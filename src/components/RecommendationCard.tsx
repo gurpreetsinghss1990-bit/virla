@@ -64,12 +64,12 @@ export function RecommendationCard() {
   };
 
   return (
-    <View className="w-full bg-orange-50 border border-orange-100 p-6 rounded-[24px] shadow-sm relative overflow-hidden">
+    <View className="w-full bg-indigo-50 border border-indigo-100 p-6 rounded-[24px] shadow-sm relative overflow-hidden">
       {/* Visual indicator representing AI activity */}
-      <View className="absolute w-20 h-20 rounded-full bg-orange-200/20 -top-5 -right-5" />
+      <View className="absolute w-20 h-20 rounded-full bg-indigo-200/20 -top-5 -right-5" />
       
       <View className="flex-row items-center gap-1.5 mb-2.5">
-        <Text className="text-orange-500 text-[10px] font-black uppercase tracking-wider">
+        <Text className="text-indigo-600 text-[10px] font-black uppercase tracking-wider">
           ★ AI Recommendation
         </Text>
       </View>

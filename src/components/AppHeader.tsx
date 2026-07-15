@@ -30,8 +30,8 @@ export function AppHeader({ onNotificationPress, onAvatarPress }: AppHeaderProps
               Good Morning,
             </Text>
             {/* Membership Badge */}
-            <View className="bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full">
-              <Text className="text-orange-600 text-[9px] font-black tracking-wide uppercase">
+            <View className="bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
+              <Text className="text-indigo-700 text-[9px] font-black tracking-wide uppercase">
                 Premium
               </Text>
             </View>

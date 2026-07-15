@@ -10,8 +10,8 @@ export function MembershipCard() {
   const progress = membership.availableCredits / membership.totalCredits;
 
   const handlePress = () => {
-    // Navigate to membership tab
-    router.push('/(tabs)/membership');
+    // Navigate to profile tab where membership is now located
+    router.push('/(tabs)/profile' as any);
   };
 
   return (
@@ -21,12 +21,12 @@ export function MembershipCard() {
       className="w-full bg-zinc-900 border border-zinc-800 p-6 rounded-[24px] flex-row justify-between items-center shadow-md relative overflow-hidden"
     >
       {/* Abstract premium mesh vector visual */}
-      <View className="absolute w-44 h-44 rounded-full bg-orange-500/10 -bottom-16 -right-16 blur-2xl" />
+      <View className="absolute w-44 h-44 rounded-full bg-indigo-600/10 -bottom-16 -right-16 blur-2xl" />
       
       {/* Plan Details */}
       <View className="flex-1 mr-4">
         <View className="flex-row items-center gap-1.5 mb-1">
-          <Text className="text-orange-400 text-[10px] font-black uppercase tracking-wider">
+          <Text className="text-indigo-400 text-[10px] font-black uppercase tracking-wider">
             Active Membership
           </Text>
         </View>
@@ -45,7 +45,7 @@ export function MembershipCard() {
       </View>
 
       {/* Credit Progress Ring */}
-      <ProgressRing progress={progress} size={84} strokeWidth={8} activeColor="#FF6B00" inactiveColor="#27272A">
+      <ProgressRing progress={progress} size={84} strokeWidth={8} activeColor="#4F46E5" inactiveColor="#27272A">
         <View className="items-center justify-center">
           <Text className="text-white text-lg font-black tracking-tighter">
             {membership.availableCredits}

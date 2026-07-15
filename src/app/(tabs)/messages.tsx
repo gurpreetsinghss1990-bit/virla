@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity } from 'react-native';
-import { Heading, Subtitle } from '@/presentation/components';
+import { View, Text, Image, ScrollView, TouchableOpacity, Platform } from 'react-native';
 
 interface Chat {
   id: string;
@@ -40,25 +39,29 @@ const mockChats: Chat[] = [
 
 export default function MessagesScreen() {
   return (
-    <View className="flex-1 bg-white px-6 pt-6">
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
+    <SafeAreaViewWrapper>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        className="flex-1 bg-[#F8F9FB]"
+        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 140 }}
+      >
         {/* Header */}
         <View className="mb-6">
-          <Text className="text-orange-500 text-xs font-bold uppercase tracking-wider">Chat Logs</Text>
-          <Heading align="left" className="mt-1">Messages</Heading>
-          <Subtitle align="left" className="mt-1">
+          <Text className="text-[#6B7280] text-xs font-extrabold uppercase tracking-widest">Chat Logs</Text>
+          <Text className="text-[#111827] text-3xl font-black tracking-tight mt-1">Messages</Text>
+          <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed mt-1">
             Coordinate schedules and workouts directly with your coaches.
-          </Subtitle>
+          </Text>
         </View>
 
         {/* Chats List */}
-        <View className="bg-zinc-50 border border-zinc-100 rounded-[24px] overflow-hidden">
+        <View className="bg-white border border-[#E5E7EB] rounded-[28px] overflow-hidden shadow-xs">
           {mockChats.map((chat, idx) => (
             <TouchableOpacity
               key={chat.id}
               activeOpacity={0.7}
               className={`flex-row items-center p-5 ${
-                idx > 0 ? 'border-t border-zinc-100/80' : ''
+                idx > 0 ? 'border-t border-[#E5E7EB]' : ''
               }`}
             >
               {/* Avatar */}
@@ -75,10 +78,10 @@ export default function MessagesScreen() {
               {/* Message Details */}
               <View className="flex-1 ml-4 mr-2">
                 <View className="flex-row justify-between items-center mb-1">
-                  <Text className={`text-sm tracking-tight ${chat.unread ? 'font-black text-primary' : 'font-extrabold text-zinc-700'}`}>
+                  <Text className={`text-sm tracking-tight ${chat.unread ? 'font-black text-[#111827]' : 'font-extrabold text-zinc-700'}`}>
                     {chat.name}
                   </Text>
-                  <Text className="text-[10px] text-zinc-400 font-semibold">
+                  <Text className="text-[10px] text-[#6B7280] font-semibold">
                     {chat.time}
                   </Text>
                 </View>
@@ -93,6 +96,13 @@ export default function MessagesScreen() {
           ))}
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaViewWrapper>
   );
+}
+
+function SafeAreaViewWrapper({ children }: { children: React.ReactNode }) {
+  if (Platform.OS === 'ios') {
+    return <View className="flex-1 bg-[#F8F9FB] pt-12">{children}</View>;
+  }
+  return <View className="flex-1 bg-[#F8F9FB]">{children}</View>;
 }

@@ -1,23 +1,40 @@
-import React from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, SafeAreaView, TouchableOpacity, Image, ScrollView, Alert, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
 import { useWorkoutStore } from '../store/workoutStore';
 import { useCoachStore } from '../store/coachStore';
 import { BookingStatusBadge } from '../components/BookingStatusBadge';
-import { Ionicons } from '@expo/vector-icons';
-import { Heading } from '@/presentation/components';
+import { Ionicons, Feather } from '@expo/vector-icons';
+import Svg, { Rect } from 'react-native-svg';
 
 export default function SessionDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const bookingId = params.id as string;
 
-  const { bookings, cancelSession, rescheduleSession } = useBookingStore();
+  const { bookings, cancelSession } = useBookingStore();
   const { workouts } = useWorkoutStore();
   const { coaches } = useCoachStore();
 
   const booking = bookings.find((b) => b.id === bookingId) || bookings[0];
+
+  // Checklist state
+  const [checklist, setChecklist] = useState({
+    towel: false,
+    water: false,
+    shoes: false,
+  });
+
+  // Simulated countdown timer (12 hours, 45 minutes, 30 seconds remaining)
+  const [secondsLeft, setSecondsLeft] = useState(12 * 3600 + 45 * 60 + 30);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (!booking) {
     return (
@@ -30,19 +47,14 @@ export default function SessionDetailScreen() {
     );
   }
 
-  // Find related objects to open profile/workout details
-  const coach = coaches.find(c => c.name === booking.trainerName);
+  const coach = coaches.find(c => c.name === booking.trainerName.replace('Coach ', '').replace(' (Requested)', ''));
   const workout = workouts.find(w => w.title === booking.workoutTitle);
 
-  const handleWorkoutDetails = () => {
-    if (workout) {
-      router.push({
-        pathname: '/workout-detail' as any,
-        params: { id: workout.id }
-      });
-    } else {
-      Alert.alert('Details Unavailable', 'Workout details cannot be loaded.');
-    }
+  const formatCountdown = () => {
+    const h = Math.floor(secondsLeft / 3600);
+    const m = Math.floor((secondsLeft % 3600) / 60);
+    const s = secondsLeft % 60;
+    return `${h}h ${m}m ${s}s`;
   };
 
   const handleCoachDetails = () => {
@@ -63,12 +75,8 @@ export default function SessionDetailScreen() {
     }
   };
 
-  const handleChat = () => {
-    Alert.alert('Mock Chat', `Opening encrypted chat room with Coach ${booking.trainerName}...`);
-  };
-
-  const handleCall = () => {
-    Alert.alert('Mock Call', `Dialing Coach ${booking.trainerName} (+91 98765 43210)...`);
+  const handleNavigateMap = () => {
+    Alert.alert('Navigation Active', `Getting GPS route directions to training venue: ${booking.address}`);
   };
 
   const handleCancel = () => {
@@ -89,52 +97,72 @@ export default function SessionDetailScreen() {
     );
   };
 
-  const handleReschedule = () => {
-    Alert.alert(
-      'Reschedule Session',
-      'Select a new date/time slot.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Next Monday at 10 AM',
-          onPress: () => {
-            rescheduleSession(booking.id, 'Jul 20, 2026', '10:00 AM');
-            Alert.alert('Rescheduled', 'Session rescheduled to Jul 20, 2026, 10:00 AM.');
-          },
-        },
-        {
-          text: 'Next Friday at 5 PM',
-          onPress: () => {
-            rescheduleSession(booking.id, 'Jul 24, 2026', '05:00 PM');
-            Alert.alert('Rescheduled', 'Session rescheduled to Jul 24, 2026, 05:00 PM.');
-          },
-        },
-      ]
+  const isUpcoming = booking.status === 'upcoming';
+
+  // Render a Mock premium QR Code using SVG rect grids
+  const renderMockQRCode = () => {
+    const qrMatrix = [
+      [1, 1, 1, 1, 0, 1, 1, 1, 1],
+      [1, 0, 0, 1, 0, 1, 0, 0, 1],
+      [1, 0, 0, 1, 1, 1, 0, 0, 1],
+      [1, 1, 1, 1, 0, 1, 1, 1, 1],
+      [0, 0, 1, 0, 1, 0, 1, 0, 0],
+      [1, 1, 0, 1, 0, 1, 0, 1, 1],
+      [1, 0, 0, 1, 1, 0, 1, 0, 1],
+      [1, 0, 0, 1, 0, 1, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1],
+    ];
+    const cellSize = 14;
+    return (
+      <View className="bg-white border border-[#E5E7EB] p-4 rounded-3xl shadow-sm items-center justify-center">
+        <Svg width={cellSize * 9} height={cellSize * 9}>
+          {qrMatrix.map((row, rIdx) =>
+            row.map((val, cIdx) => (
+              <Rect
+                key={`${rIdx}-${cIdx}`}
+                x={cIdx * cellSize}
+                y={rIdx * cellSize}
+                width={cellSize - 2}
+                height={cellSize - 2}
+                fill={val === 1 ? '#111827' : '#FFFFFF'}
+              />
+            ))
+          )}
+        </Svg>
+        <Text className="text-[#6B7280] text-[9px] font-black uppercase tracking-wider mt-3">
+          QR Session Check-In
+        </Text>
+      </View>
     );
   };
 
-  const isUpcoming = booking.status === 'upcoming';
-
-  const mockInstructions = 'Ensure a clear space of at least 6x6 feet in your living room or workout zone. Keep the room ventilated and turn on the air conditioner if preferred. Your coach will arrive with all specialized equipment.';
-  const mockItemsToKeepReady = ['A clean training/yoga mat', 'Water bottle and small face towel', 'Light, stretchable athletic attire'];
-
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
       {/* Header back bar */}
-      <View className="h-14 flex-row items-center px-6 border-b border-zinc-100">
+      <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#111111" />
+          <Ionicons name="arrow-back" size={20} color="#111827" />
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-primary text-base font-black tracking-tight mr-8">
+        <Text className="flex-1 text-center text-[#111827] text-base font-black tracking-tight mr-8">
           Session Details
         </Text>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 60 }}>
         <View className="gap-6">
           
-          {/* Header row: Coach details & Status */}
-          <View className="bg-zinc-50 border border-zinc-100 p-5 rounded-[24px] gap-4">
+          {/* Section 1: Live Countdown (Premium Feature) */}
+          {isUpcoming && (
+            <View className="bg-zinc-900 p-6 rounded-[28px] shadow-lg relative overflow-hidden items-center justify-center">
+              <View className="absolute w-36 h-36 rounded-full bg-indigo-500/10 -bottom-12 -right-12 blur-xl" />
+              <Text className="text-indigo-400 text-[10px] font-black uppercase tracking-widest">Starts In</Text>
+              <Text className="text-white text-3xl font-black mt-2 tracking-tighter">{formatCountdown()}</Text>
+              <Text className="text-zinc-400 text-[9px] font-bold mt-1.5 uppercase">Tomorrow • {booking.time}</Text>
+            </View>
+          )}
+
+          {/* Section 2: Header Info Card */}
+          <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-xs gap-4">
             <View className="flex-row items-center justify-between">
               <TouchableOpacity 
                 activeOpacity={0.8}
@@ -143,160 +171,157 @@ export default function SessionDetailScreen() {
               >
                 <Image
                   source={{ uri: booking.trainerPhoto }}
-                  className="w-12 h-12 rounded-full border border-zinc-200"
+                  className="w-12 h-12 rounded-full border border-[#E5E7EB]"
                 />
                 <View className="flex-1">
-                  <Text className="text-primary text-base font-black tracking-tight">
+                  <Text className="text-[#111827] text-base font-black tracking-tight">
                     {booking.trainerName.includes('Assigning') ? booking.trainerName : `Coach ${booking.trainerName}`}
                   </Text>
-                  {!booking.trainerName.includes('Assigning') && (
-                    <Text className="text-zinc-400 text-[9px] font-bold uppercase tracking-wide">
-                      View Profile Details
+                  {!booking.trainerName.includes('Assigning') ? (
+                    <Text className="text-[#4F46E5] text-[9px] font-black uppercase tracking-wider">
+                      View Coach Profile
+                    </Text>
+                  ) : (
+                    <Text className="text-[#6B7280] text-[9px] font-bold uppercase tracking-wider">
+                      Auto-matching active
                     </Text>
                   )}
                 </View>
               </TouchableOpacity>
               <BookingStatusBadge status={booking.status} />
             </View>
-
-            {/* Quick Contact Row */}
-            {isUpcoming && (
-              <View className="flex-row gap-3 pt-3 border-t border-zinc-200/50">
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={handleChat}
-                  className="flex-1 bg-white border border-zinc-200 py-2.5 rounded-xl flex-row justify-center items-center gap-2"
-                >
-                  <Ionicons name="chatbubble-outline" size={14} color="#111111" />
-                  <Text className="text-primary text-xs font-bold">Chat</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={handleCall}
-                  className="flex-1 bg-white border border-zinc-200 py-2.5 rounded-xl flex-row justify-center items-center gap-2"
-                >
-                  <Ionicons name="call-outline" size={14} color="#111111" />
-                  <Text className="text-primary text-xs font-bold">Call</Text>
-                </TouchableOpacity>
-              </View>
-            )}
           </View>
 
-          {/* Workout details row */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleWorkoutDetails}
-            className="flex-row justify-between items-center bg-zinc-50 border border-zinc-100 p-4 rounded-2xl"
-          >
+          {/* Section 3: Training Info (Workout & Date/Time Details) */}
+          <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-xs gap-4">
             <View className="flex-row items-center gap-3">
-              <View className="w-10 h-10 rounded-xl bg-white border border-zinc-200 justify-center items-center">
+              <View className="w-10 h-10 rounded-xl bg-indigo-50/50 justify-center items-center">
                 <Text className="text-lg">🏋️‍♂️</Text>
               </View>
               <View>
-                <Text className="text-primary text-xs font-black uppercase tracking-wider">Workout Category</Text>
-                <Text className="text-primary text-sm font-black tracking-tight">{booking.workoutTitle}</Text>
+                <Text className="text-[#6B7280] text-[9px] font-black uppercase">Workout Program</Text>
+                <Text className="text-[#111827] text-sm font-extrabold">{booking.workoutTitle}</Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#71717A" />
-          </TouchableOpacity>
 
-          {/* Date & Time display */}
-          <View className="flex-row justify-between items-center bg-zinc-50 border border-zinc-100 p-4 rounded-2xl">
-            <View className="flex-row items-center gap-2">
-              <Text className="text-base">📅</Text>
-              <View>
-                <Text className="text-zinc-400 text-[9px] font-bold uppercase tracking-wider">Scheduled Date</Text>
-                <Text className="text-primary text-xs font-black tracking-tight mt-0.5">{booking.date}</Text>
+            <View className="h-[1px] bg-[#E5E7EB] my-1" />
+
+            <View className="flex-row justify-between items-center">
+              <View className="flex-row items-center gap-2">
+                <Text className="text-base">📅</Text>
+                <View>
+                  <Text className="text-[#6B7280] text-[8px] font-bold uppercase">Date</Text>
+                  <Text className="text-[#111827] text-xs font-extrabold mt-0.5">{booking.date}</Text>
+                </View>
               </View>
-            </View>
-            <View className="w-[1px] h-8 bg-zinc-200" />
-            <View className="flex-row items-center gap-2">
-              <Text className="text-base">⏱️</Text>
-              <View>
-                <Text className="text-zinc-400 text-[9px] font-bold uppercase tracking-wider">Session Time</Text>
-                <Text className="text-primary text-xs font-black tracking-tight mt-0.5">{booking.time}</Text>
+              <View className="w-[1px] h-8 bg-[#E5E7EB]" />
+              <View className="flex-row items-center gap-2">
+                <Text className="text-base">⏱️</Text>
+                <View>
+                  <Text className="text-[#6B7280] text-[8px] font-bold uppercase">Time</Text>
+                  <Text className="text-[#111827] text-xs font-extrabold mt-0.5">{booking.time}</Text>
+                </View>
               </View>
             </View>
           </View>
 
-          {/* Address Details */}
-          <View className="gap-2">
-            <Text className="text-primary text-sm font-black tracking-tight">📍 Training Venue Address</Text>
-            <View className="bg-zinc-50 border border-zinc-100 p-4 rounded-2xl">
-              <Text className="text-zinc-700 text-xs font-semibold leading-relaxed">
-                {booking.address || 'Flat 402, Sea Breeze Heights, Worli Sea Face, Mumbai - 400018'}
+          {/* Section 4: Training Venue & Navigation */}
+          <View className="gap-2.5">
+            <Text className="text-[#111827] text-sm font-black tracking-tight">📍 Training Venue</Text>
+            <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-xs gap-4">
+              <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed">
+                {booking.address || 'Worli, Mumbai, India'}
               </Text>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleNavigateMap}
+                className="w-full bg-[#111827] py-3 rounded-2xl flex-row items-center justify-center gap-2 shadow-xs"
+              >
+                <Feather name="navigation" size={14} color="white" />
+                <Text className="text-white text-xs font-extrabold tracking-wide">Get Directions</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
-          {/* Family Member Beneficiary */}
-          {booking.familyMember && (
-            <View className="gap-2">
-              <Text className="text-primary text-sm font-black tracking-tight">👤 Session Attendee</Text>
-              <View className="bg-zinc-50 border border-zinc-100 p-4 rounded-2xl gap-1">
-                <Text className="text-primary text-xs font-black">{booking.familyMember.name} ({booking.familyMember.relation})</Text>
-                <Text className="text-zinc-500 text-xs font-medium">Age: {booking.familyMember.age} • Gender: {booking.familyMember.gender}</Text>
-                {booking.familyMember.notes && (
-                  <Text className="text-zinc-400 text-xs font-medium italic mt-1">"Note: {booking.familyMember.notes}"</Text>
-                )}
+          {/* Section 5: Interactive Preparation Checklist */}
+          {isUpcoming && (
+            <View className="gap-2.5">
+              <Text className="text-[#111827] text-sm font-black tracking-tight">🧘 Preparation Checklist</Text>
+              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-xs gap-3">
+                <Text className="text-[#6B7280] text-[10px] font-bold leading-normal mb-1">
+                  Keep these items ready before the coach arrives:
+                </Text>
+                
+                {/* Check 1 */}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setChecklist({ ...checklist, towel: !checklist.towel })}
+                  className="flex-row items-center justify-between py-2 border-b border-[#E5E7EB]/50"
+                >
+                  <View className="flex-row items-center gap-2.5">
+                    <Feather name="check" size={14} color={checklist.towel ? '#22C55E' : '#9CA3AF'} />
+                    <Text className={`text-xs font-semibold ${checklist.towel ? 'text-zinc-400 line-through' : 'text-[#111827]'}`}>
+                      Bring clean gym towel
+                    </Text>
+                  </View>
+                  <View className={`w-4 h-4 rounded border items-center justify-center ${checklist.towel ? 'bg-[#22C55E] border-[#22C55E]' : 'border-zinc-300'}`}>
+                    {checklist.towel && <Feather name="check" size={10} color="white" />}
+                  </View>
+                </TouchableOpacity>
+
+                {/* Check 2 */}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setChecklist({ ...checklist, water: !checklist.water })}
+                  className="flex-row items-center justify-between py-2 border-b border-[#E5E7EB]/50"
+                >
+                  <View className="flex-row items-center gap-2.5">
+                    <Feather name="droplet" size={14} color={checklist.water ? '#22C55E' : '#9CA3AF'} />
+                    <Text className={`text-xs font-semibold ${checklist.water ? 'text-zinc-400 line-through' : 'text-[#111827]'}`}>
+                      Keep hydration water ready
+                    </Text>
+                  </View>
+                  <View className={`w-4 h-4 rounded border items-center justify-center ${checklist.water ? 'bg-[#22C55E] border-[#22C55E]' : 'border-zinc-300'}`}>
+                    {checklist.water && <Feather name="check" size={10} color="white" />}
+                  </View>
+                </TouchableOpacity>
+
+                {/* Check 3 */}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setChecklist({ ...checklist, shoes: !checklist.shoes })}
+                  className="flex-row items-center justify-between py-2"
+                >
+                  <View className="flex-row items-center gap-2.5">
+                    <Feather name="heart" size={14} color={checklist.shoes ? '#22C55E' : '#9CA3AF'} />
+                    <Text className={`text-xs font-semibold ${checklist.shoes ? 'text-zinc-400 line-through' : 'text-[#111827]'}`}>
+                      Wear indoor training shoes
+                    </Text>
+                  </View>
+                  <View className={`w-4 h-4 rounded border items-center justify-center ${checklist.shoes ? 'bg-[#22C55E] border-[#22C55E]' : 'border-zinc-300'}`}>
+                    {checklist.shoes && <Feather name="check" size={10} color="white" />}
+                  </View>
+                </TouchableOpacity>
               </View>
             </View>
           )}
 
-          {/* Expected Arrival */}
-          <View className="gap-2">
-            <Text className="text-primary text-sm font-black tracking-tight">🚗 Expected Arrival</Text>
-            <View className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-2xl flex-row items-center gap-3">
-              <Text className="text-lg">⏱️</Text>
-              <Text className="text-orange-700 text-xs font-bold leading-normal">
-                Expected Arrival: Coach will arrive 10 minutes early to set up training equipment.
-              </Text>
-            </View>
-          </View>
-
-          {/* Items to Keep Ready */}
-          <View className="gap-2">
-            <Text className="text-primary text-sm font-black tracking-tight">🧘 Items to Keep Ready</Text>
-            <View className="bg-zinc-50 border border-zinc-100 p-4 rounded-2xl gap-2.5">
-              {mockItemsToKeepReady.map((item, idx) => (
-                <View key={idx} className="flex-row items-center gap-2">
-                  <View className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                  <Text className="text-zinc-600 text-xs font-semibold">{item}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          {/* Preparation Instructions */}
-          <View className="gap-2">
-            <Text className="text-primary text-sm font-black tracking-tight">📋 Pre-Session Preparation</Text>
-            <View className="bg-zinc-50 border border-zinc-100 p-4 rounded-2xl">
-              <Text className="text-zinc-600 text-xs font-medium leading-relaxed">
-                {mockInstructions}
-              </Text>
-            </View>
-          </View>
-
-          {/* Action Triggers */}
+          {/* Section 6: QR Code Check-in */}
           {isUpcoming && (
-            <View className="flex-row gap-4 mt-4">
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={handleCancel}
-                className="flex-1 py-4 bg-red-50 rounded-2xl items-center justify-center border border-red-200/50"
-              >
-                <Text className="text-red-500 text-sm font-extrabold">Cancel Session</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={handleReschedule}
-                className="flex-1 py-4 bg-zinc-900 rounded-2xl items-center justify-center"
-              >
-                <Text className="text-white text-sm font-extrabold">Reschedule</Text>
-              </TouchableOpacity>
+            <View className="items-center py-4">
+              {renderMockQRCode()}
             </View>
+          )}
+
+          {/* Section 7: Cancel Session */}
+          {isUpcoming && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleCancel}
+              className="w-full bg-rose-50 border border-rose-100 py-4 rounded-2xl items-center justify-center"
+            >
+              <Text className="text-[#EF4444] text-xs font-extrabold uppercase tracking-wider">Cancel Session</Text>
+            </TouchableOpacity>
           )}
 
         </View>

@@ -13,28 +13,6 @@ interface WorkoutState {
 const mockWorkouts: Workout[] = [
   {
     id: 'w-1',
-    title: 'Personal Training',
-    icon: '🏋️‍♂️',
-    description: 'One-on-one personal training tailored to your exact fitness goals. Your assigned certified coach will design custom routines for your lifestyle, posture, and strength capabilities.',
-    calories: 350,
-    duration: 60,
-    heroImage: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=800&q=80',
-    category: 'Personalized',
-    benefits: ['100% custom-tailored exercise plans', 'Real-time form correction & guidance', 'Progress tracking & regular assessments'],
-    difficulty: 'All Levels',
-    equipment: ['Resistance bands (provided)', 'Custom weights (provided)', 'Mat'],
-    homeVisitBadge: true,
-    sessionPrice: 1500,
-    rating: 4.95,
-    reviews: [
-      { reviewerName: 'Rohan P.', rating: 5, comment: 'Highly personalized attention. The trainer understands my limitations and pushes me correctly.' }
-    ],
-    faqs: [
-      { question: 'Who is this for?', answer: 'Anyone looking for dedicated one-on-one fitness coaching at home, from beginners to advanced fitness enthusiasts.' }
-    ]
-  },
-  {
-    id: 'w-2',
     title: 'Strength Training',
     icon: '💪',
     description: 'Build lean muscle and improve overall body strength at home. Our elite coach will structure exercises around resistance bands, bodyweight, and weights suited to your target zones.',
@@ -48,37 +26,11 @@ const mockWorkouts: Workout[] = [
     homeVisitBadge: true,
     sessionPrice: 1200,
     rating: 4.9,
-    reviews: [
-      { reviewerName: 'Rohit K.', rating: 5, comment: 'Great strength workout! The coach brought all the resistance bands.' }
-    ],
-    faqs: [
-      { question: 'What space do I need?', answer: 'A standard living room space (around 6x6 feet) is more than enough for a full session.' }
-    ]
+    reviews: [{ reviewerName: 'Rohit K.', rating: 5, comment: 'Great strength workout! The coach brought all the resistance bands.' }],
+    faqs: [{ question: 'What space do I need?', answer: 'A standard living room space (around 6x6 feet) is more than enough for a full session.' }]
   },
   {
-    id: 'w-3',
-    title: 'Weight Loss',
-    icon: '🔥',
-    description: 'High-energy, calorie-burning conditioning sessions combining high intensity cardio, full body fat burn, and metabolic conditioning to hit your weight goals.',
-    calories: 450,
-    duration: 45,
-    heroImage: 'https://images.unsplash.com/photo-1518310383802-640c2de311b2?auto=format&fit=crop&w=800&q=80',
-    category: 'Cardio',
-    benefits: ['High calorie burn & fat reduction', 'Enhanced stamina & lung capacity', 'Post-workout metabolic elevation (EPOC)'],
-    difficulty: 'Medium - Hard',
-    equipment: ['Jump rope (provided)', 'Speed ladder (provided)', 'Mat'],
-    homeVisitBadge: true,
-    sessionPrice: 1200,
-    rating: 4.85,
-    reviews: [
-      { reviewerName: 'Priya S.', rating: 5, comment: 'Lost 4 kgs in 6 weeks combining these home sessions with diet tips. Incredibly intense!' }
-    ],
-    faqs: [
-      { question: 'Is it too hard for beginners?', answer: 'The session starts with low intensity and scales up gradually based on your target heart rate.' }
-    ]
-  },
-  {
-    id: 'w-4',
+    id: 'w-2',
     title: 'Yoga',
     icon: '🧘‍♀️',
     description: 'Restore physical harmony, flexibility, and mindfulness through guided yoga flows, posture correction, and breathing routines designed to restore body harmony.',
@@ -92,15 +44,11 @@ const mockWorkouts: Workout[] = [
     homeVisitBadge: true,
     sessionPrice: 1100,
     rating: 4.8,
-    reviews: [
-      { reviewerName: 'Sneha M.', rating: 5, comment: 'Very peaceful. Great breathing exercises at the end. Recommended!' }
-    ],
-    faqs: [
-      { question: 'Do I need blocks?', answer: 'If you have blocks it is good, otherwise the trainer will provide them.' }
-    ]
+    reviews: [{ reviewerName: 'Sneha M.', rating: 5, comment: 'Very peaceful. Great breathing exercises at the end. Recommended!' }],
+    faqs: [{ question: 'Do I need blocks?', answer: 'If you have blocks it is good, otherwise the trainer will provide them.' }]
   },
   {
-    id: 'w-5',
+    id: 'w-3',
     title: 'Pilates',
     icon: '🧘',
     description: 'Focus on core strength, posture control, and stability. Incorporates slow, precise resistance movements to build abdominal and spinal support.',
@@ -118,7 +66,25 @@ const mockWorkouts: Workout[] = [
     faqs: []
   },
   {
-    id: 'w-6',
+    id: 'w-4',
+    title: 'Dance Fitness',
+    icon: '💃',
+    description: 'Fun, calorie-burning rhythmic dance workouts combining high-energy music with easy-to-follow cardio choreography.',
+    calories: 380,
+    duration: 45,
+    heroImage: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=800&q=80',
+    category: 'Cardio',
+    benefits: ['Cardiovascular conditioning', 'Full body coordination', 'Endorphin release'],
+    difficulty: 'Medium',
+    equipment: ['Comfy sports shoes', 'Water bottle'],
+    homeVisitBadge: true,
+    sessionPrice: 1000,
+    rating: 4.8,
+    reviews: [],
+    faqs: []
+  },
+  {
+    id: 'w-5',
     title: 'Functional Training',
     icon: '⚡',
     description: 'Functional body movements that mimic daily life activities to improve mobility, strength, and coordination across muscle groups.',
@@ -136,20 +102,38 @@ const mockWorkouts: Workout[] = [
     faqs: []
   },
   {
-    id: 'w-7',
-    title: 'Dance Fitness',
-    icon: '💃',
-    description: 'Fun, calorie-burning rhythmic dance workouts combining high-energy music with easy-to-follow cardio choreography.',
-    calories: 380,
-    duration: 45,
-    heroImage: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=800&q=80',
+    id: 'w-6',
+    title: 'HIIT',
+    icon: '🏃',
+    description: 'High-intensity interval training designed to spike heart rate, ignite cardiorespiratory system, and burn max calories in minimal time.',
+    calories: 460,
+    duration: 35,
+    heroImage: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80',
     category: 'Cardio',
-    benefits: ['Cardiovascular conditioning', 'Full body coordination', 'Endorphin release'],
-    difficulty: 'Medium',
-    equipment: ['Comfy sports shoes', 'Water bottle'],
+    benefits: ['Max calorie burn', 'High cardiovascular efficiency', 'Epoc metabolic afterburn'],
+    difficulty: 'Hard',
+    equipment: ['Trainer-provided tools', 'Water bottle'],
     homeVisitBadge: true,
-    sessionPrice: 1000,
-    rating: 4.8,
+    sessionPrice: 1200,
+    rating: 4.9,
+    reviews: [],
+    faqs: []
+  },
+  {
+    id: 'w-7',
+    title: 'CrossFit',
+    icon: '🏋️',
+    description: 'Constantly varied functional movements executed at high intensity. A blend of gymnastics, weightlifting, and metabolic conditioning.',
+    calories: 500,
+    duration: 45,
+    heroImage: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80',
+    category: 'Strength',
+    benefits: ['Max power production', 'Grip strength and agility', 'High cardio thresholds'],
+    difficulty: 'Hard',
+    equipment: ['Kettlebells', 'Jump rope', 'Gym mat'],
+    homeVisitBadge: true,
+    sessionPrice: 1400,
+    rating: 4.92,
     reviews: [],
     faqs: []
   },
@@ -168,15 +152,29 @@ const mockWorkouts: Workout[] = [
     homeVisitBadge: true,
     sessionPrice: 1300,
     rating: 4.9,
-    reviews: [
-      { reviewerName: 'Kabir B.', rating: 5, comment: 'Brutal but incredibly satisfying workout! Punching pads is the best.' }
-    ],
-    faqs: [
-      { question: 'Do I need boxing gloves?', answer: 'No, the trainer will bring sanitized, high-quality focus pads and gloves for you.' }
-    ]
+    reviews: [{ reviewerName: 'Kabir B.', rating: 5, comment: 'Brutal but incredibly satisfying workout! Punching pads is the best.' }],
+    faqs: [{ question: 'Do I need boxing gloves?', answer: 'No, the trainer will bring sanitized, high-quality focus pads and gloves for you.' }]
   },
   {
     id: 'w-9',
+    title: 'Weight Loss',
+    icon: '🔥',
+    description: 'High-energy, calorie-burning conditioning sessions combining high intensity cardio, full body fat burn, and metabolic conditioning to hit your weight goals.',
+    calories: 450,
+    duration: 45,
+    heroImage: 'https://images.unsplash.com/photo-1518310383802-640c2de311b2?auto=format&fit=crop&w=800&q=80',
+    category: 'Cardio',
+    benefits: ['High calorie burn & fat reduction', 'Enhanced stamina & lung capacity', 'Post-workout metabolic elevation (EPOC)'],
+    difficulty: 'Medium - Hard',
+    equipment: ['Jump rope (provided)', 'Speed ladder (provided)', 'Mat'],
+    homeVisitBadge: true,
+    sessionPrice: 1200,
+    rating: 4.85,
+    reviews: [{ reviewerName: 'Priya S.', rating: 5, comment: 'Lost 4 kgs in 6 weeks combining these home sessions with diet tips. Incredibly intense!' }],
+    faqs: [{ question: 'Is it too hard for beginners?', answer: 'The session starts with low intensity and scales up gradually based on your target heart rate.' }]
+  },
+  {
+    id: 'w-10',
     title: 'Senior Fitness',
     icon: '👴',
     description: 'Low-impact movements designed for seniors to keep active, improve joint mobility, and maintain balance.',
@@ -194,20 +192,92 @@ const mockWorkouts: Workout[] = [
     faqs: []
   },
   {
-    id: 'w-10',
-    title: 'Mobility & Stretching',
-    icon: '🔄',
-    description: 'Decompress tight joints, increase flexibility, and accelerate muscle recovery after heavy sessions or long working hours.',
-    calories: 120,
-    duration: 30,
+    id: 'w-11',
+    title: 'Prenatal',
+    icon: '🤰',
+    description: 'Carefully designed exercise routines for expecting mothers to maintain pelvic strength, ease delivery, and control pregnancy fatigue.',
+    calories: 140,
+    duration: 45,
+    heroImage: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80',
+    category: 'Specialized',
+    benefits: ['Relieves back and hip tension', 'Strengthens pelvic floor', 'Prepares body for delivery'],
+    difficulty: 'Beginner',
+    equipment: ['Comfortable gym mat', 'Stretching strap'],
+    homeVisitBadge: true,
+    sessionPrice: 1300,
+    rating: 4.88,
+    reviews: [],
+    faqs: []
+  },
+  {
+    id: 'w-12',
+    title: 'Postnatal',
+    icon: '👶',
+    description: 'Postpartum recovery programs to help mothers rebuild core strength, recover joint stability, and regain fitness safely.',
+    calories: 180,
+    duration: 45,
+    heroImage: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80',
+    category: 'Specialized',
+    benefits: ['Restores abdominal wall integrity', 'Aids in healing pelvic alignment', 'Increases energy levels'],
+    difficulty: 'Beginner',
+    equipment: ['Soft resistance bands', 'Mat'],
+    homeVisitBadge: true,
+    sessionPrice: 1300,
+    rating: 4.84,
+    reviews: [],
+    faqs: []
+  },
+  {
+    id: 'w-13',
+    title: 'Rehabilitation',
+    icon: '🩹',
+    description: 'Targeted recovery exercises designed to rebuild muscular strength, restore joint mobility, and recover safely after an injury.',
+    calories: 130,
+    duration: 45,
     heroImage: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=800&q=80',
     category: 'Recovery',
-    benefits: ['Relieve muscle stiffness & joint pain', 'Improve range of motion', 'Accelerate post-workout muscle recovery'],
+    benefits: ['Rehabilitates injured tissue', 'Restores proper range of motion', 'Mitigates chronic joint pain'],
     difficulty: 'Beginner',
-    equipment: ['Yoga mat', 'Stretching strap (provided)'],
+    equipment: ['Taping tools', 'Foam roller', 'Bands'],
     homeVisitBadge: true,
-    sessionPrice: 900,
-    rating: 4.75,
+    sessionPrice: 1400,
+    rating: 4.9,
+    reviews: [],
+    faqs: []
+  },
+  {
+    id: 'w-14',
+    title: 'Kids Fitness',
+    icon: '👦',
+    description: 'Fun, active fitness games, agility drills, and bodyweight coordination circuits to build healthy lifestyle habits in children.',
+    calories: 250,
+    duration: 40,
+    heroImage: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=800&q=80',
+    category: 'Specialized',
+    benefits: ['Improves agility and motor coordination', 'Fosters healthy bone and joint growth', 'Interactive and fun workout game formats'],
+    difficulty: 'Beginner',
+    equipment: ['Small plastic cones', 'Agility ladder'],
+    homeVisitBadge: true,
+    sessionPrice: 1000,
+    rating: 4.86,
+    reviews: [],
+    faqs: []
+  },
+  {
+    id: 'w-15',
+    title: 'Sports Conditioning',
+    icon: '🏃‍♂️',
+    description: 'High-performance drills targeting speed, agility, quickness, and specialized power output for active competitive sports athletes.',
+    calories: 480,
+    duration: 50,
+    heroImage: 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?auto=format&fit=crop&w=800&q=80',
+    category: 'Conditioning',
+    benefits: ['Spikes lateral agility thresholds', 'Increases vertical and explosive force output', 'Maintains peak aerobic and anaerobic stamina'],
+    difficulty: 'Hard',
+    equipment: ['Parachute harness', 'Sprint hurdles'],
+    homeVisitBadge: true,
+    sessionPrice: 1500,
+    rating: 4.94,
     reviews: [],
     faqs: []
   }
@@ -217,35 +287,91 @@ const mockCoaches: Coach[] = [
   {
     id: 'c-1',
     name: 'Karan Sharma',
-    photo: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80',
+    photo: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=300&q=80',
     experience: '8 yrs exp',
     rating: 4.9,
     specialty: 'Strength & HIIT',
+    yearsExperience: 8,
+    specialization: 'Strength Training, Muscle Hypertrophy & High Intensity Cardio',
+    languages: ['English', 'Hindi', 'Punjabi'],
+    shortBio: 'Certified personal trainer with a passion for helping clients build long-term athletic strength and lean muscle from home.',
+    price: 1200,
+    verifiedBadge: true,
+    certifications: ['ACE Certified Personal Trainer', 'ISSA Strength & Conditioning Specialist', 'CPR/AED Certified'],
+    achievements: ['Trained 450+ clients across India', 'Featured in FitIndia Magazine 2025', 'Specialist Coach of the Year 2025 (VIRLA)'],
+    reviews: [
+      { reviewerName: 'Rahul V.', rating: 5, comment: 'Karan completely changed how I think about home workouts. High energy and great technique corrections!' },
+      { reviewerName: 'Amit S.', rating: 4.8, comment: 'Punctual, professional, and very encouraging. Highly recommend him for strength training!' }
+    ],
+    workoutSpecialties: ['Strength Training', 'HIIT', 'Boxing', 'Mobility'],
+    availability: ['06:00 AM - 07:00 AM', '07:00 AM - 08:00 AM', '09:00 AM - 10:00 AM', '04:00 PM - 05:00 PM', '07:00 PM - 08:00 PM']
   },
   {
     id: 'c-2',
     name: 'Priya Patel',
-    photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+    photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80',
     experience: '6 yrs exp',
     rating: 4.8,
     specialty: 'Yoga & Pilates',
+    yearsExperience: 6,
+    specialization: 'Vinyasa Flow, Ashtanga Yoga, Core Rehabilitation & Pilates',
+    languages: ['English', 'Gujarati', 'Hindi'],
+    shortBio: 'Dedicated Yoga and Pilates teacher focusing on posture correction, core alignment, and stress reduction through breathwork.',
+    price: 1100,
+    verifiedBadge: true,
+    certifications: ['RYT 500 Yoga Alliance Certified', 'Balanced Body Pilates Instructor', 'Pre-Natal & Post-Natal Yoga Specialist'],
+    achievements: ['Conducted 600+ wellness hours', 'Co-founded MindfulFlow Retreats', 'Yoga Expert panelist for Wellness Weekly'],
+    reviews: [
+      { reviewerName: 'Sneha M.', rating: 5, comment: 'Priya has a wonderful calming presence. Her posture adjustments are incredibly helpful!' },
+      { reviewerName: 'Deepa K.', rating: 4.6, comment: 'Perfect mix of strength and mindfulness. Loved the pregnancy guidance.' }
+    ],
+    workoutSpecialties: ['Yoga', 'Pilates', 'Stretching', 'Pregnancy Fitness'],
+    availability: ['07:00 AM - 08:00 AM', '09:00 AM - 10:00 AM', '10:00 AM - 11:00 AM', '05:00 PM - 06:00 PM', '09:00 PM - 10:00 PM']
   },
   {
     id: 'c-3',
     name: 'Rohan Mehta',
-    photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+    photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
     experience: '10 yrs exp',
     rating: 4.95,
     specialty: 'Boxing & Athletics',
+    yearsExperience: 10,
+    specialization: 'Boxing, Kickboxing, Functional Cardio & Speed-Agility training',
+    languages: ['English', 'Hindi', 'Marathi'],
+    shortBio: 'Former national level kickboxer offering dynamic boxing fitness and high-intensity agility workouts directly at your home.',
+    price: 1500,
+    verifiedBadge: true,
+    certifications: ['WAKO Certified Kickboxing Coach', 'National Academy of Sports Medicine (NASM) CPT', 'FMS Level 1 Functional Movement Specialist'],
+    achievements: ['National Kickboxing Bronze Medalist', 'Trainer to celebrity corporate executives', 'VIRLA Elite Master Trainer designation'],
+    reviews: [
+      { reviewerName: 'Vikram R.', rating: 5, comment: 'Rohan brings boxing gym energy to your living room. Brutal but incredibly satisfying workout!' },
+      { reviewerName: 'Rohit J.', rating: 4.9, comment: 'Amazing pads drills. His attention to footwork and form is outstanding.' }
+    ],
+    workoutSpecialties: ['Boxing', 'HIIT', 'Strength Training', 'Mobility'],
+    availability: ['06:00 AM - 07:00 AM', '08:00 AM - 09:00 AM', '04:00 PM - 05:00 PM', '07:00 PM - 08:00 PM', '09:00 PM - 10:00 PM']
   },
   {
     id: 'c-4',
     name: 'Anjali Rao',
-    photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+    photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80',
     experience: '5 yrs exp',
     rating: 4.75,
     specialty: 'Dance & Stretching',
-  },
+    yearsExperience: 5,
+    specialization: 'Zumba Fitness, Dance Conditioning & Passive Decompression Stretching',
+    languages: ['English', 'Kannada', 'Hindi'],
+    shortBio: 'High-energy dance fitness instructor and passive stretching therapist specializing in active recovery and cardiovascular conditioning.',
+    price: 1000,
+    verifiedBadge: false,
+    certifications: ['Licensed Zumba Instructor (L1 & L2)', 'AFAA Group Fitness Certification', 'Therapeutic Stretching Specialist'],
+    achievements: ['Choreographed virtual wellness events for corporate giants', 'VIRLA Rising Star Coach award nominee', 'Certified 100+ seniors in active aging exercises'],
+    reviews: [
+      { reviewerName: 'Priyanka D.', rating: 4.8, comment: 'So much fun! The dance routines fly by, and I burn close to 400 calories every time.' },
+      { reviewerName: 'Nisha G.', rating: 4.7, comment: 'Anjali is super positive. Her stretching session cured my chronic lower back stiffness.' }
+    ],
+    workoutSpecialties: ['Dance Fitness', 'Stretching', 'Senior Fitness', 'Mobility'],
+    availability: ['07:00 AM - 08:00 AM', '09:00 AM - 10:00 AM', '04:00 PM - 05:00 PM', '05:00 PM - 06:00 PM', '07:00 PM - 08:00 PM']
+  }
 ];
 
 export const useWorkoutStore = create<WorkoutState>(() => ({

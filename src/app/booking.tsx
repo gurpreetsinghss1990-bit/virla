@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Alert, Image } from 'react-native';
+import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Alert, Image, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useWorkoutStore } from '../store/workoutStore';
 import { useBookingStore } from '../store/bookingStore';
@@ -16,7 +16,7 @@ import {
   SuccessAnimation 
 } from '../components';
 import { Heading, Subtitle } from '../presentation/components';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, Feather } from '@expo/vector-icons';
 
 export default function BookingScreen() {
   const router = useRouter();
@@ -28,13 +28,13 @@ export default function BookingScreen() {
   const { membership, useCredit } = useMembershipStore();
   const { familyMembers } = useUserStore();
   
-  // Zustand Stores for Step State Management (Feature 14)
+  // Zustand Stores for Step State Management
   const { addresses, addAddress, selectedAddressId, setSelectedAddressId } = useAddressStore();
   const { coaches } = useCoachStore();
   const { selectedDate, setSelectedDate } = useCalendarStore();
   const { selectedTimeSlot, setSelectedTimeSlot, timeSlots } = useTimeSlotStore();
 
-  // Redesigned Steps (Steps 1 to 7)
+  // Wizard Steps (1 to 7)
   const [step, setStep] = useState(initialWorkoutId ? 2 : 1);
 
   // Flow State
@@ -60,7 +60,7 @@ export default function BookingScreen() {
   const [fmRelation, setFmRelation] = useState('');
   const [fmNotes, setFmNotes] = useState('');
 
-  // Preferred Coach ID (Returning Coach Feature)
+  // Preferred Coach ID
   const [prefCoachId, setPrefCoachId] = useState('');
   const [coachValidationStatus, setCoachValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
   const [validatedCoachName, setValidatedCoachName] = useState('');
@@ -110,7 +110,7 @@ export default function BookingScreen() {
 
   const handleWorkoutSelect = (id: string) => {
     setSelectedWorkoutId(id);
-    setStep(2); // Auto proceed to Goal Selection
+    setStep(2);
   };
 
   const handleNext = () => {
@@ -248,12 +248,12 @@ export default function BookingScreen() {
       } : undefined
     });
 
-    setStep(7); // success step
+    setStep(7);
   };
 
   const getHeaderTitle = () => {
     switch (step) {
-      case 1: return 'Select Workout';
+      case 1: return 'Select Workout Type';
       case 2: return 'Select Goal';
       case 3: return 'Choose Date & Time';
       case 4: return 'Choose Location';
@@ -278,14 +278,14 @@ export default function BookingScreen() {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
       {/* Top Header */}
       {step < 7 && (
-        <View className="h-14 flex-row items-center px-6 border-b border-zinc-100">
+        <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
           <TouchableOpacity onPress={handleBack} className="w-8 h-8 items-center justify-center">
-            <Ionicons name="arrow-back" size={20} color="#111111" />
+            <Ionicons name="arrow-back" size={20} color="#111827" />
           </TouchableOpacity>
-          <Text className="flex-1 text-center text-primary text-base font-black tracking-tight mr-8">
+          <Text className="flex-1 text-center text-[#111827] text-base font-black tracking-tight mr-8">
             {getHeaderTitle()}
           </Text>
         </View>
@@ -293,13 +293,13 @@ export default function BookingScreen() {
 
       <View className="flex-1">
         {step < 7 ? (
-          <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6">
+          <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 50 }}>
             
             {/* Step 1: Workout Selection */}
             {step === 1 && (
               <View className="gap-4 pb-8">
-                <Text className="text-zinc-500 text-sm font-medium mb-1">
-                  Select a certified home wellness program
+                <Text className="text-[#6B7280] text-xs font-bold uppercase tracking-wider mb-1">
+                  Choose Workout Category
                 </Text>
                 
                 {workouts.map((w) => {
@@ -309,8 +309,8 @@ export default function BookingScreen() {
                       key={w.id}
                       activeOpacity={0.9}
                       onPress={() => handleWorkoutSelect(w.id)}
-                      className={`bg-white border-2 rounded-3xl overflow-hidden shadow-xs flex-row p-4 gap-4 ${
-                        isSelected ? 'border-accent bg-zinc-50/30' : 'border-zinc-100'
+                      className={`bg-white border rounded-[28px] overflow-hidden shadow-xs flex-row p-4 gap-4 ${
+                        isSelected ? 'border-[#4F46E5]' : 'border-[#E5E7EB]'
                       }`}
                     >
                       <Image
@@ -319,14 +319,14 @@ export default function BookingScreen() {
                       />
                       <View className="flex-1 justify-between py-0.5">
                         <View>
-                          <Text className="text-primary text-base font-extrabold tracking-tight">{w.title}</Text>
-                          <Text className="text-zinc-500 text-xs font-semibold leading-relaxed mt-0.5" numberOfLines={2}>
+                          <Text className="text-[#111827] text-base font-extrabold tracking-tight">{w.title}</Text>
+                          <Text className="text-[#6B7280] text-[11px] font-semibold leading-relaxed mt-0.5" numberOfLines={2}>
                             {w.description}
                           </Text>
                         </View>
                         <View className="flex-row justify-between items-center mt-2.5">
-                          <Text className="text-zinc-400 text-[10px] font-bold">⏱️ {w.duration} mins</Text>
-                          <Text className="text-accent text-xs font-black">Starts ₹{w.sessionPrice || 900}</Text>
+                          <Text className="text-zinc-400 text-[10px] font-bold">⏱ {w.duration} mins</Text>
+                          <Text className="text-[#4F46E5] text-xs font-black">Starts ₹{w.sessionPrice || 900}</Text>
                         </View>
                       </View>
                     </TouchableOpacity>
@@ -338,8 +338,8 @@ export default function BookingScreen() {
             {/* Step 2: Goal Selection */}
             {step === 2 && (
               <View className="gap-5">
-                <Text className="text-zinc-500 text-sm font-medium">
-                  What is your primary goal? This helps our AI matches assign the perfect coach.
+                <Text className="text-[#6B7280] text-xs font-bold uppercase tracking-wider">
+                  What is your goal?
                 </Text>
 
                 <View className="flex-row flex-wrap gap-4 justify-between">
@@ -351,15 +351,14 @@ export default function BookingScreen() {
                         activeOpacity={0.8}
                         onPress={() => {
                           setSelectedGoal(g.label);
-                          // Delay briefly for premium micro-interaction before proceeding
                           setTimeout(() => setStep(3), 200);
                         }}
-                        className={`w-[47%] p-5 rounded-3xl border-2 items-center justify-center gap-3 ${
-                          isSelected ? 'border-accent bg-zinc-50/50' : 'border-zinc-100 bg-white'
+                        className={`w-[47%] p-5 rounded-[24px] border items-center justify-center gap-3 ${
+                          isSelected ? 'border-[#4F46E5] bg-indigo-50/20' : 'border-[#E5E7EB] bg-white'
                         }`}
                       >
                         <Text className="text-3xl">{g.icon}</Text>
-                        <Text className="text-primary text-xs font-extrabold text-center tracking-tight leading-tight">
+                        <Text className="text-[#111827] text-xs font-extrabold text-center tracking-tight leading-tight">
                           {g.label}
                         </Text>
                       </TouchableOpacity>
@@ -372,12 +371,12 @@ export default function BookingScreen() {
             {/* Step 3: Choose Date & Time */}
             {step === 3 && (
               <View className="gap-5">
-                <Text className="text-zinc-500 text-sm font-medium">
-                  When should we schedule your session?
+                <Text className="text-[#6B7280] text-xs font-bold uppercase tracking-wider">
+                  Select Date & Time
                 </Text>
 
                 {/* Today/Tomorrow/Other Capsules */}
-                <View className="flex-row bg-zinc-50 border border-zinc-100 p-1.5 rounded-2xl">
+                <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1.5 rounded-2xl">
                   {(['today', 'tomorrow', 'other'] as const).map((type) => {
                     const isActive = dateType === type;
                     return (
@@ -389,7 +388,7 @@ export default function BookingScreen() {
                           isActive ? 'bg-zinc-900 shadow-sm' : ''
                         }`}
                       >
-                        <Text className={`text-xs font-extrabold uppercase tracking-wider ${isActive ? 'text-white' : 'text-zinc-400'}`}>
+                        <Text className={`text-[10px] font-black uppercase tracking-wider ${isActive ? 'text-white' : 'text-[#6B7280]'}`}>
                           {type === 'other' ? 'Pick Date' : type}
                         </Text>
                       </TouchableOpacity>
@@ -407,15 +406,15 @@ export default function BookingScreen() {
                   </View>
                 )}
 
-                {/* Date Confirmation Subheader */}
-                <View className="bg-zinc-50 p-4 rounded-2xl flex-row justify-between items-center">
-                  <Text className="text-zinc-500 text-xs font-semibold">Selected Workout Date</Text>
-                  <Text className="text-primary text-xs font-black">📅 {selectedDate || 'Select Date'}</Text>
+                {/* Date Confirmation */}
+                <View className="bg-white border border-[#E5E7EB] p-4 rounded-2xl flex-row justify-between items-center">
+                  <Text className="text-[#6B7280] text-xs font-semibold">Scheduled Date</Text>
+                  <Text className="text-[#111827] text-xs font-black">📅 {selectedDate || 'Select Date'}</Text>
                 </View>
 
                 {/* Available Slots */}
                 <View className="gap-3">
-                  <Text className="text-zinc-400 text-[10px] font-extrabold uppercase tracking-wider">Select Available Time Slot</Text>
+                  <Text className="text-[#6B7280] text-[9px] font-extrabold uppercase tracking-wider">Select Preferred Time Slot</Text>
                   <View className="flex-row flex-wrap gap-4 justify-between">
                     {timeSlots.map((s, i) => (
                       <TimeSlotCard
@@ -435,8 +434,8 @@ export default function BookingScreen() {
             {step === 4 && (
               <View className="gap-4">
                 <View className="flex-row justify-between items-center">
-                  <Text className="text-zinc-500 text-sm font-medium">
-                    Where should our wellness coach visit?
+                  <Text className="text-[#6B7280] text-xs font-bold uppercase tracking-wider">
+                    Select Training Venue
                   </Text>
                   
                   {!showAddressForm && (
@@ -453,29 +452,29 @@ export default function BookingScreen() {
 
                 {showAddressForm ? (
                   /* Inline Add Address Form */
-                  <View className="bg-zinc-50 border border-zinc-100 p-5 rounded-2xl gap-4">
-                    <Text className="text-primary text-xs font-black uppercase tracking-wider">Add Address Details</Text>
+                  <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4 shadow-xs">
+                    <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">New Location Address</Text>
                     <TextInput
                       value={addrLabel}
                       onChangeText={setAddrLabel}
-                      placeholder="Address Label (e.g. Home, Office, Gym)"
+                      placeholder="Address Label (e.g. Home, Office)"
                       placeholderTextColor="#A1A1AA"
-                      className="border border-zinc-200 p-3 rounded-xl text-primary text-xs font-bold bg-white"
+                      className="border border-[#E5E7EB] p-3.5 rounded-xl text-primary text-xs font-bold bg-zinc-50/50"
                     />
                     <TextInput
                       value={addrLine}
                       onChangeText={setAddrLine}
-                      placeholder="Street address, apartment, sector, city"
+                      placeholder="Full street address details"
                       placeholderTextColor="#A1A1AA"
                       multiline
-                      className="border border-zinc-200 p-3 rounded-xl text-primary text-xs font-bold bg-white h-16"
+                      className="border border-[#E5E7EB] p-3.5 rounded-xl text-primary text-xs font-bold bg-zinc-50/50 h-16"
                     />
                     <TouchableOpacity
                       activeOpacity={0.8}
                       onPress={() => setAddrDefault(!addrDefault)}
                       className="flex-row items-center gap-2"
                     >
-                      <View className={`w-4 h-4 rounded border items-center justify-center ${addrDefault ? 'bg-orange-500 border-orange-500' : 'border-zinc-300'}`}>
+                      <View className={`w-4 h-4 rounded border items-center justify-center ${addrDefault ? 'bg-[#4F46E5] border-[#4F46E5]' : 'border-zinc-300'}`}>
                         {addrDefault && <Ionicons name="checkmark" size={10} color="white" />}
                       </View>
                       <Text className="text-zinc-500 text-xs font-semibold">Set as default address</Text>
@@ -484,7 +483,7 @@ export default function BookingScreen() {
                       <TouchableOpacity
                         activeOpacity={0.7}
                         onPress={() => setShowAddressForm(false)}
-                        className="flex-1 py-3 bg-zinc-200/50 rounded-xl items-center"
+                        className="flex-1 py-3 bg-zinc-100 rounded-xl items-center"
                       >
                         <Text className="text-primary text-xs font-bold">Cancel</Text>
                       </TouchableOpacity>
@@ -507,25 +506,25 @@ export default function BookingScreen() {
                           key={addr.id}
                           activeOpacity={0.8}
                           onPress={() => setSelectedAddressId(addr.id)}
-                          className={`p-4 rounded-2xl border-2 flex-row justify-between items-center ${
-                            isSelected ? 'border-accent bg-zinc-50/50' : 'border-zinc-100'
+                          className={`p-4 rounded-2xl border flex-row justify-between items-center ${
+                            isSelected ? 'border-[#4F46E5] bg-indigo-50/10' : 'border-[#E5E7EB] bg-white'
                           }`}
                         >
                           <View className="flex-1 pr-4">
                             <View className="flex-row items-center gap-2 mb-1">
                               <Text className="text-primary text-sm font-black">{addr.label}</Text>
                               {addr.isDefault && (
-                                <View className="bg-orange-500/10 px-2.5 py-0.5 rounded-full border border-orange-500/20">
-                                  <Text className="text-orange-600 text-[8px] font-black uppercase tracking-wider">Default</Text>
+                                <View className="bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+                                  <Text className="text-[#4F46E5] text-[8px] font-black uppercase tracking-wider">Default</Text>
                                 </View>
                               )}
                             </View>
-                            <Text className="text-zinc-500 text-xs font-semibold leading-relaxed" numberOfLines={2}>
+                            <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed" numberOfLines={2}>
                               {addr.addressLine}
                             </Text>
                           </View>
-                          <View className={`w-5 h-5 rounded-full border-2 items-center justify-center ${isSelected ? 'border-accent' : 'border-zinc-200'}`}>
-                            {isSelected && <View className="w-2.5 h-2.5 rounded-full bg-orange-500" />}
+                          <View className={`w-5 h-5 rounded-full border-2 items-center justify-center ${isSelected ? 'border-[#4F46E5]' : 'border-zinc-200'}`}>
+                            {isSelected && <View className="w-2.5 h-2.5 rounded-full bg-[#4F46E5]" />}
                           </View>
                         </TouchableOpacity>
                       );
@@ -538,8 +537,8 @@ export default function BookingScreen() {
             {/* Step 5: Family Member */}
             {step === 5 && (
               <View className="gap-4">
-                <Text className="text-zinc-500 text-sm font-medium">
-                  Select who this wellness workout session is for:
+                <Text className="text-[#6B7280] text-xs font-bold uppercase tracking-wider">
+                  Who is the session for?
                 </Text>
                 
                 <View className="flex-row gap-3">
@@ -550,8 +549,8 @@ export default function BookingScreen() {
                       setSelectedFamilyMemberId('');
                       setShowFamilyForm(false);
                     }}
-                    className={`flex-1 p-4 rounded-2xl border-2 items-center justify-center ${
-                      beneficiary === 'myself' ? 'border-accent bg-zinc-50/50' : 'border-zinc-100'
+                    className={`flex-1 p-4 rounded-2xl border items-center justify-center ${
+                      beneficiary === 'myself' ? 'border-[#4F46E5] bg-indigo-50/10' : 'border-[#E5E7EB] bg-white'
                     }`}
                   >
                     <Text className="text-lg mb-1">🙋‍♂️</Text>
@@ -561,8 +560,8 @@ export default function BookingScreen() {
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={() => setBeneficiary('family')}
-                    className={`flex-1 p-4 rounded-2xl border-2 items-center justify-center ${
-                      beneficiary === 'family' ? 'border-accent bg-zinc-50/50' : 'border-zinc-100'
+                    className={`flex-1 p-4 rounded-2xl border items-center justify-center ${
+                      beneficiary === 'family' ? 'border-[#4F46E5] bg-indigo-50/10' : 'border-[#E5E7EB] bg-white'
                     }`}
                   >
                     <Text className="text-lg mb-1">👨‍👩‍👧‍👦</Text>
@@ -573,7 +572,7 @@ export default function BookingScreen() {
                 {beneficiary === 'family' && (
                   <View className="gap-3 mt-2">
                     <View className="flex-row justify-between items-center">
-                      <Text className="text-[10px] text-zinc-400 font-extrabold uppercase tracking-wider">Select Registered Family</Text>
+                      <Text className="text-[10px] text-zinc-400 font-extrabold uppercase tracking-wider">Family Accounts</Text>
                       {!showFamilyForm && (
                         <TouchableOpacity
                           activeOpacity={0.7}
@@ -581,21 +580,21 @@ export default function BookingScreen() {
                           className="bg-zinc-900 px-3 py-1.5 rounded-full flex-row items-center gap-1 shadow-sm"
                         >
                           <Ionicons name="add" size={12} color="white" />
-                          <Text className="text-white text-[9px] font-black uppercase tracking-wider">Add Family</Text>
+                          <Text className="text-white text-[9px] font-black uppercase tracking-wider">Add Profile</Text>
                         </TouchableOpacity>
                       )}
                     </View>
 
                     {showFamilyForm ? (
                       /* Inline Add Family Form */
-                      <View className="bg-zinc-50 border border-zinc-100 p-5 rounded-2xl gap-4">
-                        <Text className="text-primary text-xs font-black uppercase tracking-wider">New Family Member Profile</Text>
+                      <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4 shadow-xs">
+                        <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Family Member details</Text>
                         <TextInput
                           value={fmName}
                           onChangeText={setFmName}
                           placeholder="Full Name"
                           placeholderTextColor="#A1A1AA"
-                          className="border border-zinc-200 p-3 rounded-xl text-primary text-xs font-bold bg-white"
+                          className="border border-[#E5E7EB] p-3 rounded-xl text-primary text-xs font-bold bg-zinc-50/50"
                         />
                         <View className="flex-row gap-3">
                           <TextInput
@@ -604,14 +603,14 @@ export default function BookingScreen() {
                             placeholder="Age"
                             keyboardType="numeric"
                             placeholderTextColor="#A1A1AA"
-                            className="flex-1 border border-zinc-200 p-3 rounded-xl text-primary text-xs font-bold bg-white"
+                            className="flex-1 border border-[#E5E7EB] p-3 rounded-xl text-primary text-xs font-bold bg-zinc-50/50"
                           />
                           <TextInput
                             value={fmRelation}
                             onChangeText={setFmRelation}
                             placeholder="Relation"
                             placeholderTextColor="#A1A1AA"
-                            className="flex-1 border border-zinc-200 p-3 rounded-xl text-primary text-xs font-bold bg-white"
+                            className="flex-1 border border-[#E5E7EB] p-3 rounded-xl text-primary text-xs font-bold bg-zinc-50/50"
                           />
                         </View>
                         
@@ -636,19 +635,19 @@ export default function BookingScreen() {
                         <TextInput
                           value={fmNotes}
                           onChangeText={setFmNotes}
-                          placeholder="Special fitness notes or injuries"
+                          placeholder="Fitness notes or injuries"
                           placeholderTextColor="#A1A1AA"
                           multiline
-                          className="border border-zinc-200 p-3 rounded-xl text-primary text-xs font-bold bg-white h-16 text-top"
+                          className="border border-[#E5E7EB] p-3 rounded-xl text-primary text-xs font-bold bg-zinc-50/50 h-16 text-top"
                         />
 
                         <View className="flex-row gap-3 mt-2">
                           <TouchableOpacity
                             activeOpacity={0.7}
                             onPress={() => setShowFamilyForm(false)}
-                            className="flex-1 py-3 bg-zinc-200/50 rounded-xl items-center"
+                            className="flex-1 py-3 bg-zinc-100 rounded-xl items-center"
                           >
-                            <Text className="text-primary text-xs font-bold">Cancel</Text>
+                            <Text className="text-[#111827] text-xs font-bold">Cancel</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
                             activeOpacity={0.8}
@@ -660,7 +659,7 @@ export default function BookingScreen() {
                         </View>
                       </View>
                     ) : (
-                      /* Family members list */
+                      /* Family list */
                       <View className="gap-2">
                         {familyMembers.map((member) => {
                           const isSelected = selectedFamilyMemberId === member.id;
@@ -669,16 +668,16 @@ export default function BookingScreen() {
                               key={member.id}
                               activeOpacity={0.8}
                               onPress={() => setSelectedFamilyMemberId(member.id)}
-                              className={`p-4 rounded-2xl border-2 flex-row justify-between items-center ${
-                                isSelected ? 'border-accent bg-zinc-50/50' : 'border-zinc-100'
+                              className={`p-4 rounded-2xl border flex-row justify-between items-center ${
+                                isSelected ? 'border-[#4F46E5] bg-indigo-50/10' : 'border-[#E5E7EB] bg-white'
                               }`}
                             >
                               <View>
                                 <Text className="text-primary text-sm font-black">{member.name}</Text>
                                 <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">{member.relation}</Text>
                               </View>
-                              <View className={`w-5 h-5 rounded-full border-2 items-center justify-center ${isSelected ? 'border-accent' : 'border-zinc-200'}`}>
-                                {isSelected && <View className="w-2.5 h-2.5 rounded-full bg-orange-500" />}
+                              <View className={`w-5 h-5 rounded-full border-2 items-center justify-center ${isSelected ? 'border-[#4F46E5]' : 'border-zinc-200'}`}>
+                                {isSelected && <View className="w-2.5 h-2.5 rounded-full bg-[#4F46E5]" />}
                               </View>
                             </TouchableOpacity>
                           );
@@ -690,45 +689,43 @@ export default function BookingScreen() {
               </View>
             )}
 
-            {/* Step 6: Booking Summary & Preferred Coach */}
+            {/* Step 6: Booking Summary & Preferred Coach Code */}
             {step === 6 && (
               <View className="gap-4 pb-8">
-                <Text className="text-zinc-500 text-sm font-medium">
-                  Review your session details and select payment mode.
+                <Text className="text-[#6B7280] text-xs font-bold uppercase tracking-wider">
+                  Review Booking Details
                 </Text>
                 
                 <BookingSummaryCard
                   workoutTitle={activeWorkout.title}
                   workoutIcon={activeWorkout.icon}
-                  goal={selectedGoal}
+                  duration={activeWorkout.duration}
                   date={selectedDate}
                   time={selectedTimeSlot}
-                  address={activeAddress.addressLine}
                   price={workoutPrice}
-                  creditsBefore={membership.availableCredits}
                   useCreditsMode={useCreditsMode}
                 />
 
-                {/* Returning Coach Box (Preferred Coach Feature) */}
-                <View className="bg-zinc-50 border border-zinc-100 p-5 rounded-[24px] gap-3.5 shadow-xs">
+                {/* Trainer Code (Optional Trainer Code field at bottom) */}
+                <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-3.5 shadow-xs">
                   <View className="flex-row justify-between items-center">
-                    <Text className="text-primary text-xs font-black uppercase tracking-wider">Have a Preferred Coach?</Text>
+                    <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Trainer ID (Optional)</Text>
                     {coachValidationStatus === 'valid' && (
-                      <View className="bg-orange-500/10 px-2.5 py-0.5 rounded-full border border-orange-500/20">
-                        <Text className="text-orange-600 text-[8px] font-black uppercase tracking-wider">Verified Match</Text>
+                      <View className="bg-indigo-50 border border-indigo-150 px-2 py-0.5 rounded-full">
+                        <Text className="text-[#4F46E5] text-[8px] font-black uppercase tracking-wider">Matched</Text>
                       </View>
                     )}
                   </View>
                   <TextInput
                     value={prefCoachId}
                     onChangeText={setPrefCoachId}
-                    placeholder="Enter Coach ID (e.g. c-1)"
+                    placeholder="Enter Coach ID"
                     placeholderTextColor="#A1A1AA"
                     autoCapitalize="none"
-                    className="border border-zinc-200 p-3.5 rounded-xl text-primary text-xs font-bold bg-white"
+                    className="border border-[#E5E7EB] p-3.5 rounded-xl text-primary text-xs font-bold bg-zinc-50/50"
                   />
                   {coachValidationStatus === 'valid' && (
-                    <Text className="text-orange-600 text-[10px] font-bold">
+                    <Text className="text-[#4F46E5] text-[10px] font-bold">
                       ✓ Requesting Coach {validatedCoachName}.
                     </Text>
                   )}
@@ -737,24 +734,24 @@ export default function BookingScreen() {
                       ⚠️ Coach ID not found. Leave blank to let VIRLA assign the best coach.
                     </Text>
                   )}
-                  <Text className="text-[9px] text-zinc-400 font-medium leading-relaxed">
+                  <Text className="text-[9px] text-[#6B7280] font-medium leading-relaxed">
                     If your previous VIRLA coach shared their Coach ID with you, enter it here to request the same coach.
                   </Text>
                 </View>
 
                 {/* Selection of Payment Mode */}
-                <View className="bg-zinc-50 border border-zinc-100 p-5 rounded-[24px] gap-3 shadow-xs">
-                  <Text className="text-primary text-xs font-black uppercase tracking-wider">Payment Mode</Text>
+                <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-3 shadow-xs">
+                  <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Payment Mode</Text>
                   
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={() => setUseCreditsMode(true)}
                     className={`p-3.5 rounded-xl border flex-row justify-between items-center ${
-                      useCreditsMode ? 'bg-zinc-900 border-zinc-900' : 'bg-white border-zinc-200'
+                      useCreditsMode ? 'bg-[#111827] border-[#111827]' : 'bg-white border-[#E5E7EB]'
                     }`}
                   >
-                    <Text className={`text-xs font-bold ${useCreditsMode ? 'text-white' : 'text-zinc-600'}`}>Use Membership Credit (1 Credit)</Text>
-                    <Text className={`text-[10px] font-black uppercase ${useCreditsMode ? 'text-orange-400' : 'text-zinc-400'}`}>
+                    <Text className={`text-xs font-bold ${useCreditsMode ? 'text-white' : 'text-[#6B7280]'}`}>Use Membership Credit (1 Credit)</Text>
+                    <Text className={`text-[10px] font-black uppercase ${useCreditsMode ? 'text-[#4F46E5]' : 'text-zinc-400'}`}>
                       Balance: {membership.availableCredits}
                     </Text>
                   </TouchableOpacity>
@@ -763,10 +760,10 @@ export default function BookingScreen() {
                     activeOpacity={0.8}
                     onPress={() => setUseCreditsMode(false)}
                     className={`p-3.5 rounded-xl border flex-row justify-between items-center ${
-                      !useCreditsMode ? 'bg-zinc-900 border-zinc-900' : 'bg-white border-zinc-200'
+                      !useCreditsMode ? 'bg-[#111827] border-[#111827]' : 'bg-white border-[#E5E7EB]'
                     }`}
                   >
-                    <Text className={`text-xs font-bold ${!useCreditsMode ? 'text-white' : 'text-zinc-600'}`}>Pay Cash / Card on Coach Arrival</Text>
+                    <Text className={`text-xs font-bold ${!useCreditsMode ? 'text-white' : 'text-[#6B7280]'}`}>Pay Cash / Card on Coach Arrival</Text>
                     <Text className={`text-xs font-black ${!useCreditsMode ? 'text-white' : 'text-primary'}`}>
                       ₹{workoutPrice - Math.round(workoutPrice * 0.15) + Math.round((workoutPrice - Math.round(workoutPrice * 0.15)) * 0.18)}
                     </Text>
@@ -777,43 +774,43 @@ export default function BookingScreen() {
 
           </ScrollView>
         ) : (
-          /* Step 7: Booking Confirmed Splash (Feature 8) */
+          /* Step 7: Booking Confirmed (Success Screen) */
           <View className="flex-1 justify-center items-center px-6 py-10 bg-white">
             <SuccessAnimation />
             
-            <Heading className="mb-2 text-center">Your Booking Is Placed!</Heading>
-            <Subtitle className="mb-8 text-center">
-              We are assigning the best available certified VIRLA coach for your {activeWorkout.title} session.
+            <Heading className="mb-2 text-center text-2xl font-black">Booking Confirmed!</Heading>
+            <Subtitle className="mb-8 text-center text-[#6B7280] max-w-[80%] text-sm">
+              We are assigning the best available certified VIRLA coach for your session.
             </Subtitle>
 
             {/* Receipt Summary Card */}
-            <View className="w-full bg-zinc-50 border border-zinc-100 p-6 rounded-3xl mb-12 gap-3.5">
+            <View className="w-full bg-[#F8F9FB] border border-[#E5E7EB] p-6 rounded-3xl mb-12 gap-3.5">
               <View className="flex-row justify-between items-center">
-                <Text className="text-zinc-500 text-xs font-semibold">Booking ID</Text>
-                <Text className="text-primary text-xs font-black">{newBookingId}</Text>
+                <Text className="text-[#6B7280] text-xs font-semibold">Booking ID</Text>
+                <Text className="text-[#111827] text-xs font-extrabold">{newBookingId}</Text>
               </View>
               <View className="flex-row justify-between items-center">
-                <Text className="text-zinc-500 text-xs font-semibold">Workout Type</Text>
-                <Text className="text-primary text-xs font-black">{activeWorkout.title}</Text>
+                <Text className="text-[#6B7280] text-xs font-semibold">Workout Type</Text>
+                <Text className="text-[#111827] text-xs font-extrabold">{activeWorkout.title}</Text>
               </View>
               <View className="flex-row justify-between items-center">
-                <Text className="text-zinc-500 text-xs font-semibold">Date</Text>
-                <Text className="text-primary text-xs font-black">{selectedDate}</Text>
+                <Text className="text-[#6B7280] text-xs font-semibold">Date</Text>
+                <Text className="text-[#111827] text-xs font-extrabold">{selectedDate}</Text>
               </View>
               <View className="flex-row justify-between items-center">
-                <Text className="text-zinc-500 text-xs font-semibold">Time</Text>
-                <Text className="text-primary text-xs font-black">{selectedTimeSlot.split(' - ')[0]}</Text>
+                <Text className="text-[#6B7280] text-xs font-semibold">Time</Text>
+                <Text className="text-[#111827] text-xs font-extrabold">{selectedTimeSlot.split(' - ')[0]}</Text>
               </View>
               <View className="flex-row justify-between items-center">
-                <Text className="text-zinc-500 text-xs font-semibold">Payment Status</Text>
-                <Text className="text-orange-500 text-xs font-black">
+                <Text className="text-[#6B7280] text-xs font-semibold">Payment Status</Text>
+                <Text className="text-[#4F46E5] text-xs font-black">
                   {useCreditsMode ? 'Paid via Credit' : 'Cash/Card on Arrival'}
                 </Text>
               </View>
-              <View className="h-[1px] bg-zinc-200/50 my-1" />
-              <View className="bg-orange-500/10 p-3 rounded-2xl border border-orange-500/15 items-center justify-center">
-                <Text className="text-orange-600 text-[10px] font-black uppercase text-center leading-normal">
-                  ⚡ Automatic coach matching active
+              <View className="h-[1px] bg-[#E5E7EB] my-1" />
+              <View className="bg-indigo-50 p-3 rounded-2xl border border-indigo-100 items-center justify-center">
+                <Text className="text-[#4F46E5] text-[10px] font-black uppercase text-center leading-normal">
+                  ⚡ Coach assignment matches goal: {selectedGoal}
                 </Text>
               </View>
             </View>
@@ -838,7 +835,7 @@ export default function BookingScreen() {
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => router.replace('/(tabs)')}
-                className="w-full py-4 bg-zinc-100 rounded-2xl items-center justify-center border border-zinc-200/50"
+                className="w-full py-4 bg-zinc-100 rounded-2xl items-center justify-center border border-[#E5E7EB]"
               >
                 <Text className="text-primary text-base font-bold">
                   Go Home
@@ -851,7 +848,7 @@ export default function BookingScreen() {
 
       {/* Continue Action Button */}
       {step < 6 && (
-        <View className="p-6 bg-white border-t border-zinc-100">
+        <View className="p-6 bg-white border-t border-[#E5E7EB]">
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={handleNext}
@@ -866,11 +863,11 @@ export default function BookingScreen() {
 
       {/* Confirm Booking Action Button */}
       {step === 6 && (
-        <View className="p-6 bg-white border-t border-zinc-100">
+        <View className="p-6 bg-white border-t border-[#E5E7EB]">
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={handleConfirmBooking}
-            className="w-full py-4 bg-zinc-900 rounded-[20px] items-center justify-center shadow-sm"
+            className="w-full py-4 bg-[#4F46E5] rounded-[20px] items-center justify-center shadow-sm"
           >
             <Text className="text-white text-base font-extrabold tracking-wide">
               Confirm Booking

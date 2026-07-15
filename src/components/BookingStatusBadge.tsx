@@ -9,8 +9,8 @@ interface BookingStatusBadgeProps {
 export function BookingStatusBadge({ status, className = '' }: BookingStatusBadgeProps) {
   const styles = {
     upcoming: {
-      bg: 'bg-orange-50 border-green-150',
-      text: 'text-orange-600',
+      bg: 'bg-indigo-50 border-green-150',
+      text: 'text-indigo-700',
       label: 'Upcoming',
     },
     completed: {
