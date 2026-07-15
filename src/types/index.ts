@@ -20,6 +20,18 @@ export interface Workout {
   description: string;
   calories: number;
   duration: number;
+  
+  // Sprint 3 additions
+  heroImage?: string;
+  category?: string;
+  benefits?: string[];
+  difficulty?: string;
+  equipment?: string[];
+  homeVisitBadge?: boolean;
+  sessionPrice?: number;
+  rating?: number;
+  reviews?: { reviewerName: string; rating: number; comment: string }[];
+  faqs?: { question: string; answer: string }[];
 }
 
 export interface Booking {
@@ -30,6 +42,15 @@ export interface Booking {
   date: string;
   time: string;
   status: 'upcoming' | 'completed' | 'cancelled';
+  price?: number;
+  address?: string;
+  familyMember?: {
+    name: string;
+    age: number;
+    gender: string;
+    relation: string;
+    notes?: string;
+  };
 }
 
 export interface Coach {
@@ -40,6 +61,19 @@ export interface Coach {
   rating: number;
   specialty: string;
   bio?: string;
+  
+  // Sprint 3 additions
+  yearsExperience?: number;
+  specialization?: string;
+  languages?: string[];
+  shortBio?: string;
+  price?: number;
+  verifiedBadge?: boolean;
+  certifications?: string[];
+  achievements?: string[];
+  reviews?: { reviewerName: string; rating: number; comment: string }[];
+  workoutSpecialties?: string[];
+  availability?: string[];
 }
 
 export interface NotificationItem {

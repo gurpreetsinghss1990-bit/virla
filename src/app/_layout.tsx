@@ -21,6 +21,11 @@ export default function RootLayout() {
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="get-started" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="booking" />
+        <Stack.Screen name="session-detail" />
+        <Stack.Screen name="workout-detail" />
+        <Stack.Screen name="coach-profile" />
+        <Stack.Screen name="address-management" />
       </Stack>
     </>
   );

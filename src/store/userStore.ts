@@ -5,6 +5,9 @@ interface FamilyMember {
   id: string;
   name: string;
   relation: string;
+  age?: number;
+  gender?: string;
+  notes?: string;
 }
 
 interface UserState {

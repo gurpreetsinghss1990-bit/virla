@@ -78,7 +78,7 @@ export function BookingCard({ booking }: BookingCardProps) {
               Coach {booking.trainerName}
             </Text>
             <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
-              {booking.workoutTitle}
+              {booking.workoutTitle} • ₹{booking.price || 1200}
             </Text>
           </View>
         </View>

@@ -2,8 +2,10 @@ import React from 'react';
 import { View, Text, ScrollView, Switch, Image, Alert } from 'react-native';
 import { Heading, Subtitle, PrimaryButton } from '@/presentation/components';
 import { useUserStore } from '../../store/userStore';
+import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { user, updateProfile } = useUserStore();
 
   const handleUpdateLocation = () => {
@@ -59,10 +61,14 @@ export default function ProfileScreen() {
         </View>
 
         {/* Action Triggers */}
-        <View className="mb-6">
+        <View className="mb-6 gap-3">
           <PrimaryButton 
             title="Update Location" 
             onPress={handleUpdateLocation} 
+          />
+          <PrimaryButton 
+            title="Manage Saved Addresses" 
+            onPress={() => router.push('/address-management' as any)} 
           />
         </View>
 

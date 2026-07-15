@@ -5,10 +5,30 @@ import { useBookingStore } from '../store/bookingStore';
 import { useMembershipStore } from '../store/membershipStore';
 
 export function RecommendationCard() {
-  const { recommendation, workouts } = useWorkoutStore();
-  const { addBooking } = useBookingStore();
+  const { workouts } = useWorkoutStore();
+  const { bookings, addBooking } = useBookingStore();
   const { useCredit, membership } = useMembershipStore();
   const [booked, setBooked] = useState(false);
+
+  const upcomingBookings = bookings.filter((b) => b.status === 'upcoming');
+  
+  // Dynamic recommendation message (Feature 9)
+  let recommendationMessage = 'Based on your previous activity, today we recommend a Stretching session.';
+  let recommendationWorkoutId = 'w-3';
+
+  if (upcomingBookings.length > 0) {
+    const latestWorkout = upcomingBookings[0].workoutTitle;
+    if (latestWorkout === 'Strength Training') {
+      recommendationMessage = 'To balance your upcoming Strength Training, we recommend a Yoga flow to restore mobility today.';
+      recommendationWorkoutId = 'w-2';
+    } else if (latestWorkout === 'Yoga') {
+      recommendationMessage = 'After your Yoga session, we recommend a gentle Stretching routine to release remaining hamstring tightness.';
+      recommendationWorkoutId = 'w-3';
+    } else {
+      recommendationMessage = 'You have a session scheduled. Rest up or join our Pilates core stabilization session.';
+      recommendationWorkoutId = 'w-6';
+    }
+  }
 
   const handleBookNow = () => {
     // Check if already booked in current session
@@ -18,7 +38,7 @@ export function RecommendationCard() {
     }
 
     // Find recommended workout
-    const targetWorkout = workouts.find((w) => w.id === recommendation.workoutId);
+    const targetWorkout = workouts.find((w) => w.id === recommendationWorkoutId);
     const workoutTitle = targetWorkout ? targetWorkout.title : 'Stretching';
 
     // Verify credits
@@ -55,7 +75,7 @@ export function RecommendationCard() {
       </View>
       
       <Text className="text-primary text-base font-extrabold mb-3 leading-relaxed">
-        {recommendation.message}
+        {recommendationMessage}
       </Text>
       
       <TouchableOpacity
