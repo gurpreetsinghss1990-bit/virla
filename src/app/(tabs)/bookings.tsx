@@ -27,7 +27,7 @@ export default function BookingsScreen() {
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Page Header */}
         <View className="mb-6">
-          <Text className="text-green-500 text-xs font-bold uppercase tracking-wider">My Schedule</Text>
+          <Text className="text-orange-500 text-xs font-bold uppercase tracking-wider">My Schedule</Text>
           <Heading align="left" className="mt-1">Booked Sessions</Heading>
           <Subtitle align="left" className="mt-1">
             Track and manage all your home wellness sessions.

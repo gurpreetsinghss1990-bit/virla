@@ -15,7 +15,7 @@ export default function MembershipScreen() {
     <View className="flex-1 bg-white px-6 pt-6">
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
         <View className="mb-6">
-          <Text className="text-green-500 text-xs font-bold uppercase tracking-wider">My Subscription</Text>
+          <Text className="text-orange-500 text-xs font-bold uppercase tracking-wider">My Subscription</Text>
           <Heading align="left" className="mt-1">{membership.tier}</Heading>
           <Subtitle align="left" className="mt-1">
             Renewal Date: {membership.renewalDate}. Next bill amount: ₹4,999.
@@ -36,7 +36,7 @@ export default function MembershipScreen() {
           <View className="h-[1px] bg-zinc-200 my-2.5" />
           <View className="flex-row justify-between items-center">
             <Text className="text-xs font-bold text-primary">Available Balance</Text>
-            <Text className="text-lg font-black text-green-500">{membership.availableCredits} Credits</Text>
+            <Text className="text-lg font-black text-orange-500">{membership.availableCredits} Credits</Text>
           </View>
         </View>
 
@@ -53,19 +53,19 @@ export default function MembershipScreen() {
           <Text className="text-sm font-bold text-primary mb-4">Plan Benefits</Text>
           <View className="gap-3">
             <View className="flex-row items-center">
-              <Text className="text-base mr-3 text-green-500">✓</Text>
+              <Text className="text-base mr-3 text-orange-500">✓</Text>
               <Text className="text-sm text-zinc-600 font-medium">Shared with up to 4 family members</Text>
             </View>
             <View className="flex-row items-center">
-              <Text className="text-base mr-3 text-green-500">✓</Text>
+              <Text className="text-base mr-3 text-orange-500">✓</Text>
               <Text className="text-sm text-zinc-600 font-medium">Access to all workout modalities</Text>
             </View>
             <View className="flex-row items-center">
-              <Text className="text-base mr-3 text-green-500">✓</Text>
+              <Text className="text-base mr-3 text-orange-500">✓</Text>
               <Text className="text-sm text-zinc-600 font-medium">Monthly AI wellness reports</Text>
             </View>
             <View className="flex-row items-center">
-              <Text className="text-base mr-3 text-green-500">✓</Text>
+              <Text className="text-base mr-3 text-orange-500">✓</Text>
               <Text className="text-sm text-zinc-600 font-medium">Certified home wellness coaches</Text>
             </View>
           </View>

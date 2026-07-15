@@ -1,11 +1,10 @@
 import React from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Text } from 'react-native';
 
 interface BookingSummaryCardProps {
   workoutTitle: string;
   workoutIcon: string;
-  coachName: string;
-  coachPhoto: string;
+  goal: string;
   date: string;
   time: string;
   address: string;
@@ -17,8 +16,7 @@ interface BookingSummaryCardProps {
 export function BookingSummaryCard({
   workoutTitle,
   workoutIcon,
-  coachName,
-  coachPhoto,
+  goal,
   date,
   time,
   address,
@@ -48,16 +46,15 @@ export function BookingSummaryCard({
         </View>
       </View>
 
-      {/* Assigned Coach Row */}
+      {/* Goal Row */}
       <View className="flex-row items-center justify-between pb-4 border-b border-zinc-200/50">
         <View className="flex-row items-center gap-3">
-          <Image
-            source={{ uri: coachPhoto }}
-            className="w-12 h-12 rounded-full border border-zinc-200"
-          />
+          <View className="w-12 h-12 rounded-2xl bg-white border border-zinc-100 items-center justify-center shadow-xs">
+            <Text className="text-xl">🎯</Text>
+          </View>
           <View>
-            <Text className="text-primary text-base font-black tracking-tight">{coachName}</Text>
-            <Text className="text-zinc-400 text-[9px] font-bold uppercase tracking-wider">Wellness Coach</Text>
+            <Text className="text-primary text-base font-black tracking-tight">{goal}</Text>
+            <Text className="text-zinc-400 text-[9px] font-bold uppercase tracking-wider">Workout Goal</Text>
           </View>
         </View>
       </View>
@@ -86,7 +83,7 @@ export function BookingSummaryCard({
         </View>
         <View className="flex-row justify-between items-center">
           <Text className="text-zinc-500 text-xs font-semibold">Membership Discount</Text>
-          <Text className="text-green-500 text-xs font-bold">-₹{membershipDiscount}</Text>
+          <Text className="text-orange-500 text-xs font-bold">-₹{membershipDiscount}</Text>
         </View>
         <View className="flex-row justify-between items-center">
           <Text className="text-zinc-500 text-xs font-semibold">Taxes (18% GST)</Text>

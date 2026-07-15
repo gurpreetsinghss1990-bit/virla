@@ -88,7 +88,7 @@ export function DatePicker({ selectedDate, onSelect }: DatePickerProps) {
                 {date.dayNum}
               </Text>
               <Text className={`text-[8px] font-bold uppercase mt-1 ${
-                isSelected ? 'text-green-400' : 'text-zinc-400'
+                isSelected ? 'text-orange-400' : 'text-zinc-400'
               }`}>
                 {date.monthName}
               </Text>

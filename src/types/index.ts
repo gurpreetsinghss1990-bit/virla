@@ -44,6 +44,8 @@ export interface Booking {
   status: 'upcoming' | 'completed' | 'cancelled';
   price?: number;
   address?: string;
+  goal?: string;
+  preferredCoachId?: string;
   familyMember?: {
     name: string;
     age: number;

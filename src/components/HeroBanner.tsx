@@ -6,8 +6,8 @@ export function HeroBanner() {
   const router = useRouter();
 
   const handleBook = () => {
-    // Navigate to bookings tab
-    router.push('/(tabs)/bookings');
+    // Navigate to booking wizard
+    router.push('/booking' as any);
   };
 
   return (

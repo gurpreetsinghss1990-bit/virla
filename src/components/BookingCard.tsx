@@ -75,7 +75,7 @@ export function BookingCard({ booking }: BookingCardProps) {
           />
           <View>
             <Text className="text-primary text-base font-black tracking-tight">
-              Coach {booking.trainerName}
+              {booking.trainerName.includes('Assigning') ? booking.trainerName : `Coach ${booking.trainerName}`}
             </Text>
             <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
               {booking.workoutTitle} • ₹{booking.price || 1200}

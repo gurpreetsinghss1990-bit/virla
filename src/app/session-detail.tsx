@@ -46,6 +46,13 @@ export default function SessionDetailScreen() {
   };
 
   const handleCoachDetails = () => {
+    if (booking.trainerName.includes('Assigning')) {
+      Alert.alert(
+        'Coach Assignment in Progress',
+        'We are currently matching the best available certified VIRLA coach for your session. You will receive an alert once matched.'
+      );
+      return;
+    }
     if (coach) {
       router.push({
         pathname: '/coach-profile' as any,
@@ -140,11 +147,13 @@ export default function SessionDetailScreen() {
                 />
                 <View className="flex-1">
                   <Text className="text-primary text-base font-black tracking-tight">
-                    Coach {booking.trainerName}
+                    {booking.trainerName.includes('Assigning') ? booking.trainerName : `Coach ${booking.trainerName}`}
                   </Text>
-                  <Text className="text-zinc-400 text-[9px] font-bold uppercase tracking-wide">
-                    View Profile Details
-                  </Text>
+                  {!booking.trainerName.includes('Assigning') && (
+                    <Text className="text-zinc-400 text-[9px] font-bold uppercase tracking-wide">
+                      View Profile Details
+                    </Text>
+                  )}
                 </View>
               </TouchableOpacity>
               <BookingStatusBadge status={booking.status} />
@@ -238,9 +247,9 @@ export default function SessionDetailScreen() {
           {/* Expected Arrival */}
           <View className="gap-2">
             <Text className="text-primary text-sm font-black tracking-tight">🚗 Expected Arrival</Text>
-            <View className="bg-green-500/10 border border-green-500/20 p-4 rounded-2xl flex-row items-center gap-3">
+            <View className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-2xl flex-row items-center gap-3">
               <Text className="text-lg">⏱️</Text>
-              <Text className="text-green-700 text-xs font-bold leading-normal">
+              <Text className="text-orange-700 text-xs font-bold leading-normal">
                 Expected Arrival: Coach will arrive 10 minutes early to set up training equipment.
               </Text>
             </View>
@@ -252,7 +261,7 @@ export default function SessionDetailScreen() {
             <View className="bg-zinc-50 border border-zinc-100 p-4 rounded-2xl gap-2.5">
               {mockItemsToKeepReady.map((item, idx) => (
                 <View key={idx} className="flex-row items-center gap-2">
-                  <View className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  <View className="w-1.5 h-1.5 rounded-full bg-orange-500" />
                   <Text className="text-zinc-600 text-xs font-semibold">{item}</Text>
                 </View>
               ))}

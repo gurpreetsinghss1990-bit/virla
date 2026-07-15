@@ -70,8 +70,8 @@ export function SessionCard({ booking }: SessionCardProps) {
             </Text>
           </View>
         </View>
-        <View className="bg-green-50 border border-green-100 px-3 py-1 rounded-full">
-          <Text className="text-green-600 text-[10px] font-black uppercase tracking-wider">
+        <View className="bg-orange-50 border border-orange-100 px-3 py-1 rounded-full">
+          <Text className="text-orange-600 text-[10px] font-black uppercase tracking-wider">
             {booking.workoutTitle}
           </Text>
         </View>

@@ -44,7 +44,7 @@ export default function MessagesScreen() {
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Header */}
         <View className="mb-6">
-          <Text className="text-green-500 text-xs font-bold uppercase tracking-wider">Chat Logs</Text>
+          <Text className="text-orange-500 text-xs font-bold uppercase tracking-wider">Chat Logs</Text>
           <Heading align="left" className="mt-1">Messages</Heading>
           <Subtitle align="left" className="mt-1">
             Coordinate schedules and workouts directly with your coaches.

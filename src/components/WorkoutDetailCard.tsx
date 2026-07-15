@@ -39,7 +39,7 @@ export function WorkoutDetailCard({ workout }: WorkoutDetailCardProps) {
           <View className="gap-1">
             <Text className="text-white text-2xl font-black tracking-tight">{workout.title}</Text>
             <View className="flex-row gap-2 mt-1">
-              <View className="bg-green-500 px-3 py-1 rounded-full flex-row items-center gap-1 shadow-sm">
+              <View className="bg-orange-500 px-3 py-1 rounded-full flex-row items-center gap-1 shadow-sm">
                 <Text className="text-white text-[10px] font-black uppercase tracking-wider">🏠 Home Visit</Text>
               </View>
               <View className="bg-white/20 px-3 py-1 rounded-full border border-white/10 backdrop-blur-md">
@@ -91,7 +91,7 @@ export function WorkoutDetailCard({ workout }: WorkoutDetailCardProps) {
             <View className="gap-2.5">
               {workout.benefits.map((benefit, i) => (
                 <View key={i} className="flex-row items-start">
-                  <Text className="text-green-500 text-sm mr-2.5">✓</Text>
+                  <Text className="text-orange-500 text-sm mr-2.5">✓</Text>
                   <Text className="text-zinc-600 text-sm font-semibold flex-1 leading-relaxed">
                     {benefit}
                   </Text>

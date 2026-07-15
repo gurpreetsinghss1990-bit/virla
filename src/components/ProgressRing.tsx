@@ -15,7 +15,7 @@ export function ProgressRing({
   progress,
   size = 80,
   strokeWidth = 8,
-  activeColor = '#22C55E', // Accent green
+  activeColor = '#FF6B00', // Accent green
   inactiveColor = '#E4E4E7', // Zinc-200
   children,
 }: ProgressRingProps) {

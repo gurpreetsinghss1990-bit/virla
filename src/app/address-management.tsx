@@ -128,7 +128,7 @@ export default function AddressManagementScreen() {
                 onPress={() => setIsDefault(!isDefault)}
                 className="flex-row items-center gap-3 p-1"
               >
-                <View className={`w-5 h-5 rounded border items-center justify-center ${isDefault ? 'bg-green-500 border-green-500' : 'border-zinc-300'}`}>
+                <View className={`w-5 h-5 rounded border items-center justify-center ${isDefault ? 'bg-orange-500 border-orange-500' : 'border-zinc-300'}`}>
                   {isDefault && <Ionicons name="checkmark" size={12} color="white" />}
                 </View>
                 <Text className="text-primary text-xs font-bold">Set as Default Address</Text>
@@ -178,8 +178,8 @@ export default function AddressManagementScreen() {
                     <View className="flex-row items-center gap-2">
                       <Text className="text-primary text-base font-black tracking-tight">{addr.label}</Text>
                       {addr.isDefault && (
-                        <View className="bg-green-500/10 px-2.5 py-0.5 rounded-full border border-green-500/20">
-                          <Text className="text-green-600 text-[8px] font-black uppercase tracking-wider">Default</Text>
+                        <View className="bg-orange-500/10 px-2.5 py-0.5 rounded-full border border-orange-500/20">
+                          <Text className="text-orange-600 text-[8px] font-black uppercase tracking-wider">Default</Text>
                         </View>
                       )}
                     </View>

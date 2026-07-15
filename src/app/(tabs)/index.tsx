@@ -9,14 +9,12 @@ import {
   MembershipCard, 
   SessionCard, 
   RecommendationCard, 
-  CategoryGrid, 
-  CoachCard 
+  CategoryGrid 
 } from '../../components';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { bookings } = useBookingStore();
-  const { coaches } = useWorkoutStore();
   const upcomingBookings = bookings.filter((b) => b.status === 'upcoming');
   const pastBookings = bookings.filter((b) => b.status === 'completed');
 
@@ -128,21 +126,7 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {/* Section 7: Featured Coaches */}
-          <View className="gap-3">
-            <Text className="text-primary text-lg font-black tracking-tight px-6">
-              Featured Coaches
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 24 }}
-            >
-              {coaches.map((coach) => (
-                <CoachCard key={coach.id} coach={coach} />
-              ))}
-            </ScrollView>
-          </View>
+
 
         </View>
       </ScrollView>

@@ -50,7 +50,7 @@ export default function CoachProfileScreen() {
             resizeMode="cover"
           />
           {coach.verifiedBadge && (
-            <View className="absolute top-4 right-4 bg-green-500 px-3.5 py-1.5 rounded-full flex-row items-center gap-1 shadow-sm">
+            <View className="absolute top-4 right-4 bg-orange-500 px-3.5 py-1.5 rounded-full flex-row items-center gap-1 shadow-sm">
               <Ionicons name="checkmark-circle" size={12} color="white" />
               <Text className="text-white text-[9px] font-black uppercase tracking-wider">Verified Pro</Text>
             </View>
@@ -102,7 +102,7 @@ export default function CoachProfileScreen() {
               <View className="gap-2">
                 {coach.certifications.map((cert, i) => (
                   <View key={i} className="flex-row items-center bg-zinc-50/50 border border-zinc-100/50 p-3.5 rounded-2xl">
-                    <Ionicons name="ribbon-outline" size={16} color="#22C55E" className="mr-3" />
+                    <Ionicons name="ribbon-outline" size={16} color="#FF6B00" className="mr-3" />
                     <Text className="text-zinc-700 text-xs font-bold flex-1">{cert}</Text>
                   </View>
                 ))}
