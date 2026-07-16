@@ -28,6 +28,10 @@ export default function RootLayout() {
         <Stack.Screen name="address-management" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="trainer-availability" />
+        <Stack.Screen name="membership" />
+        <Stack.Screen name="wallet" />
+        <Stack.Screen name="payment-history" />
+        <Stack.Screen name="invoice" />
       </Stack>
     </>
   );

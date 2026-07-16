@@ -3,6 +3,7 @@ import { Booking } from '../types';
 import { useMembershipStore } from './membershipStore';
 import { useCoachStore } from './coachStore';
 import { useNotificationStore } from './notificationStore';
+import { useWalletStore } from './walletStore';
 
 interface BookingState {
   bookings: Booking[];
@@ -89,10 +90,12 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   bookings: mockBookings,
   cancelSession: (id) =>
     set((state) => {
-      // Refund client credit upon cancellation
       const target = state.bookings.find(b => b.id === id);
       if (target && target.status === 'upcoming') {
+        // Sync with membershipStore and walletStore
         useMembershipStore.getState().refundCredit(1);
+        useWalletStore.getState().refundCredit(`Refund: Cancelled Session ${target.workoutTitle}`);
+        
         useNotificationStore.getState().addNotification({
           title: 'Booking Cancelled 🚨',
           body: `Your session for ${target.workoutTitle} was cancelled. 1 credit has been refunded to your wallet.`,
@@ -112,7 +115,9 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     })),
   addBooking: (booking) =>
     set((state) => {
-      // Generate standard 4-digit OTP dynamically for security check-in
+      // Sync with walletStore
+      useWalletStore.getState().useCredit(`Booked ${booking.workoutTitle} Session`);
+
       const otp = Math.floor(1000 + Math.random() * 9000).toString();
       return {
         bookings: [
@@ -145,7 +150,6 @@ export const useBookingStore = create<BookingState>((set, get) => ({
           : b
       ),
     })),
-  // S6 state machine implementations
   acceptBooking: (id) =>
     set((state) => {
       const target = state.bookings.find(b => b.id === id);
@@ -174,6 +178,9 @@ export const useBookingStore = create<BookingState>((set, get) => ({
         });
         // Restore time slot availability
         useCoachStore.getState().restoreAvailabilitySlot(target.time);
+
+        // Sync late cancellation fee in wallet store
+        useWalletStore.getState().deductCreditLateCancel('Client No-Show Forfeited');
         
         useNotificationStore.getState().addNotification({
           title: 'Client No-Show Logged ⚠️',
@@ -193,6 +200,10 @@ export const useBookingStore = create<BookingState>((set, get) => ({
         // Refund client's credit + award 1 bonus credit
         useMembershipStore.getState().refundCredit(1); // refund
         useMembershipStore.getState().addCredits(1); // bonus
+
+        // Sync with walletStore
+        useWalletStore.getState().refundCredit('Trainer No-Show Refund');
+        useWalletStore.getState().addBonusCredit('Trainer No-Show Bonus Credit');
         
         // Penalize coach
         useCoachStore.getState().addEarning({

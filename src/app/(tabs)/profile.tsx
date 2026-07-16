@@ -126,7 +126,7 @@ export default function ProfileScreen() {
 
                 <TouchableOpacity 
                   activeOpacity={0.95}
-                  onPress={() => setShowInvoices(!showInvoices)}
+                  onPress={() => router.push('/wallet' as any)}
                   className="bg-zinc-950 rounded-[30px] p-6 shadow-xl relative overflow-hidden border border-zinc-800"
                 >
                   <Animated.View style={{ opacity: shimmerAnim }} className="absolute top-0 left-0 right-0 bottom-0 bg-indigo-500/10" />
@@ -134,7 +134,7 @@ export default function ProfileScreen() {
                   <View className="flex-row justify-between items-start mb-6">
                     <View>
                       <Text className="text-[#06B6D4] text-[9px] font-black uppercase tracking-widest">
-                        ★ VIRLA Pass (Tap to ledger)
+                        ★ VIRLA Pass (Tap to open wallet)
                       </Text>
                       <Text className="text-white text-xl font-black mt-1 tracking-tight">
                         {membership.tier}
@@ -164,64 +164,56 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Customer Ledger: Invoices Section (Feature 11) */}
-              {showInvoices && (
-                <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
-                  <Text className="text-[#111827] text-xs font-black uppercase tracking-wider border-b border-zinc-50 pb-3">Customer Invoices ledger</Text>
-                  
-                  <View className="gap-3.5">
-                    {invoices.map((inv) => (
-                      <View key={inv.id} className="flex-row justify-between items-center py-2.5 border-b border-zinc-50/50 last:border-b-0">
-                        <View className="flex-1 pr-3 gap-0.5">
-                          <Text className="text-zinc-900 text-xs font-black leading-tight" numberOfLines={1}>{inv.type}</Text>
-                          <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{inv.date} • {inv.credits} credits</Text>
-                        </View>
-                        <View className="items-end gap-1">
-                          <Text className="text-zinc-900 text-xs font-black">{inv.amount}</Text>
-                          <View className="bg-emerald-50 px-1.5 py-0.5 rounded-md">
-                            <Text className="text-emerald-600 text-[7px] font-black uppercase">Paid</Text>
-                          </View>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {/* Purchase Credit Packs & Memberships (Feature 11 & 12) */}
+              {/* Purchase Credit Packs & Memberships (Feature 10 profile integration) */}
               <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
-                <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Buy Packages & Upgrades</Text>
+                <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Wallet & Billing Hub</Text>
                 
-                {/* Credit Pack */}
+                {/* Buy more Credits */}
                 <TouchableOpacity 
                   activeOpacity={0.8}
-                  onPress={() => handleBuyCredits(5, '₹4,500')}
+                  onPress={() => router.push('/membership' as any)}
                   className="bg-[#F8F9FB] border border-[#E5E7EB]/60 p-4 rounded-2xl flex-row justify-between items-center"
                 >
                   <View className="flex-row items-center gap-3">
                     <Feather name="plus-circle" size={16} color="#4F46E5" />
                     <View>
-                      <Text className="text-[#111827] text-xs font-black">Buy 5 Credit top-up</Text>
-                      <Text className="text-zinc-400 text-[8px] font-bold uppercase">Get extra credit slots</Text>
+                      <Text className="text-[#111827] text-xs font-black">Buy More Credits</Text>
+                      <Text className="text-zinc-400 text-[8px] font-bold uppercase">Upgrade plans or buy top-ups</Text>
                     </View>
                   </View>
-                  <Text className="text-[#4F46E5] text-xs font-black">₹4,500</Text>
+                  <Feather name="chevron-right" size={14} color="#6B7280" />
                 </TouchableOpacity>
 
-                {/* Upgrade Tier */}
+                {/* Credit Wallet */}
                 <TouchableOpacity 
                   activeOpacity={0.8}
-                  onPress={() => handleUpgradeMembership('Elite Master', 10, '₹8,500')}
+                  onPress={() => router.push('/wallet' as any)}
                   className="bg-[#F8F9FB] border border-[#E5E7EB]/60 p-4 rounded-2xl flex-row justify-between items-center"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Feather name="trending-up" size={16} color="#10B981" />
+                    <Feather name="credit-card" size={16} color="#10B981" />
                     <View>
-                      <Text className="text-[#111827] text-xs font-black">Upgrade to Elite Master</Text>
-                      <Text className="text-zinc-400 text-[8px] font-bold uppercase">Add 10 credits to balance</Text>
+                      <Text className="text-[#111827] text-xs font-black">Credit Wallet Ledger</Text>
+                      <Text className="text-zinc-400 text-[8px] font-bold uppercase">View balances and usage transactions</Text>
                     </View>
                   </View>
-                  <Text className="text-emerald-600 text-xs font-black">₹8,500</Text>
+                  <Feather name="chevron-right" size={14} color="#6B7280" />
+                </TouchableOpacity>
+
+                {/* Payment History */}
+                <TouchableOpacity 
+                  activeOpacity={0.8}
+                  onPress={() => router.push('/payment-history' as any)}
+                  className="bg-[#F8F9FB] border border-[#E5E7EB]/60 p-4 rounded-2xl flex-row justify-between items-center"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Feather name="file-text" size={16} color="#F59E0B" />
+                    <View>
+                      <Text className="text-[#111827] text-xs font-black">Invoices & Payment History</Text>
+                      <Text className="text-zinc-400 text-[8px] font-bold uppercase">Download PDF purchase receipts</Text>
+                    </View>
+                  </View>
+                  <Feather name="chevron-right" size={14} color="#6B7280" />
                 </TouchableOpacity>
               </View>
 
