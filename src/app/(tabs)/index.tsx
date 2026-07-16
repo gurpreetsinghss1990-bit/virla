@@ -361,34 +361,61 @@ export default function HomeScreen() {
                   </Text>
                 </View>
 
-                {/* Trainer ledger balance */}
-                <View className="bg-zinc-950 p-6 rounded-[28px] border border-zinc-800 shadow-xl gap-4">
-                  <View className="flex-row justify-between items-center border-b border-zinc-800 pb-4">
-                    <View className="gap-0.5">
-                      <Text className="text-zinc-500 text-[9px] font-black uppercase tracking-wider">Pro Ledger Earnings</Text>
-                      <Text className="text-white text-3xl font-black tracking-tight">₹{totalEarnings.toLocaleString('en-IN')}</Text>
+                {/* Dashboard Analytics Card (Sprint 7.1) */}
+                <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+                  <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">Dashboard Analytics</Text>
+                  
+                  <View className="flex-row flex-wrap justify-between gap-y-3.5">
+                    <View className="w-[47%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
+                      <Text className="text-zinc-500 text-[8px] font-bold uppercase">Current Rank</Text>
+                      <Text className="text-zinc-900 text-xs font-black">Associate Trainer</Text>
                     </View>
-                    <View className="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
-                      <Text className="text-emerald-500 text-[8px] font-black uppercase tracking-widest">Active Partner</Text>
+                    <View className="w-[47%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
+                      <Text className="text-zinc-500 text-[8px] font-bold uppercase">Completed Sessions</Text>
+                      <Text className="text-zinc-900 text-xs font-black">420 Sessions</Text>
+                    </View>
+                    <View className="w-[47%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
+                      <Text className="text-zinc-500 text-[8px] font-bold uppercase">Average Rating</Text>
+                      <Text className="text-zinc-900 text-xs font-black">⭐ 4.91 / 5.0</Text>
+                    </View>
+                    <View className="w-[47%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
+                      <Text className="text-zinc-500 text-[8px] font-bold uppercase">Attendance Rate</Text>
+                      <Text className="text-zinc-900 text-xs font-black">98%</Text>
+                    </View>
+                    <View className="w-[47%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
+                      <Text className="text-zinc-500 text-[8px] font-bold uppercase">Punctuality Rate</Text>
+                      <Text className="text-zinc-900 text-xs font-black">99%</Text>
+                    </View>
+                    <View className="w-[47%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
+                      <Text className="text-zinc-500 text-[8px] font-bold uppercase">Retainer Status</Text>
+                      <Text className="text-red-500 text-xs font-black">Not Eligible</Text>
+                    </View>
+                    <View className="w-[47%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
+                      <Text className="text-zinc-500 text-[8px] font-bold uppercase">Promotion Progress</Text>
+                      <Text className="text-amber-600 text-xs font-black">On Hold (84%)</Text>
+                    </View>
+                    <View className="w-[47%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
+                      <Text className="text-zinc-500 text-[8px] font-bold uppercase">Weekly Earnings</Text>
+                      <Text className="text-emerald-600 text-xs font-black">₹6,400</Text>
                     </View>
                   </View>
+                </View>
 
-                  <View className="flex-row justify-between items-center">
-                    <View className="gap-0.5">
-                      <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">Completed Jobs</Text>
-                      <Text className="text-white text-sm font-black">{earningsList.filter(e => e.type === 'session').length} Visits</Text>
+                {/* Today's Sessions List (Sprint 7.1) */}
+                <View className="gap-3">
+                  <Text className="text-[#111827] text-xs font-black uppercase tracking-widest pl-1">Today's Visits</Text>
+                  <View className="bg-white border border-[#E5E7EB] p-4 rounded-2xl flex-row justify-between items-center shadow-xs">
+                    <View className="flex-row items-center gap-3">
+                      <View className="w-8 h-8 rounded-xl bg-indigo-50 items-center justify-center">
+                        <Feather name="clock" size={14} color="#4F46E5" />
+                      </View>
+                      <View>
+                        <Text className="text-zinc-900 text-xs font-black">Forge Strength - Juhu</Text>
+                        <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Today • 08:00 AM</Text>
+                      </View>
                     </View>
-                    <View className="w-[1px] h-6 bg-zinc-800" />
-                    <View className="gap-0.5">
-                      <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">Compensations</Text>
-                      <Text className="text-white text-sm font-black">
-                        {earningsList.filter(e => e.type === 'no_show_compensation').length} logs
-                      </Text>
-                    </View>
-                    <View className="w-[1px] h-6 bg-zinc-800" />
-                    <View className="gap-0.5 items-end">
-                      <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">Last Payout</Text>
-                      <Text className="text-white text-sm font-black">Jul 15, 2026</Text>
+                    <View className="bg-emerald-50 px-2 py-0.5 rounded-full">
+                      <Text className="text-emerald-600 text-[7px] font-black uppercase">Completed</Text>
                     </View>
                   </View>
                 </View>

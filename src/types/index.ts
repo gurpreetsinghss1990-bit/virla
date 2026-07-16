@@ -118,6 +118,7 @@ export interface Coach {
   remainingSlotChanges?: number;
   retainerStatus?: 'eligible' | 'not_eligible';
   attendanceRate?: number;
+  punctualityRate?: number;
   availabilityCompliance?: number;
 }
 

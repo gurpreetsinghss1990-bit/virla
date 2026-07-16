@@ -927,12 +927,12 @@ export default function BookingScreen() {
                       {/* Status stages steps */}
                       <View className="w-full gap-3 mt-4 px-2">
                         {[
-                          'User books session (Initiated)',
-                          'Matching Engine: Filtering Associate Trainers',
-                          'GPS Radar: Calculating Nearest Trainer distance',
-                          'Quality Engine: Filtering Highest Rated coaches',
-                          'VIRLA Matchmaker: Coach accepting job request',
-                          'Concierge Desk: Booking confirmed successfully!'
+                          'User Books Session (Initiated)',
+                          'Find Trainers Available For That Exact Time Slot',
+                          'Filter Trainers Within Supported Distance Radius',
+                          'Sort By: Availability, Distance, Average Rating, Completed Sessions',
+                          'Automatically Assign Best Matching Trainer',
+                          'Trainer Confirms Booking & Customer Receives Confirmation'
                         ].map((label, idx) => {
                           const isDone = matchStage > idx;
                           const isActive = matchStage === idx;

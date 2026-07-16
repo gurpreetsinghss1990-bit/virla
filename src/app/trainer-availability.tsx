@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useCoachStore } from '../store/coachStore';
 import { ProgressRing } from '../components/ProgressRing';
 import { Ionicons, Feather } from '@expo/vector-icons';
-import Svg, { Circle } from 'react-native-svg';
 
 export default function TrainerAvailabilityScreen() {
   const router = useRouter();
@@ -13,20 +12,34 @@ export default function TrainerAvailabilityScreen() {
     remainingSlotChanges, 
     toggleSlotAvailability, 
     editScheduleSlot,
-    isScheduleSubmitted,
-    submitSchedule
   } = useCoachStore();
 
   const [activeDay, setActiveDay] = useState('Mon');
   const daysList = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-  // Current statistics (Sprint 7 Promotion metrics)
+  // Current statistics (Sprint 7.1 Promotion metrics)
   const sessionsCompleted = 420;
-  const sessionsGoal = 500;
-  const averageRating = 4.92;
-  const attendanceRate = 99;
-  const complianceRate = 100;
-  const promotionProgress = sessionsCompleted / sessionsGoal; // 84%
+  const sessionsReq = 500;
+  const averageRating = 4.91;
+  const ratingReq = 4.90;
+  const attendanceRate = 98;
+  const attendanceReq = 98;
+  const punctualityRate = 99;
+  const punctualityReq = 99;
+
+  // Validation rules check
+  const isSessionsValid = sessionsCompleted >= sessionsReq;
+  const isRatingValid = averageRating >= ratingReq;
+  const isAttendanceValid = attendanceRate >= attendanceReq;
+  const isPunctualityValid = punctualityRate >= punctualityReq;
+
+  // Overall status check (requires ALL parameters to be qualified)
+  const isEligibleForPromotion = isSessionsValid && isRatingValid && isAttendanceValid && isPunctualityValid;
+  const promotionStatus = isEligibleForPromotion 
+    ? 'Eligible for Promotion' 
+    : (!isSessionsValid || !isRatingValid || !isAttendanceValid || !isPunctualityValid) 
+    ? 'Promotion On Hold' 
+    : 'Keep Going';
 
   // Calculate current active slots in the schedule
   const activeSlots = weeklySchedule.filter(s => s.isAvailable);
@@ -61,7 +74,6 @@ export default function TrainerAvailabilityScreen() {
   ];
 
   const handleEditTimeSlot = (slotId: string, currentIsPrime: boolean, currentTime: string) => {
-    // Show select modal/alert with options of the SAME type
     const options = currentIsPrime ? primeOptions : offPeakOptions;
     const filteredOptions = options.filter(t => t !== currentTime);
 
@@ -79,11 +91,9 @@ export default function TrainerAvailabilityScreen() {
             }
           }
         })),
-        // Add option to try replacing with a different slot type (to trigger validation failure check)
         {
           text: `Replace with ${currentIsPrime ? 'Off-Peak' : 'Prime'} (Test Policy Check)`,
           onPress: () => {
-            // Fails validation check
             Alert.alert('Policy Rejection ⚠️', `Prime slots can only be replaced with another Prime slot, and Off-Peak with Off-Peak to preserve retainer compliance.`);
           }
         }
@@ -106,7 +116,7 @@ export default function TrainerAvailabilityScreen() {
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 100 }}>
         <View className="gap-6">
 
-          {/* Section 1: Promotion Progress Card (Feature 7) */}
+          {/* Section 1: Promotion Progress Card (Feature 3) */}
           <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
             <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
               <View>
@@ -114,82 +124,113 @@ export default function TrainerAvailabilityScreen() {
                 <Text className="text-zinc-900 text-sm font-black mt-0.5">Associate Trainer</Text>
               </View>
               <View className="bg-indigo-50 border border-indigo-150 px-2.5 py-0.5 rounded-full">
-                <Text className="text-[#4F46E5] text-[8px] font-black uppercase tracking-wider">Level Progress</Text>
+                <Text className="text-[#4F46E5] text-[8px] font-black uppercase tracking-wider">Progress to Certified</Text>
               </View>
             </View>
 
             <View className="flex-row items-center justify-center py-2 gap-6">
-              <ProgressRing progress={promotionProgress} size={88} strokeWidth={8} activeColor="#4F46E5">
+              {/* Circular progress ring representing completed sessions progress (420/500 = 84%) */}
+              <ProgressRing progress={sessionsCompleted / sessionsReq} size={88} strokeWidth={8} activeColor="#4F46E5">
                 <View className="items-center justify-center">
-                  <Text className="text-zinc-900 text-base font-black">84%</Text>
-                  <Text className="text-zinc-400 text-[6px] font-black uppercase mt-0.5">Progress</Text>
+                  <Text className="text-[#111827] text-base font-black">84%</Text>
+                  <Text className="text-zinc-400 text-[6px] font-black uppercase mt-0.5">Complete</Text>
                 </View>
               </ProgressRing>
 
+              {/* Promotion Requirement Checklist */}
               <View className="flex-1 gap-2">
                 <View className="flex-row justify-between items-center border-b border-zinc-50 pb-1">
-                  <Text className="text-zinc-500 text-[9px] font-bold">Sessions Done</Text>
-                  <Text className="text-zinc-900 text-[10px] font-black">{sessionsCompleted} / {sessionsGoal}</Text>
+                  <Text className="text-zinc-500 text-[9px] font-bold">Sessions: {sessionsCompleted} / {sessionsReq}</Text>
+                  <Text className={`text-[10px] font-black ${isSessionsValid ? 'text-green-600' : 'text-red-500'}`}>
+                    {isSessionsValid ? '✓' : '✗'}
+                  </Text>
                 </View>
                 <View className="flex-row justify-between items-center border-b border-zinc-50 pb-1">
-                  <Text className="text-zinc-500 text-[9px] font-bold">Average Rating</Text>
-                  <Text className="text-zinc-900 text-[10px] font-black">{averageRating} / 5.0</Text>
+                  <Text className="text-zinc-500 text-[9px] font-bold">Rating: {averageRating} / {ratingReq}</Text>
+                  <Text className={`text-[10px] font-black ${isRatingValid ? 'text-green-600' : 'text-red-500'}`}>
+                    {isRatingValid ? '✓' : '✗'}
+                  </Text>
+                </View>
+                <View className="flex-row justify-between items-center border-b border-zinc-50 pb-1">
+                  <Text className="text-zinc-500 text-[9px] font-bold">Attendance: {attendanceRate}% / {attendanceReq}%</Text>
+                  <Text className={`text-[10px] font-black ${isAttendanceValid ? 'text-green-600' : 'text-red-500'}`}>
+                    {isAttendanceValid ? '✓' : '✗'}
+                  </Text>
                 </View>
                 <View className="flex-row justify-between items-center">
-                  <Text className="text-zinc-500 text-[9px] font-bold">Attendance rate</Text>
-                  <Text className="text-zinc-900 text-[10px] font-black">{attendanceRate}%</Text>
+                  <Text className="text-zinc-500 text-[9px] font-bold">Punctuality: {punctualityRate}% / {punctualityReq}%</Text>
+                  <Text className={`text-[10px] font-black ${isPunctualityValid ? 'text-green-600' : 'text-red-500'}`}>
+                    {isPunctualityValid ? '✓' : '✗'}
+                  </Text>
                 </View>
+              </View>
+            </View>
+
+            <View className="h-[1px] bg-zinc-100 my-1" />
+
+            <View className="flex-row justify-between items-center px-1">
+              <Text className="text-zinc-400 text-[8px] font-black uppercase">Overall Promotion Status</Text>
+              <View className={`px-2.5 py-0.5 rounded-full ${
+                promotionStatus === 'Eligible for Promotion' 
+                  ? 'bg-emerald-50 border border-emerald-150' 
+                  : 'bg-amber-50 border border-amber-150'
+              }`}>
+                <Text className={`text-[8px] font-black uppercase ${
+                  promotionStatus === 'Eligible for Promotion' ? 'text-emerald-600' : 'text-amber-600'
+                }`}>
+                  {promotionStatus}
+                </Text>
               </View>
             </View>
           </View>
 
-          {/* Section 2: Retainer eligibility checker card (Feature 1 & 2) */}
+          {/* Section 2: Availability Retainer Monthly Status Dashboard (Feature 4) */}
           <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
             <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
-              <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Retainer Status Check</Text>
-              
-              {/* Eligibility badge */}
-              <View className={`px-2.5 py-0.5 rounded-full ${
-                isRetainerEligible 
-                  ? 'bg-emerald-50 border border-emerald-150' 
-                  : 'bg-red-50 border border-red-150'
-              }`}>
-                <Text className={`text-[8px] font-black uppercase tracking-widest ${
-                  isRetainerEligible ? 'text-emerald-600' : 'text-red-500'
-                }`}>
-                  {isRetainerEligible ? 'Eligible' : 'Not Eligible'}
-                </Text>
+              <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Availability Retainer</Text>
+              <View className="bg-red-50 border border-red-150 px-2 py-0.5 rounded-full">
+                <Text className="text-red-500 text-[8px] font-black uppercase tracking-widest">Monthly Status</Text>
               </View>
             </View>
 
-            {/* Availability Retainer Rules compliance stats */}
-            <View className="gap-2 px-1">
-              <View className="flex-row justify-between items-center">
-                <Text className="text-zinc-500 text-xs font-semibold">Prime slots count (Min 24)</Text>
-                <Text className={`text-xs font-black ${activePrimeCount >= 24 ? 'text-emerald-600' : 'text-red-500'}`}>
-                  {activePrimeCount} / 24
-                </Text>
+            <View className="gap-3 px-1">
+              <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
+                <Text className="text-zinc-500 text-xs font-semibold">Week 1 Status</Text>
+                <Text className="text-green-600 text-xs font-black">Qualified ✓</Text>
               </View>
-              <View className="flex-row justify-between items-center">
-                <Text className="text-zinc-500 text-xs font-semibold">Off-Peak slots count (Min 12)</Text>
-                <Text className={`text-xs font-black ${activeOffPeakCount >= 12 ? 'text-emerald-600' : 'text-red-500'}`}>
-                  {activeOffPeakCount} / 12
-                </Text>
-              </View>
-              <View className="flex-row justify-between items-center">
-                <Text className="text-zinc-500 text-xs font-semibold">Overall schedule slots (Min 36)</Text>
-                <Text className={`text-xs font-black ${totalActiveCount >= 36 ? 'text-emerald-600' : 'text-red-500'}`}>
-                  {totalActiveCount} / 36
-                </Text>
+              
+              <View className="border-b border-zinc-50 pb-2">
+                <View className="flex-row justify-between items-center">
+                  <Text className="text-zinc-500 text-xs font-semibold">Week 2 Status</Text>
+                  <Text className="text-red-500 text-xs font-black">Missed Prime Slots ✗</Text>
+                </View>
+                <Text className="text-red-400 text-[8px] font-bold uppercase mt-0.5 pl-0.5">⚠️ Reason: Only 22 Prime Slots Submitted</Text>
               </View>
 
-              <View className="h-[1px] bg-zinc-100 my-2" />
+              <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
+                <Text className="text-zinc-500 text-xs font-semibold">Week 3 Status</Text>
+                <Text className="text-green-600 text-xs font-black">Qualified ✓</Text>
+              </View>
 
-              <Text className={`text-[10px] font-extrabold text-center uppercase tracking-wide py-1 rounded-xl ${
-                isRetainerEligible ? 'bg-emerald-50/50 text-emerald-700' : 'bg-red-50/50 text-red-500'
-              }`}>
-                {isRetainerEligible ? 'Availability Retainer Eligible ✅' : 'Availability Retainer Not Eligible ⚠️'}
-              </Text>
+              <View className="pb-1">
+                <View className="flex-row justify-between items-center">
+                  <Text className="text-zinc-500 text-xs font-semibold">Week 4 Status</Text>
+                  <Text className="text-[#4F46E5] text-xs font-black">Pending ⏰</Text>
+                </View>
+                <Text className="text-indigo-400 text-[8px] font-bold uppercase mt-0.5 pl-0.5">⚠️ Reason: Only 10 Off Peak Slots Submitted</Text>
+              </View>
+
+              <View className="h-[1px] bg-zinc-150 my-2" />
+
+              <View className="flex-row justify-between items-center bg-red-50/50 p-3.5 rounded-xl">
+                <View>
+                  <Text className="text-zinc-400 text-[7px] font-black uppercase">Current Month Payout Result</Text>
+                  <Text className="text-red-700 text-xs font-black mt-0.5">Not Eligible</Text>
+                </View>
+                <Text className="text-red-500 text-[8px] font-black uppercase text-right leading-relaxed max-w-[50%]">
+                  Missed Prime Slot minimum compliance in Week 2.
+                </Text>
+              </View>
             </View>
           </View>
 
@@ -197,7 +238,7 @@ export default function TrainerAvailabilityScreen() {
           <View className="bg-zinc-50 border border-zinc-150 p-4.5 rounded-[24px] flex-row justify-between items-center">
             <View className="flex-row items-center gap-2.5">
               <Feather name="edit-3" size={14} color="#4F46E5" />
-              <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Slot edit allowance</Text>
+              <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Slot Edit Allowance</Text>
             </View>
             <View className="bg-zinc-950 border border-zinc-800 px-3 py-1 rounded-lg">
               <Text className="text-amber-400 text-[9px] font-black uppercase tracking-wider">
@@ -291,33 +332,6 @@ export default function TrainerAvailabilityScreen() {
                 </View>
               );
             })}
-          </View>
-
-          {/* Section 6: Weekly Retainer Dashboard (Feature 6) */}
-          <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4.5 mt-2">
-            <Text className="text-[#111827] text-xs font-black uppercase tracking-wider border-b border-zinc-50 pb-3">Retainer Earnings Ledger</Text>
-            
-            <View className="flex-row justify-between items-center">
-              <View className="gap-0.5">
-                <Text className="text-zinc-500 text-[8px] font-bold uppercase">Availability Submitted</Text>
-                <Text className="text-zinc-900 text-sm font-black">4 Weeks</Text>
-              </View>
-              <View className="w-[1px] h-6 bg-zinc-200" />
-              <View className="gap-0.5">
-                <Text className="text-zinc-500 text-[8px] font-bold uppercase">Retainer Earned</Text>
-                <Text className="text-emerald-600 text-sm font-black">₹5,000</Text>
-              </View>
-              <View className="w-[1px] h-6 bg-zinc-200" />
-              <View className="gap-0.5 items-end">
-                <Text className="text-zinc-500 text-[8px] font-bold uppercase">Availability Missed</Text>
-                <Text className="text-red-500 text-sm font-black">0 Weeks</Text>
-              </View>
-            </View>
-
-            <View className="bg-zinc-50 border border-zinc-100 p-3 rounded-2xl flex-row justify-between items-center">
-              <Text className="text-zinc-500 text-[8px] font-bold uppercase">Retainer Payout Period</Text>
-              <Text className="text-zinc-900 text-[9px] font-extrabold">Weekly (Cycle Ends Sundays)</Text>
-            </View>
           </View>
 
         </View>
