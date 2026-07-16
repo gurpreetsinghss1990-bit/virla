@@ -1,11 +1,17 @@
 import { create } from 'zustand';
-import { Coach } from '../types';
+import { Coach, TrainerEarning } from '../types';
 
 interface CoachState {
   coaches: Coach[];
   selectedCoachId: string;
   setSelectedCoachId: (id: string) => void;
   toggleFavouriteCoach: (id: string) => void;
+  
+  // Trainer ledger (S6)
+  earningsList: TrainerEarning[];
+  totalEarnings: number;
+  addEarning: (earning: Omit<TrainerEarning, 'id' | 'date'>) => void;
+  restoreAvailabilitySlot: (slot: string) => void;
 }
 
 const mockCoaches: Coach[] = [
@@ -243,11 +249,64 @@ const mockCoaches: Coach[] = [
   }
 ];
 
+const mockEarnings: TrainerEarning[] = [
+  {
+    id: 'earn-1',
+    bookingId: 'b-old-10',
+    clientName: 'Viral',
+    amount: 800,
+    date: 'Jul 14, 2026',
+    type: 'session',
+  },
+  {
+    id: 'earn-2',
+    bookingId: 'b-old-11',
+    clientName: 'Rahul V.',
+    amount: 800,
+    date: 'Jul 11, 2026',
+    type: 'session',
+  },
+  {
+    id: 'earn-3',
+    bookingId: 'b-old-12',
+    clientName: 'Aarav S.',
+    amount: 400,
+    date: 'Jul 08, 2026',
+    type: 'no_show_compensation',
+  }
+];
+
 export const useCoachStore = create<CoachState>((set) => ({
   coaches: mockCoaches,
   selectedCoachId: '', // Default to empty (VIRLA chooses)
   setSelectedCoachId: (id) => set({ selectedCoachId: id }),
   toggleFavouriteCoach: (id) => set((state) => ({
     coaches: state.coaches.map(c => c.id === id ? { ...c, isFavourite: !c.isFavourite } : c)
-  }))
+  })),
+  // Sprint 6 trainer ledger
+  earningsList: mockEarnings,
+  totalEarnings: mockEarnings.reduce((acc, curr) => acc + curr.amount, 0),
+  addEarning: (earning) => set((state) => {
+    const newEarn: TrainerEarning = {
+      ...earning,
+      id: `earn-${Date.now().toString().slice(-4)}`,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+    };
+    const updated = [newEarn, ...state.earningsList];
+    return {
+      earningsList: updated,
+      totalEarnings: updated.reduce((acc, curr) => acc + curr.amount, 0),
+    };
+  }),
+  restoreAvailabilitySlot: (slot) => set((state) => {
+    // Restore availability slot for Coach c-1 or c-2 (we can restore c-1 by adding back to availability)
+    return {
+      coaches: state.coaches.map(c => {
+        if (c.id === 'c-1' && c.availability && !c.availability.includes(slot)) {
+          return { ...c, availability: [...c.availability, slot] };
+        }
+        return c;
+      })
+    };
+  })
 }));

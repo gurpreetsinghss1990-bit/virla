@@ -4,6 +4,8 @@ export interface User {
   email: string;
   avatar: string;
   location: string;
+  // Sprint 6 addition
+  role?: 'customer' | 'trainer';
 }
 
 export interface Membership {
@@ -41,7 +43,7 @@ export interface Booking {
   workoutTitle: string;
   date: string;
   time: string;
-  status: 'upcoming' | 'completed' | 'cancelled';
+  status: 'upcoming' | 'completed' | 'cancelled' | 'client_no_show' | 'trainer_no_show';
   price?: number;
   address?: string;
   goal?: string;
@@ -72,6 +74,15 @@ export interface Booking {
     difficulty: string;
     energy: string;
     comments?: string;
+  };
+
+  // Sprint 6 additions
+  otp?: string;
+  questionnaire?: {
+    mobilityScore: number;
+    workoutSummary: string;
+    coachNotes: string;
+    coachSignature: string;
   };
 }
 
@@ -111,3 +122,21 @@ export interface NotificationItem {
   timestamp: string;
 }
 
+// Sprint 6 additions for Ledgers
+export interface Invoice {
+  id: string;
+  type: string;
+  amount: string;
+  date: string;
+  status: 'paid' | 'pending';
+  credits: number;
+}
+
+export interface TrainerEarning {
+  id: string;
+  bookingId: string;
+  clientName: string;
+  amount: number;
+  date: string;
+  type: 'session' | 'no_show_compensation' | 'penalty';
+}
