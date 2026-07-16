@@ -7,7 +7,9 @@ export type EmptyStateType =
   | 'no-notifications' 
   | 'no-progress' 
   | 'no-bookings' 
-  | 'no-favourite-trainer';
+  | 'no-favourite-trainer'
+  | 'no-messages'
+  | 'no-activities';
 
 interface EmptyStateProps {
   type: EmptyStateType;
@@ -134,6 +136,42 @@ export function EmptyState({ type, onAction, actionText, message }: EmptyStatePr
             </Svg>
           ),
           defaultActionText: 'Browse Coaches',
+        };
+      case 'no-messages':
+        return {
+          title: 'No Messages Yet',
+          description: message || 'You don’t have any chat threads active. Contact your coach from the session details page.',
+          icon: (
+            <Svg width={120} height={120} viewBox="0 0 120 120" fill="none">
+              <Defs>
+                <LinearGradient id="grad-msgs" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <Stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.8" />
+                  <Stop offset="100%" stopColor="#3B82F6" stopOpacity="0.8" />
+                </LinearGradient>
+              </Defs>
+              <Circle cx={60} cy={60} r={40} fill="url(#grad-msgs)" opacity={0.15} />
+              <Path d="M40 45H80V67.5C80 71.6421 76.6421 75 72.5 75H52.5L40 85V45Z" stroke="url(#grad-msgs)" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+            </Svg>
+          ),
+          defaultActionText: 'Go Back',
+        };
+      case 'no-activities':
+        return {
+          title: 'No Activity Found',
+          description: message || 'You haven’t completed any booking sessions or wallet purchases yet.',
+          icon: (
+            <Svg width={120} height={120} viewBox="0 0 120 120" fill="none">
+              <Defs>
+                <LinearGradient id="grad-acts" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <Stop offset="0%" stopColor="#EC4899" stopOpacity="0.8" />
+                  <Stop offset="100%" stopColor="#F59E0B" stopOpacity="0.8" />
+                </LinearGradient>
+              </Defs>
+              <Circle cx={60} cy={60} r={40} fill="url(#grad-acts)" opacity={0.15} />
+              <Path d="M45 60L55 70L75 50" stroke="url(#grad-acts)" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+            </Svg>
+          ),
+          defaultActionText: 'Explore App',
         };
     }
   };

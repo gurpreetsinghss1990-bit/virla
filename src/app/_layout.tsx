@@ -32,6 +32,7 @@ export default function RootLayout() {
         <Stack.Screen name="wallet" />
         <Stack.Screen name="payment-history" />
         <Stack.Screen name="invoice" />
+        <Stack.Screen name="communication" />
       </Stack>
     </>
   );

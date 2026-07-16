@@ -324,7 +324,7 @@ export default function BookingScreen() {
       price: matchedCoach.price || 1200,
       address: targetAddress,
       goal: selectedExperience.title,
-      timelineStatus: 'confirmed',
+      timelineStatus: 'booked',
       trainerLevel: matchedCoach.level || 'Certified',
       trainerRating: matchedCoach.rating,
       trainerCompletedSessions: matchedCoach.completedSessions || 150,

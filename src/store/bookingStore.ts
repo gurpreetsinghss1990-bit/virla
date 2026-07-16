@@ -29,7 +29,7 @@ const mockBookings: Booking[] = [
     date: 'Jul 20, 2026',
     time: '10:00 AM',
     status: 'upcoming',
-    timelineStatus: 'confirmed',
+    timelineStatus: 'booked',
     trainerLevel: 'Certified',
     trainerRating: 4.9,
     trainerCompletedSessions: 245,
@@ -47,7 +47,7 @@ const mockBookings: Booking[] = [
     date: 'Jul 14, 2026',
     time: '08:30 AM',
     status: 'completed',
-    timelineStatus: 'completed',
+    timelineStatus: 'session_closed',
     trainerLevel: 'Certified',
     trainerRating: 4.8,
     trainerCompletedSessions: 190,
@@ -65,7 +65,7 @@ const mockBookings: Booking[] = [
     date: 'Jul 11, 2026',
     time: '06:00 PM',
     status: 'completed',
-    timelineStatus: 'completed',
+    timelineStatus: 'session_closed',
     trainerLevel: 'Elite',
     trainerRating: 4.95,
     trainerCompletedSessions: 480,
@@ -92,13 +92,13 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     set((state) => {
       const target = state.bookings.find(b => b.id === id);
       if (target && target.status === 'upcoming') {
-        // Sync with membershipStore and walletStore
         useMembershipStore.getState().refundCredit(1);
         useWalletStore.getState().refundCredit(`Refund: Cancelled Session ${target.workoutTitle}`);
         
         useNotificationStore.getState().addNotification({
           title: 'Booking Cancelled 🚨',
           body: `Your session for ${target.workoutTitle} was cancelled. 1 credit has been refunded to your wallet.`,
+          icon: 'rotate-ccw'
         });
       }
       return {
@@ -110,18 +110,17 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   rescheduleSession: (id, date, time) =>
     set((state) => ({
       bookings: state.bookings.map((b) =>
-        b.id === id ? { ...b, date, time, status: 'upcoming', timelineStatus: 'confirmed' } : b
+        b.id === id ? { ...b, date, time, status: 'upcoming', timelineStatus: 'booked' } : b
       ),
     })),
   addBooking: (booking) =>
     set((state) => {
-      // Sync with walletStore
       useWalletStore.getState().useCredit(`Booked ${booking.workoutTitle} Session`);
 
       const otp = Math.floor(1000 + Math.random() * 9000).toString();
       return {
         bookings: [
-          { ...booking, otp, status: 'upcoming', timelineStatus: 'confirmed' },
+          { ...booking, otp, status: 'upcoming', timelineStatus: 'booked' },
           ...state.bookings,
         ],
       };
@@ -133,7 +132,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
           ? {
               ...b,
               timelineStatus: status,
-              status: status === 'completed' ? 'completed' : b.status,
+              status: status === 'session_closed' ? 'completed' : b.status,
             }
           : b
       ),
@@ -145,7 +144,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
           ? {
               ...b,
               ratingDetails,
-              timelineStatus: 'completed',
+              timelineStatus: 'session_closed',
             }
           : b
       ),
@@ -157,11 +156,12 @@ export const useBookingStore = create<BookingState>((set, get) => ({
         useNotificationStore.getState().addNotification({
           title: 'Booking Accepted 🔔',
           body: `Coach ${target.trainerName} has accepted your job. They will begin travel at the scheduled time.`,
+          icon: 'user-check'
         });
       }
       return {
         bookings: state.bookings.map((b) =>
-          b.id === id ? { ...b, timelineStatus: 'trainer_assigned' } : b
+          b.id === id ? { ...b, timelineStatus: 'trainer_accepted' } : b
         ),
       };
     }),
@@ -169,27 +169,24 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     set((state) => {
       const target = state.bookings.find(b => b.id === id);
       if (target) {
-        // Payout trainer travel compensation
         useCoachStore.getState().addEarning({
           bookingId: id,
           clientName: 'Viral (No-Show)',
           amount: 400,
           type: 'no_show_compensation',
         });
-        // Restore time slot availability
         useCoachStore.getState().restoreAvailabilitySlot(target.time);
-
-        // Sync late cancellation fee in wallet store
         useWalletStore.getState().deductCreditLateCancel('Client No-Show Forfeited');
         
         useNotificationStore.getState().addNotification({
           title: 'Client No-Show Logged ⚠️',
           body: `We logged a no-show for your scheduled session. 1 credit was forfeited, and travel compensation was sent to your coach.`,
+          icon: 'rotate-ccw'
         });
       }
       return {
         bookings: state.bookings.map((b) =>
-          b.id === id ? { ...b, status: 'client_no_show', timelineStatus: 'completed' } : b
+          b.id === id ? { ...b, status: 'client_no_show', timelineStatus: 'session_closed' } : b
         ),
       };
     }),
@@ -197,15 +194,11 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     set((state) => {
       const target = state.bookings.find(b => b.id === id);
       if (target) {
-        // Refund client's credit + award 1 bonus credit
-        useMembershipStore.getState().refundCredit(1); // refund
-        useMembershipStore.getState().addCredits(1); // bonus
-
-        // Sync with walletStore
+        useMembershipStore.getState().refundCredit(1);
+        useMembershipStore.getState().addCredits(1);
         useWalletStore.getState().refundCredit('Trainer No-Show Refund');
         useWalletStore.getState().addBonusCredit('Trainer No-Show Bonus Credit');
         
-        // Penalize coach
         useCoachStore.getState().addEarning({
           bookingId: id,
           clientName: 'VIRLA Penalty (No-Show)',
@@ -213,17 +206,17 @@ export const useBookingStore = create<BookingState>((set, get) => ({
           type: 'penalty',
         });
         
-        // Restore availability
         useCoachStore.getState().restoreAvailabilitySlot(target.time);
 
         useNotificationStore.getState().addNotification({
           title: 'Trainer No-Show Logged 🚨',
           body: `Your coach failed to arrive. Your credit has been refunded, and we've added a FREE bonus credit to your account.`,
+          icon: 'rotate-ccw'
         });
       }
       return {
         bookings: state.bookings.map((b) =>
-          b.id === id ? { ...b, status: 'trainer_no_show', timelineStatus: 'completed' } : b
+          b.id === id ? { ...b, status: 'trainer_no_show', timelineStatus: 'session_closed' } : b
         ),
       };
     }),
@@ -231,19 +224,17 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     set((state) => {
       const target = state.bookings.find(b => b.id === id);
       if (target) {
-        // Update trainer ledger with session payout earnings
         useCoachStore.getState().addEarning({
           bookingId: id,
           clientName: 'Viral',
           amount: 800,
           type: 'session',
         });
-        // Restore availability slot
         useCoachStore.getState().restoreAvailabilitySlot(target.time);
       }
       return {
         bookings: state.bookings.map((b) =>
-          b.id === id ? { ...b, questionnaire, timelineStatus: 'feedback_pending', status: 'completed' } : b
+          b.id === id ? { ...b, questionnaire, timelineStatus: 'trainer_report_submitted', status: 'completed' } : b
         ),
       };
     }),

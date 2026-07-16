@@ -12,7 +12,7 @@ import Svg, { Circle, Defs, LinearGradient, Stop, Line } from 'react-native-svg'
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { bookings, acceptBooking } = useBookingStore();
+  const { bookings, acceptBooking, updateTimelineStatus } = useBookingStore();
   const { membership } = useMembershipStore();
   const { unreadCount } = useNotificationStore();
   const { user, role } = useUserStore();
@@ -20,6 +20,7 @@ export default function HomeScreen() {
 
   const upcomingBookings = bookings.filter((b) => b.status === 'upcoming');
   const pastBookings = bookings.filter((b) => b.status === 'completed');
+  const activeBooking = bookings.find(b => b.status === 'upcoming' && b.timelineStatus && b.timelineStatus !== 'session_closed' && b.timelineStatus !== 'booked');
 
   // Hydration state
   const [waterMl, setWaterMl] = useState(750);
@@ -110,7 +111,7 @@ export default function HomeScreen() {
       Alert.alert('Job Accepted', 'You accepted this session. Ready to begin travel at the scheduled time!');
     } else {
       router.push({
-        pathname: '/session-detail',
+        pathname: '/session-detail' as any,
         params: { id: bookingId },
       });
     }
@@ -134,7 +135,9 @@ export default function HomeScreen() {
           >
             <Feather name="bell" size={16} color="#111827" />
             {unreadCount > 0 && (
-              <View className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#EF4444]" />
+              <View className="absolute -top-1 -right-1 bg-red-500 rounded-full w-4 h-4 justify-center items-center">
+                <Text className="text-white text-[8px] font-black">{unreadCount}</Text>
+              </View>
             )}
           </TouchableOpacity>
 
@@ -170,6 +173,22 @@ export default function HomeScreen() {
                   {greeting.subtitle}
                 </Text>
               </View>
+
+              {/* Quick Resume Active Session Card (Feature 10) */}
+              {activeBooking && (
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={() => router.push({ pathname: '/session-detail' as any, params: { id: activeBooking.id } })}
+                  className="bg-indigo-600 p-5 rounded-[28px] shadow-lg flex-row justify-between items-center"
+                >
+                  <View className="flex-1 pr-3 gap-1">
+                    <Text className="text-white text-[8px] font-black uppercase tracking-wider">Live Active Workout</Text>
+                    <Text className="text-white text-sm font-black mt-0.5">Resume: {activeBooking.workoutTitle}</Text>
+                    <Text className="text-indigo-200 text-[10px] font-bold">Status: {activeBooking.timelineStatus?.replace(/_/g, ' ')}</Text>
+                  </View>
+                  <Feather name="arrow-right-circle" size={24} color="white" />
+                </TouchableOpacity>
+              )}
 
               {/* AI Fitness Coach Recommendation Card (Feature 2) */}
               <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
@@ -421,68 +440,142 @@ export default function HomeScreen() {
                 </View>
               </View>
 
-              {/* Assigned Jobs checklist */}
-              <View className="gap-3.5">
-                <Text className="text-[#111827] text-xs font-black uppercase tracking-widest pl-1">Assigned Client Visits</Text>
+              {/* Trainer Console Visits Hub (Feature 5) */}
+              <View className="gap-5">
                 
-                {bookings.filter(b => b.status === 'upcoming').length > 0 ? (
-                  bookings.filter(b => b.status === 'upcoming').map((job) => {
-                    const timeline = job.timelineStatus || 'confirmed';
+                {/* 1. Current Visit Control Center */}
+                <View className="gap-3">
+                  <Text className="text-[#111827] text-xs font-black uppercase tracking-widest pl-1">Current Visit Console</Text>
+                  {bookings.filter(b => b.status === 'upcoming').length > 0 ? (() => {
+                    const job = bookings.filter(b => b.status === 'upcoming')[0];
+                    const timeline = job.timelineStatus || 'booked';
+                    
                     return (
-                      <View 
-                        key={job.id}
-                        className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4"
-                      >
+                      <View className="bg-zinc-950 p-5 rounded-[28px] border border-zinc-800 shadow-xl gap-4">
                         <View className="flex-row justify-between items-start">
                           <View className="gap-1 flex-1 pr-3">
-                            <Text className="text-zinc-400 text-[8px] font-black uppercase">Session ID: {job.id}</Text>
-                            <Text className="text-zinc-900 text-base font-black mt-1 leading-tight">{job.workoutTitle}</Text>
-                            <Text className="text-[#6B7280] text-[10px] font-semibold mt-1">👤 Client: {user.name} • ⏱ {job.date} @ {job.time}</Text>
+                            <Text className="text-zinc-500 text-[8px] font-black uppercase">Active Workout ID: {job.id}</Text>
+                            <Text className="text-white text-base font-black mt-1 leading-tight">{job.workoutTitle}</Text>
+                            <Text className="text-zinc-400 text-[10px] font-semibold mt-1">👤 Customer: Viral • 📍 Worli, Mumbai</Text>
+                            <Text className="text-zinc-500 text-[9px] font-semibold mt-0.5">⏱ Today • {job.time}</Text>
                           </View>
-                          
-                          {/* Tag representing current state in timeline machine */}
-                          <View className={`px-2.5 py-0.5 rounded-full ${
-                            timeline === 'confirmed' 
-                              ? 'bg-amber-50 border border-amber-150' 
-                              : timeline === 'trainer_assigned'
-                              ? 'bg-blue-50 border border-blue-150'
-                              : 'bg-emerald-50 border border-emerald-150'
-                          }`}>
-                            <Text className={`text-[7px] font-black uppercase ${
-                              timeline === 'confirmed' 
-                                ? 'text-amber-600' 
-                                : timeline === 'trainer_assigned'
-                                ? 'text-blue-600'
-                                : 'text-emerald-600'
-                            }`}>
-                              {timeline === 'confirmed' ? 'New Request' : timeline === 'trainer_assigned' ? 'Assigned' : 'Active'}
-                            </Text>
+                          <View className="bg-indigo-500/10 border border-indigo-500/25 px-2.5 py-0.5 rounded-full">
+                            <Text className="text-indigo-400 text-[7px] font-black uppercase tracking-wider">{timeline.replace(/_/g, ' ')}</Text>
                           </View>
                         </View>
 
-                        <View className="h-[1px] bg-zinc-50" />
+                        {/* Communication Action Keys */}
+                        <View className="flex-row gap-2">
+                          <TouchableOpacity
+                            onPress={() => Alert.alert('GPS Routing Simulated', 'Opening navigation routing to Worli, Mumbai...')}
+                            className="flex-1 bg-zinc-900 border border-zinc-800 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
+                          >
+                            <Feather name="navigation" size={10} color="white" />
+                            <Text className="text-white text-[7px] font-black uppercase">Navigate</Text>
+                          </TouchableOpacity>
 
-                        {/* Job action triggers */}
-                        <TouchableOpacity
-                          activeOpacity={0.8}
-                          onPress={() => handleTrainerJobClick(job.id, timeline)}
-                          className={`w-full py-3.5 rounded-2xl items-center justify-center ${
-                            timeline === 'confirmed' ? 'bg-[#4F46E5]' : 'bg-[#111827]'
-                          }`}
-                        >
-                          <Text className="text-white text-xs font-black uppercase tracking-wider">
-                            {timeline === 'confirmed' ? 'Accept Visit Job' : 'Open Tracking Console'}
-                          </Text>
-                        </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => Alert.alert('Secure Call', 'Connecting call to customer Viral (+91 99999 88888)...')}
+                            className="flex-1 bg-zinc-900 border border-zinc-800 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
+                          >
+                            <Feather name="phone" size={10} color="white" />
+                            <Text className="text-white text-[7px] font-black uppercase">Call Client</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            onPress={() => router.push({ pathname: '/communication' as any, params: { id: job.id } })}
+                            className="flex-1 bg-zinc-900 border border-zinc-800 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
+                          >
+                            <Feather name="message-square" size={10} color="white" />
+                            <Text className="text-white text-[7px] font-black uppercase">Message</Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        <View className="h-[1px] bg-zinc-800" />
+
+                        {/* Interactive state transition controls */}
+                        {timeline === 'booked' || timeline === 'trainer_assigned' ? (
+                          <TouchableOpacity
+                            onPress={() => handleTrainerJobClick(job.id, timeline)}
+                            className="w-full bg-[#4F46E5] py-3.5 rounded-xl items-center justify-center"
+                          >
+                            <Text className="text-white text-xs font-black uppercase tracking-wider">Accept Booking Visit</Text>
+                          </TouchableOpacity>
+                        ) : timeline === 'trainer_accepted' ? (
+                          <TouchableOpacity
+                            onPress={() => {
+                              updateTimelineStatus(job.id, 'trainer_travelling');
+                              useNotificationStore.getState().addNotification({
+                                title: 'Coach On The Way 🚗',
+                                body: `Coach ${job.trainerName} started travelling to your venue.`,
+                                icon: 'user-check'
+                              });
+                              Alert.alert('Travel Started', 'Clients have been notified you are on the way.');
+                            }}
+                            className="w-full bg-indigo-600 py-3.5 rounded-xl items-center justify-center"
+                          >
+                            <Text className="text-white text-xs font-black uppercase tracking-wider">Start Travel</Text>
+                          </TouchableOpacity>
+                        ) : timeline === 'trainer_travelling' ? (
+                          <TouchableOpacity
+                            onPress={() => {
+                              updateTimelineStatus(job.id, 'trainer_arrived');
+                              useNotificationStore.getState().addNotification({
+                                title: 'Coach Arrived 🔔',
+                                body: `Coach ${job.trainerName} has arrived at your location.`,
+                                icon: 'lock'
+                              });
+                              Alert.alert('Arrived at Venue', 'Clients have been notified of your arrival. Awaiting check-in OTP.');
+                            }}
+                            className="w-full bg-emerald-600 py-3.5 rounded-xl items-center justify-center"
+                          >
+                            <Text className="text-white text-xs font-black uppercase tracking-wider">Reached Location</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <TouchableOpacity
+                            onPress={() => router.push({ pathname: '/session-detail' as any, params: { id: job.id } })}
+                            className="w-full bg-zinc-800 py-3.5 rounded-xl items-center justify-center"
+                          >
+                            <Text className="text-white text-xs font-black uppercase tracking-wider">
+                              {timeline === 'trainer_arrived' ? 'Waiting client OTP check-in' : 'Open active console'}
+                            </Text>
+                          </TouchableOpacity>
+                        )}
                       </View>
                     );
-                  })
-                ) : (
-                  <View className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center justify-center py-10 shadow-xs">
-                    <Feather name="coffee" size={24} color="#9CA3AF" />
-                    <Text className="text-zinc-500 text-xs font-black uppercase mt-2">No active sessions matching profile</Text>
-                  </View>
-                )}
+                  })() : (
+                    <View className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center justify-center py-8 shadow-xs">
+                      <Feather name="coffee" size={20} color="#9CA3AF" />
+                      <Text className="text-zinc-500 text-[10px] font-black uppercase mt-2">No active current visits</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* 2. Next Visit Previews */}
+                <View className="gap-3">
+                  <Text className="text-[#111827] text-xs font-black uppercase tracking-widest pl-1">Next Visit</Text>
+                  {bookings.filter(b => b.status === 'upcoming').length > 1 ? (() => {
+                    const nextJob = bookings.filter(b => b.status === 'upcoming')[1];
+                    return (
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => router.push({ pathname: '/session-detail' as any, params: { id: nextJob.id } })}
+                        className="bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-xs flex-row justify-between items-center"
+                      >
+                        <View className="flex-1 pr-3 gap-0.5">
+                          <Text className="text-zinc-900 text-xs font-black">{nextJob.workoutTitle}</Text>
+                          <Text className="text-zinc-400 text-[8px] font-bold uppercase">Client: Viral • {nextJob.date} @ {nextJob.time}</Text>
+                        </View>
+                        <Feather name="chevron-right" size={14} color="#6B7280" />
+                      </TouchableOpacity>
+                    );
+                  })() : (
+                    <View className="bg-white border border-[#E5E7EB] p-6 rounded-[24px] items-center justify-center shadow-xs">
+                      <Text className="text-zinc-400 text-[9px] font-bold uppercase">No upcoming next visits booked</Text>
+                    </View>
+                  )}
+                </View>
+
               </View>
 
               {/* Navigate to Availability Planner (Sprint 7) */}

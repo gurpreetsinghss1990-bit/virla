@@ -57,7 +57,7 @@ export interface Booking {
   };
   
   // Sprint 5 additions
-  timelineStatus?: 'confirmed' | 'trainer_assigned' | 'on_the_way' | 'arrived' | 'started' | 'completed' | 'feedback_pending';
+  timelineStatus?: 'booked' | 'trainer_assigned' | 'trainer_accepted' | 'trainer_travelling' | 'trainer_arrived' | 'otp_verified' | 'workout_started' | 'workout_completed' | 'trainer_report_submitted' | 'customer_review_pending' | 'session_closed';
   trainerLevel?: 'Associate' | 'Certified' | 'Elite';
   trainerRating?: number;
   trainerCompletedSessions?: number;
@@ -128,6 +128,8 @@ export interface NotificationItem {
   body: string;
   read: boolean;
   timestamp: string;
+  group: 'today' | 'yesterday' | 'earlier';
+  icon?: string;
 }
 
 // Sprint 6 additions for Ledgers

@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Switch, Image, Alert, TouchableOpacity, Animate
 import { useUserStore } from '../../store/userStore';
 import { useMembershipStore } from '../../store/membershipStore';
 import { useCoachStore } from '../../store/coachStore';
+import { useWalletStore } from '../../store/walletStore';
 import { useRouter } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import Svg, { Rect } from 'react-native-svg';
@@ -12,6 +13,7 @@ export default function ProfileScreen() {
   const { user, role, setRole, invoices } = useUserStore();
   const { membership, buyCredits, purchaseMembership } = useMembershipStore();
   const { totalEarnings, earningsList } = useCoachStore();
+  const { ledger } = useWalletStore();
 
   const [showInvoices, setShowInvoices] = useState(false);
   const shimmerAnim = useRef(new Animated.Value(0.3)).current;
@@ -243,6 +245,31 @@ export default function ProfileScreen() {
                     <Text className="text-emerald-600 text-xs font-black">6 Credits</Text>
                   </View>
                 </View>
+              </View>
+
+              {/* Booking Activity Feed Timeline (Feature 7) */}
+              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+                <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Recent Activities</Text>
+                
+                {ledger.length > 0 ? (
+                  <View className="gap-3.5 pl-1">
+                    {ledger.map((item, idx) => (
+                      <View key={item.id} className="flex-row items-start gap-3">
+                        <View className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5" />
+                        <View className="flex-1">
+                          <Text className="text-zinc-800 text-xs font-black leading-tight">
+                            {item.title}
+                          </Text>
+                          <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">
+                            {item.date} • {item.change >= 0 ? '+' : ''}{item.change} Credits
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text className="text-zinc-400 text-[10px] text-center py-4">No recent activity logs found.</Text>
+                )}
               </View>
             </>
           )}
