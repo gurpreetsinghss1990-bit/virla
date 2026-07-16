@@ -1,14 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, Platform, Animated, Image } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ProgressRing } from '../../components/ProgressRing';
 import { useBookingStore } from '../../store/bookingStore';
+import { useCoachStore } from '../../store/coachStore';
 import { useMembershipStore } from '../../store/membershipStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useUserStore } from '../../store/userStore';
-import { useCoachStore } from '../../store/coachStore';
-import { ProgressRing } from '../../components/ProgressRing';
-import { Feather, Ionicons } from '@expo/vector-icons';
-import Svg, { Circle, Defs, LinearGradient, Stop, Line } from 'react-native-svg';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -141,7 +140,7 @@ export default function HomeScreen() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => router.push('/(tabs)/profile' as any)}
             className="w-10 h-10 rounded-full border border-[#E5E7EB] overflow-hidden"
@@ -151,16 +150,16 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
         className="bg-[#F8F9FB] flex-1"
       >
-        <Animated.View 
+        <Animated.View
           style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
           className="px-6 pt-6 gap-6"
         >
-          
+
           {/* ==================== CLIENT MODE DASHBOARD ==================== */}
           {role === 'customer' && (
             <>
@@ -243,7 +242,7 @@ export default function HomeScreen() {
 
               {/* Today's Activity / Stats Redesigned widgets (Feature 1) */}
               <View className="flex-row flex-wrap justify-between gap-y-4">
-                
+
                 {/* Calories Burned Widget */}
                 <View className="w-[47%] bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-xs gap-3">
                   <View className="w-8 h-8 rounded-xl bg-orange-50 items-center justify-center">
@@ -383,7 +382,7 @@ export default function HomeScreen() {
                 {/* Dashboard Analytics Card (Sprint 7.1) */}
                 <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
                   <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">Dashboard Analytics</Text>
-                  
+
                   <View className="flex-row flex-wrap justify-between gap-y-3.5">
                     <View className="w-[47%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
                       <Text className="text-zinc-500 text-[8px] font-bold uppercase">Current Rank</Text>
@@ -442,14 +441,14 @@ export default function HomeScreen() {
 
               {/* Trainer Console Visits Hub (Feature 5) */}
               <View className="gap-5">
-                
+
                 {/* 1. Current Visit Control Center */}
                 <View className="gap-3">
                   <Text className="text-[#111827] text-xs font-black uppercase tracking-widest pl-1">Current Visit Console</Text>
                   {bookings.filter(b => b.status === 'upcoming').length > 0 ? (() => {
                     const job = bookings.filter(b => b.status === 'upcoming')[0];
                     const timeline = job.timelineStatus || 'booked';
-                    
+
                     return (
                       <View className="bg-zinc-950 p-5 rounded-[28px] border border-zinc-800 shadow-xl gap-4">
                         <View className="flex-row justify-between items-start">
@@ -600,7 +599,7 @@ export default function HomeScreen() {
                 <Text className="text-[#6B7280] text-[10px] font-semibold leading-relaxed">
                   Upon completion of any mandatory post-session client report, your corresponding slot block will automatically restore and reactivate for new bookings.
                 </Text>
-                
+
                 <View className="flex-row flex-wrap gap-2.5 mt-1">
                   {['07:00 AM', '08:00 AM', '09:00 AM', '05:00 PM', '07:00 PM'].map((s, idx) => (
                     <View key={idx} className="bg-zinc-50 border border-zinc-100 px-3.5 py-2 rounded-xl flex-row items-center gap-1.5">

@@ -1,59 +1,79 @@
 import React, { useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert, Switch, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAddressStore, Address } from '../store/addressStore';
-import { Ionicons } from '@expo/vector-icons';
+import { useUserProfileStore, SavedAddress } from '../store/userProfileStore';
+import { Ionicons, Feather } from '@expo/vector-icons';
 
 export default function AddressManagementScreen() {
   const router = useRouter();
-  const { addresses, addAddress, updateAddress, deleteAddress, setDefaultAddress } = useAddressStore();
+  const { addresses, addAddress, updateAddress, deleteAddress, setDefaultAddress } = useUserProfileStore();
 
-  // Form State
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [label, setLabel] = useState('');
-  const [addressLine, setAddressLine] = useState('');
+
+  // Form states
+  const [label, setLabel] = useState<'Home' | 'Office' | 'Gym' | 'Custom'>('Home');
+  const [name, setName] = useState('');
+  const [building, setBuilding] = useState('');
+  const [street, setStreet] = useState('');
+  const [landmark, setLandmark] = useState('');
+  const [city, setCity] = useState('');
+  const [pinCode, setPinCode] = useState('');
   const [isDefault, setIsDefault] = useState(false);
 
   const resetForm = () => {
-    setLabel('');
-    setAddressLine('');
+    setLabel('Home');
+    setName('');
+    setBuilding('');
+    setStreet('');
+    setLandmark('');
+    setCity('');
+    setPinCode('');
     setIsDefault(false);
     setEditingId(null);
     setShowForm(false);
   };
 
-  const handleEdit = (addr: Address) => {
-    setEditingId(addr.id);
-    setLabel(addr.label);
-    setAddressLine(addr.addressLine);
-    setIsDefault(addr.isDefault);
-    setShowForm(true);
-  };
-
   const handleSave = () => {
-    if (!label.trim() || !addressLine.trim()) {
-      Alert.alert('Incomplete Form', 'Please enter a label (e.g. Home, Work) and the full address.');
+    if (!name.trim() || !building.trim() || !street.trim() || !city.trim() || !pinCode.trim()) {
+      Alert.alert('Incomplete Form', 'Please fill in Name, Building, Street, City, and PIN Code.');
       return;
     }
 
+    const payload = {
+      label,
+      name: name.trim(),
+      building: building.trim(),
+      street: street.trim(),
+      landmark: landmark.trim(),
+      city: city.trim(),
+      pinCode: pinCode.trim(),
+      isDefault,
+      gpsPlaceholder: '19.0176, 72.8164' // mock
+    };
+
     if (editingId) {
-      updateAddress(editingId, {
-        label: label.trim(),
-        addressLine: addressLine.trim(),
-        isDefault,
-      });
+      updateAddress(editingId, payload);
       Alert.alert('Success', 'Address updated successfully.');
     } else {
-      addAddress({
-        label: label.trim(),
-        addressLine: addressLine.trim(),
-        isDefault,
-      });
+      addAddress(payload);
       Alert.alert('Success', 'New address added successfully.');
     }
 
     resetForm();
+  };
+
+  const handleEdit = (addr: SavedAddress) => {
+    setEditingId(addr.id);
+    setLabel(addr.label);
+    setName(addr.name);
+    setBuilding(addr.building);
+    setStreet(addr.street);
+    setLandmark(addr.landmark || '');
+    setCity(addr.city);
+    setPinCode(addr.pinCode);
+    setIsDefault(addr.isDefault);
+    setShowForm(true);
   };
 
   const handleDelete = (id: string) => {
@@ -68,156 +88,208 @@ export default function AddressManagementScreen() {
           onPress: () => {
             deleteAddress(id);
             Alert.alert('Deleted', 'Address removed successfully.');
-          },
-        },
+          }
+        }
       ]
     );
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      {/* Header back button */}
-      <View className="h-14 flex-row items-center px-6 border-b border-zinc-100">
+    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
+      {/* Header */}
+      <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#111111" />
+          <Ionicons name="arrow-back" size={20} color="#111827" />
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-primary text-base font-black tracking-tight mr-8">
-          Manage Addresses
+        <Text className="text-[#111827] text-sm font-black uppercase tracking-wider">
+          Saved Addresses
         </Text>
+        <TouchableOpacity onPress={() => { if (showForm) { resetForm(); } else { setShowForm(true); } }}>
+          <Text className="text-indigo-600 text-xs font-black uppercase">
+            {showForm ? 'Cancel' : 'Add New'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-      >
-        <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6">
-          {showForm ? (
-            /* Address Form View (Add / Edit) */
-            <View className="gap-5">
-              <Text className="text-primary text-lg font-black tracking-tight">
-                {editingId ? 'Edit Address' : 'Add New Address'}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+        <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 60 }}>
+          <View className="gap-6">
+            
+            <View>
+              <Text className="text-zinc-900 text-2xl font-black tracking-tight leading-tight">Addresses</Text>
+              <Text className="text-zinc-500 text-xs font-semibold mt-1 leading-relaxed">
+                Add, edit, or set default delivery addresses for fitness sessions at home or work.
               </Text>
-
-              <View className="gap-2">
-                <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Address Label</Text>
-                <TextInput
-                  value={label}
-                  onChangeText={setLabel}
-                  placeholder="e.g. Home, Office, Parents House"
-                  placeholderTextColor="#A1A1AA"
-                  className="border border-zinc-200 p-4 rounded-xl text-primary text-xs font-bold bg-zinc-50"
-                />
-              </View>
-
-              <View className="gap-2">
-                <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Full Address Details</Text>
-                <TextInput
-                  value={addressLine}
-                  onChangeText={setAddressLine}
-                  placeholder="Street, flat number, landmark, city, pin code"
-                  placeholderTextColor="#A1A1AA"
-                  multiline
-                  numberOfLines={3}
-                  className="border border-zinc-200 p-4 rounded-xl text-primary text-xs font-bold bg-zinc-50 h-24 text-top"
-                />
-              </View>
-
-              {/* Set as Default Switch */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => setIsDefault(!isDefault)}
-                className="flex-row items-center gap-3 p-1"
-              >
-                <View className={`w-5 h-5 rounded border items-center justify-center ${isDefault ? 'bg-indigo-600 border-indigo-600' : 'border-zinc-300'}`}>
-                  {isDefault && <Ionicons name="checkmark" size={12} color="white" />}
-                </View>
-                <Text className="text-primary text-xs font-bold">Set as Default Address</Text>
-              </TouchableOpacity>
-
-              <View className="flex-row gap-4 mt-4">
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={resetForm}
-                  className="flex-1 py-4 bg-zinc-100 rounded-2xl items-center justify-center border border-zinc-200/50"
-                >
-                  <Text className="text-primary text-xs font-bold">Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={handleSave}
-                  className="flex-1 py-4 bg-zinc-900 rounded-2xl items-center justify-center"
-                >
-                  <Text className="text-white text-xs font-black">Save Address</Text>
-                </TouchableOpacity>
-              </View>
             </View>
-          ) : (
-            /* Saved Addresses List View */
-            <View className="gap-5">
-              <View className="flex-row justify-between items-center mb-2">
-                <Text className="text-zinc-500 text-sm font-medium">Your registered session venues</Text>
+
+            {showForm ? (
+              /* Add/Edit Form Panel */
+              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+                <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider border-b border-zinc-50 pb-2">
+                  {editingId ? 'Modify Address Details' : 'New Address Details'}
+                </Text>
+
+                {/* Label Category Selection */}
+                <View className="gap-2">
+                  <Text className="text-zinc-500 text-[8px] font-black uppercase">Address Label</Text>
+                  <View className="flex-row gap-2">
+                    {(['Home', 'Office', 'Gym', 'Custom'] as const).map((l) => (
+                      <TouchableOpacity
+                        key={l}
+                        onPress={() => setLabel(l)}
+                        className={`px-3.5 py-2 rounded-xl border ${
+                          label === l ? 'bg-zinc-950 border-zinc-950' : 'bg-[#F8F9FB] border-zinc-200'
+                        }`}
+                      >
+                        <Text className={`text-[8px] font-black uppercase ${
+                          label === l ? 'text-white' : 'text-zinc-650'
+                        }`}>{l}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                <View className="gap-1">
+                  <Text className="text-zinc-500 text-[8px] font-black uppercase">Location Nickname</Text>
+                  <TextInput
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="e.g. My Residence, Worli HQ"
+                    className="border border-[#E5E7EB] bg-[#F8F9FB] p-3.5 rounded-xl text-xs font-semibold"
+                  />
+                </View>
+
+                <View className="gap-1">
+                  <Text className="text-zinc-500 text-[8px] font-black uppercase">Flat / Building name</Text>
+                  <TextInput
+                    value={building}
+                    onChangeText={setBuilding}
+                    placeholder="Flat 12A, Sea Tower"
+                    className="border border-[#E5E7EB] bg-[#F8F9FB] p-3.5 rounded-xl text-xs font-semibold"
+                  />
+                </View>
+
+                <View className="gap-1">
+                  <Text className="text-zinc-500 text-[8px] font-black uppercase">Street / Locality</Text>
+                  <TextInput
+                    value={street}
+                    onChangeText={setStreet}
+                    placeholder="Worli Sea Face road"
+                    className="border border-[#E5E7EB] bg-[#F8F9FB] p-3.5 rounded-xl text-xs font-semibold"
+                  />
+                </View>
+
+                <View className="gap-1">
+                  <Text className="text-zinc-500 text-[8px] font-black uppercase">Landmark (Optional)</Text>
+                  <TextInput
+                    value={landmark}
+                    onChangeText={setLandmark}
+                    placeholder="e.g. Opposite Trident Hotel"
+                    className="border border-[#E5E7EB] bg-[#F8F9FB] p-3.5 rounded-xl text-xs font-semibold"
+                  />
+                </View>
+
+                <View className="flex-row gap-3">
+                  <View className="flex-1 gap-1">
+                    <Text className="text-zinc-500 text-[8px] font-black uppercase">City</Text>
+                    <TextInput
+                      value={city}
+                      onChangeText={setCity}
+                      placeholder="Mumbai"
+                      className="border border-[#E5E7EB] bg-[#F8F9FB] p-3.5 rounded-xl text-xs font-semibold"
+                    />
+                  </View>
+                  <View className="flex-1 gap-1">
+                    <Text className="text-zinc-500 text-[8px] font-black uppercase">PIN Code</Text>
+                    <TextInput
+                      value={pinCode}
+                      onChangeText={setPinCode}
+                      placeholder="400030"
+                      keyboardType="numeric"
+                      maxLength={6}
+                      className="border border-[#E5E7EB] bg-[#F8F9FB] p-3.5 rounded-xl text-xs font-semibold"
+                    />
+                  </View>
+                </View>
+
+                <View className="flex-row justify-between items-center py-2">
+                  <Text className="text-zinc-950 text-xs font-black uppercase">Set Default Address</Text>
+                  <Switch value={isDefault} onValueChange={setIsDefault} />
+                </View>
+
                 <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => setShowForm(true)}
-                  className="bg-zinc-900 px-4 py-2 rounded-full flex-row items-center gap-1 shadow-sm"
+                  onPress={handleSave}
+                  className="w-full bg-[#111827] py-4 rounded-2xl items-center justify-center mt-2 shadow-xs"
                 >
-                  <Ionicons name="add" size={14} color="white" />
-                  <Text className="text-white text-[10px] font-black uppercase tracking-wider">Add New</Text>
+                  <Text className="text-white text-xs font-black uppercase">
+                    {editingId ? 'Update Address' : 'Save Address'}
+                  </Text>
                 </TouchableOpacity>
               </View>
-
-              {addresses.map((addr) => (
-                <View
-                  key={addr.id}
-                  className={`p-5 rounded-2xl border-2 shadow-xs bg-white ${
-                    addr.isDefault ? 'border-primary' : 'border-zinc-100'
-                  }`}
-                >
-                  <View className="flex-row justify-between items-center mb-2">
-                    <View className="flex-row items-center gap-2">
-                      <Text className="text-primary text-base font-black tracking-tight">{addr.label}</Text>
+            ) : (
+              /* Address List View */
+              <View className="gap-4">
+                {addresses.map((addr) => (
+                  <View
+                    key={addr.id}
+                    className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-3.5"
+                  >
+                    <View className="flex-row justify-between items-start">
+                      <View className="gap-0.5 flex-1 pr-3">
+                        <Text className="text-zinc-950 text-sm font-black">{addr.name}</Text>
+                        <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{addr.label}</Text>
+                      </View>
                       {addr.isDefault && (
-                        <View className="bg-indigo-600/10 px-2.5 py-0.5 rounded-full border border-indigo-600/20">
-                          <Text className="text-indigo-700 text-[8px] font-black uppercase tracking-wider">Default</Text>
+                        <View className="bg-emerald-50 border border-emerald-150 px-2 py-0.5 rounded-full">
+                          <Text className="text-emerald-600 text-[7px] font-black uppercase">Default</Text>
                         </View>
                       )}
                     </View>
-                    <View className="flex-row gap-2">
+
+                    <View className="gap-1 pl-1">
+                      <Text className="text-zinc-650 text-xs font-semibold leading-relaxed">
+                        {addr.building}, {addr.street}
+                      </Text>
+                      {addr.landmark ? <Text className="text-zinc-450 text-[10px] font-medium italic">Landmark: {addr.landmark}</Text> : null}
+                      <Text className="text-zinc-500 text-[10px] font-semibold">
+                        {addr.city} - {addr.pinCode}
+                      </Text>
+                    </View>
+
+                    <View className="h-[1px] bg-zinc-50" />
+
+                    <View className="flex-row gap-3">
                       <TouchableOpacity
-                        activeOpacity={0.7}
                         onPress={() => handleEdit(addr)}
-                        className="w-8 h-8 rounded-full bg-zinc-50 items-center justify-center border border-zinc-100"
+                        className="flex-1 bg-zinc-50 border border-zinc-100 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
                       >
-                        <Ionicons name="pencil" size={14} color="#71717A" />
+                        <Feather name="edit" size={11} color="#111827" />
+                        <Text className="text-zinc-950 text-[8px] font-black uppercase">Edit</Text>
                       </TouchableOpacity>
+
+                      {!addr.isDefault && (
+                        <TouchableOpacity
+                          onPress={() => setDefaultAddress(addr.id)}
+                          className="flex-1 bg-zinc-50 border border-zinc-100 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
+                        >
+                          <Feather name="check" size={11} color="#4F46E5" />
+                          <Text className="text-[#4F46E5] text-[8px] font-black uppercase">Make Default</Text>
+                        </TouchableOpacity>
+                      )}
+
                       <TouchableOpacity
-                        activeOpacity={0.7}
                         onPress={() => handleDelete(addr.id)}
-                        className="w-8 h-8 rounded-full bg-zinc-50 items-center justify-center border border-zinc-100"
+                        className="w-10 bg-rose-50 border border-rose-100 py-2.5 rounded-xl items-center justify-center"
                       >
-                        <Ionicons name="trash" size={14} color="#EF4444" />
+                        <Feather name="trash-2" size={12} color="#EF4444" />
                       </TouchableOpacity>
                     </View>
                   </View>
+                ))}
+              </View>
+            )}
 
-                  <Text className="text-zinc-500 text-xs font-semibold leading-relaxed mb-4">
-                    {addr.addressLine}
-                  </Text>
-
-                  {!addr.isDefault && (
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      onPress={() => setDefaultAddress(addr.id)}
-                      className="border border-zinc-200 py-2 rounded-xl items-center"
-                    >
-                      <Text className="text-primary text-[10px] font-bold uppercase tracking-wider">Set as Default</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ))}
-            </View>
-          )}
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

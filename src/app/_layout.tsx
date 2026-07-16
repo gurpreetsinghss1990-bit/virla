@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import '../global.css';
 
 // Keep the splash screen visible while we fetch resources
@@ -33,6 +33,15 @@ export default function RootLayout() {
         <Stack.Screen name="payment-history" />
         <Stack.Screen name="invoice" />
         <Stack.Screen name="communication" />
+        <Stack.Screen name="health-profile" />
+        <Stack.Screen name="fitness-goals" />
+        <Stack.Screen name="emergency-contacts" />
+        <Stack.Screen name="privacy-security" />
+        <Stack.Screen name="help-support" />
+        <Stack.Screen name="legal-center" />
+        <Stack.Screen name="personal-statistics" />
+        <Stack.Screen name="personal-achievements" />
+        <Stack.Screen name="settings" />
       </Stack>
     </>
   );

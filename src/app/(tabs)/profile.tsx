@@ -1,22 +1,41 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, Switch, Image, Alert, TouchableOpacity, Animated, Platform } from 'react-native';
+import { View, Text, ScrollView, Switch, Image, Alert, TouchableOpacity, TextInput, Animated, Platform } from 'react-native';
 import { useUserStore } from '../../store/userStore';
 import { useMembershipStore } from '../../store/membershipStore';
 import { useCoachStore } from '../../store/coachStore';
 import { useWalletStore } from '../../store/walletStore';
+import { useUserProfileStore } from '../../store/userProfileStore';
 import { useRouter } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import Svg, { Rect } from 'react-native-svg';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, role, setRole, invoices } = useUserStore();
-  const { membership, buyCredits, purchaseMembership } = useMembershipStore();
+  
+  // Sprints 1-9 Stores
+  const { user, role, setRole } = useUserStore();
+  const { membership } = useMembershipStore();
   const { totalEarnings, earningsList } = useCoachStore();
   const { ledger } = useWalletStore();
 
-  const [showInvoices, setShowInvoices] = useState(false);
+  // Sprint 10 Store
+  const profile = useUserProfileStore();
+
   const shimmerAnim = useRef(new Animated.Value(0.3)).current;
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+
+  // Profile Edit fields local states
+  const [editName, setEditName] = useState(profile.name);
+  const [editMobile, setEditMobile] = useState(profile.mobile);
+  const [editEmail, setEditEmail] = useState(profile.email);
+  const [editGender, setEditGender] = useState(profile.gender);
+  const [editDob, setEditDob] = useState(profile.dob);
+  const [editHeight, setEditHeight] = useState(profile.height);
+  const [editWeight, setEditWeight] = useState(profile.weight);
+  const [editFitnessLevel, setEditFitnessLevel] = useState(profile.fitnessLevel);
+  const [editTargetGoal, setEditTargetGoal] = useState(profile.targetGoal);
+  const [editLanguage, setEditLanguage] = useState(profile.preferredLanguage);
+  const [editCity, setEditCity] = useState(profile.city);
 
   useEffect(() => {
     Animated.loop(
@@ -27,18 +46,22 @@ export default function ProfileScreen() {
     ).start();
   }, []);
 
-  const handleCopyReferral = () => {
-    Alert.alert('Referral Link Copied', 'Copied your invitation link: virla.fit/invite/VIRLA50. Share with friends to earn 2 free credits!');
-  };
-
-  const handleBuyCredits = (credits: number, price: string) => {
-    buyCredits(credits, price);
-    Alert.alert('Credits Purchased', `Successfully added ${credits} credits to your wallet. Invoice generated.`);
-  };
-
-  const handleUpgradeMembership = (tier: string, credits: number, price: string) => {
-    purchaseMembership(tier, credits, price);
-    Alert.alert('Plan Upgraded', `You are now a ${tier} Member! ${credits} credits added, invoice logged.`);
+  const handleSaveProfile = () => {
+    profile.updateCoreProfile({
+      name: editName,
+      mobile: editMobile,
+      email: editEmail,
+      gender: editGender,
+      dob: editDob,
+      height: editHeight,
+      weight: editWeight,
+      fitnessLevel: editFitnessLevel,
+      targetGoal: editTargetGoal,
+      preferredLanguage: editLanguage,
+      city: editCity
+    });
+    setIsEditingProfile(false);
+    Alert.alert('Profile Saved', 'Your core details have been updated successfully.');
   };
 
   const renderPassQRCode = () => {
@@ -79,7 +102,7 @@ export default function ProfileScreen() {
       >
         <View className="px-6 pt-6 gap-6">
 
-          {/* Dual Role Switcher at the top (Feature 10 & 11) */}
+          {/* Dual Role Switcher at the top */}
           <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1.5 rounded-2xl">
             <TouchableOpacity
               activeOpacity={0.8}
@@ -113,11 +136,11 @@ export default function ProfileScreen() {
               {/* Client Profile Header */}
               <View className="items-center mb-2">
                 <Image
-                  source={{ uri: user.avatar }}
+                  source={{ uri: profile.avatar }}
                   className="w-20 h-20 rounded-full border-2 border-white mb-3 shadow-md"
                 />
-                <Text className="text-[#111827] text-2xl font-black tracking-tight">{user.name}</Text>
-                <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">{user.email}</Text>
+                <Text className="text-[#111827] text-2xl font-black tracking-tight">{profile.name}</Text>
+                <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">{profile.email}</Text>
               </View>
 
               {/* Apple Wallet Membership Credit Card */}
@@ -166,94 +189,109 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Purchase Credit Packs & Memberships (Feature 10 profile integration) */}
+              {/* Complete User Core Profile editing panel (Feature 1) */}
               <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
-                <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Wallet & Billing Hub</Text>
-                
-                {/* Buy more Credits */}
-                <TouchableOpacity 
-                  activeOpacity={0.8}
-                  onPress={() => router.push('/membership' as any)}
-                  className="bg-[#F8F9FB] border border-[#E5E7EB]/60 p-4 rounded-2xl flex-row justify-between items-center"
-                >
-                  <View className="flex-row items-center gap-3">
-                    <Feather name="plus-circle" size={16} color="#4F46E5" />
-                    <View>
-                      <Text className="text-[#111827] text-xs font-black">Buy More Credits</Text>
-                      <Text className="text-zinc-400 text-[8px] font-bold uppercase">Upgrade plans or buy top-ups</Text>
-                    </View>
-                  </View>
-                  <Feather name="chevron-right" size={14} color="#6B7280" />
-                </TouchableOpacity>
-
-                {/* Credit Wallet */}
-                <TouchableOpacity 
-                  activeOpacity={0.8}
-                  onPress={() => router.push('/wallet' as any)}
-                  className="bg-[#F8F9FB] border border-[#E5E7EB]/60 p-4 rounded-2xl flex-row justify-between items-center"
-                >
-                  <View className="flex-row items-center gap-3">
-                    <Feather name="credit-card" size={16} color="#10B981" />
-                    <View>
-                      <Text className="text-[#111827] text-xs font-black">Credit Wallet Ledger</Text>
-                      <Text className="text-zinc-400 text-[8px] font-bold uppercase">View balances and usage transactions</Text>
-                    </View>
-                  </View>
-                  <Feather name="chevron-right" size={14} color="#6B7280" />
-                </TouchableOpacity>
-
-                {/* Payment History */}
-                <TouchableOpacity 
-                  activeOpacity={0.8}
-                  onPress={() => router.push('/payment-history' as any)}
-                  className="bg-[#F8F9FB] border border-[#E5E7EB]/60 p-4 rounded-2xl flex-row justify-between items-center"
-                >
-                  <View className="flex-row items-center gap-3">
-                    <Feather name="file-text" size={16} color="#F59E0B" />
-                    <View>
-                      <Text className="text-[#111827] text-xs font-black">Invoices & Payment History</Text>
-                      <Text className="text-zinc-400 text-[8px] font-bold uppercase">Download PDF purchase receipts</Text>
-                    </View>
-                  </View>
-                  <Feather name="chevron-right" size={14} color="#6B7280" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Referral Dashboard Card (Feature 10) */}
-              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
-                <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Referral Rewards</Text>
-                <View className="flex-row justify-between items-center py-2 bg-indigo-50/40 border border-indigo-50 p-4 rounded-2xl">
-                  <View className="gap-0.5 flex-1 pr-3">
-                    <Text className="text-indigo-950 text-xs font-black">Invite & Earn Credits</Text>
-                    <Text className="text-indigo-900 text-[9px] font-semibold mt-0.5">Friends get ₹500 off, you earn 2 free credits.</Text>
-                  </View>
-                  <TouchableOpacity onPress={handleCopyReferral} className="bg-zinc-900 px-3.5 py-2.5 rounded-xl flex-row items-center gap-1.5">
-                    <Text className="text-white text-[8px] font-black uppercase">VIRLA50</Text>
-                    <Feather name="copy" size={10} color="white" />
+                <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
+                  <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Personal Profile</Text>
+                  <TouchableOpacity onPress={() => { if (isEditingProfile) { handleSaveProfile(); } else { setIsEditingProfile(true); } }}>
+                    <Text className="text-indigo-600 text-xs font-black uppercase">{isEditingProfile ? 'Save' : 'Edit'}</Text>
                   </TouchableOpacity>
                 </View>
 
-                {/* Referral stats */}
-                <View className="flex-row justify-between items-center px-1">
-                  <View className="gap-0.5">
-                    <Text className="text-zinc-400 text-[8px] font-bold uppercase">Friends Invited</Text>
-                    <Text className="text-zinc-800 text-xs font-black">3 joined</Text>
+                {isEditingProfile ? (
+                  <View className="gap-3.5">
+                    {[
+                      { l: 'Full Name', val: editName, set: setEditName },
+                      { l: 'Mobile Number', val: editMobile, set: setEditMobile, kt: 'phone-pad' as const },
+                      { l: 'Email address', val: editEmail, set: setEditEmail, kt: 'email-address' as const },
+                      { l: 'Gender', val: editGender, set: setEditGender },
+                      { l: 'Date of Birth', val: editDob, set: setEditDob },
+                      { l: 'Height', val: editHeight, set: setEditHeight },
+                      { l: 'Weight', val: editWeight, set: setEditWeight },
+                      { l: 'Fitness Level', val: editFitnessLevel, set: setEditFitnessLevel },
+                      { l: 'Target Goal', val: editTargetGoal, set: setEditTargetGoal },
+                      { l: 'Preferred Language', val: editLanguage, set: setEditLanguage },
+                      { l: 'City', val: editCity, set: setEditCity }
+                    ].map((f, idx) => (
+                      <View key={idx} className="gap-1">
+                        <Text className="text-zinc-500 text-[8px] font-black uppercase">{f.l}</Text>
+                        <TextInput
+                          value={f.val}
+                          onChangeText={f.set}
+                          keyboardType={f.kt}
+                          className="border border-[#E5E7EB] bg-[#F8F9FB] p-3 rounded-xl text-xs text-zinc-900 font-semibold"
+                        />
+                      </View>
+                    ))}
                   </View>
-                  <View className="w-[1px] h-6 bg-zinc-200" />
-                  <View className="gap-0.5 items-end">
-                    <Text className="text-zinc-400 text-[8px] font-bold uppercase">Free Credits Earned</Text>
-                    <Text className="text-emerald-600 text-xs font-black">6 Credits</Text>
+                ) : (
+                  <View className="gap-3">
+                    {[
+                      { l: 'Full Name', val: profile.name },
+                      { l: 'Mobile Number', val: profile.mobile },
+                      { l: 'Email address', val: profile.email },
+                      { l: 'Gender', val: profile.gender },
+                      { l: 'Date of Birth', val: profile.dob },
+                      { l: 'Height', val: profile.height },
+                      { l: 'Weight', val: profile.weight },
+                      { l: 'Fitness Level', val: profile.fitnessLevel },
+                      { l: 'Target Goal', val: profile.targetGoal },
+                      { l: 'Preferred Language', val: profile.preferredLanguage },
+                      { l: 'City', val: profile.city },
+                      { l: 'Member Since', val: profile.memberSince },
+                      { l: 'Total Sessions completed', val: `${profile.totalSessions} Sessions` },
+                      { l: 'Total Calories burned', val: `${profile.totalCalories.toLocaleString()} kcal` },
+                      { l: 'Lifetime spendings', val: profile.lifetimeSpend }
+                    ].map((f, idx) => (
+                      <View key={idx} className="flex-row justify-between py-1 border-b border-zinc-50 pb-2">
+                        <Text className="text-zinc-400 text-xs font-semibold">{f.l}</Text>
+                        <Text className="text-zinc-950 text-xs font-black">{f.val}</Text>
+                      </View>
+                    ))}
                   </View>
-                </View>
+                )}
               </View>
 
-              {/* Booking Activity Feed Timeline (Feature 7) */}
+              {/* Account Management & Personalization Menu */}
+              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-3">
+                <Text className="text-[#111827] text-xs font-black uppercase tracking-wider border-b border-zinc-105 pb-3">Personalization Hub</Text>
+                
+                {[
+                  { label: 'Health & Medical Profile', icon: 'activity', route: '/health-profile' as const, desc: 'Declare conditions, allergies and restrictions' },
+                  { label: 'Target Fitness Goals', icon: 'zap', route: '/fitness-goals' as const, desc: 'Choose active conditioning workout metrics' },
+                  { label: 'Saved Addresses', icon: 'map-pin', route: '/address-management' as const, desc: 'Manage home, office and gym GPS markers' },
+                  { label: 'Emergency SOS Contacts', icon: 'shield', route: '/emergency-contacts' as const, desc: 'Add alternate contacts for check-in safety' },
+                  { label: 'Analytics & Statistics', icon: 'trending-up', route: '/personal-statistics' as const, desc: 'View monthly charts and hours trained' },
+                  { label: 'Achievements & Badges', icon: 'award', route: '/personal-achievements' as const, desc: 'Unlock milestones and streaks rewards' },
+                  { label: 'Privacy & Security Controls', icon: 'lock', route: '/privacy-security' as const, desc: 'Update passwords, biometrics and logins' },
+                  { label: 'Help & Support Desk', icon: 'help-circle', route: '/help-support' as const, desc: 'Raise support tickets and FAQ manuals' },
+                  { label: 'Global App Settings', icon: 'settings', route: '/settings' as const, desc: 'Adjust time format, languages and themes' }
+                ].map((item, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    activeOpacity={0.8}
+                    onPress={() => router.push(item.route as any)}
+                    className="bg-[#F8F9FB] border border-[#E5E7EB]/60 p-4.5 rounded-2xl flex-row justify-between items-center"
+                  >
+                    <View className="flex-row items-center gap-3.5 flex-1 pr-3">
+                      <Feather name={item.icon as any} size={15} color="#4F46E5" />
+                      <View className="flex-1">
+                        <Text className="text-[#111827] text-xs font-black leading-tight">{item.label}</Text>
+                        <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5 leading-relaxed">{item.desc}</Text>
+                      </View>
+                    </View>
+                    <Feather name="chevron-right" size={14} color="#6B7280" />
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Booking Activity Feed Timeline */}
               <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
                 <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Recent Activities</Text>
                 
                 {ledger.length > 0 ? (
                   <View className="gap-3.5 pl-1">
-                    {ledger.map((item, idx) => (
+                    {ledger.map((item) => (
                       <View key={item.id} className="flex-row items-start gap-3">
                         <View className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5" />
                         <View className="flex-1">
@@ -289,7 +327,7 @@ export default function ProfileScreen() {
                 <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">Certified Trainer • Strength & HIIT</Text>
               </View>
 
-              {/* Trainer Ledger: Earnings List (Feature 10) */}
+              {/* Trainer Ledger: Earnings List */}
               <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
                 <Text className="text-[#111827] text-xs font-black uppercase tracking-wider border-b border-zinc-50 pb-3">Earnings & Payout Ledger</Text>
                 
@@ -328,27 +366,6 @@ export default function ProfileScreen() {
               </View>
             </>
           )}
-
-          {/* Standard preferences & logout */}
-          <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
-            <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">App Preferences</Text>
-            <View className="flex-row justify-between items-center py-1">
-              <Text className="text-[#6B7280] text-xs font-semibold">Push Notifications</Text>
-              <Switch value={true} trackColor={{ true: '#4F46E5' }} />
-            </View>
-            <View className="flex-row justify-between items-center py-1">
-              <Text className="text-[#6B7280] text-xs font-semibold">Concierge AI Reminders</Text>
-              <Switch value={true} trackColor={{ true: '#4F46E5' }} />
-            </View>
-          </View>
-
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => Alert.alert('Logout', 'Session logout simulated successfully.')}
-            className="w-full bg-[#111827] py-4 rounded-2xl items-center justify-center shadow-xs mt-2"
-          >
-            <Text className="text-white text-xs font-extrabold uppercase tracking-widest text-center">Logout Account</Text>
-          </TouchableOpacity>
 
         </View>
       </ScrollView>
