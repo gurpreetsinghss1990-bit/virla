@@ -112,6 +112,13 @@ export interface Coach {
   level?: 'Associate' | 'Certified' | 'Elite';
   completedSessions?: number;
   isFavourite?: boolean;
+
+  // Sprint 7 additions
+  weeklySlotsSubmitted?: number;
+  remainingSlotChanges?: number;
+  retainerStatus?: 'eligible' | 'not_eligible';
+  attendanceRate?: number;
+  availabilityCompliance?: number;
 }
 
 export interface NotificationItem {
@@ -140,3 +147,14 @@ export interface TrainerEarning {
   date: string;
   type: 'session' | 'no_show_compensation' | 'penalty';
 }
+
+// Sprint 7 additions for availability planning
+export interface ScheduleSlot {
+  id: string;
+  day: string;
+  time: string;
+  isPrime: boolean;
+  isBooked: boolean;
+  isAvailable: boolean;
+}
+

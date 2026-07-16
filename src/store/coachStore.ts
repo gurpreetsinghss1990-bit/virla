@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { Coach, TrainerEarning } from '../types';
+import { Coach, TrainerEarning, ScheduleSlot } from '../types';
+import { Alert } from 'react-native';
 
 interface CoachState {
   coaches: Coach[];
@@ -12,6 +13,14 @@ interface CoachState {
   totalEarnings: number;
   addEarning: (earning: Omit<TrainerEarning, 'id' | 'date'>) => void;
   restoreAvailabilitySlot: (slot: string) => void;
+
+  // Sprint 7 availability planner
+  weeklySchedule: ScheduleSlot[];
+  remainingSlotChanges: number;
+  isScheduleSubmitted: boolean;
+  toggleSlotAvailability: (slotId: string) => void;
+  editScheduleSlot: (slotId: string, newTime: string) => boolean;
+  submitSchedule: () => void;
 }
 
 const mockCoaches: Coach[] = [
@@ -114,138 +123,6 @@ const mockCoaches: Coach[] = [
     level: 'Associate',
     completedSessions: 95,
     isFavourite: false,
-  },
-  {
-    id: 'c-5',
-    name: 'Vikram Gill',
-    photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
-    experience: '7 yrs exp',
-    rating: 4.85,
-    specialty: 'Strength & Bodybuilding',
-    yearsExperience: 7,
-    specialization: 'Strength Training, Core Conditioning & Muscle Building',
-    languages: ['English', 'Hindi', 'Punjabi'],
-    shortBio: 'Expert coach dedicated to safe lifting and helping clients build solid muscle foundations with simple at-home equipment.',
-    price: 1300,
-    verifiedBadge: true,
-    certifications: ['ISSA Personal Trainer Certified', 'FMS Level 2 Specialist'],
-    achievements: ['Coached 200+ clients', 'Trainer Award 2024'],
-    reviews: [],
-    workoutSpecialties: ['Strength Training', 'Functional Training'],
-    availability: ['07:00 AM - 11:00 AM', '04:00 PM - 08:00 PM'],
-    level: 'Certified',
-    completedSessions: 160,
-    isFavourite: false,
-  },
-  {
-    id: 'c-6',
-    name: 'Sneha Deshmukh',
-    photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-    experience: '9 yrs exp',
-    rating: 4.9,
-    specialty: 'Pilates & Core Rehab',
-    yearsExperience: 9,
-    specialization: 'Classical Pilates, core rehab, spinal health',
-    languages: ['English', 'Marathi', 'Hindi'],
-    shortBio: 'Certified Pilates master focused on core stabilizer activation, posture repair, and back pain mitigation.',
-    price: 1200,
-    verifiedBadge: true,
-    certifications: ['Balanced Body Pilates Certified', 'Rehab Trainer Specialist'],
-    achievements: ['Pilates lead trainer for State Athletic Team'],
-    reviews: [],
-    workoutSpecialties: ['Pilates', 'Mobility & Stretching'],
-    availability: ['08:00 AM - 12:00 PM', '03:00 PM - 07:00 PM'],
-    level: 'Certified',
-    completedSessions: 175,
-    isFavourite: false,
-  },
-  {
-    id: 'c-7',
-    name: 'Arjun Nair',
-    photo: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=300&q=80',
-    experience: '12 yrs exp',
-    rating: 4.98,
-    specialty: 'Boxing & Elite Agility',
-    yearsExperience: 12,
-    specialization: 'Professional boxing coach, cardio padwork, HIIT conditioning',
-    languages: ['English', 'Malayalam', 'Hindi'],
-    shortBio: 'Former professional boxer bringing high-octane conditioning, reflexes, and pad-striking drills to your doorstep.',
-    price: 1400,
-    verifiedBadge: true,
-    certifications: ['AIBA Certified Coach', 'NASM Performance Enhancement Specialist'],
-    achievements: ['National Boxing Champion (2018)', 'Trained 10+ professional boxers'],
-    reviews: [],
-    workoutSpecialties: ['Boxing', 'Functional Training', 'HIIT'],
-    availability: ['07:00 AM - 10:00 AM', '05:00 PM - 09:00 PM'],
-    level: 'Elite',
-    completedSessions: 395,
-    isFavourite: false,
-  },
-  {
-    id: 'c-8',
-    name: 'Neha Sen',
-    photo: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=300&q=80',
-    experience: '8 yrs exp',
-    rating: 4.8,
-    specialty: 'Senior & Posture Care',
-    yearsExperience: 8,
-    specialization: 'Low-impact senior fitness, active aging, mobility posture care',
-    languages: ['English', 'Bengali', 'Hindi'],
-    shortBio: 'Caring fitness professional working to restore independence, balance, and joint strength in older adults.',
-    price: 1100,
-    verifiedBadge: true,
-    certifications: ['ACE Senior Fitness Specialist', 'CPR & First Aid Lead'],
-    achievements: ['Conducted 1000+ senior care home visits'],
-    reviews: [],
-    workoutSpecialties: ['Senior Fitness', 'Mobility & Stretching'],
-    availability: ['09:00 AM - 01:00 PM', '02:00 PM - 06:00 PM'],
-    level: 'Associate',
-    completedSessions: 80,
-    isFavourite: false,
-  },
-  {
-    id: 'c-9',
-    name: 'Rahul Varma',
-    photo: 'https://images.unsplash.com/photo-1542206395-9feb3edaa68d?auto=format&fit=crop&w=300&q=80',
-    experience: '6 yrs exp',
-    rating: 4.7,
-    specialty: 'Active Mobility & Rehab',
-    yearsExperience: 6,
-    specialization: 'Myofascial release, static and dynamic stretching, injury rehabilitation assistance',
-    languages: ['English', 'Hindi', 'Telugu'],
-    shortBio: 'Mobility coach specializing in helping desk-bound workers decompress and reverse joint stiffness.',
-    price: 1000,
-    verifiedBadge: false,
-    certifications: ['FMS Certified Specialist', 'Active Release Techniques Certification'],
-    achievements: ['Consultant for Corporate Posture Programs'],
-    reviews: [],
-    workoutSpecialties: ['Mobility & Stretching', 'Yoga'],
-    availability: ['07:00 AM - 11:00 AM', '04:00 PM - 08:00 PM'],
-    level: 'Associate',
-    completedSessions: 75,
-    isFavourite: false,
-  },
-  {
-    id: 'c-10',
-    name: 'Pooja Hegde',
-    photo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=300&q=80',
-    experience: '7 yrs exp',
-    rating: 4.82,
-    specialty: 'Dance Fitness & Aerobics',
-    yearsExperience: 7,
-    specialization: 'High calorie dance cardio, group rhythm training, stamina',
-    languages: ['English', 'Tulu', 'Hindi'],
-    shortBio: 'Passionate dance coach who infuses beats, energy, and smiles into sweat-drenched home fitness sessions.',
-    price: 1200,
-    verifiedBadge: false,
-    certifications: ['Zumba Pro Specialist', 'AFAA Aerobics Lead'],
-    achievements: ['Choreographed national fitness campaigns'],
-    reviews: [],
-    workoutSpecialties: ['Dance Fitness', 'HIIT'],
-    availability: ['08:00 AM - 10:00 AM', '05:00 PM - 08:00 PM'],
-    level: 'Associate',
-    completedSessions: 110,
-    isFavourite: false,
   }
 ];
 
@@ -276,14 +153,37 @@ const mockEarnings: TrainerEarning[] = [
   }
 ];
 
-export const useCoachStore = create<CoachState>((set) => ({
+// Helper to pre-populate 36 slots
+const generateInitialSchedule = (): ScheduleSlot[] => {
+  const list: ScheduleSlot[] = [];
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  
+  days.forEach((day) => {
+    // Generate 4 Prime Slots (eligible availability)
+    list.push({ id: `${day}-p1`, day, time: '07:00 AM - 08:00 AM', isPrime: true, isBooked: false, isAvailable: true });
+    list.push({ id: `${day}-p2`, day, time: '08:00 AM - 09:00 AM', isPrime: true, isBooked: false, isAvailable: true });
+    list.push({ id: `${day}-p3`, day, time: '05:00 PM - 06:00 PM', isPrime: true, isBooked: false, isAvailable: true });
+    list.push({ id: `${day}-p4`, day, time: '06:00 PM - 07:00 PM', isPrime: true, isBooked: false, isAvailable: true });
+
+    // Generate 2 Off-Peak Slots
+    list.push({ id: `${day}-o1`, day, time: '09:00 AM - 10:00 AM', isPrime: false, isBooked: false, isAvailable: true });
+    list.push({ id: `${day}-o2`, day, time: '10:00 AM - 11:00 AM', isPrime: false, isBooked: false, isAvailable: true });
+  });
+
+  // Mark two slots as Booked (locked)
+  list[2].isBooked = true; // Tuesday Prime
+  list[8].isBooked = true; // Thursday Off Peak
+
+  return list;
+};
+
+export const useCoachStore = create<CoachState>((set, get) => ({
   coaches: mockCoaches,
-  selectedCoachId: '', // Default to empty (VIRLA chooses)
+  selectedCoachId: '',
   setSelectedCoachId: (id) => set({ selectedCoachId: id }),
   toggleFavouriteCoach: (id) => set((state) => ({
     coaches: state.coaches.map(c => c.id === id ? { ...c, isFavourite: !c.isFavourite } : c)
   })),
-  // Sprint 6 trainer ledger
   earningsList: mockEarnings,
   totalEarnings: mockEarnings.reduce((acc, curr) => acc + curr.amount, 0),
   addEarning: (earning) => set((state) => {
@@ -299,7 +199,6 @@ export const useCoachStore = create<CoachState>((set) => ({
     };
   }),
   restoreAvailabilitySlot: (slot) => set((state) => {
-    // Restore availability slot for Coach c-1 or c-2 (we can restore c-1 by adding back to availability)
     return {
       coaches: state.coaches.map(c => {
         if (c.id === 'c-1' && c.availability && !c.availability.includes(slot)) {
@@ -308,5 +207,74 @@ export const useCoachStore = create<CoachState>((set) => ({
         return c;
       })
     };
-  })
+  }),
+  
+  // Sprint 7 availability planner states
+  weeklySchedule: generateInitialSchedule(),
+  remainingSlotChanges: 2,
+  isScheduleSubmitted: true, // starts submitted so changes limits apply
+
+  toggleSlotAvailability: (slotId) => {
+    const { isScheduleSubmitted, remainingSlotChanges, weeklySchedule } = get();
+    const slot = weeklySchedule.find(s => s.id === slotId);
+
+    if (!slot) return;
+
+    // Policy Rule 2: Booked slots cannot be edited
+    if (slot.isBooked) {
+      Alert.alert('Change Blocked', 'Booked slots are locked and cannot be edited or toggled.');
+      return;
+    }
+
+    if (isScheduleSubmitted) {
+      // Policy Rule 1: Limit slot changes to 2 per week
+      if (remainingSlotChanges <= 0) {
+        Alert.alert('Change Blocked', 'Remaining Changes: 0/2. You have used all allowed changes for this week.');
+        return;
+      }
+
+      set((state) => ({
+        weeklySchedule: state.weeklySchedule.map(s => 
+          s.id === slotId ? { ...s, isAvailable: !s.isAvailable } : s
+        ),
+        remainingSlotChanges: state.remainingSlotChanges - 1
+      }));
+    } else {
+      // Draft mode toggles freely
+      set((state) => ({
+        weeklySchedule: state.weeklySchedule.map(s => 
+          s.id === slotId ? { ...s, isAvailable: !s.isAvailable } : s
+        )
+      }));
+    }
+  },
+
+  editScheduleSlot: (slotId, newTime) => {
+    const { isScheduleSubmitted, remainingSlotChanges, weeklySchedule } = get();
+    const slot = weeklySchedule.find(s => s.id === slotId);
+
+    if (!slot) return false;
+
+    if (slot.isBooked) {
+      Alert.alert('Change Blocked', 'Booked slots are locked and cannot be edited.');
+      return false;
+    }
+
+    if (isScheduleSubmitted && remainingSlotChanges <= 0) {
+      Alert.alert('Change Blocked', 'Remaining Changes: 0/2. You have used all allowed changes for this week.');
+      return false;
+    }
+
+    // Update time slot
+    set((state) => ({
+      weeklySchedule: state.weeklySchedule.map(s => 
+        s.id === slotId ? { ...s, time: newTime } : s
+      ),
+      remainingSlotChanges: isScheduleSubmitted ? state.remainingSlotChanges - 1 : state.remainingSlotChanges
+    }));
+    
+    return true;
+  },
+
+  submitSchedule: () => set({ isScheduleSubmitted: true, remainingSlotChanges: 2 })
 }));

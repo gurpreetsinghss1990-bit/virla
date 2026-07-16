@@ -27,6 +27,7 @@ export default function RootLayout() {
         <Stack.Screen name="coach-profile" />
         <Stack.Screen name="address-management" />
         <Stack.Screen name="notifications" />
+        <Stack.Screen name="trainer-availability" />
       </Stack>
     </>
   );

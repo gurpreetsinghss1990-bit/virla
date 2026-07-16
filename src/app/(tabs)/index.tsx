@@ -458,6 +458,22 @@ export default function HomeScreen() {
                 )}
               </View>
 
+              {/* Navigate to Availability Planner (Sprint 7) */}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => router.push('/trainer-availability' as any)}
+                className="bg-indigo-50 border border-indigo-150 p-5 rounded-[28px] shadow-xs flex-row justify-between items-center"
+              >
+                <View className="flex-row items-center gap-3">
+                  <Feather name="calendar" size={16} color="#4F46E5" />
+                  <View>
+                    <Text className="text-indigo-950 text-xs font-black uppercase tracking-wider">Weekly Schedule Planner</Text>
+                    <Text className="text-[#4F46E5] text-[9px] font-semibold mt-0.5">Submit slots & manage compliance edits</Text>
+                  </View>
+                </View>
+                <Feather name="chevron-right" size={14} color="#4F46E5" />
+              </TouchableOpacity>
+
               {/* Pro Trainer Schedule Slot restoration rules (Feature 10 availability) */}
               <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-3">
                 <Text className="text-[#111827] text-xs font-black uppercase tracking-wider border-b border-zinc-100 pb-3">Restored Availability log</Text>
