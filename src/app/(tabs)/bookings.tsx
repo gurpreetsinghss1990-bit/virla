@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { useBookingStore } from '../../store/bookingStore';
 import { BookingCard } from '../../components/BookingCard';
+import { EmptyState } from '../../components/EmptyState';
+
 
 type FilterType = 'upcoming' | 'completed' | 'cancelled';
 
@@ -69,18 +71,14 @@ export default function BookingsScreen() {
               <BookingCard key={booking.id} booking={booking} />
             ))
           ) : (
-            <View className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] items-center justify-center py-12 shadow-xs">
-              <Text className="text-3xl mb-2">📅</Text>
-              <Text className="text-[#111827] text-sm font-extrabold">
-                No {getFilterLabel(activeFilter).toLowerCase()} sessions
-              </Text>
-              <Text className="text-[#6B7280] text-xs text-center mt-1 max-w-[80%] leading-relaxed font-semibold">
-                {activeFilter === 'upcoming' 
-                  ? 'Schedule your next at-home training session from the home screen.'
-                  : `You do not have any ${activeFilter} visits listed.`
-                }
-              </Text>
-            </View>
+            <EmptyState 
+              type={activeFilter === 'completed' ? 'no-sessions' : 'no-bookings'} 
+              message={
+                activeFilter === 'upcoming' 
+                  ? 'Schedule your next premium at-home training session from the home dashboard.'
+                  : `You do not have any ${activeFilter} visits logged in your profile.`
+              }
+            />
           )}
         </View>
       </ScrollView>

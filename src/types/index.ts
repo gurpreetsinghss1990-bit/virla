@@ -53,6 +53,26 @@ export interface Booking {
     relation: string;
     notes?: string;
   };
+  
+  // Sprint 5 additions
+  timelineStatus?: 'confirmed' | 'trainer_assigned' | 'on_the_way' | 'arrived' | 'started' | 'completed' | 'feedback_pending';
+  trainerLevel?: 'Associate' | 'Certified' | 'Elite';
+  trainerRating?: number;
+  trainerCompletedSessions?: number;
+  trainerSpeciality?: string;
+  trainerLanguages?: string[];
+  trainerDistance?: string;
+  trainerArrivalTime?: string;
+  caloriesBurned?: number;
+  durationMinutes?: number;
+  ratingDetails?: {
+    overallRating: number;
+    trainerRating: number;
+    workoutRating: number;
+    difficulty: string;
+    energy: string;
+    comments?: string;
+  };
 }
 
 export interface Coach {
@@ -76,6 +96,11 @@ export interface Coach {
   reviews?: { reviewerName: string; rating: number; comment: string }[];
   workoutSpecialties?: string[];
   availability?: string[];
+
+  // Sprint 5 additions
+  level?: 'Associate' | 'Certified' | 'Elite';
+  completedSessions?: number;
+  isFavourite?: boolean;
 }
 
 export interface NotificationItem {
@@ -85,3 +110,4 @@ export interface NotificationItem {
   read: boolean;
   timestamp: string;
 }
+

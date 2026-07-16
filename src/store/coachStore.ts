@@ -5,6 +5,7 @@ interface CoachState {
   coaches: Coach[];
   selectedCoachId: string;
   setSelectedCoachId: (id: string) => void;
+  toggleFavouriteCoach: (id: string) => void;
 }
 
 const mockCoaches: Coach[] = [
@@ -28,7 +29,10 @@ const mockCoaches: Coach[] = [
       { reviewerName: 'Amit S.', rating: 4.8, comment: 'Punctual, professional, and very encouraging. Highly recommend him for strength training!' }
     ],
     workoutSpecialties: ['Strength Training', 'HIIT', 'Boxing', 'Mobility'],
-    availability: ['06:00 AM - 07:00 AM', '07:00 AM - 08:00 AM', '09:00 AM - 10:00 AM', '04:00 PM - 05:00 PM', '07:00 PM - 08:00 PM']
+    availability: ['07:00 AM - 08:00 AM', '08:00 AM - 09:00 AM', '09:00 AM - 10:00 AM', '05:00 PM - 06:00 PM', '07:00 PM - 08:00 PM'],
+    level: 'Certified',
+    completedSessions: 245,
+    isFavourite: false,
   },
   {
     id: 'c-2',
@@ -50,7 +54,10 @@ const mockCoaches: Coach[] = [
       { reviewerName: 'Deepa K.', rating: 4.6, comment: 'Perfect mix of strength and mindfulness. Loved the pregnancy guidance.' }
     ],
     workoutSpecialties: ['Yoga', 'Pilates', 'Stretching', 'Pregnancy Fitness'],
-    availability: ['07:00 AM - 08:00 AM', '09:00 AM - 10:00 AM', '10:00 AM - 11:00 AM', '05:00 PM - 06:00 PM', '09:00 PM - 10:00 PM']
+    availability: ['07:00 AM - 08:00 AM', '09:00 AM - 10:00 AM', '10:00 AM - 11:00 AM', '05:00 PM - 06:00 PM', '09:00 PM - 10:00 PM'],
+    level: 'Certified',
+    completedSessions: 190,
+    isFavourite: true,
   },
   {
     id: 'c-3',
@@ -72,7 +79,10 @@ const mockCoaches: Coach[] = [
       { reviewerName: 'Rohit J.', rating: 4.9, comment: 'Amazing pads drills. His attention to footwork and form is outstanding.' }
     ],
     workoutSpecialties: ['Boxing', 'HIIT', 'Strength Training', 'Mobility'],
-    availability: ['06:00 AM - 07:00 AM', '08:00 AM - 09:00 AM', '04:00 PM - 05:00 PM', '07:00 PM - 08:00 PM', '09:00 PM - 10:00 PM']
+    availability: ['07:00 AM - 08:00 AM', '08:00 AM - 09:00 AM', '05:00 PM - 06:00 PM', '07:00 PM - 08:00 PM', '09:00 PM - 10:00 PM'],
+    level: 'Elite',
+    completedSessions: 480,
+    isFavourite: true,
   },
   {
     id: 'c-4',
@@ -94,7 +104,10 @@ const mockCoaches: Coach[] = [
       { reviewerName: 'Nisha G.', rating: 4.7, comment: 'Anjali is super positive. Her stretching session cured my chronic lower back stiffness.' }
     ],
     workoutSpecialties: ['Dance Fitness', 'Stretching', 'Senior Fitness', 'Mobility'],
-    availability: ['07:00 AM - 08:00 AM', '09:00 AM - 10:00 AM', '04:00 PM - 05:00 PM', '05:00 PM - 06:00 PM', '07:00 PM - 08:00 PM']
+    availability: ['07:00 AM - 08:00 AM', '09:00 AM - 10:00 AM', '04:00 PM - 05:00 PM', '05:00 PM - 06:00 PM', '07:00 PM - 08:00 PM'],
+    level: 'Associate',
+    completedSessions: 95,
+    isFavourite: false,
   },
   {
     id: 'c-5',
@@ -113,7 +126,10 @@ const mockCoaches: Coach[] = [
     achievements: ['Coached 200+ clients', 'Trainer Award 2024'],
     reviews: [],
     workoutSpecialties: ['Strength Training', 'Functional Training'],
-    availability: ['07:00 AM - 11:00 AM', '04:00 PM - 08:00 PM']
+    availability: ['07:00 AM - 11:00 AM', '04:00 PM - 08:00 PM'],
+    level: 'Certified',
+    completedSessions: 160,
+    isFavourite: false,
   },
   {
     id: 'c-6',
@@ -132,7 +148,10 @@ const mockCoaches: Coach[] = [
     achievements: ['Pilates lead trainer for State Athletic Team'],
     reviews: [],
     workoutSpecialties: ['Pilates', 'Mobility & Stretching'],
-    availability: ['08:00 AM - 12:00 PM', '03:00 PM - 07:00 PM']
+    availability: ['08:00 AM - 12:00 PM', '03:00 PM - 07:00 PM'],
+    level: 'Certified',
+    completedSessions: 175,
+    isFavourite: false,
   },
   {
     id: 'c-7',
@@ -151,7 +170,10 @@ const mockCoaches: Coach[] = [
     achievements: ['National Boxing Champion (2018)', 'Trained 10+ professional boxers'],
     reviews: [],
     workoutSpecialties: ['Boxing', 'Functional Training', 'HIIT'],
-    availability: ['06:00 AM - 10:00 AM', '05:00 PM - 09:00 PM']
+    availability: ['07:00 AM - 10:00 AM', '05:00 PM - 09:00 PM'],
+    level: 'Elite',
+    completedSessions: 395,
+    isFavourite: false,
   },
   {
     id: 'c-8',
@@ -170,7 +192,10 @@ const mockCoaches: Coach[] = [
     achievements: ['Conducted 1000+ senior care home visits'],
     reviews: [],
     workoutSpecialties: ['Senior Fitness', 'Mobility & Stretching'],
-    availability: ['09:00 AM - 01:00 PM', '02:00 PM - 06:00 PM']
+    availability: ['09:00 AM - 01:00 PM', '02:00 PM - 06:00 PM'],
+    level: 'Associate',
+    completedSessions: 80,
+    isFavourite: false,
   },
   {
     id: 'c-9',
@@ -189,7 +214,10 @@ const mockCoaches: Coach[] = [
     achievements: ['Consultant for Corporate Posture Programs'],
     reviews: [],
     workoutSpecialties: ['Mobility & Stretching', 'Yoga'],
-    availability: ['07:00 AM - 11:00 AM', '04:00 PM - 08:00 PM']
+    availability: ['07:00 AM - 11:00 AM', '04:00 PM - 08:00 PM'],
+    level: 'Associate',
+    completedSessions: 75,
+    isFavourite: false,
   },
   {
     id: 'c-10',
@@ -208,7 +236,10 @@ const mockCoaches: Coach[] = [
     achievements: ['Choreographed national fitness campaigns'],
     reviews: [],
     workoutSpecialties: ['Dance Fitness', 'HIIT'],
-    availability: ['08:00 AM - 10:00 AM', '05:00 PM - 08:00 PM']
+    availability: ['08:00 AM - 10:00 AM', '05:00 PM - 08:00 PM'],
+    level: 'Associate',
+    completedSessions: 110,
+    isFavourite: false,
   }
 ];
 
@@ -216,4 +247,7 @@ export const useCoachStore = create<CoachState>((set) => ({
   coaches: mockCoaches,
   selectedCoachId: '', // Default to empty (VIRLA chooses)
   setSelectedCoachId: (id) => set({ selectedCoachId: id }),
+  toggleFavouriteCoach: (id) => set((state) => ({
+    coaches: state.coaches.map(c => c.id === id ? { ...c, isFavourite: !c.isFavourite } : c)
+  }))
 }));
