@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, SafeAreaView, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useWorkoutStore } from '../store/workoutStore';
 import { WorkoutDetailCard } from '../components/WorkoutDetailCard';
+import { SkeletonLoader } from '../components/SkeletonLoader';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function WorkoutDetailScreen() {
@@ -13,12 +14,25 @@ export default function WorkoutDetailScreen() {
   const { workouts } = useWorkoutStore();
   const workout = workouts.find((w) => w.id === workoutId) || workouts[0];
 
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleStartBooking = () => {
     router.push({
       pathname: '/booking',
       params: { workoutId: workout.id },
     });
   };
+
+  if (loading) {
+    return <SkeletonLoader layout="workout-detail" />;
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-white">

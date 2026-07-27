@@ -302,6 +302,7 @@ export default function BookingScreen() {
     setAddrLabel('');
     setAddrLine('');
     setAddrDefault(false);
+    setTimeout(() => triggerTransition(4), 250);
   };
 
   const handleConfirmBooking = () => {
@@ -382,13 +383,13 @@ export default function BookingScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
+    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
       {/* Header back button */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
         <TouchableOpacity onPress={handleBack} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#111827" />
+          <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[#111827] text-sm font-black uppercase tracking-wider mr-8">
+        <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
           {step <= 5 ? `Step ${step} of 5` : 'Trainer Match'}
         </Text>
       </View>
@@ -403,7 +404,7 @@ export default function BookingScreen() {
                 <View className="gap-5">
                   <View>
                     <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Training Experience</Text>
-                    <Text className="text-[#111827] text-2xl font-black tracking-tight mt-1">Choose Workout Experience</Text>
+                    <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1">Choose Workout Experience</Text>
                   </View>
 
                   <View className="gap-4">
@@ -413,7 +414,10 @@ export default function BookingScreen() {
                         <TouchableOpacity
                           key={exp.id}
                           activeOpacity={0.9}
-                          onPress={() => setSelectedExperience(exp)}
+                          onPress={() => {
+                            setSelectedExperience(exp);
+                            setTimeout(() => triggerTransition(2), 250);
+                          }}
                           className={`p-5 rounded-[28px] border flex-row items-center justify-between shadow-xs ${
                             isSelected 
                               ? 'bg-zinc-950 border-zinc-950 shadow-md' 
@@ -428,7 +432,7 @@ export default function BookingScreen() {
                               <Text className="text-xl">{exp.emoji}</Text>
                             </View>
                             <View className="flex-1">
-                              <Text className={`text-sm font-black tracking-tight ${isSelected ? 'text-white' : 'text-[#111827]'}`}>
+                              <Text className={`text-sm font-black tracking-tight ${isSelected ? 'text-white' : 'text-[#101828]'}`}>
                                 {exp.title}
                               </Text>
                               <Text className={`text-[10px] font-bold mt-1 leading-relaxed ${isSelected ? 'text-zinc-400' : 'text-[#6B7280]'}`}>
@@ -453,7 +457,7 @@ export default function BookingScreen() {
                 <View className="gap-5">
                   <View>
                     <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Concierge Match</Text>
-                    <Text className="text-[#111827] text-2xl font-black tracking-tight mt-1">Trainer Preference</Text>
+                    <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1">Trainer Preference</Text>
                   </View>
 
                   <View className="flex-row flex-wrap justify-between gap-y-4">
@@ -471,11 +475,12 @@ export default function BookingScreen() {
                           onPress={() => {
                             setTrainerPref(pref.id as any);
                             if (pref.id === 'favourite') {
-                              // Auto-select first favorite if exists
                               const favs = coaches.filter(c => c.isFavourite);
                               if (favs.length > 0) {
                                 setSelectedTrainerId(favs[0].id);
                               }
+                            } else {
+                              setTimeout(() => triggerTransition(3), 250);
                             }
                           }}
                           className={`w-[47%] p-5 rounded-[24px] border items-center justify-center gap-2.5 shadow-xs ${
@@ -484,7 +489,7 @@ export default function BookingScreen() {
                         >
                           <Feather name={pref.icon as any} size={20} color={isSelected ? '#F59E0B' : '#6B7280'} />
                           <View className="items-center">
-                            <Text className={`text-xs font-black tracking-tight text-center ${isSelected ? 'text-white' : 'text-[#111827]'}`}>
+                            <Text className={`text-xs font-black tracking-tight text-center ${isSelected ? 'text-white' : 'text-[#101828]'}`}>
                               {pref.label}
                             </Text>
                             <Text className={`text-[8px] text-center font-bold mt-1 ${isSelected ? 'text-zinc-500' : 'text-[#9CA3AF]'}`}>
@@ -499,7 +504,7 @@ export default function BookingScreen() {
                   {/* Favourites Section */}
                   {trainerPref === 'favourite' && (
                     <View className="mt-4 gap-3">
-                      <Text className="text-[#111827] text-xs font-black uppercase tracking-wider pl-1">Select Favorite Coach</Text>
+                      <Text className="text-[#101828] text-xs font-black uppercase tracking-wider pl-1">Select Favorite Coach</Text>
                       {coaches.filter(c => c.isFavourite).length > 0 ? (
                         coaches.filter(c => c.isFavourite).map((coach) => {
                           const isSelected = selectedTrainerId === coach.id;
@@ -507,7 +512,10 @@ export default function BookingScreen() {
                             <TouchableOpacity
                               key={coach.id}
                               activeOpacity={0.8}
-                              onPress={() => setSelectedTrainerId(coach.id)}
+                              onPress={() => {
+                                setSelectedTrainerId(coach.id);
+                                setTimeout(() => triggerTransition(3), 250);
+                              }}
                               className={`p-4 rounded-2xl border flex-row items-center justify-between ${
                                 isSelected ? 'bg-indigo-50/50 border-indigo-500' : 'bg-white border-[#E5E7EB]'
                               }`}
@@ -515,7 +523,7 @@ export default function BookingScreen() {
                               <View className="flex-row items-center gap-3">
                                 <Image source={{ uri: coach.photo }} className="w-10 h-10 rounded-full" />
                                 <View>
-                                  <Text className="text-[#111827] text-xs font-black">{coach.name}</Text>
+                                  <Text className="text-[#101828] text-xs font-black">{coach.name}</Text>
                                   <Text className="text-[#6B7280] text-[9px] font-bold mt-0.5">{coach.specialty} • ⭐ {coach.rating}</Text>
                                 </View>
                               </View>
@@ -542,7 +550,7 @@ export default function BookingScreen() {
                 <View className="gap-5">
                   <View>
                     <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Training Venue</Text>
-                    <Text className="text-[#111827] text-2xl font-black tracking-tight mt-1">Select Location</Text>
+                    <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1">Select Location</Text>
                   </View>
 
                   {/* Location Selector Tabs */}
@@ -562,7 +570,7 @@ export default function BookingScreen() {
                             else setShowAddressForm(false);
                           }}
                           className={`flex-1 py-3 rounded-xl items-center justify-center ${
-                            isActive ? 'bg-[#111827] shadow-sm' : ''
+                            isActive ? 'bg-[#101828] shadow-sm' : ''
                           }`}
                         >
                           <Text className={`text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-white' : 'text-[#6B7280]'}`}>
@@ -582,7 +590,10 @@ export default function BookingScreen() {
                           <TouchableOpacity
                             key={addr.id}
                             activeOpacity={0.8}
-                            onPress={() => setSelectedAddressId(addr.id)}
+                            onPress={() => {
+                              setSelectedAddressId(addr.id);
+                              setTimeout(() => triggerTransition(4), 250);
+                            }}
                             className={`p-5 rounded-[24px] border flex-row items-start gap-3.5 shadow-xs ${
                               isSelected ? 'bg-white border-zinc-950 shadow-sm' : 'bg-white border-[#E5E7EB]'
                             }`}
@@ -592,7 +603,7 @@ export default function BookingScreen() {
                             </View>
                             <View className="flex-1 gap-1">
                               <View className="flex-row items-center gap-2">
-                                <Text className="text-[#111827] text-xs font-black">{addr.label}</Text>
+                                <Text className="text-[#101828] text-xs font-black">{addr.label}</Text>
                                 {addr.isDefault && (
                                   <View className="bg-zinc-100 border border-zinc-200 px-1.5 py-0.5 rounded-full">
                                     <Text className="text-[#6B7280] text-[7px] font-black uppercase tracking-wider">Default</Text>
@@ -612,7 +623,7 @@ export default function BookingScreen() {
                   {/* Add New Address Form */}
                   {showAddressForm && (
                     <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4 shadow-sm">
-                      <Text className="text-[#111827] text-xs font-black uppercase tracking-wider pl-1">New Address details</Text>
+                      <Text className="text-[#101828] text-xs font-black uppercase tracking-wider pl-1">New Address details</Text>
                       <View className="gap-3">
                         <TextInput
                           value={addrLabel}
@@ -634,7 +645,7 @@ export default function BookingScreen() {
                           onPress={() => setAddrDefault(!addrDefault)}
                           className="flex-row items-center gap-2 py-1 pl-1"
                         >
-                          <View className={`w-4 h-4 rounded border justify-center items-center ${addrDefault ? 'bg-[#111827] border-[#111827]' : 'border-zinc-300'}`}>
+                          <View className={`w-4 h-4 rounded border justify-center items-center ${addrDefault ? 'bg-[#101828] border-[#101828]' : 'border-zinc-300'}`}>
                             {addrDefault && <Feather name="check" size={10} color="white" />}
                           </View>
                           <Text className="text-[#6B7280] text-[10px] font-bold uppercase tracking-wider">Set as default address</Text>
@@ -668,7 +679,7 @@ export default function BookingScreen() {
                     <View className="flex-row justify-between items-center px-1">
                       <View className="flex-row items-center gap-2">
                         <Feather name="navigation" size={14} color="#3B82F6" />
-                        <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Coverage Radius</Text>
+                        <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Coverage Radius</Text>
                       </View>
                       <View className="bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
                         <Text className="text-blue-600 text-[8px] font-black uppercase">Active GPS</Text>
@@ -741,7 +752,7 @@ export default function BookingScreen() {
                 <View className="gap-5">
                   <View>
                     <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Schedule Day</Text>
-                    <Text className="text-[#111827] text-2xl font-black tracking-tight mt-1">Select Date</Text>
+                    <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1">Select Date</Text>
                   </View>
 
                   {/* Horizontal Date Capsules (Feature 4) */}
@@ -757,12 +768,17 @@ export default function BookingScreen() {
                         <TouchableOpacity
                           key={capsule.id}
                           activeOpacity={0.8}
-                          onPress={() => setDateSelectionType(capsule.id as any)}
+                          onPress={() => {
+                            setDateSelectionType(capsule.id as any);
+                            if (capsule.id !== 'calendar') {
+                              setTimeout(() => triggerTransition(5), 250);
+                            }
+                          }}
                           className={`flex-1 p-3.5 rounded-2xl border items-center justify-center gap-1 shadow-xs ${
                             isSelected ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-[#E5E7EB]'
                           }`}
                         >
-                          <Text className={`text-[10px] font-black uppercase tracking-wider ${isSelected ? 'text-white' : 'text-[#111827]'}`}>
+                          <Text className={`text-[10px] font-black uppercase tracking-wider ${isSelected ? 'text-white' : 'text-[#101828]'}`}>
                             {capsule.label}
                           </Text>
                           <Text className={`text-[8px] font-bold ${isSelected ? 'text-zinc-400' : 'text-[#6B7280]'}`}>
@@ -776,7 +792,7 @@ export default function BookingScreen() {
                   {/* Date picker grid panel */}
                   {showCalendarPicker && (
                     <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4 shadow-sm">
-                      <Text className="text-[#111827] text-xs font-black uppercase tracking-wider text-center">Select Available Date</Text>
+                      <Text className="text-[#101828] text-xs font-black uppercase tracking-wider text-center">Select Available Date</Text>
                       <View className="flex-row flex-wrap justify-between gap-y-3">
                         {Array.from({ length: 12 }).map((_, i) => {
                           const dateObj = new Date();
@@ -790,9 +806,12 @@ export default function BookingScreen() {
                             <TouchableOpacity
                               key={i}
                               activeOpacity={0.8}
-                              onPress={() => setSelectedDate(dateString)}
+                              onPress={() => {
+                                setSelectedDate(dateString);
+                                setTimeout(() => triggerTransition(5), 250);
+                              }}
                               className={`w-[22%] py-3 rounded-xl border items-center justify-center ${
-                                isPicked ? 'bg-[#111827] border-[#111827]' : 'bg-white border-[#E5E7EB]'
+                                isPicked ? 'bg-[#101828] border-[#101828]' : 'bg-white border-[#E5E7EB]'
                               }`}
                             >
                               <Text className={`text-xs font-black ${isPicked ? 'text-white' : 'text-zinc-800'}`}>{displayDay}</Text>
@@ -808,7 +827,7 @@ export default function BookingScreen() {
                   <View className="bg-white border border-[#E5E7EB] px-5 py-4.5 rounded-[24px] flex-row justify-between items-center">
                     <View className="flex-row items-center gap-2.5">
                       <Feather name="calendar" size={16} color="#4F46E5" />
-                      <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Selected Date</Text>
+                      <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Selected Date</Text>
                     </View>
                     <Text className="text-[#4F46E5] text-xs font-extrabold">{selectedDate || 'Select a date'}</Text>
                   </View>
@@ -820,7 +839,7 @@ export default function BookingScreen() {
                 <View className="gap-5">
                   <View>
                     <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Training Schedule</Text>
-                    <Text className="text-[#111827] text-2xl font-black tracking-tight mt-1">Select Time Slot</Text>
+                    <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1">Select Time Slot</Text>
                   </View>
 
                   {/* Day periods capsules */}
@@ -838,7 +857,7 @@ export default function BookingScreen() {
                           activeOpacity={0.8}
                           onPress={() => setTimePeriod(period.id as any)}
                           className={`flex-1 py-3 rounded-xl items-center justify-center ${
-                            isActive ? 'bg-[#111827] shadow-sm' : ''
+                            isActive ? 'bg-[#101828] shadow-sm' : ''
                           }`}
                         >
                           <Text className={`text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-white' : 'text-[#6B7280]'}`}>
@@ -857,7 +876,10 @@ export default function BookingScreen() {
                         <TouchableOpacity
                           key={idx}
                           activeOpacity={0.8}
-                          onPress={() => setSelectedTime(slotObj.time)}
+                          onPress={() => {
+                            setSelectedTime(slotObj.time);
+                            setTimeout(() => handleNext(), 250);
+                          }}
                           className={`p-4.5 rounded-[24px] border flex-row justify-between items-center shadow-xs ${
                             isPicked ? 'bg-zinc-950 border-zinc-950 shadow-md' : 'bg-white border-[#E5E7EB]'
                           }`}
@@ -918,7 +940,7 @@ export default function BookingScreen() {
                       </View>
 
                       <View className="items-center gap-1.5">
-                        <Text className="text-[#111827] text-lg font-black tracking-tight">Finding your perfect coach…</Text>
+                        <Text className="text-[#101828] text-lg font-black tracking-tight">Finding your perfect coach…</Text>
                         <Text className="text-[#6B7280] text-xs font-semibold uppercase tracking-wider mt-1 text-center max-w-[80%] leading-relaxed">
                           Checking matches for: {selectedExperience.title}
                         </Text>
@@ -961,39 +983,23 @@ export default function BookingScreen() {
                     /* REVEAL TRAINER BEAUTIFULLY & SESSION SUMMARY */
                     <View className="gap-6 animate-fade-in">
                       <View>
-                        <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Match Confirmed</Text>
-                        <Text className="text-[#111827] text-2xl font-black tracking-tight mt-1">Perfect Coach Found!</Text>
+                        <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Wellness Match</Text>
+                        <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1">Professional Coach Match</Text>
                       </View>
 
-                      {/* Coach Detail Card */}
+                      {/* Coach Detail Card (Obscured pre-booking) */}
                       <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
                         <View className="flex-row gap-4 items-center">
-                          <Image source={{ uri: matchedCoach.photo }} className="w-16 h-16 rounded-full border border-zinc-100" />
+                          {/* Generic Avatar Placeholder */}
+                          <View className="w-16 h-16 rounded-full bg-zinc-100 border border-zinc-200 items-center justify-center">
+                            <Feather name="user" size={24} color="#9CA3AF" />
+                          </View>
                           <View className="flex-1 gap-1">
                             <View className="flex-row items-center gap-2 flex-wrap">
-                              <Text className="text-[#111827] text-base font-black tracking-tight">{matchedCoach.name}</Text>
-                              
-                              {/* Level premium badges */}
-                              <View className={`px-2.5 py-0.5 rounded-full ${
-                                matchedCoach.level === 'Elite' 
-                                  ? 'bg-amber-500/10 border border-amber-500/20' 
-                                  : matchedCoach.level === 'Certified' 
-                                  ? 'bg-zinc-400/10 border border-zinc-400/20' 
-                                  : 'bg-orange-700/10 border border-orange-700/20'
-                              }`}>
-                                <Text className={`text-[8px] font-black uppercase tracking-widest ${
-                                  matchedCoach.level === 'Elite'
-                                    ? 'text-amber-600'
-                                    : matchedCoach.level === 'Certified'
-                                    ? 'text-zinc-500'
-                                    : 'text-orange-700'
-                                }`}>
-                                  {matchedCoach.level} Badge
-                                </Text>
-                              </View>
+                              <Text className="text-[#101828] text-base font-black tracking-tight">Wellness Coach (To be assigned)</Text>
                             </View>
-                            <Text className="text-[#6B7280] text-xs font-semibold leading-none">{matchedCoach.specialty}</Text>
-                            <Text className="text-zinc-400 text-[10px] font-bold leading-none mt-1">⭐️ {matchedCoach.rating} ({matchedCoach.completedSessions || 150} sessions completed)</Text>
+                            <Text className="text-[#6B7280] text-xs font-semibold leading-none">ACE/ISSA Certified Specialist</Text>
+                            <Text className="text-zinc-400 text-[10px] font-bold leading-none mt-1">⭐️ 4.9+ Rated Expert (150+ sessions completed)</Text>
                           </View>
                         </View>
 
@@ -1001,40 +1007,40 @@ export default function BookingScreen() {
 
                         <View className="flex-row justify-between items-center px-1">
                           <View className="gap-0.5">
-                            <Text className="text-[#6B7280] text-[8px] font-bold uppercase">Languages</Text>
-                            <Text className="text-zinc-800 text-[10px] font-extrabold">{(matchedCoach.languages || ['English']).join(', ')}</Text>
+                            <Text className="text-[#6B7280] text-[8px] font-bold uppercase">Details Release</Text>
+                            <Text className="text-zinc-800 text-[10px] font-extrabold">Sent 5 hours prior to session</Text>
                           </View>
                           <View className="gap-0.5 items-end">
-                            <Text className="text-[#6B7280] text-[8px] font-bold uppercase">Arrival distance</Text>
-                            <Text className="text-zinc-800 text-[10px] font-extrabold">~2.5 km away</Text>
+                            <Text className="text-[#6B7280] text-[8px] font-bold uppercase">Security check</Text>
+                            <Text className="text-zinc-800 text-[10px] font-extrabold">100% Vetted & Background Checked</Text>
                           </View>
                         </View>
                       </View>
 
                       {/* Workout Session Details */}
                       <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
-                        <Text className="text-[#111827] text-xs font-black uppercase tracking-wider border-b border-zinc-100 pb-3">Session Summary</Text>
+                        <Text className="text-[#101828] text-xs font-black uppercase tracking-wider border-b border-zinc-100 pb-3">Session Summary</Text>
                         
                         <View className="gap-3">
                           <View className="flex-row justify-between items-center">
                             <Text className="text-[#6B7280] text-xs font-semibold">Workout Experience</Text>
-                            <Text className="text-[#111827] text-xs font-extrabold">{selectedExperience.title}</Text>
+                            <Text className="text-[#101828] text-xs font-extrabold">{selectedExperience.title}</Text>
                           </View>
                           <View className="flex-row justify-between items-center">
                             <Text className="text-[#6B7280] text-xs font-semibold">Scheduled Date</Text>
-                            <Text className="text-[#111827] text-xs font-extrabold">{selectedDate}</Text>
+                            <Text className="text-[#101828] text-xs font-extrabold">{selectedDate}</Text>
                           </View>
                           <View className="flex-row justify-between items-center">
                             <Text className="text-[#6B7280] text-xs font-semibold">Time Slot</Text>
-                            <Text className="text-[#111827] text-xs font-extrabold">{selectedTime}</Text>
+                            <Text className="text-[#101828] text-xs font-extrabold">{selectedTime}</Text>
                           </View>
                           <View className="flex-row justify-between items-center">
                             <Text className="text-[#6B7280] text-xs font-semibold">Duration</Text>
-                            <Text className="text-[#111827] text-xs font-extrabold">{selectedExperience.duration} Mins</Text>
+                            <Text className="text-[#101828] text-xs font-extrabold">{selectedExperience.duration} Mins</Text>
                           </View>
                           <View className="flex-row justify-between items-start">
                             <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">Location</Text>
-                            <Text className="text-[#111827] text-xs font-extrabold max-w-[60%] text-right leading-relaxed">
+                            <Text className="text-[#101828] text-xs font-extrabold max-w-[60%] text-right leading-relaxed">
                               {addresses.find(a => a.id === selectedAddressId)?.addressLine || 'Selected address'}
                             </Text>
                           </View>

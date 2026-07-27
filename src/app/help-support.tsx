@@ -34,13 +34,13 @@ export default function HelpSupportScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
+    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#111827" />
+          <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
-        <Text className="text-[#111827] text-sm font-black uppercase tracking-wider">
+        <Text className="text-[#101828] text-sm font-black uppercase tracking-wider">
           Help & Support Center
         </Text>
         <View className="w-8" />
@@ -95,7 +95,7 @@ export default function HelpSupportScreen() {
                   value={ticketSubject}
                   onChangeText={setTicketSubject}
                   placeholder="e.g. Credit balance discrepancy"
-                  className="border border-[#E5E7EB] bg-[#F8F9FB] p-3 rounded-xl text-xs font-semibold text-zinc-900"
+                  className="border border-[#E5E7EB] bg-[#F7F8FC] p-3 rounded-xl text-xs font-semibold text-zinc-900"
                 />
               </View>
 
@@ -105,7 +105,7 @@ export default function HelpSupportScreen() {
                   value={ticketDetails}
                   onChangeText={setTicketDetails}
                   placeholder="Add context or session IDs..."
-                  className="border border-[#E5E7EB] bg-[#F8F9FB] p-3 rounded-xl text-xs font-semibold text-zinc-900 h-16"
+                  className="border border-[#E5E7EB] bg-[#F7F8FC] p-3 rounded-xl text-xs font-semibold text-zinc-900 h-16"
                   multiline
                 />
               </View>
@@ -138,7 +138,7 @@ export default function HelpSupportScreen() {
                       <Feather name={isOpen ? 'minus' : 'plus'} size={12} color="#6B7280" />
                     </View>
                     {isOpen && (
-                      <Text className="text-zinc-500 text-[10px] font-semibold leading-relaxed mt-1 bg-[#F8F9FB] p-3 rounded-xl border border-zinc-100">
+                      <Text className="text-zinc-500 text-[10px] font-semibold leading-relaxed mt-1 bg-[#F7F8FC] p-3 rounded-xl border border-zinc-100">
                         {faq.a}
                       </Text>
                     )}

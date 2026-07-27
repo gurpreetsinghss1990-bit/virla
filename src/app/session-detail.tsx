@@ -7,6 +7,7 @@ import { useUserStore } from '../store/userStore';
 import { useWalletStore } from '../store/walletStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import Svg, { Circle, Path } from 'react-native-svg';
+import { SkeletonLoader } from '../components/SkeletonLoader';
 
 export default function SessionDetailScreen() {
   const router = useRouter();
@@ -20,19 +21,19 @@ export default function SessionDetailScreen() {
 
   const booking = bookings.find((b) => b.id === bookingId) || bookings[0];
 
-  if (!booking) {
-    return (
-      <SafeAreaView className="flex-1 bg-white justify-center items-center">
-        <Text className="text-zinc-400 font-semibold">No booking details found.</Text>
-        <TouchableOpacity onPress={() => router.back()} className="mt-4 bg-zinc-900 px-6 py-2 rounded-full">
-          <Text className="text-white font-bold text-xs">Go Back</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Fallback status alignment for 11-stage timeline
-  const currentStatus = booking.timelineStatus || 'booked';
+  const currentStatus = booking?.timelineStatus || 'booked';
+  const isPendingDetails = role === 'customer' && 
+    (currentStatus === 'booked' || currentStatus === 'trainer_assigned' || currentStatus === 'trainer_accepted');
 
   // Trainer active states
   const [otpInput, setOtpInput] = useState('');
@@ -96,6 +97,21 @@ export default function SessionDetailScreen() {
       return () => clearInterval(timer);
     }
   }, [currentStatus]);
+
+  if (loading) {
+    return <SkeletonLoader layout="session-detail" />;
+  }
+
+  if (!booking) {
+    return (
+      <SafeAreaView className="flex-1 bg-white justify-center items-center">
+        <Text className="text-zinc-400 font-semibold">No booking details found.</Text>
+        <TouchableOpacity onPress={() => router.back()} className="mt-4 bg-zinc-900 px-6 py-2 rounded-full">
+          <Text className="text-white font-bold text-xs">Go Back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   // Verify OTP Security Code
   const handleVerifyOtp = () => {
@@ -232,13 +248,13 @@ export default function SessionDetailScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
+    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#111827" />
+          <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
-        <Text className="text-[#111827] text-sm font-black uppercase tracking-wider">
+        <Text className="text-[#101828] text-sm font-black uppercase tracking-wider">
           {role === 'trainer' ? 'Trainer Console' : 'Concierge Pass'}
         </Text>
         <TouchableOpacity onPress={handleSOS} className="bg-red-50 px-3 py-1.5 rounded-full border border-red-150">
@@ -309,10 +325,20 @@ export default function SessionDetailScreen() {
 
           {/* Trainer Status Card (Feature 3) */}
           <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm flex-row gap-4 items-center">
-            <Image source={{ uri: booking.trainerPhoto }} className="w-12 h-12 rounded-full border border-zinc-100" />
+            {isPendingDetails ? (
+              <View className="w-12 h-12 rounded-full bg-zinc-100 border border-zinc-200 items-center justify-center">
+                <Feather name="user" size={20} color="#9CA3AF" />
+              </View>
+            ) : (
+              <Image source={{ uri: booking.trainerPhoto }} className="w-12 h-12 rounded-full border border-zinc-100" />
+            )}
             <View className="flex-1">
-              <Text className="text-zinc-950 text-sm font-black">Coach {booking.trainerName}</Text>
-              <Text className="text-zinc-400 text-[8px] font-bold mt-0.5">🚗 Vehicle: White Activa 5G (MH02EA4920)</Text>
+              <Text className="text-zinc-950 text-sm font-black">
+                {isPendingDetails ? 'Professional Wellness Coach' : `Coach ${booking.trainerName}`}
+              </Text>
+              <Text className="text-zinc-400 text-[8px] font-bold mt-0.5">
+                {isPendingDetails ? '🚗 Details released 5 hours prior to session' : '🚗 Vehicle: White Activa 5G (MH02EA4920)'}
+              </Text>
               <View className="flex-row items-center gap-1.5 mt-1.5">
                 <View className="bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
                   <Text className="text-[#4F46E5] text-[7px] font-black uppercase tracking-wider">{getLiveStatusText()}</Text>
@@ -329,17 +355,26 @@ export default function SessionDetailScreen() {
             <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">Communication Controls</Text>
             
             <View className="flex-row justify-between">
-              <TouchableOpacity onPress={handleCall} className="w-[30%] bg-zinc-900 py-3 rounded-2xl items-center justify-center gap-1">
+              <TouchableOpacity 
+                onPress={isPendingDetails ? () => Alert.alert('Secure Line Locked', 'Coach communication channel opens 5 hours prior to your session time.') : handleCall} 
+                className="w-[30%] bg-zinc-900 py-3 rounded-2xl items-center justify-center gap-1"
+              >
                 <Feather name="phone" size={14} color="white" />
                 <Text className="text-white text-[8px] font-black uppercase mt-1">Call</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity onPress={handleMessage} className="w-[30%] bg-zinc-900 py-3 rounded-2xl items-center justify-center gap-1">
+              <TouchableOpacity 
+                onPress={isPendingDetails ? () => Alert.alert('Secure Line Locked', 'Coach communication channel opens 5 hours prior to your session time.') : handleMessage} 
+                className="w-[30%] bg-zinc-900 py-3 rounded-2xl items-center justify-center gap-1"
+              >
                 <Feather name="message-square" size={14} color="white" />
                 <Text className="text-white text-[8px] font-black uppercase mt-1">Message</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity onPress={handleShareLocation} className="w-[30%] bg-zinc-900 py-3 rounded-2xl items-center justify-center gap-1">
+              <TouchableOpacity 
+                onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Live location sharing opens 5 hours prior to your session time.') : handleShareLocation} 
+                className="w-[30%] bg-zinc-900 py-3 rounded-2xl items-center justify-center gap-1"
+              >
                 <Feather name="navigation" size={14} color="white" />
                 <Text className="text-white text-[8px] font-black uppercase mt-1">Share GPS</Text>
               </TouchableOpacity>
@@ -398,7 +433,7 @@ export default function SessionDetailScreen() {
           {/* Questionnaire overlay sheet */}
           {showQuestionnaire && (
             <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-lg gap-4">
-              <Text className="text-[#111827] text-xs font-black uppercase tracking-wider border-b border-zinc-50 pb-3">Mandatory Workout Report</Text>
+              <Text className="text-[#101828] text-xs font-black uppercase tracking-wider border-b border-zinc-50 pb-3">Mandatory Workout Report</Text>
               
               <View className="gap-2">
                 <Text className="text-zinc-500 text-[8px] font-black uppercase">Mobility star index</Text>

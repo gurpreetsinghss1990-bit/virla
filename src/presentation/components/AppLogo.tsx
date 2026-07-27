@@ -7,9 +7,9 @@ interface AppLogoProps {
 
 export function AppLogo({ size = 'medium' }: AppLogoProps) {
   const sizeClasses = {
-    small: 'text-xl tracking-[0.2em]',
-    medium: 'text-3xl tracking-[0.25em]',
-    large: 'text-5xl tracking-[0.3em]',
+    small: 'text-[20px] tracking-[0.2em]',
+    medium: 'text-[30px] tracking-[0.25em]',
+    large: 'text-[42px] tracking-[0.3em]',
   };
 
   const dotSizes = {
@@ -20,10 +20,10 @@ export function AppLogo({ size = 'medium' }: AppLogoProps) {
 
   return (
     <View className="flex-row items-center justify-center">
-      <Text className={`font-bold text-primary ${sizeClasses[size]}`}>
+      <Text className={`font-black text-[#101828] ${sizeClasses[size]}`}>
         VIRLA
       </Text>
-      <View className={`rounded-full bg-accent ${dotSizes[size]}`} />
+      <View className={`rounded-full bg-[#F5B942] ${dotSizes[size]}`} />
     </View>
   );
 }

@@ -16,13 +16,13 @@ export default function PaymentHistoryScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
+    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#111827" />
+          <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[#111827] text-sm font-black uppercase tracking-wider mr-8">
+        <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
           Billing History
         </Text>
       </View>

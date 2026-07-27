@@ -138,15 +138,15 @@ export default function CommunicationScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
+    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#111827" />
+          <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
         
         <View className="items-center">
-          <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Coach {booking.trainerName}</Text>
+          <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Coach {booking.trainerName}</Text>
           <Text className="text-zinc-400 text-[8px] font-bold uppercase">{booking.trainerSpeciality} • {booking.trainerLevel}</Text>
         </View>
 
@@ -158,12 +158,12 @@ export default function CommunicationScreen() {
       {/* Communications Top Tool Bar */}
       <View className="bg-white border-b border-zinc-150 p-4 flex-row justify-around gap-2.5">
         <TouchableOpacity onPress={handleCall} className="flex-1 bg-zinc-50 border border-zinc-100 py-3 rounded-2xl items-center flex-row justify-center gap-2">
-          <Feather name="phone" size={12} color="#111827" />
+          <Feather name="phone" size={12} color="#101828" />
           <Text className="text-zinc-950 text-[8px] font-black uppercase">Call Trainer</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={handleShareLocation} className="flex-1 bg-zinc-50 border border-zinc-100 py-3 rounded-2xl items-center flex-row justify-center gap-2">
-          <Feather name="navigation" size={12} color="#111827" />
+          <Feather name="navigation" size={12} color="#101828" />
           <Text className="text-zinc-950 text-[8px] font-black uppercase">Share Live GPS</Text>
         </TouchableOpacity>
 

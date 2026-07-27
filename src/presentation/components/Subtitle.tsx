@@ -16,7 +16,7 @@ export function Subtitle({ children, className = '', align = 'center' }: Subtitl
 
   return (
     <Text
-      className={`text-base text-zinc-500 leading-relaxed ${alignClass} ${className}`}
+      className={`text-[15px] font-semibold text-[#6B7280] leading-relaxed ${alignClass} ${className}`}
     >
       {children}
     </Text>

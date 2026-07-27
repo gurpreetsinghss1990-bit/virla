@@ -152,13 +152,13 @@ export default function MembershipScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
+    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#111827" />
+          <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[#111827] text-sm font-black uppercase tracking-wider mr-8">
+        <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
           VIRLA Credits
         </Text>
       </View>
@@ -291,19 +291,19 @@ export default function MembershipScreen() {
                         <Text className="text-[#4F46E5] text-[10px] font-bold mt-1">🏷️ GST Tax Note: {selectedPlan.gstText}</Text>
                       </View>
                       <TouchableOpacity onPress={closeDetails} className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center">
-                        <Feather name="x" size={14} color="#111827" />
+                        <Feather name="x" size={14} color="#101828" />
                       </TouchableOpacity>
                     </View>
 
                     <View className="gap-2">
-                      <Text className="text-[#111827] text-xs font-black uppercase">Plan overview</Text>
+                      <Text className="text-[#101828] text-xs font-black uppercase">Plan overview</Text>
                       <Text className="text-zinc-500 text-xs font-semibold leading-relaxed pl-0.5">
                         {selectedPlan.idealFor}
                       </Text>
                     </View>
 
                     <View className="gap-3">
-                      <Text className="text-[#111827] text-xs font-black uppercase">What's included</Text>
+                      <Text className="text-[#101828] text-xs font-black uppercase">What's included</Text>
                       {[
                         'Book Any workout (Strength, Flow, Cardio, Reset, Combat)',
                         'Pause anytime options (up to validity limits)',
@@ -332,7 +332,7 @@ export default function MembershipScreen() {
                     <View className="flex-row justify-between items-center border-b border-zinc-100 pb-4">
                       <Text className="text-zinc-950 text-base font-black uppercase tracking-wider pl-1">Apple Checkout</Text>
                       <TouchableOpacity onPress={() => setCheckoutActive(false)} className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center">
-                        <Feather name="arrow-left" size={14} color="#111827" />
+                        <Feather name="arrow-left" size={14} color="#101828" />
                       </TouchableOpacity>
                     </View>
 
@@ -369,7 +369,7 @@ export default function MembershipScreen() {
                         onTouchEnd={onSwipeRelease}
                         className="absolute left-2.5 w-10 h-10 rounded-xl bg-white justify-center items-center shadow-md"
                       >
-                        <Feather name="arrow-right" size={16} color="#111827" />
+                        <Feather name="arrow-right" size={16} color="#101828" />
                       </Animated.View>
                     </View>
                   </View>
@@ -417,7 +417,7 @@ export default function MembershipScreen() {
                     closeDetails();
                     router.push('/booking');
                   }}
-                  className="w-full bg-[#111827] py-4.5 rounded-2xl items-center justify-center mt-4"
+                  className="w-full bg-[#101828] py-4.5 rounded-2xl items-center justify-center mt-4"
                 >
                   <Text className="text-white text-xs font-black uppercase">Book Your First Workout</Text>
                 </TouchableOpacity>

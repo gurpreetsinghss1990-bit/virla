@@ -35,13 +35,13 @@ export default function HealthProfileScreen() {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
+    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#111827" />
+          <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
-        <Text className="text-[#111827] text-sm font-black uppercase tracking-wider">
+        <Text className="text-[#101828] text-sm font-black uppercase tracking-wider">
           Health & Medical profile
         </Text>
         <TouchableOpacity onPress={() => { if (isEditing) { handleSave(); } else { setIsEditing(true); } }}>
@@ -76,7 +76,7 @@ export default function HealthProfileScreen() {
                       onChangeText={(val) => setForm(prev => ({ ...prev, [field.key]: val }))}
                       placeholder={field.placeholder}
                       placeholderTextColor="#9CA3AF"
-                      className="border border-[#E5E7EB] bg-[#F8F9FB] p-3 rounded-xl text-zinc-900 text-xs font-semibold"
+                      className="border border-[#E5E7EB] bg-[#F7F8FC] p-3 rounded-xl text-zinc-900 text-xs font-semibold"
                     />
                   ) : (
                     <Text className="text-zinc-650 text-xs font-semibold leading-relaxed pl-5">
@@ -90,7 +90,7 @@ export default function HealthProfileScreen() {
             {isEditing && (
               <TouchableOpacity
                 onPress={handleSave}
-                className="w-full bg-[#111827] py-4 rounded-2xl items-center justify-center mt-3 shadow-xs"
+                className="w-full bg-[#101828] py-4 rounded-2xl items-center justify-center mt-3 shadow-xs"
               >
                 <Text className="text-white text-xs font-black uppercase">Save Medical Information</Text>
               </TouchableOpacity>

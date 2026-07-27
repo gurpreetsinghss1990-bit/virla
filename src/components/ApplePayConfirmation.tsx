@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, Animated, PanResponder, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Animated, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 interface ApplePayConfirmationProps {
@@ -10,69 +10,47 @@ interface ApplePayConfirmationProps {
 
 export function ApplePayConfirmation({ onConfirm, priceText = '₹1,200', creditsText = '1 Credit' }: ApplePayConfirmationProps) {
   const [confirmed, setConfirmed] = useState(false);
-  const containerWidth = useRef(0);
-  
-  // Slider animations
-  const panX = useRef(new Animated.Value(0)).current;
-  const sliderWidth = 56; // size of the circle slider
-  const padding = 4;
+  const [loading, setLoading] = useState(false);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => !confirmed,
-      onMoveShouldSetPanResponder: () => !confirmed,
-      onPanResponderMove: (_, gestureState) => {
-        // limit dragging between 0 and max draggable width
-        const maxDraggable = containerWidth.current - sliderWidth - padding * 2;
-        let newX = gestureState.dx;
-        if (newX < 0) newX = 0;
-        if (newX > maxDraggable) newX = maxDraggable;
-        panX.setValue(newX);
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        const maxDraggable = containerWidth.current - sliderWidth - padding * 2;
-        // if user dragged past 80%, confirm booking
-        if (gestureState.dx >= maxDraggable * 0.8) {
-          Animated.timing(panX, {
-            toValue: maxDraggable,
-            duration: 150,
-            useNativeDriver: true,
-          }).start(() => {
-            setConfirmed(true);
-            onConfirm();
-          });
-        } else {
-          // snap back to start
-          Animated.spring(panX, {
-            toValue: 0,
-            tension: 50,
-            friction: 7,
-            useNativeDriver: true,
-          }).start();
-        }
-      },
-    })
-  ).current;
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.97,
+      useNativeDriver: true,
+      tension: 100,
+      friction: 6,
+    }).start();
+  };
 
-  // Interpolate opacity of helper text based on slide progress
-  const maxDraggable = containerWidth.current ? containerWidth.current - sliderWidth - padding * 2 : 200;
-  const textOpacity = panX.interpolate({
-    inputRange: [0, Math.max(maxDraggable, 1)],
-    outputRange: [1, 0.1],
-  });
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1.0,
+      useNativeDriver: true,
+      tension: 100,
+      friction: 6,
+    }).start();
+  };
+
+  const handleConfirm = () => {
+    if (confirmed || loading) return;
+    setLoading(true);
+    // Add a tiny delay to simulate payment auth
+    setTimeout(() => {
+      setLoading(false);
+      setConfirmed(true);
+      onConfirm();
+    }, 800);
+  };
 
   return (
     <View 
-      onLayout={(e) => {
-        containerWidth.current = e.nativeEvent.layout.width;
-      }}
-      className="bg-zinc-950 p-4.5 rounded-[32px] border border-zinc-800 shadow-xl overflow-hidden"
+      className="bg-zinc-950 p-5 rounded-[28px] border border-zinc-800 shadow-xl overflow-hidden"
     >
       {/* Top billing preview */}
-      <View className="flex-row justify-between items-center mb-4.5 px-1.5">
+      <View className="flex-row justify-between items-center mb-5 px-1">
         <View className="flex-row items-center gap-2">
           <View className="w-6 h-6 rounded-full bg-amber-500/10 items-center justify-center">
-            <Feather name="credit-card" size={12} color="#F59E0B" />
+            <Feather name="credit-card" size={12} color="#F5B942" />
           </View>
           <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Payment Method</Text>
         </View>
@@ -82,39 +60,49 @@ export function ApplePayConfirmation({ onConfirm, priceText = '₹1,200', credit
         </View>
       </View>
 
-      {/* Swipe Container */}
-      <View className="h-16 bg-zinc-900 border border-zinc-800 rounded-2xl relative justify-center p-1">
-        {/* Animated Slide to Confirm label */}
-        <Animated.View style={{ opacity: textOpacity }} className="absolute w-full items-center justify-center z-0 flex-row gap-1">
-          <Text className="text-zinc-400 text-xs font-black tracking-widest uppercase">
-            Slide to Confirm
-          </Text>
-          <Feather name="chevrons-right" size={14} color="#A1A1AA" />
-        </Animated.View>
-
-        {/* Draggable Circle Handle */}
-        <Animated.View
-          {...panResponder.panHandlers}
-          style={{
-            transform: [{ translateX: panX }],
-            width: sliderWidth,
-            height: sliderWidth,
-          }}
-          className={`rounded-xl items-center justify-center z-10 shadow-lg ${
-            confirmed ? 'bg-emerald-500' : 'bg-amber-400'
+      {/* Tap to Confirm Button */}
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }} className="w-full">
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={handleConfirm}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          disabled={confirmed || loading}
+          className={`w-full h-14 rounded-2xl justify-center items-center flex-row ${
+            confirmed ? 'bg-emerald-500' : 'bg-[#F5B942]'
           }`}
+          style={{
+            shadowColor: confirmed ? '#10B981' : '#F5B942',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.2,
+            shadowRadius: 8,
+            elevation: 4,
+          }}
         >
-          {confirmed ? (
-            <Feather name="check" size={22} color="white" />
+          {loading ? (
+            <ActivityIndicator color="#09090B" size="small" />
+          ) : confirmed ? (
+            <View className="flex-row items-center justify-center gap-2">
+              <Feather name="check" size={18} color="white" />
+              <Text className="text-white text-xs font-black uppercase tracking-widest">
+                Confirmed
+              </Text>
+            </View>
           ) : (
-            <Feather name="arrow-right" size={22} color="#09090B" />
+            <View className="flex-row items-center justify-center gap-2">
+              <Text className="text-[#09090B] text-xs font-black uppercase tracking-widest">
+                Confirm Booking
+              </Text>
+              <Feather name="arrow-right" size={14} color="#09090B" />
+            </View>
           )}
-        </Animated.View>
-      </View>
+        </TouchableOpacity>
+      </Animated.View>
 
-      <Text className="text-center text-[9px] text-zinc-500 font-bold uppercase tracking-wider mt-3">
+      <Text className="text-center text-[9px] text-zinc-500 font-bold uppercase tracking-wider mt-3.5">
         🔒 Encrypted • Touch ID / Face ID Authenticated
       </Text>
     </View>
   );
 }
+export default ApplePayConfirmation;

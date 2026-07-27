@@ -122,11 +122,11 @@ export default function VirlaAIScreen() {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
+    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#111827" />
+          <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
         
         <View className="flex-row bg-[#F1F3F5] p-1 rounded-full">
@@ -199,7 +199,7 @@ export default function VirlaAIScreen() {
 
               {/* Suggested Questions Grid (Feature 5) */}
               <View className="gap-3">
-                <Text className="text-[#111827] text-xs font-black uppercase tracking-widest pl-1">Ask Virla Anything</Text>
+                <Text className="text-[#101828] text-xs font-black uppercase tracking-widest pl-1">Ask Virla Anything</Text>
                 <View className="flex-row flex-wrap gap-2.5">
                   {[
                     { label: 'Improve Resume', query: 'improve resume' },
@@ -224,7 +224,7 @@ export default function VirlaAIScreen() {
 
               {/* Expandable AI Knowledge Cards (Feature 8) */}
               <View className="gap-3">
-                <Text className="text-[#111827] text-xs font-black uppercase tracking-widest pl-1">AI Knowledge Cards</Text>
+                <Text className="text-[#101828] text-xs font-black uppercase tracking-widest pl-1">AI Knowledge Cards</Text>
                 <View className="gap-3">
                   {knowledgeCards.map((card) => {
                     const isExpanded = expandedKnowledgeCard === card.id;

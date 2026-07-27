@@ -25,13 +25,13 @@ export default function PersonalStatisticsScreen() {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
+    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#111827" />
+          <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
-        <Text className="text-[#111827] text-sm font-black uppercase tracking-wider">
+        <Text className="text-[#101828] text-sm font-black uppercase tracking-wider">
           Personal Statistics
         </Text>
         <View className="w-8" />

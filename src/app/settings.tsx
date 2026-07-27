@@ -8,7 +8,7 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 export default function SettingsScreen() {
   const router = useRouter();
   const { settings, updateGeneralSettings, notifications, updateNotificationPrefs } = useUserProfileStore();
-  const { setRole } = useUserStore();
+  const { setRole, setLoggedIn } = useUserStore();
 
   const handleAction = (label: string, detail: string) => {
     Alert.alert(label, detail);
@@ -24,7 +24,8 @@ export default function SettingsScreen() {
           text: 'Logout',
           style: 'destructive',
           onPress: () => {
-            router.replace('/onboarding' as any);
+            setLoggedIn(false);
+            router.replace('/get-started' as any);
           }
         }
       ]
@@ -32,13 +33,13 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
+    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#111827" />
+          <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
-        <Text className="text-[#111827] text-sm font-black uppercase tracking-wider">
+        <Text className="text-[#101828] text-sm font-black uppercase tracking-wider">
           System Settings
         </Text>
         <View className="w-8" />
@@ -186,25 +187,25 @@ export default function SettingsScreen() {
             
             <TouchableOpacity
               onPress={() => handleAction('Rate VIRLA', 'Thank you! Redirecting to App Store rating page...')}
-              className="bg-[#F8F9FB] border border-[#E5E7EB]/60 p-4 rounded-2xl flex-row justify-between items-center"
+              className="bg-[#F7F8FC] border border-[#E5E7EB]/60 p-4 rounded-2xl flex-row justify-between items-center"
             >
-              <Text className="text-[#111827] text-xs font-black">Rate App</Text>
+              <Text className="text-[#101828] text-xs font-black">Rate App</Text>
               <Feather name="star" size={12} color="#6B7280" />
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => handleAction('Share App', 'App download invitation link copied: check out virla.fit!')}
-              className="bg-[#F8F9FB] border border-[#E5E7EB]/60 p-4 rounded-2xl flex-row justify-between items-center"
+              className="bg-[#F7F8FC] border border-[#E5E7EB]/60 p-4 rounded-2xl flex-row justify-between items-center"
             >
-              <Text className="text-[#111827] text-xs font-black">Share App with Friends</Text>
+              <Text className="text-[#101828] text-xs font-black">Share App with Friends</Text>
               <Feather name="share-2" size={12} color="#6B7280" />
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => router.push('/legal-center' as any)}
-              className="bg-[#F8F9FB] border border-[#E5E7EB]/60 p-4 rounded-2xl flex-row justify-between items-center"
+              className="bg-[#F7F8FC] border border-[#E5E7EB]/60 p-4 rounded-2xl flex-row justify-between items-center"
             >
-              <Text className="text-[#111827] text-xs font-black">Legal Center & Version</Text>
+              <Text className="text-[#101828] text-xs font-black">Legal Center & Version</Text>
               <Feather name="chevron-right" size={12} color="#6B7280" />
             </TouchableOpacity>
           </View>
@@ -212,7 +213,7 @@ export default function SettingsScreen() {
           {/* Logout */}
           <TouchableOpacity
             onPress={handleLogout}
-            className="w-full bg-[#111827] py-4 rounded-2xl items-center justify-center shadow-xs"
+            className="w-full bg-[#101828] py-4 rounded-2xl items-center justify-center shadow-xs"
           >
             <Text className="text-white text-xs font-black uppercase">Sign Out of Account</Text>
           </TouchableOpacity>

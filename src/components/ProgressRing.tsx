@@ -1,12 +1,12 @@
 import React from 'react';
 import { View } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 interface ProgressRingProps {
   progress: number; // Value between 0 and 1
   size?: number;
   strokeWidth?: number;
-  activeColor?: string;
+  activeColor?: string; // Fallback or override active color, default uses gradient
   inactiveColor?: string;
   children?: React.ReactNode;
 }
@@ -15,7 +15,7 @@ export function ProgressRing({
   progress,
   size = 80,
   strokeWidth = 8,
-  activeColor = '#4F46E5', // Accent green
+  activeColor,
   inactiveColor = '#E4E4E7', // Zinc-200
   children,
 }: ProgressRingProps) {
@@ -28,6 +28,15 @@ export function ProgressRing({
   return (
     <View style={{ width: size, height: size }} className="justify-center items-center relative">
       <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }} className="absolute">
+        <Defs>
+          {/* Luxury circular progress gradient (Blue -> Purple -> Gold) */}
+          <LinearGradient id="ringProgressGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor="#4F46E5" />
+            <Stop offset="60%" stopColor="#6D5EF7" />
+            <Stop offset="100%" stopColor="#F5B942" />
+          </LinearGradient>
+        </Defs>
+
         {/* Background Inactive Circle */}
         <Circle
           cx={size / 2}
@@ -42,7 +51,7 @@ export function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={activeColor}
+          stroke={activeColor || 'url(#ringProgressGrad)'}
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
@@ -54,3 +63,4 @@ export function ProgressRing({
     </View>
   );
 }
+export default ProgressRing;

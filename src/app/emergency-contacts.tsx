@@ -82,13 +82,13 @@ export default function EmergencyContactsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
+    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#111827" />
+          <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
-        <Text className="text-[#111827] text-sm font-black uppercase tracking-wider">
+        <Text className="text-[#101828] text-sm font-black uppercase tracking-wider">
           Emergency Contacts
         </Text>
         <TouchableOpacity onPress={() => { if (isAdding) { resetForm(); } else { setIsAdding(true); } }}>
@@ -121,7 +121,7 @@ export default function EmergencyContactsScreen() {
                   value={name}
                   onChangeText={setName}
                   placeholder="Enter full name"
-                  className="border border-[#E5E7EB] bg-[#F8F9FB] p-3.5 rounded-xl text-xs font-semibold"
+                  className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
                 />
               </View>
 
@@ -131,7 +131,7 @@ export default function EmergencyContactsScreen() {
                   value={relationship}
                   onChangeText={setRelationship}
                   placeholder="e.g. Spouse, Brother, Father"
-                  className="border border-[#E5E7EB] bg-[#F8F9FB] p-3.5 rounded-xl text-xs font-semibold"
+                  className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
                 />
               </View>
 
@@ -142,7 +142,7 @@ export default function EmergencyContactsScreen() {
                   onChangeText={setPhone}
                   placeholder="e.g. +91 98200 11223"
                   keyboardType="phone-pad"
-                  className="border border-[#E5E7EB] bg-[#F8F9FB] p-3.5 rounded-xl text-xs font-semibold"
+                  className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
                 />
               </View>
 
@@ -153,7 +153,7 @@ export default function EmergencyContactsScreen() {
                   onChangeText={setAltPhone}
                   placeholder="e.g. +91 98200 44556"
                   keyboardType="phone-pad"
-                  className="border border-[#E5E7EB] bg-[#F8F9FB] p-3.5 rounded-xl text-xs font-semibold"
+                  className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
                 />
               </View>
 
@@ -163,7 +163,7 @@ export default function EmergencyContactsScreen() {
                   value={medicalNotes}
                   onChangeText={setMedicalNotes}
                   placeholder="e.g. Heart condition history, Asthma"
-                  className="border border-[#E5E7EB] bg-[#F8F9FB] p-3.5 rounded-xl text-xs font-semibold"
+                  className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
                 />
               </View>
 
@@ -214,7 +214,7 @@ export default function EmergencyContactsScreen() {
                       onPress={() => handleEdit(contact)}
                       className="flex-1 bg-zinc-50 border border-zinc-100 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
                     >
-                      <Feather name="edit" size={11} color="#111827" />
+                      <Feather name="edit" size={11} color="#101828" />
                       <Text className="text-zinc-950 text-[8px] font-black uppercase">Edit</Text>
                     </TouchableOpacity>
 

@@ -56,14 +56,14 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
+    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
       {/* Header */}
       <View className="h-14 flex-row items-center justify-between px-6 border-b border-[#E5E7EB] bg-white">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#111827" />
+          <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
         
-        <Text className="text-[#111827] text-sm font-black uppercase tracking-wider">
+        <Text className="text-[#101828] text-sm font-black uppercase tracking-wider">
           Notifications Center
         </Text>
 
@@ -93,7 +93,7 @@ export default function NotificationsScreen() {
               if (group.items.length === 0) return null;
               return (
                 <View key={group.title} className="gap-3.5">
-                  <Text className="text-[#111827] text-xs font-black uppercase tracking-wider pl-1">
+                  <Text className="text-[#101828] text-xs font-black uppercase tracking-wider pl-1">
                     {group.title}
                   </Text>
                   
@@ -117,7 +117,7 @@ export default function NotificationsScreen() {
                         </View>
                         
                         <View className="flex-1 justify-center pr-3">
-                          <Text className="text-[#111827] text-xs font-black tracking-tight">{item.title}</Text>
+                          <Text className="text-[#101828] text-xs font-black tracking-tight">{item.title}</Text>
                           <Text className="text-[#6B7280] text-[10px] font-semibold leading-relaxed mt-0.5">
                             {item.body}
                           </Text>

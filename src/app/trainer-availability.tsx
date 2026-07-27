@@ -102,13 +102,13 @@ export default function TrainerAvailabilityScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
+    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#111827" />
+          <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[#111827] text-sm font-black uppercase tracking-wider mr-8">
+        <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
           Weekly Availability
         </Text>
       </View>
@@ -132,7 +132,7 @@ export default function TrainerAvailabilityScreen() {
               {/* Circular progress ring representing completed sessions progress (420/500 = 84%) */}
               <ProgressRing progress={sessionsCompleted / sessionsReq} size={88} strokeWidth={8} activeColor="#4F46E5">
                 <View className="items-center justify-center">
-                  <Text className="text-[#111827] text-base font-black">84%</Text>
+                  <Text className="text-[#101828] text-base font-black">84%</Text>
                   <Text className="text-zinc-400 text-[6px] font-black uppercase mt-0.5">Complete</Text>
                 </View>
               </ProgressRing>
@@ -187,7 +187,7 @@ export default function TrainerAvailabilityScreen() {
           {/* Section 2: Availability Retainer Monthly Status Dashboard (Feature 4) */}
           <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
             <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
-              <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Availability Retainer</Text>
+              <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Availability Retainer</Text>
               <View className="bg-red-50 border border-red-150 px-2 py-0.5 rounded-full">
                 <Text className="text-red-500 text-[8px] font-black uppercase tracking-widest">Monthly Status</Text>
               </View>
@@ -238,7 +238,7 @@ export default function TrainerAvailabilityScreen() {
           <View className="bg-zinc-50 border border-zinc-150 p-4.5 rounded-[24px] flex-row justify-between items-center">
             <View className="flex-row items-center gap-2.5">
               <Feather name="edit-3" size={14} color="#4F46E5" />
-              <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Slot Edit Allowance</Text>
+              <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Slot Edit Allowance</Text>
             </View>
             <View className="bg-zinc-950 border border-zinc-800 px-3 py-1 rounded-lg">
               <Text className="text-amber-400 text-[9px] font-black uppercase tracking-wider">
@@ -257,7 +257,7 @@ export default function TrainerAvailabilityScreen() {
                   activeOpacity={0.8}
                   onPress={() => setActiveDay(day)}
                   className={`flex-1 py-2.5 rounded-xl items-center justify-center ${
-                    isAct ? 'bg-[#111827] shadow-xs' : ''
+                    isAct ? 'bg-[#101828] shadow-xs' : ''
                   }`}
                 >
                   <Text className={`text-[9px] font-black uppercase tracking-wider ${isAct ? 'text-white' : 'text-[#6B7280]'}`}>

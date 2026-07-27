@@ -4,6 +4,7 @@ import { Booking } from '../types';
 import { BookingStatusBadge } from './BookingStatusBadge';
 import { useBookingStore } from '../store/bookingStore';
 import { useRouter } from 'expo-router';
+import { LuxuryCard } from './LuxuryCard';
 
 interface BookingCardProps {
   booking: Booking;
@@ -65,20 +66,26 @@ export function BookingCard({ booking }: BookingCardProps) {
   const isUpcoming = booking.status === 'upcoming';
 
   return (
-    <View className="bg-white border border-zinc-100 p-5 rounded-[24px] shadow-sm mb-4">
+    <LuxuryCard className="p-5 mb-4" interactive={false}>
       {/* Top Section */}
-      <View className="flex-row items-center justify-between mb-4 pb-4 border-b border-zinc-50">
+      <View className="flex-row items-center justify-between mb-4 pb-4 border-b border-zinc-100">
         <View className="flex-row items-center gap-3">
-          <Image
-            source={{ uri: booking.trainerPhoto }}
-            className="w-12 h-12 rounded-full border border-zinc-150"
-          />
+          {isUpcoming ? (
+            <View className="w-12 h-12 rounded-full bg-zinc-100 border border-zinc-200 items-center justify-center">
+              <Text className="text-lg">🧘</Text>
+            </View>
+          ) : (
+            <Image
+              source={{ uri: booking.trainerPhoto }}
+              className="w-12 h-12 rounded-full border border-zinc-150"
+            />
+          )}
           <View>
-            <Text className="text-primary text-base font-black tracking-tight">
-              {booking.trainerName.includes('Assigning') ? booking.trainerName : `Coach ${booking.trainerName}`}
+            <Text className="text-[#101828] text-base font-extrabold tracking-tight">
+              {isUpcoming ? 'Professional Wellness Coach' : `Coach ${booking.trainerName}`}
             </Text>
-            <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
-              {booking.workoutTitle} • ₹{booking.price || 1200}
+            <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider mt-0.5">
+              {isUpcoming ? `${booking.workoutTitle} • Details sent 5h prior` : `${booking.workoutTitle} • ₹${booking.price || 1200}`}
             </Text>
           </View>
         </View>
@@ -86,11 +93,11 @@ export function BookingCard({ booking }: BookingCardProps) {
       </View>
 
       {/* Date & Time Row */}
-      <View className="flex-row justify-between items-center bg-zinc-50 px-4 py-3 rounded-2xl mb-4">
-        <Text className="text-zinc-600 text-xs font-semibold">
+      <View className="flex-row justify-between items-center bg-zinc-50 px-4 py-3 rounded-xl mb-4">
+        <Text className="text-zinc-500 text-xs font-semibold">
           📅 {booking.date}
         </Text>
-        <Text className="text-zinc-600 text-xs font-semibold">
+        <Text className="text-zinc-500 text-xs font-semibold">
           ⏱️ {booking.time}
         </Text>
       </View>
@@ -102,31 +109,31 @@ export function BookingCard({ booking }: BookingCardProps) {
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={handleReschedule}
-              className="flex-1 bg-zinc-50 border border-zinc-100 py-3 rounded-xl items-center justify-center"
+              className="flex-1 bg-zinc-50 border border-zinc-200/60 py-3 rounded-xl items-center justify-center"
             >
-              <Text className="text-primary text-xs font-bold">Reschedule</Text>
+              <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Reschedule</Text>
             </TouchableOpacity>
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={handleCancel}
-              className="flex-1 bg-red-50 border border-red-100 py-3 rounded-xl items-center justify-center"
+              className="flex-1 bg-red-50/50 border border-red-100/50 py-3 rounded-xl items-center justify-center"
             >
-              <Text className="text-red-500 text-xs font-bold">Cancel</Text>
+              <Text className="text-[#FF4D4F] text-xs font-black uppercase tracking-wider">Cancel</Text>
             </TouchableOpacity>
           </>
         )}
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={handleViewDetails}
-          className={`py-3 rounded-xl items-center justify-center ${
-            isUpcoming ? 'px-4 bg-zinc-900 border border-zinc-900' : 'flex-1 bg-zinc-900 border border-zinc-900'
+          className={`py-3 rounded-xl items-center justify-center bg-[#101828] border border-[#101828] ${
+            isUpcoming ? 'px-5' : 'flex-1'
           }`}
         >
-          <Text className="text-white text-xs font-bold">
+          <Text className="text-white text-xs font-black uppercase tracking-wider">
             {isUpcoming ? 'Details' : 'View Details'}
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </LuxuryCard>
   );
 }

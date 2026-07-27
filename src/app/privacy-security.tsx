@@ -84,13 +84,13 @@ export default function PrivacySecurityScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
+    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#111827" />
+          <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
-        <Text className="text-[#111827] text-sm font-black uppercase tracking-wider">
+        <Text className="text-[#101828] text-sm font-black uppercase tracking-wider">
           Privacy & Security
         </Text>
         <View className="w-8" />
@@ -145,7 +145,7 @@ export default function PrivacySecurityScreen() {
 
             <TouchableOpacity
               onPress={() => setShowPasswordModal(true)}
-              className="mt-2 bg-[#F8F9FB] border border-[#E5E7EB] py-3 rounded-2xl items-center"
+              className="mt-2 bg-[#F7F8FC] border border-[#E5E7EB] py-3 rounded-2xl items-center"
             >
               <Text className="text-zinc-950 text-[10px] font-black uppercase">Change Account Password</Text>
             </TouchableOpacity>
@@ -160,14 +160,14 @@ export default function PrivacySecurityScreen() {
                 onChangeText={setOldPassword}
                 placeholder="Enter current password"
                 secureTextEntry
-                className="border border-[#E5E7EB] bg-[#F8F9FB] p-3 rounded-xl text-xs font-semibold text-zinc-900"
+                className="border border-[#E5E7EB] bg-[#F7F8FC] p-3 rounded-xl text-xs font-semibold text-zinc-900"
               />
               <TextInput
                 value={newPassword}
                 onChangeText={setNewPassword}
                 placeholder="Enter new password"
                 secureTextEntry
-                className="border border-[#E5E7EB] bg-[#F8F9FB] p-3 rounded-xl text-xs font-semibold text-zinc-900"
+                className="border border-[#E5E7EB] bg-[#F7F8FC] p-3 rounded-xl text-xs font-semibold text-zinc-900"
               />
               <View className="flex-row gap-3">
                 <TouchableOpacity onPress={() => setShowPasswordModal(false)} className="flex-1 bg-zinc-50 border border-zinc-150 py-3 rounded-xl items-center">

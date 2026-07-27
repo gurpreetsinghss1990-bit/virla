@@ -95,13 +95,13 @@ export default function AddressManagementScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
+    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#111827" />
+          <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
-        <Text className="text-[#111827] text-sm font-black uppercase tracking-wider">
+        <Text className="text-[#101828] text-sm font-black uppercase tracking-wider">
           Saved Addresses
         </Text>
         <TouchableOpacity onPress={() => { if (showForm) { resetForm(); } else { setShowForm(true); } }}>
@@ -138,7 +138,7 @@ export default function AddressManagementScreen() {
                         key={l}
                         onPress={() => setLabel(l)}
                         className={`px-3.5 py-2 rounded-xl border ${
-                          label === l ? 'bg-zinc-950 border-zinc-950' : 'bg-[#F8F9FB] border-zinc-200'
+                          label === l ? 'bg-zinc-950 border-zinc-950' : 'bg-[#F7F8FC] border-zinc-200'
                         }`}
                       >
                         <Text className={`text-[8px] font-black uppercase ${
@@ -155,7 +155,7 @@ export default function AddressManagementScreen() {
                     value={name}
                     onChangeText={setName}
                     placeholder="e.g. My Residence, Worli HQ"
-                    className="border border-[#E5E7EB] bg-[#F8F9FB] p-3.5 rounded-xl text-xs font-semibold"
+                    className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
                   />
                 </View>
 
@@ -165,7 +165,7 @@ export default function AddressManagementScreen() {
                     value={building}
                     onChangeText={setBuilding}
                     placeholder="Flat 12A, Sea Tower"
-                    className="border border-[#E5E7EB] bg-[#F8F9FB] p-3.5 rounded-xl text-xs font-semibold"
+                    className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
                   />
                 </View>
 
@@ -175,7 +175,7 @@ export default function AddressManagementScreen() {
                     value={street}
                     onChangeText={setStreet}
                     placeholder="Worli Sea Face road"
-                    className="border border-[#E5E7EB] bg-[#F8F9FB] p-3.5 rounded-xl text-xs font-semibold"
+                    className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
                   />
                 </View>
 
@@ -185,7 +185,7 @@ export default function AddressManagementScreen() {
                     value={landmark}
                     onChangeText={setLandmark}
                     placeholder="e.g. Opposite Trident Hotel"
-                    className="border border-[#E5E7EB] bg-[#F8F9FB] p-3.5 rounded-xl text-xs font-semibold"
+                    className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
                   />
                 </View>
 
@@ -196,7 +196,7 @@ export default function AddressManagementScreen() {
                       value={city}
                       onChangeText={setCity}
                       placeholder="Mumbai"
-                      className="border border-[#E5E7EB] bg-[#F8F9FB] p-3.5 rounded-xl text-xs font-semibold"
+                      className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
                     />
                   </View>
                   <View className="flex-1 gap-1">
@@ -207,7 +207,7 @@ export default function AddressManagementScreen() {
                       placeholder="400030"
                       keyboardType="numeric"
                       maxLength={6}
-                      className="border border-[#E5E7EB] bg-[#F8F9FB] p-3.5 rounded-xl text-xs font-semibold"
+                      className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
                     />
                   </View>
                 </View>
@@ -219,7 +219,7 @@ export default function AddressManagementScreen() {
 
                 <TouchableOpacity
                   onPress={handleSave}
-                  className="w-full bg-[#111827] py-4 rounded-2xl items-center justify-center mt-2 shadow-xs"
+                  className="w-full bg-[#101828] py-4 rounded-2xl items-center justify-center mt-2 shadow-xs"
                 >
                   <Text className="text-white text-xs font-black uppercase">
                     {editingId ? 'Update Address' : 'Save Address'}
@@ -263,7 +263,7 @@ export default function AddressManagementScreen() {
                         onPress={() => handleEdit(addr)}
                         className="flex-1 bg-zinc-50 border border-zinc-100 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
                       >
-                        <Feather name="edit" size={11} color="#111827" />
+                        <Feather name="edit" size={11} color="#101828" />
                         <Text className="text-zinc-950 text-[8px] font-black uppercase">Edit</Text>
                       </TouchableOpacity>
 

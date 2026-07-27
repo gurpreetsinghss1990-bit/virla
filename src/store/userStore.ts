@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Invoice } from '../types';
 
 interface FamilyMember {
@@ -14,6 +16,11 @@ interface UserState {
   user: User;
   familyMembers: FamilyMember[];
   updateProfile: (profile: Partial<User>) => void;
+  // Startup & Authentication states
+  isLoggedIn: boolean;
+  hasCompletedOnboarding: boolean;
+  setLoggedIn: (loggedIn: boolean) => void;
+  setCompletedOnboarding: (completed: boolean) => void;
   // Sprint 6 additions
   role: 'customer' | 'trainer';
   setRole: (role: 'customer' | 'trainer') => void;
@@ -55,26 +62,38 @@ const mockInvoices: Invoice[] = [
   }
 ];
 
-export const useUserStore = create<UserState>((set) => ({
-  user: mockUser,
-  familyMembers: mockFamily,
-  updateProfile: (profile) =>
-    set((state) => ({
-      user: { ...state.user, ...profile },
-    })),
-  // Sprint 6 state & actions
-  role: 'customer',
-  setRole: (r) => set((state) => ({
-    role: r,
-    user: { ...state.user, role: r }
-  })),
-  invoices: mockInvoices,
-  addInvoice: (inv) => set((state) => {
-    const newInv: Invoice = {
-      ...inv,
-      id: `inv-${Date.now().toString().slice(-4)}`,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-    };
-    return { invoices: [newInv, ...state.invoices] };
-  }),
-}));
+export const useUserStore = create<UserState>()(
+  persist(
+    (set) => ({
+      user: mockUser,
+      familyMembers: mockFamily,
+      updateProfile: (profile) =>
+        set((state) => ({
+          user: { ...state.user, ...profile },
+        })),
+      isLoggedIn: false,
+      hasCompletedOnboarding: false,
+      setLoggedIn: (loggedIn) => set({ isLoggedIn: loggedIn }),
+      setCompletedOnboarding: (completed) => set({ hasCompletedOnboarding: completed }),
+      // Sprint 6 state & actions
+      role: 'customer',
+      setRole: (r) => set((state) => ({
+        role: r,
+        user: { ...state.user, role: r }
+      })),
+      invoices: mockInvoices,
+      addInvoice: (inv) => set((state) => {
+        const newInv: Invoice = {
+          ...inv,
+          id: `inv-${Date.now().toString().slice(-4)}`,
+          date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+        };
+        return { invoices: [newInv, ...state.invoices] };
+      }),
+    }),
+    {
+      name: 'virla-user-storage',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);

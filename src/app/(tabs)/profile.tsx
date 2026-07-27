@@ -8,6 +8,7 @@ import { useUserProfileStore } from '../../store/userProfileStore';
 import { useRouter } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import Svg, { Rect } from 'react-native-svg';
+import { LuxuryCard } from '../../components/LuxuryCard';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -84,7 +85,7 @@ export default function ProfileScreen() {
                 y={rIdx * cellSize}
                 width={cellSize - 1.5}
                 height={cellSize - 1.5}
-                fill={val === 1 ? '#111827' : '#FFFFFF'}
+                fill={val === 1 ? '#101828' : '#FFFFFF'}
               />
             ))
           )}
@@ -98,7 +99,7 @@ export default function ProfileScreen() {
       <ScrollView 
         showsVerticalScrollIndicator={false} 
         contentContainerStyle={{ paddingBottom: 140 }}
-        className="bg-[#F8F9FB] flex-1"
+        className="bg-[#F7F8FC] flex-1"
       >
         <View className="px-6 pt-6 gap-6">
 
@@ -108,7 +109,7 @@ export default function ProfileScreen() {
               activeOpacity={0.8}
               onPress={() => setRole('customer')}
               className={`flex-1 py-3.5 rounded-xl items-center justify-center ${
-                role === 'customer' ? 'bg-[#111827] shadow-sm' : ''
+                role === 'customer' ? 'bg-[#101828] shadow-sm' : ''
               }`}
             >
               <Text className={`text-[10px] font-black uppercase tracking-wider ${role === 'customer' ? 'text-white' : 'text-[#6B7280]'}`}>
@@ -119,7 +120,7 @@ export default function ProfileScreen() {
               activeOpacity={0.8}
               onPress={() => setRole('trainer')}
               className={`flex-1 py-3.5 rounded-xl items-center justify-center ${
-                role === 'trainer' ? 'bg-[#111827] shadow-sm' : ''
+                role === 'trainer' ? 'bg-[#101828] shadow-sm' : ''
               }`}
             >
               <Text className={`text-[10px] font-black uppercase tracking-wider ${role === 'trainer' ? 'text-white' : 'text-[#6B7280]'}`}>
@@ -134,25 +135,38 @@ export default function ProfileScreen() {
           {role === 'customer' && (
             <>
               {/* Client Profile Header */}
-              <View className="items-center mb-2">
+              <View className="items-center mb-4">
                 <Image
                   source={{ uri: profile.avatar }}
-                  className="w-20 h-20 rounded-full border-2 border-white mb-3 shadow-md"
+                  className="w-20 h-20 rounded-full border-2 border-[#F5B942] mb-3 shadow-lg"
                 />
-                <Text className="text-[#111827] text-2xl font-black tracking-tight">{profile.name}</Text>
+                <Text className="text-[#101828] text-2xl font-black tracking-tight">{profile.name}</Text>
                 <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">{profile.email}</Text>
+                
+                {/* Gold Luxury Member Badge */}
+                <View className="bg-amber-500/10 border border-amber-500/20 px-3 py-0.5 rounded-full flex-row items-center gap-1.5 mt-2">
+                  <Feather name="award" size={10} color="#F5B942" />
+                  <Text className="text-[#F5B942] text-[8px] font-black uppercase tracking-wider">Elite Member</Text>
+                </View>
               </View>
 
               {/* Apple Wallet Membership Credit Card */}
               <View className="gap-3">
-                <Text className="text-[#111827] text-xs font-black uppercase tracking-widest pl-1">
+                <Text className="text-[#101828] text-xs font-black uppercase tracking-widest pl-1">
                   My Membership Pass
                 </Text>
 
                 <TouchableOpacity 
                   activeOpacity={0.95}
                   onPress={() => router.push('/wallet' as any)}
-                  className="bg-zinc-950 rounded-[30px] p-6 shadow-xl relative overflow-hidden border border-zinc-800"
+                  className="bg-[#101828] rounded-[24px] p-6 shadow-xl relative overflow-hidden border border-zinc-800"
+                  style={{
+                    shadowColor: '#101828',
+                    shadowOffset: { width: 0, height: 10 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 20,
+                    elevation: 8,
+                  }}
                 >
                   <Animated.View style={{ opacity: shimmerAnim }} className="absolute top-0 left-0 right-0 bottom-0 bg-indigo-500/10" />
 
@@ -175,12 +189,12 @@ export default function ProfileScreen() {
                       <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">Credits Left</Text>
                       <Text className="text-white text-base font-black">{membership.availableCredits} Credits</Text>
                     </View>
-                    <View className="w-[1px] h-8 bg-zinc-850" />
+                    <View className="w-[1px] h-8 bg-zinc-800" />
                     <View className="gap-0.5">
                       <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">Freeze status</Text>
                       <Text className="text-white text-base font-black">15 Days</Text>
                     </View>
-                    <View className="w-[1px] h-8 bg-zinc-850" />
+                    <View className="w-[1px] h-8 bg-zinc-800" />
                     <View className="gap-0.5 items-end">
                       <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">Expiry Date</Text>
                       <Text className="text-white text-xs font-black mt-0.5">{membership.renewalDate}</Text>
@@ -190,11 +204,11 @@ export default function ProfileScreen() {
               </View>
 
               {/* Complete User Core Profile editing panel (Feature 1) */}
-              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
-                <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
-                  <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Personal Profile</Text>
+              <LuxuryCard className="p-5 gap-4" interactive={false}>
+                <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
+                  <Text className="text-[#101828] text-xs font-black uppercase tracking-widest">Personal Profile</Text>
                   <TouchableOpacity onPress={() => { if (isEditingProfile) { handleSaveProfile(); } else { setIsEditingProfile(true); } }}>
-                    <Text className="text-indigo-600 text-xs font-black uppercase">{isEditingProfile ? 'Save' : 'Edit'}</Text>
+                    <Text className="text-indigo-600 text-xs font-black uppercase tracking-widest">{isEditingProfile ? 'Save' : 'Edit'}</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -219,7 +233,7 @@ export default function ProfileScreen() {
                           value={f.val}
                           onChangeText={f.set}
                           keyboardType={f.kt}
-                          className="border border-[#E5E7EB] bg-[#F8F9FB] p-3 rounded-xl text-xs text-zinc-900 font-semibold"
+                          className="border border-[#E5E7EB] bg-[#F7F8FC] p-3 rounded-xl text-xs text-zinc-900 font-semibold"
                         />
                       </View>
                     ))}
@@ -250,11 +264,11 @@ export default function ProfileScreen() {
                     ))}
                   </View>
                 )}
-              </View>
+              </LuxuryCard>
 
               {/* Account Management & Personalization Menu */}
-              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-3">
-                <Text className="text-[#111827] text-xs font-black uppercase tracking-wider border-b border-zinc-105 pb-3">Personalization Hub</Text>
+              <LuxuryCard className="p-5 gap-3" interactive={false}>
+                <Text className="text-[#101828] text-xs font-black uppercase tracking-widest border-b border-zinc-100 pb-3">Personalization Hub</Text>
                 
                 {[
                   { label: 'Health & Medical Profile', icon: 'activity', route: '/health-profile' as const, desc: 'Declare conditions, allergies and restrictions' },
@@ -271,23 +285,23 @@ export default function ProfileScreen() {
                     key={idx}
                     activeOpacity={0.8}
                     onPress={() => router.push(item.route as any)}
-                    className="bg-[#F8F9FB] border border-[#E5E7EB]/60 p-4.5 rounded-2xl flex-row justify-between items-center"
+                    className="bg-zinc-50 border border-zinc-200/60 p-4 rounded-xl flex-row justify-between items-center"
                   >
                     <View className="flex-row items-center gap-3.5 flex-1 pr-3">
                       <Feather name={item.icon as any} size={15} color="#4F46E5" />
                       <View className="flex-1">
-                        <Text className="text-[#111827] text-xs font-black leading-tight">{item.label}</Text>
+                        <Text className="text-[#101828] text-xs font-black leading-tight">{item.label}</Text>
                         <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5 leading-relaxed">{item.desc}</Text>
                       </View>
                     </View>
                     <Feather name="chevron-right" size={14} color="#6B7280" />
                   </TouchableOpacity>
                 ))}
-              </View>
+              </LuxuryCard>
 
               {/* Booking Activity Feed Timeline */}
-              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
-                <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Recent Activities</Text>
+              <LuxuryCard className="p-5 gap-4" interactive={false}>
+                <Text className="text-[#101828] text-xs font-black uppercase tracking-widest">Recent Activities</Text>
                 
                 {ledger.length > 0 ? (
                   <View className="gap-3.5 pl-1">
@@ -308,7 +322,7 @@ export default function ProfileScreen() {
                 ) : (
                   <Text className="text-zinc-400 text-[10px] text-center py-4">No recent activity logs found.</Text>
                 )}
-              </View>
+              </LuxuryCard>
             </>
           )}
 
@@ -318,22 +332,22 @@ export default function ProfileScreen() {
           {role === 'trainer' && (
             <>
               {/* Trainer Profile Header */}
-              <View className="items-center mb-2">
+              <View className="items-center mb-4">
                 <Image
                   source={{ uri: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }}
-                  className="w-20 h-20 rounded-full border-2 border-white mb-3 shadow-md"
+                  className="w-20 h-20 rounded-full border-2 border-[#F5B942] mb-3 shadow-lg"
                 />
-                <Text className="text-[#111827] text-2xl font-black tracking-tight">Coach Karan Sharma</Text>
+                <Text className="text-[#101828] text-2xl font-black tracking-tight">Coach Karan Sharma</Text>
                 <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">Certified Trainer • Strength & HIIT</Text>
               </View>
 
               {/* Trainer Ledger: Earnings List */}
-              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
-                <Text className="text-[#111827] text-xs font-black uppercase tracking-wider border-b border-zinc-50 pb-3">Earnings & Payout Ledger</Text>
+              <LuxuryCard className="p-5 gap-4" interactive={false}>
+                <Text className="text-[#101828] text-xs font-black uppercase tracking-widest border-b border-zinc-100 pb-3">Earnings & Payout Ledger</Text>
                 
                 <View className="gap-3.5">
                   {earningsList.map((earn) => (
-                    <View key={earn.id} className="flex-row justify-between items-center py-2.5 border-b border-zinc-50/50 last:border-b-0">
+                    <View key={earn.id} className="flex-row justify-between items-center py-2.5 border-b border-zinc-100 last:border-b-0">
                       <View className="flex-1 pr-3 gap-0.5">
                         <Text className="text-zinc-900 text-xs font-black leading-tight">
                           {earn.type === 'session' && `Visit Payout: ${earn.clientName}`}
@@ -348,22 +362,22 @@ export default function ProfileScreen() {
                     </View>
                   ))}
                 </View>
-              </View>
+              </LuxuryCard>
 
               {/* Safety Rules & Travel Guidelines */}
-              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-3">
-                <Text className="text-[#111827] text-xs font-black uppercase tracking-wider">Safety Guidelines</Text>
+              <LuxuryCard className="p-5 gap-3" interactive={false}>
+                <Text className="text-[#101828] text-xs font-black uppercase tracking-widest">Safety Guidelines</Text>
                 <View className="gap-2.5 mt-1">
                   <View className="flex-row gap-2 items-start">
-                    <Feather name="check" size={12} color="#10B981" className="mt-0.5" />
+                    <Feather name="check" size={12} color="#16C784" className="mt-0.5" />
                     <Text className="text-[#6B7280] text-[10px] leading-relaxed flex-1">Keep client safety OTP verify check-ins active for travel authentication.</Text>
                   </View>
                   <View className="flex-row gap-2 items-start">
-                    <Feather name="check" size={12} color="#10B981" className="mt-0.5" />
+                    <Feather name="check" size={12} color="#16C784" className="mt-0.5" />
                     <Text className="text-[#6B7280] text-[10px] leading-relaxed flex-1">Complete mandatory post-session reports within 2 hours to release payout funds.</Text>
                   </View>
                 </View>
-              </View>
+              </LuxuryCard>
             </>
           )}
 
@@ -375,7 +389,7 @@ export default function ProfileScreen() {
 
 function SafeAreaViewWrapper({ children }: { children: React.ReactNode }) {
   if (Platform.OS === 'ios') {
-    return <View className="flex-1 bg-[#F8F9FB] pt-12">{children}</View>;
+    return <View className="flex-1 bg-[#F7F8FC] pt-12">{children}</View>;
   }
-  return <View className="flex-1 bg-[#F8F9FB]">{children}</View>;
+  return <View className="flex-1 bg-[#F7F8FC]">{children}</View>;
 }

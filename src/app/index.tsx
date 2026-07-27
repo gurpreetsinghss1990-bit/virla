@@ -1,79 +1,136 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, SafeAreaView, Animated, StyleSheet } from 'react-native';
+import { View, Text, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
-import { AppLogo } from '../presentation/components/AppLogo';
-import Svg, { Circle, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { useUserStore } from '../store/userStore';
+import { bootstrapApp } from '../utils/bootstrap';
 
 export default function SplashScreen() {
   const router = useRouter();
-
-  // Animations
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const spinAnim = useRef(new Animated.Value(0)).current;
+  
+  // Animation refs
+  const fadeAnim = useRef(new Animated.Value(0)).current;       // For the entire screen container
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;    // For logo scale
+  const dotScale = useRef(new Animated.Value(1)).current;       // For blue/purple dot pulsing
 
   useEffect(() => {
-    // Fade in project logo and texts
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 1000,
-      useNativeDriver: true,
-    }).start();
-
-    // Loop spin loading indicator
-    Animated.loop(
-      Animated.timing(spinAnim, {
+    // 1. Fade in the screen and scale up the logo smoothly
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 1200,
+        duration: 800,
         useNativeDriver: true,
-      })
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // 2. Pulse the blue/purple dot continuously
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(dotScale, {
+          toValue: 1.6,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        Animated.timing(dotScale, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+      ])
     ).start();
 
-    // Move to Onboarding Screen after 2.8s
-    const timer = setTimeout(() => {
-      router.replace('/onboarding' as any);
-    }, 2800);
+    // 3. Run bootstrap and control navigation timing
+    let hasNavigated = false;
+    const startTime = Date.now();
 
-    return () => clearTimeout(timer);
+    const runBootstrap = async () => {
+      try {
+        // Run service initialization (with its internal 3s timeout)
+        await bootstrapApp();
+      } catch (err) {
+        console.warn('Bootstrap orchestrator errored:', err);
+      } finally {
+        // Enforce duration limits: 1.5s (1500ms) minimum, 2s (2000ms) maximum
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(1500 - elapsed, 0);
+        
+        setTimeout(() => {
+          triggerExitTransition();
+        }, Math.min(remaining, 1200)); // cap wait time to avoid exceeding 2s total
+      }
+    };
+
+    const triggerExitTransition = () => {
+      if (hasNavigated) return;
+      hasNavigated = true;
+
+      // Smooth exit fade out
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }).start(() => {
+        // Route selection based on persisted authentication state
+        const { isLoggedIn, hasCompletedOnboarding } = useUserStore.getState();
+        
+        try {
+          if (isLoggedIn) {
+            router.replace('/(tabs)');
+          } else if (hasCompletedOnboarding) {
+            router.replace('/get-started');
+          } else {
+            router.replace('/onboarding');
+          }
+        } catch (error) {
+          console.error('Splash screen transition error:', error);
+          router.replace('/onboarding'); // safe fallback
+        }
+      });
+    };
+
+    // Backup safety timeout to guarantee the screen NEVER freezes, even in worst-case hangs
+    const safetyTimeout = setTimeout(() => {
+      triggerExitTransition();
+    }, 2200);
+
+    runBootstrap();
+
+    return () => {
+      clearTimeout(safetyTimeout);
+    };
   }, [router]);
 
-  const spin = spinAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg']
-  });
-
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      {/* Soft top gradient */}
-      <View className="absolute top-0 left-0 right-0 h-[40%] bg-gradient-to-b from-[#F5F3FF]/30 to-white" />
-
-      <Animated.View style={{ opacity: fadeAnim }} className="flex-1 justify-between px-6 py-12">
-        {/* Empty placeholder to push logo to center */}
-        <View className="h-10" />
-
-        {/* Center Content */}
-        <View className="items-center justify-center gap-6">
-          <AppLogo size="large" />
-          
-          <Text className="text-zinc-950 text-base font-black uppercase tracking-[0.25em] text-center mt-2">
-            Wellness At Your Doorstep
+    <View className="flex-1 bg-white items-center justify-center">
+      <Animated.View 
+        style={{ 
+          opacity: fadeAnim,
+          transform: [{ scale: scaleAnim }]
+        }} 
+        className="items-center justify-center"
+      >
+        <View className="flex-row items-center justify-center">
+          <Text className="font-bold text-[#101828] text-5xl tracking-[0.3em]">
+            VIRLA
           </Text>
-
-          {/* Premium animated loading ring */}
-          <Animated.View style={{ transform: [{ rotate: spin }] }} className="mt-8 w-8 h-8 items-center justify-center">
-            <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
-              <Circle cx={16} cy={16} r={14} stroke="#E5E7EB" strokeWidth={3} />
-              <Path d="M16 2A14 14 0 0 1 30 16" stroke="#4F46E5" strokeWidth={3} strokeLinecap="round" />
-            </Svg>
-          </Animated.View>
+          {/* Small animated blue/purple dot next to the logo text */}
+          <Animated.View 
+            style={{ 
+              transform: [{ scale: dotScale }] 
+            }} 
+            className="w-3.5 h-3.5 rounded-full bg-indigo-600 ml-2" 
+          />
         </View>
-
-        {/* Footer categories list */}
-        <View className="items-center">
-          <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em] text-center leading-relaxed">
-            Strength  •  Yoga  •  Boxing  •  Dance  •  Stretching
-          </Text>
-        </View>
+        
+        <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-[0.25em] text-center mt-6">
+          Wellness At Your Doorstep
+        </Text>
       </Animated.View>
-    </SafeAreaView>
+    </View>
   );
 }

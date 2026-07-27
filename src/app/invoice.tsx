@@ -28,13 +28,13 @@ export default function InvoiceScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F8F9FB]">
+    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#111827" />
+          <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
-        <Text className="flex-1 text-center text-[#111827] text-sm font-black uppercase tracking-wider mr-8">
+        <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
           Invoice Pass
         </Text>
       </View>
@@ -48,7 +48,7 @@ export default function InvoiceScreen() {
             {/* Header corporate */}
             <View className="flex-row justify-between items-start border-b border-zinc-150 pb-5">
               <View className="gap-0.5">
-                <Text className="text-[#111827] text-sm font-black uppercase tracking-widest">VIRLA</Text>
+                <Text className="text-[#101828] text-sm font-black uppercase tracking-widest">VIRLA</Text>
                 <Text className="text-zinc-400 text-[7px] font-bold uppercase leading-relaxed mt-0.5">
                   VIRLA FitTech Pvt. Ltd.{"\n"}Mumbai, MH, India
                 </Text>
@@ -120,7 +120,7 @@ export default function InvoiceScreen() {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={handleDownloadInvoice}
-            className="w-full bg-[#111827] py-4 rounded-2xl items-center justify-center shadow-xs"
+            className="w-full bg-[#101828] py-4 rounded-2xl items-center justify-center shadow-xs"
           >
             <Text className="text-white text-xs font-black uppercase">Download Invoice PDF</Text>
           </TouchableOpacity>

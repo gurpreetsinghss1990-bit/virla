@@ -1,5 +1,5 @@
-import React from 'react';
-import { TouchableOpacity, Text, ActivityIndicator, View } from 'react-native';
+import React, { useRef } from 'react';
+import { Animated, TouchableOpacity, Text, ActivityIndicator, View } from 'react-native';
 
 interface SecondaryButtonProps {
   onPress: () => void;
@@ -18,25 +18,55 @@ export function SecondaryButton({
   disabled = false,
   icon,
 }: SecondaryButtonProps) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.96,
+      useNativeDriver: true,
+      tension: 100,
+      friction: 6,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1.0,
+      useNativeDriver: true,
+      tension: 100,
+      friction: 6,
+    }).start();
+  };
+
   return (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      onPress={onPress}
-      disabled={disabled || loading}
-      className={`w-full py-4 bg-white border border-zinc-200 rounded-2xl items-center justify-center flex-row ${
-        disabled ? 'opacity-50' : ''
-      } ${className}`}
-    >
-      {loading ? (
-        <ActivityIndicator color="#111111" size="small" />
-      ) : (
-        <View className="flex-row items-center justify-center">
-          {icon && <View className="mr-2">{icon}</View>}
-          <Text className="text-primary text-base font-semibold tracking-wide">
-            {title}
-          </Text>
-        </View>
-      )}
-    </TouchableOpacity>
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }} className="w-full">
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled || loading}
+        className={`w-full h-14 bg-white border border-[#E5E7EB] rounded-[20px] justify-center items-center flex-row ${
+          disabled ? 'opacity-50' : ''
+        } ${className}`}
+        style={{
+          shadowColor: '#101828',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.03,
+          shadowRadius: 4,
+        }}
+      >
+        {loading ? (
+          <ActivityIndicator color="#101828" size="small" />
+        ) : (
+          <View className="flex-row items-center justify-center px-4">
+            {icon && <View className="mr-2">{icon}</View>}
+            <Text className="text-[#101828] text-sm font-extrabold uppercase tracking-widest">
+              {title}
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
   );
 }

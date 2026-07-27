@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Animated, Platform } from 'react-native';
 import { ProgressRing } from '../../components/ProgressRing';
 import { EmptyState } from '../../components/EmptyState';
+import { LuxuryCard } from '../../components/LuxuryCard';
 import { Feather } from '@expo/vector-icons';
 
 type RangeType = 'weekly' | 'monthly' | 'yearly';
@@ -90,19 +91,19 @@ export default function ProgressScreen() {
       <ScrollView 
         showsVerticalScrollIndicator={false} 
         contentContainerStyle={{ paddingBottom: 140 }}
-        className="bg-[#F8F9FB]"
+        className="bg-[#F7F8FC]"
       >
         <View className="px-6 pt-8 pb-4 gap-6">
           {/* Header with Simulator Toggle */}
           <View className="flex-row justify-between items-end">
             <View>
               <Text className="text-[#6B7280] text-xs font-extrabold uppercase tracking-widest">Analytics & Metrics</Text>
-              <Text className="text-[#111827] text-3xl font-black tracking-tight mt-1">My Progress</Text>
+              <Text className="text-[#101828] text-3xl font-black tracking-tight mt-1">My Progress</Text>
             </View>
             <TouchableOpacity 
               activeOpacity={0.8}
               onPress={() => setIsEmpty(!isEmpty)}
-              className="bg-zinc-950 px-3 py-1.5 rounded-lg border border-zinc-800"
+              className="bg-[#101828] px-3 py-1.5 rounded-lg"
             >
               <Text className="text-amber-400 text-[8px] font-black uppercase tracking-wider">
                 {isEmpty ? 'Show Progress' : 'Simulate Empty'}
@@ -115,132 +116,130 @@ export default function ProgressScreen() {
           ) : (
             <>
               {/* Timeframe Selector (Weekly, Monthly, Yearly) */}
-          <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1.5 rounded-2xl">
-            {(['weekly', 'monthly', 'yearly'] as const).map((r) => {
-              const isActive = activeRange === r;
-              return (
-                <TouchableOpacity
-                  key={r}
-                  activeOpacity={0.8}
-                  onPress={() => setActiveRange(r)}
-                  className={`flex-1 py-3.5 rounded-xl items-center justify-center ${
-                    isActive ? 'bg-[#111827] shadow-sm' : ''
-                  }`}
-                >
-                  <Text className={`text-[10px] font-black uppercase tracking-wider ${isActive ? 'text-white' : 'text-[#6B7280]'}`}>
-                    {r}
+              <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1.5 rounded-2xl">
+                {(['weekly', 'monthly', 'yearly'] as const).map((r) => {
+                  const isActive = activeRange === r;
+                  return (
+                    <TouchableOpacity
+                      key={r}
+                      activeOpacity={0.8}
+                      onPress={() => setActiveRange(r)}
+                      className={`flex-1 py-3.5 rounded-xl items-center justify-center ${
+                        isActive ? 'bg-[#101828] shadow-sm' : ''
+                      }`}
+                    >
+                      <Text className={`text-[10px] font-black uppercase tracking-wider ${isActive ? 'text-white' : 'text-[#6B7280]'}`}>
+                        {r}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Card 1: 4 Animated Rings (Feature 8) */}
+              <Animated.View style={{ opacity: fadeAnim }}>
+                <LuxuryCard className="p-6 gap-5" interactive={false}>
+                  <Text className="text-[#101828] text-xs font-black uppercase tracking-wider pb-3.5 border-b border-zinc-100">
+                    Wellness Indicators
                   </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
 
-          {/* Card 1: 4 Animated Rings (Feature 8) */}
-          <Animated.View 
-            style={{ opacity: fadeAnim }}
-            className="bg-white border border-[#E5E7EB] p-6 rounded-[30px] shadow-sm gap-5"
-          >
-            <Text className="text-[#111827] text-xs font-black uppercase tracking-wider pb-3.5 border-b border-zinc-150/50">
-              Wellness Indicators
-            </Text>
-
-            {/* 2x2 Progress Rings Grid */}
-            <View className="flex-row flex-wrap justify-around gap-y-6 pt-2">
-              
-              {/* Ring 1: Calories */}
-              <View className="items-center w-[45%] gap-2.5">
-                <ProgressRing progress={0.65} size={76} strokeWidth={6} activeColor="#06B6D4">
-                  <View className="items-center justify-center">
-                    <Text className="text-[#111827] text-xs font-black">65%</Text>
-                  </View>
-                </ProgressRing>
-                <Text className="text-[#111827] text-xs font-extrabold">Calories</Text>
-                <Text className="text-[#6B7280] text-[9px] font-bold uppercase">{currentStats.calories} Kcal</Text>
-              </View>
-
-              {/* Ring 2: Attendance */}
-              <View className="items-center w-[45%] gap-2.5">
-                <ProgressRing progress={currentStats.attendance / 100} size={76} strokeWidth={6} activeColor="#22C55E">
-                  <View className="items-center justify-center">
-                    <Text className="text-[#111827] text-xs font-black">{currentStats.attendance}%</Text>
-                  </View>
-                </ProgressRing>
-                <Text className="text-[#111827] text-xs font-extrabold">Attendance</Text>
-                <Text className="text-[#6B7280] text-[9px] font-bold uppercase">Optimal Rate</Text>
-              </View>
-
-              {/* Ring 3: Sessions */}
-              <View className="items-center w-[45%] gap-2.5">
-                <ProgressRing progress={0.7} size={76} strokeWidth={6} activeColor="#4F46E5">
-                  <View className="items-center justify-center">
-                    <Text className="text-[#111827] text-xs font-black">{currentStats.sessions}</Text>
-                  </View>
-                </ProgressRing>
-                <Text className="text-[#111827] text-xs font-extrabold">Sessions</Text>
-                <Text className="text-[#6B7280] text-[9px] font-bold uppercase">Completed</Text>
-              </View>
-
-              {/* Ring 4: Recovery */}
-              <View className="items-center w-[45%] gap-2.5">
-                <ProgressRing progress={currentStats.recovery / 100} size={76} strokeWidth={6} activeColor="#8B5CF6">
-                  <View className="items-center justify-center">
-                    <Text className="text-[#111827] text-xs font-black">{currentStats.recovery}%</Text>
-                  </View>
-                </ProgressRing>
-                <Text className="text-[#111827] text-xs font-extrabold">Recovery</Text>
-                <Text className="text-[#6B7280] text-[9px] font-bold uppercase">High Index</Text>
-              </View>
-
-            </View>
-          </Animated.View>
-
-          {/* Card 2: Smooth animated chart */}
-          <Animated.View 
-            style={{ opacity: fadeAnim }}
-            className="bg-white border border-[#E5E7EB] p-6 rounded-[30px] shadow-sm"
-          >
-            <Text className="text-[#111827] text-xs font-black uppercase tracking-wider mb-5">
-              Activity History
-            </Text>
-
-            <View className="flex-row items-end justify-between h-32 pt-2">
-              {currentStats.chartData.map((d, index) => {
-                const heightPercent = d.val ? `${d.val}%` : '5%';
-                return (
-                  <View key={index} className="items-center flex-1 gap-2.5">
-                    <View className="w-6 bg-zinc-50 border border-zinc-100 rounded-lg h-24 justify-end overflow-hidden">
-                      <View 
-                        style={{ height: heightPercent as any }} 
-                        className={`w-full rounded-md ${
-                          d.val === 0 ? 'bg-zinc-200' : index % 2 === 0 ? 'bg-[#4F46E5]' : 'bg-[#06B6D4]'
-                        }`}
-                      />
+                  {/* 2x2 Progress Rings Grid */}
+                  <View className="flex-row flex-wrap justify-around gap-y-6 pt-2">
+                    
+                    {/* Ring 1: Calories */}
+                    <View className="items-center w-[45%] gap-2.5">
+                      <ProgressRing progress={0.65} size={76} strokeWidth={6}>
+                        <View className="items-center justify-center">
+                          <Text className="text-[#101828] text-xs font-black">65%</Text>
+                        </View>
+                      </ProgressRing>
+                      <Text className="text-[#101828] text-xs font-extrabold">Calories</Text>
+                      <Text className="text-[#6B7280] text-[9px] font-bold uppercase">{currentStats.calories} Kcal</Text>
                     </View>
-                    <Text className="text-[#6B7280] text-[10px] font-bold">{d.label}</Text>
-                  </View>
-                );
-              })}
-            </View>
-          </Animated.View>
 
-          {/* Card 3: Achievements List (Feature 8) */}
-          <View className="gap-3">
-            <Text className="text-[#111827] text-xs font-black uppercase tracking-widest pl-1">Achievements Badges</Text>
-            <View className="bg-white border border-[#E5E7EB] p-5 rounded-[30px] shadow-sm gap-4">
-              {achievements.map((b) => (
-                <View key={b.id} className="flex-row items-center gap-4 py-1.5 border-b border-zinc-100/50 last:border-b-0">
-                  <View className="w-12 h-12 rounded-2xl bg-indigo-50/50 justify-center items-center">
-                    <Text className="text-2xl">{b.icon}</Text>
+                    {/* Ring 2: Attendance */}
+                    <View className="items-center w-[45%] gap-2.5">
+                      <ProgressRing progress={currentStats.attendance / 100} size={76} strokeWidth={6}>
+                        <View className="items-center justify-center">
+                          <Text className="text-[#101828] text-xs font-black">{currentStats.attendance}%</Text>
+                        </View>
+                      </ProgressRing>
+                      <Text className="text-[#101828] text-xs font-extrabold">Attendance</Text>
+                      <Text className="text-[#6B7280] text-[9px] font-bold uppercase">Optimal Rate</Text>
+                    </View>
+
+                    {/* Ring 3: Sessions */}
+                    <View className="items-center w-[45%] gap-2.5">
+                      <ProgressRing progress={0.7} size={76} strokeWidth={6}>
+                        <View className="items-center justify-center">
+                          <Text className="text-[#101828] text-xs font-black">{currentStats.sessions}</Text>
+                        </View>
+                      </ProgressRing>
+                      <Text className="text-[#101828] text-xs font-extrabold">Sessions</Text>
+                      <Text className="text-[#6B7280] text-[9px] font-bold uppercase">Completed</Text>
+                    </View>
+
+                    {/* Ring 4: Recovery */}
+                    <View className="items-center w-[45%] gap-2.5">
+                      <ProgressRing progress={currentStats.recovery / 100} size={76} strokeWidth={6}>
+                        <View className="items-center justify-center">
+                          <Text className="text-[#101828] text-xs font-black">{currentStats.recovery}%</Text>
+                        </View>
+                      </ProgressRing>
+                      <Text className="text-[#101828] text-xs font-extrabold">Recovery</Text>
+                      <Text className="text-[#6B7280] text-[9px] font-bold uppercase">High Index</Text>
+                    </View>
+
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-[#111827] text-sm font-extrabold tracking-tight">{b.title}</Text>
-                    <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">{b.desc}</Text>
+                </LuxuryCard>
+              </Animated.View>
+
+              {/* Card 2: Smooth animated chart */}
+              <Animated.View style={{ opacity: fadeAnim }}>
+                <LuxuryCard className="p-6" interactive={false}>
+                  <Text className="text-[#101828] text-xs font-black uppercase tracking-wider mb-5">
+                    Activity History
+                  </Text>
+
+                  <View className="flex-row items-end justify-between h-32 pt-2">
+                    {currentStats.chartData.map((d, index) => {
+                      const heightPercent = d.val ? `${d.val}%` : '5%';
+                      return (
+                        <View key={index} className="items-center flex-1 gap-2.5">
+                          <View className="w-6 bg-zinc-50 border border-zinc-150 rounded-lg h-24 justify-end overflow-hidden">
+                            <View 
+                              style={{ height: heightPercent as any }} 
+                              className={`w-full rounded-md ${
+                                d.val === 0 ? 'bg-zinc-200' : index % 2 === 0 ? 'bg-[#4F46E5]' : 'bg-[#6D5EF7]'
+                              }`}
+                            />
+                          </View>
+                          <Text className="text-[#6B7280] text-[10px] font-bold">{d.label}</Text>
+                        </View>
+                      );
+                    })}
                   </View>
-                </View>
-              ))}
-            </View>
-          </View>
-          </>
+                </LuxuryCard>
+              </Animated.View>
+
+              {/* Card 3: Achievements List (Feature 8) */}
+              <View className="gap-3">
+                <Text className="text-[#101828] text-xs font-black uppercase tracking-widest pl-1">Achievements Badges</Text>
+                <LuxuryCard className="p-5 gap-4" interactive={false}>
+                  {achievements.map((b) => (
+                    <View key={b.id} className="flex-row items-center gap-4 py-1.5 border-b border-zinc-100/50 last:border-b-0">
+                      <View className="w-12 h-12 rounded-2xl bg-indigo-50/50 justify-center items-center">
+                        <Text className="text-2xl">{b.icon}</Text>
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-[#101828] text-sm font-extrabold tracking-tight">{b.title}</Text>
+                        <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">{b.desc}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </LuxuryCard>
+              </View>
+            </>
           )}
         </View>
       </ScrollView>
@@ -250,7 +249,7 @@ export default function ProgressScreen() {
 
 function SafeAreaViewWrapper({ children }: { children: React.ReactNode }) {
   if (Platform.OS === 'ios') {
-    return <View className="flex-1 bg-[#F8F9FB] pt-12">{children}</View>;
+    return <View className="flex-1 bg-[#F7F8FC] pt-12">{children}</View>;
   }
-  return <View className="flex-1 bg-[#F8F9FB]">{children}</View>;
+  return <View className="flex-1 bg-[#F7F8FC]">{children}</View>;
 }

@@ -16,7 +16,7 @@ export function Heading({ children, className = '', align = 'center' }: HeadingP
 
   return (
     <Text
-      className={`text-3xl font-extrabold tracking-tight text-primary ${alignClass} ${className}`}
+      className={`text-[30px] font-black tracking-tight text-[#101828] leading-[38px] ${alignClass} ${className}`}
     >
       {children}
     </Text>
