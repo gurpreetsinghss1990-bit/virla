@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, SafeAreaView, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import Svg, { Circle, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { Heading, Subtitle, PrimaryButton, SecondaryButton, AppLogo } from '@/presentation/components';
 import { useUserStore } from '../store/userStore';
+import { useUserProfileStore } from '../store/userProfileStore';
+import { useBookingStore } from '../store/bookingStore';
+import { useMembershipStore } from '../store/membershipStore';
+import { useWalletStore } from '../store/walletStore';
 import { Database } from '../database/Database';
+import { supabase } from '../database/supabaseClient';
 
 export default function GetStartedScreen() {
   const router = useRouter();
@@ -17,47 +22,42 @@ export default function GetStartedScreen() {
   const [password, setPassword] = useState('');
 
   // Trainer and OTP mode states
-  const [isTrainerMode, setIsTrainerMode] = useState(false);
   const [useOtp, setUseOtp] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
 
   const handleMobileSubmit = async () => {
+    console.log('[DEBUG] Mobile Submit Button pressed. Entering handleMobileSubmit.');
     if (!phone || (isRegisterMode && !name)) {
+      console.log('[DEBUG] Mobile Submit Validation Failed: Missing phone or name');
       Alert.alert('Required Fields', 'Please fill in all details');
       return;
     }
     if (!useOtp && !password) {
+      console.log('[DEBUG] Mobile Submit Validation Failed: Missing password');
       Alert.alert('Required Fields', 'Please enter your password');
       return;
     }
     if (useOtp && !otpCode) {
+      console.log('[DEBUG] Mobile Submit Validation Failed: Missing OTP code');
       Alert.alert('Required Fields', 'Please enter the OTP code');
       return;
     }
 
     try {
       let userObj;
+      console.log('[DEBUG] Mobile Submit validation passed. Starting login request. useOtp:', useOtp);
       if (useOtp) {
         if (otpCode !== '1234') {
+          console.log('[DEBUG] Mobile Submit Error: Invalid OTP code provided');
           Alert.alert('Invalid OTP', 'The OTP code is incorrect. Hint: Use 1234.');
           return;
         }
         // Simulated OTP Verification against Database user
         const matched = Database.schema.users.find(u => u.phone === phone);
         if (!matched) {
-          if (isTrainerMode) {
-            Alert.alert(
-              'Trainer Not Found', 
-              'No approved trainer account matches this phone number. Please submit an application first.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Apply as Trainer', onPress: () => router.push('/trainer-application') }
-              ]
-            );
-          } else {
-            Alert.alert('User Not Found', 'No customer account matches this phone number. Please register first.');
-          }
+          console.log('[DEBUG] Mobile Submit Error: User not found for phone:', phone);
+          Alert.alert('User Not Found', 'No customer or trainer account matches this phone number. Please register first.');
           return;
         }
         userObj = {
@@ -69,45 +69,35 @@ export default function GetStartedScreen() {
           role: matched.role
         };
       } else {
-        if (isTrainerMode) {
-          // Verify user exists and is a trainer
-          const matched = Database.schema.users.find(u => u.phone === phone);
-          if (!matched || matched.role !== 'trainer') {
-            Alert.alert(
-              'Trainer Not Found', 
-              'No approved trainer account matches this phone. Click "Apply as Trainer" below if you are new.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Apply as Trainer', onPress: () => router.push('/trainer-application') }
-              ]
-            );
-            return;
-          }
-        }
         userObj = isRegisterMode
           ? await Database.register(name, phone, password)
           : await Database.login(phone, password);
       }
 
-      // Finalize Role validation
-      if (isTrainerMode && userObj.role !== 'trainer') {
-        Alert.alert('Access Denied', 'This phone number is associated with a customer account. Please use Customer Login.');
-        return;
-      }
-      if (!isTrainerMode && userObj.role === 'trainer') {
-        Alert.alert('Access Redirect', 'This is a trainer account. Redirecting you to the Trainer Console.');
-        setRole('trainer');
-      } else {
-        setRole(userObj.role || 'customer');
-      }
+      console.log(`[DEBUG] Login request completed successfully. User ID: ${userObj.id}, Name: ${userObj.name}, Role: ${userObj.role}`);
 
+      // Finalize Role validation based on authenticated account capability
+      setRole(userObj.role || 'customer');
+
+      Database.setCurrentUserId(userObj.id);
       setLoggedIn(true);
       setCompletedOnboarding(true);
       updateProfile(userObj);
+      console.log('[DEBUG] Session created in stores.');
+
+      // Load actual user profile and other stores from DB
+      console.log('[DEBUG] Starting database store sync for logged in user...');
+      await useUserProfileStore.getState().syncFromDB();
+      await useMembershipStore.getState().syncFromDB();
+      await useBookingStore.getState().syncFromDB();
+      await useWalletStore.getState().syncFromDB();
+      console.log('[DEBUG] Database store sync completed successfully.');
       
       Alert.alert('Welcome', `Successfully authenticated as ${userObj.name}!`);
+      console.log('[DEBUG] Navigation starting to Home tab /(tabs)...');
       router.replace('/(tabs)');
     } catch (err: any) {
+      console.error('[DEBUG ERROR] Mobile submit authentication failure:', err);
       Alert.alert('Authentication Error', err.message || 'An error occurred during authentication');
     }
   };
@@ -121,21 +111,115 @@ export default function GetStartedScreen() {
     Alert.alert('OTP Sent', `A simulated verification code has been sent to ${phone}. Enter "1234" to login.`);
   };
 
-  const handleOAuth = async (provider: 'google' | 'apple') => {
+  const proceedOAuth = async (provider: 'google' | 'apple', providerId: string, name: string, email: string, role?: 'customer' | 'trainer' | 'admin') => {
+    console.log(`[DEBUG] proceedOAuth entered. Provider: ${provider}, ProviderId: ${providerId}, Name: ${name}, Email: ${email}, Role: ${role}`);
     try {
-      const randId = Math.floor(1000 + Math.random() * 9000).toString();
-      const mockName = provider === 'google' ? 'Google User' : 'Apple User';
-      const userObj = await Database.oauthLogin(provider, `${provider}-${randId}`, mockName);
+      console.log(`[DEBUG] OAuth request started for ${provider}`);
+      const userObj = await Database.oauthLogin(provider, providerId, name, email, role);
+      console.log(`[DEBUG] Provider response received successfully. Authenticated user ID: ${userObj.id}, Role: ${userObj.role}`);
       
+      Database.setCurrentUserId(userObj.id);
       setLoggedIn(true);
       setCompletedOnboarding(true);
-      setRole('customer');
+      setRole(userObj.role || 'customer');
       updateProfile(userObj);
+      console.log(`[DEBUG] Session created in stores for user ID: ${userObj.id}`);
+
+      // Load actual user profile and other stores from DB
+      console.log('[DEBUG] Starting user/profile store synchronization from DB...');
+      await useUserProfileStore.getState().syncFromDB();
+      await useMembershipStore.getState().syncFromDB();
+      await useBookingStore.getState().syncFromDB();
+      await useWalletStore.getState().syncFromDB();
+      console.log('[DEBUG] User/profile synchronization completed successfully.');
       
-      Alert.alert('Success', `Authenticated via ${provider === 'google' ? 'Google' : 'Apple'}`);
+      Alert.alert('Welcome', `Successfully authenticated as ${userObj.name}!`);
+      console.log('[DEBUG] Navigation starting to Home tab /(tabs)...');
       router.replace('/(tabs)');
     } catch (err: any) {
+      console.error('[DEBUG ERROR] OAuth authentication failed:', err);
       Alert.alert('OAuth Error', err.message || 'An error occurred during OAuth simulation');
+    }
+  };
+
+  const handleOAuth = async (provider: 'google' | 'apple') => {
+    console.log(`[DEBUG] handleOAuth Button pressed for provider: ${provider}`);
+    const formattedProvider = provider === 'google' ? 'Google' : 'Apple';
+    
+    // Compile-time environment flag to prevent mock login in production
+    const ENABLE_MOCK_LOGIN = __DEV__;
+    
+    if (ENABLE_MOCK_LOGIN) {
+      console.log('[DEBUG] Development environment detected. Launching Development Google/Apple login mock.');
+      if (Platform.OS === 'web') {
+        console.log('[DEBUG] Web platform detected. Showing window.prompt dialog.');
+        const choice = window.prompt(
+          `[DEVELOPMENT ONLY] Select Generic Test Account:\n\nType "1" for: Test Customer (customer.test@${provider}.com)\nType "2" for: Test Trainer (trainer.test@${provider}.com)\nType "3" for: Test Admin (admin.test@${provider}.com)`
+        );
+        
+        if (choice === '1') {
+          console.log('[DEBUG] Selected Test Customer account on web.');
+          await proceedOAuth(provider, `${provider}-test-customer`, 'Test Customer', `customer.test@${provider}.com`, 'customer');
+        } else if (choice === '2') {
+          console.log('[DEBUG] Selected Test Trainer account on web.');
+          await proceedOAuth(provider, `${provider}-test-trainer`, 'Test Trainer', `trainer.test@${provider}.com`, 'trainer');
+        } else if (choice === '3') {
+          console.log('[DEBUG] Selected Test Admin account on web.');
+          await proceedOAuth(provider, `${provider}-test-admin`, 'Test Admin', `admin.test@${provider}.com`, 'admin');
+        } else {
+          console.log('[DEBUG] Invalid input or cancelled.');
+        }
+      } else {
+        console.log('[DEBUG] Mobile platform detected. Showing Alert.alert dialogue.');
+        Alert.alert(
+          `[DEVELOPMENT ONLY] Development ${formattedProvider} Login`,
+          `Choose a generic test account:`,
+          [
+            { 
+              text: `Test Customer (customer.test@${provider}.com)`, 
+              onPress: () => {
+                console.log('[DEBUG] Selected Test Customer account on mobile.');
+                proceedOAuth(provider, `${provider}-test-customer`, 'Test Customer', `customer.test@${provider}.com`, 'customer');
+              }
+            },
+            { 
+              text: `Test Trainer (trainer.test@${provider}.com)`, 
+              onPress: () => {
+                console.log('[DEBUG] Selected Test Trainer account on mobile.');
+                proceedOAuth(provider, `${provider}-test-trainer`, 'Test Trainer', `trainer.test@${provider}.com`, 'trainer');
+              }
+            },
+            { 
+              text: `Test Admin (admin.test@${provider}.com)`, 
+              onPress: () => {
+                console.log('[DEBUG] Selected Test Admin account on mobile.');
+                proceedOAuth(provider, `${provider}-test-admin`, 'Test Admin', `admin.test@${provider}.com`, 'admin');
+              }
+            },
+            { 
+              text: 'Cancel', 
+              style: 'cancel',
+              onPress: () => console.log('[DEBUG] OAuth selection cancelled.')
+            }
+          ]
+        );
+      }
+    } else {
+      console.log(`[DEBUG] Production environment detected. Triggering official Supabase OAuth flow for ${provider}`);
+      try {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: provider,
+          options: {
+            redirectTo: Platform.OS === 'web' ? window.location.origin : 'virla://(tabs)'
+          }
+        });
+        
+        if (error) throw error;
+        console.log(`[DEBUG] Production OAuth flow initiated successfully. Data:`, data);
+      } catch (err: any) {
+        console.error('[DEBUG ERROR] Production OAuth flow failed:', err);
+        Alert.alert(`${formattedProvider} Sign-In Error`, err.message || 'An error occurred during authentication');
+      }
     }
   };
 
@@ -163,17 +247,13 @@ export default function GetStartedScreen() {
           <AppLogo size="large" />
           <Heading className="mt-8 mb-2">
             {showMobileForm 
-              ? (isTrainerMode ? 'Trainer Console' : (isRegisterMode ? 'Create Account' : 'Welcome Back')) 
-              : (isTrainerMode ? 'Trainer Portal' : 'Begin Your Journey')}
+              ? (isRegisterMode ? 'Create Account' : 'Welcome Back') 
+              : 'Begin Your Journey'}
           </Heading>
           <Subtitle align="center" className="max-w-[85%] mt-1">
             {showMobileForm 
-              ? (isTrainerMode 
-                  ? 'Access the secure Trainer OTP workspace to manage schedules and payouts.' 
-                  : (isRegisterMode ? 'Enter details to start your home wellness journey.' : 'Log in using your registered mobile number.'))
-              : (isTrainerMode 
-                  ? 'Manage sessions, track analytics, and handle VIP wellness jobs.' 
-                  : 'Access India\'s premium home wellness platform. Professional coaching, personalized for you.')}
+              ? (isRegisterMode ? 'Enter details to start your home wellness journey.' : 'Log in using your registered mobile number.')
+              : 'Access India\'s premium home wellness platform. Professional coaching, personalized for you.'}
           </Subtitle>
         </View>
 
@@ -255,33 +335,19 @@ export default function GetStartedScreen() {
                 title={isRegisterMode ? 'Create Account' : 'Log In'}
                 onPress={handleMobileSubmit}
               />
-              {!isTrainerMode && (
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => setIsRegisterMode(!isRegisterMode)}
-                  className="items-center py-1"
-                >
-                  <Text className="text-indigo-600 text-xs font-black uppercase tracking-wider">
-                    {isRegisterMode ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              {isTrainerMode && (
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => router.push('/trainer-application')}
-                  className="items-center py-1"
-                >
-                  <Text className="text-[#E11D48] text-xs font-black uppercase tracking-wider">
-                    Apply as Trainer
-                  </Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setIsRegisterMode(!isRegisterMode)}
+                className="items-center py-1"
+              >
+                <Text className="text-indigo-600 text-xs font-black uppercase tracking-wider">
+                  {isRegisterMode ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+                </Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => {
                   setShowMobileForm(false);
-                  setIsTrainerMode(false);
                 }}
                 className="items-center py-1"
               >
@@ -296,54 +362,24 @@ export default function GetStartedScreen() {
           <View className="gap-4 mb-4 px-2">
             {/* Primary Mobile Button */}
             <PrimaryButton
-              title={isTrainerMode ? "Continue with Trainer Phone" : "Continue with Mobile Number"}
+              title="Continue with Mobile Number"
               onPress={() => setShowMobileForm(true)}
               icon={<Text className="text-white text-base">📱</Text>}
             />
 
-            {!isTrainerMode && (
-              <>
-                {/* Secondary Google Button */}
-                <SecondaryButton
-                  title="Continue with Google"
-                  onPress={() => handleOAuth('google')}
-                  icon={<Text className="text-zinc-800 text-base">🌐</Text>}
-                />
+            {/* Secondary Google Button */}
+            <SecondaryButton
+              title="Continue with Google"
+              onPress={() => handleOAuth('google')}
+              icon={<Text className="text-zinc-800 text-base">🌐</Text>}
+            />
 
-                {/* Secondary Apple Button */}
-                <SecondaryButton
-                  title="Continue with Apple"
-                  onPress={() => handleOAuth('apple')}
-                  icon={<Text className="text-zinc-800 text-lg font-bold"></Text>}
-                />
-              </>
-            )}
-
-            {/* Subtle elegant link for role-based toggle entry point */}
-            <View className="items-center mt-4">
-              {isTrainerMode ? (
-                <TouchableOpacity 
-                  activeOpacity={0.7}
-                  onPress={() => setIsTrainerMode(false)}
-                  className="py-2"
-                >
-                  <Text className="text-zinc-500 text-xs font-black uppercase tracking-wider underline">Customer Access Portal</Text>
-                </TouchableOpacity>
-              ) : (
-                <View className="items-center gap-1.5">
-                  <Text className="text-zinc-400 text-[10px] font-semibold">Are you a VIRLA Trainer?</Text>
-                  <TouchableOpacity 
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      setIsTrainerMode(true);
-                      setUseOtp(true); // Default trainers to OTP mode
-                    }}
-                  >
-                    <Text className="text-[#E11D48] text-xs font-black uppercase tracking-wider">Trainer Login</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
+            {/* Secondary Apple Button */}
+            <SecondaryButton
+              title="Continue with Apple"
+              onPress={() => handleOAuth('apple')}
+              icon={<Text className="text-zinc-800 text-lg font-bold"></Text>}
+            />
           </View>
         )}
 

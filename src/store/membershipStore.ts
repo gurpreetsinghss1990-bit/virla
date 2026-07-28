@@ -61,7 +61,7 @@ export const useMembershipStore = create<MembershipState>((set, get) => ({
     const userId = Database.getCurrentUserId();
     if (userId) {
       Database.purchasePlan(userId, `${tier} Membership Subscription Upgrade`, credits, priceText, '₹0', priceText);
-      Database.updateProfile(userId, { membershipStatus: `${tier} Member` });
+      Database.updateProfile(userId, { membershipStatus: tier });
       useUserStore.getState().syncFromDB();
       get().syncFromDB();
     }
@@ -87,13 +87,22 @@ export const useMembershipStore = create<MembershipState>((set, get) => ({
 
         set({
           membership: {
-            tier: profile.membershipStatus || 'Elite Premium Member',
+            tier: profile.membershipStatus || 'Standard',
             totalCredits: totalPurchased,
             availableCredits: profile.creditsBalance,
             renewalDate: 'Aug 15, 2026',
           }
         });
       }
+    } else {
+      set({
+        membership: {
+          tier: 'Standard',
+          totalCredits: 0,
+          availableCredits: 0,
+          renewalDate: 'Not Active',
+        }
+      });
     }
   }
 }));

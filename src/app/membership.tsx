@@ -49,7 +49,7 @@ export default function MembershipScreen() {
     },
     {
       id: 'plan-3',
-      name: 'Premium Pack',
+      name: 'Active Pack',
       credits: 12,
       price: '₹9,999',
       originalPrice: '₹11,988',
@@ -218,44 +218,34 @@ export default function MembershipScreen() {
             <View className="gap-3">
               {/* Row Header */}
               <View className="flex-row justify-between pb-1.5 border-b border-zinc-50">
-                <Text className="w-[30%] text-zinc-400 text-[8px] font-black uppercase">Benefits</Text>
-                <Text className="w-[17%] text-zinc-900 text-[8px] font-black uppercase text-center">Single</Text>
-                <Text className="w-[17%] text-zinc-900 text-[8px] font-black uppercase text-center">Starter</Text>
-                <Text className="w-[17%] text-[#4F46E5] text-[8px] font-black uppercase text-center">Premium</Text>
-                <Text className="w-[17%] text-zinc-900 text-[8px] font-black uppercase text-center">Elite</Text>
+                <Text className="w-[40%] text-zinc-400 text-[8px] font-black uppercase">Benefits</Text>
+                <Text className="w-[30%] text-zinc-900 text-[8px] font-black uppercase text-center">Standard</Text>
+                <Text className="w-[30%] text-[#4F46E5] text-[8px] font-black uppercase text-center">Elite</Text>
               </View>
 
               {/* Rows */}
-              <View className="flex-row justify-between items-center py-1">
-                <Text className="w-[30%] text-zinc-500 text-[9px] font-semibold">Trainee Price</Text>
-                <Text className="w-[17%] text-zinc-800 text-[9px] font-bold text-center">₹999</Text>
-                <Text className="w-[17%] text-zinc-800 text-[9px] font-bold text-center">₹875</Text>
-                <Text className="w-[17%] text-zinc-800 text-[9px] font-black text-center bg-indigo-50/50 py-0.5 rounded">₹833</Text>
-                <Text className="w-[17%] text-zinc-800 text-[9px] font-bold text-center">₹799</Text>
+              <View className="flex-row justify-between items-center py-1.5">
+                <Text className="w-[40%] text-zinc-500 text-[9px] font-semibold">Trainee Price</Text>
+                <Text className="w-[30%] text-zinc-800 text-[9px] font-bold text-center">₹999 / session</Text>
+                <Text className="w-[30%] text-zinc-800 text-[9px] font-black text-center bg-indigo-50/50 py-0.5 rounded">₹799 / session</Text>
               </View>
 
-              <View className="flex-row justify-between items-center py-1">
-                <Text className="w-[30%] text-zinc-500 text-[9px] font-semibold">Trainer Tier</Text>
-                <Text className="w-[17%] text-zinc-800 text-[9px] font-bold text-center">Assoc.</Text>
-                <Text className="w-[17%] text-zinc-800 text-[9px] font-bold text-center">Certified</Text>
-                <Text className="w-[17%] text-zinc-800 text-[9px] font-black text-center bg-indigo-50/50 py-0.5 rounded">Certified</Text>
-                <Text className="w-[17%] text-zinc-800 text-[9px] font-bold text-center">Elite</Text>
+              <View className="flex-row justify-between items-center py-1.5">
+                <Text className="w-[40%] text-zinc-500 text-[9px] font-semibold">Trainer Tier</Text>
+                <Text className="w-[30%] text-zinc-800 text-[9px] font-bold text-center">Associate</Text>
+                <Text className="w-[30%] text-zinc-800 text-[9px] font-black text-center bg-indigo-50/50 py-0.5 rounded">Certified / Elite</Text>
               </View>
 
-              <View className="flex-row justify-between items-center py-1">
-                <Text className="w-[30%] text-zinc-500 text-[9px] font-semibold">Pause Days</Text>
-                <Text className="w-[17%] text-zinc-800 text-[9px] font-bold text-center">None</Text>
-                <Text className="w-[17%] text-zinc-800 text-[9px] font-bold text-center">5 Days</Text>
-                <Text className="w-[17%] text-zinc-800 text-[9px] font-black text-center bg-indigo-50/50 py-0.5 rounded">15 Days</Text>
-                <Text className="w-[17%] text-zinc-800 text-[9px] font-bold text-center">30 Days</Text>
+              <View className="flex-row justify-between items-center py-1.5">
+                <Text className="w-[40%] text-zinc-500 text-[9px] font-semibold">Pause Days</Text>
+                <Text className="w-[30%] text-zinc-800 text-[9px] font-bold text-center">None</Text>
+                <Text className="w-[30%] text-zinc-800 text-[9px] font-black text-center bg-indigo-50/50 py-0.5 rounded">30 Days</Text>
               </View>
 
-              <View className="flex-row justify-between items-center py-1">
-                <Text className="w-[30%] text-zinc-500 text-[9px] font-semibold">Priority Match</Text>
-                <Text className="w-[17%] text-zinc-800 text-[9px] font-bold text-center">Std</Text>
-                <Text className="w-[17%] text-zinc-800 text-[9px] font-bold text-center">Std</Text>
-                <Text className="w-[17%] text-zinc-800 text-[9px] font-black text-center bg-indigo-50/50 py-0.5 rounded">High</Text>
-                <Text className="w-[17%] text-zinc-800 text-[9px] font-bold text-center">Top</Text>
+              <View className="flex-row justify-between items-center py-1.5">
+                <Text className="w-[40%] text-zinc-500 text-[9px] font-semibold">Priority Match</Text>
+                <Text className="w-[30%] text-zinc-800 text-[9px] font-bold text-center">Standard</Text>
+                <Text className="w-[30%] text-zinc-800 text-[9px] font-black text-center bg-indigo-50/50 py-0.5 rounded">Top Priority</Text>
               </View>
             </View>
           </View>

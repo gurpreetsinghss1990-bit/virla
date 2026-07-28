@@ -5,7 +5,7 @@ export interface User {
   avatar: string;
   location: string;
   // Sprint 6 addition
-  role?: 'customer' | 'trainer';
+  role?: 'customer' | 'trainer' | 'admin';
 }
 
 export interface Membership {
@@ -84,6 +84,10 @@ export interface Booking {
     coachNotes: string;
     coachSignature: string;
   };
+  clientName?: string;
+  clientPhone?: string;
+  clientId?: string;
+  trainerId?: string;
 }
 
 export interface Coach {

@@ -76,6 +76,11 @@ export const useAddressStore = create<AddressState>((set, get) => ({
         addresses: list,
         selectedAddressId: get().selectedAddressId || list.find(a => a.isDefault)?.id || list[0]?.id || ''
       });
+    } else {
+      set({
+        addresses: [],
+        selectedAddressId: ''
+      });
     }
   }
 }));

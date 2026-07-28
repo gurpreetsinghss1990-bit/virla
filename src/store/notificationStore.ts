@@ -51,6 +51,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         notifications: list,
         unreadCount: list.filter((n) => !n.read).length
       });
+    } else {
+      set({
+        notifications: [],
+        unreadCount: 0
+      });
     }
   }
 }));

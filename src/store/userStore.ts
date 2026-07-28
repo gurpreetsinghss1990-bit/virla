@@ -3,6 +3,15 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Invoice } from '../types';
 import { Database } from '../database/Database';
+import { useUserProfileStore } from './userProfileStore';
+import { useBookingStore } from './bookingStore';
+import { useCoachStore } from './coachStore';
+import { useWorkoutStore } from './workoutStore';
+import { useWalletStore } from './walletStore';
+import { useMembershipStore } from './membershipStore';
+import { useNotificationStore } from './notificationStore';
+import { useAIStore } from './aiStore';
+import { useAddressStore } from './addressStore';
 
 interface FamilyMember {
   id: string;
@@ -23,8 +32,8 @@ interface UserState {
   setLoggedIn: (loggedIn: boolean) => void;
   setCompletedOnboarding: (completed: boolean) => void;
   // Sprint 6 additions
-  role: 'customer' | 'trainer';
-  setRole: (role: 'customer' | 'trainer') => void;
+  role: 'customer' | 'trainer' | 'admin';
+  setRole: (role: 'customer' | 'trainer' | 'admin') => void;
   invoices: Invoice[];
   addInvoice: (invoice: Omit<Invoice, 'id' | 'date'>) => void;
   syncFromDB: () => void;
@@ -47,13 +56,11 @@ export const useUserStore = create<UserState>()(
       updateProfile: (profile) =>
         set((state) => {
           const updatedUser = { ...state.user, ...profile };
-          if (updatedUser.id) {
-            Database.updateProfile(updatedUser.id, {
+            Database.updateUser(updatedUser.id, {
               name: updatedUser.name,
               email: updatedUser.email,
               avatar: updatedUser.avatar,
-            } as any);
-          }
+            });
           return { user: updatedUser };
         }),
       isLoggedIn: false,
@@ -62,9 +69,27 @@ export const useUserStore = create<UserState>()(
         set({ isLoggedIn: loggedIn });
         if (loggedIn) {
           get().syncFromDB();
+          useUserProfileStore.getState().syncFromDB();
+          useBookingStore.getState().syncFromDB();
+          useCoachStore.getState().syncFromDB();
+          useWorkoutStore.getState().syncFromDB();
+          useWalletStore.getState().syncFromDB();
+          useMembershipStore.getState().syncFromDB();
+          useNotificationStore.getState().syncFromDB();
+          useAIStore.getState().syncFromDB();
+          useAddressStore.getState().syncFromDB();
         } else {
           set({ user: emptyUser, familyMembers: [], invoices: [] });
           Database.setCurrentUserId(null);
+          useUserProfileStore.getState().syncFromDB();
+          useBookingStore.getState().syncFromDB();
+          useCoachStore.getState().syncFromDB();
+          useWorkoutStore.getState().syncFromDB();
+          useWalletStore.getState().syncFromDB();
+          useMembershipStore.getState().syncFromDB();
+          useNotificationStore.getState().syncFromDB();
+          useAIStore.getState().syncFromDB();
+          useAddressStore.getState().syncFromDB();
         }
       },
       setCompletedOnboarding: (completed) => set({ hasCompletedOnboarding: completed }),

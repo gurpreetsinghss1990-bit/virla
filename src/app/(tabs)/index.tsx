@@ -3,6 +3,8 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
 import Svg, { Rect, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 import { ProgressRing } from '../../components/ProgressRing';
 import { LuxuryCard } from '../../components/LuxuryCard';
 import { useBookingStore } from '../../store/bookingStore';
@@ -10,7 +12,11 @@ import { useCoachStore } from '../../store/coachStore';
 import { useMembershipStore } from '../../store/membershipStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useUserStore } from '../../store/userStore';
+import { useUserProfileStore } from '../../store/userProfileStore';
+import { useWorkoutStore } from '../../store/workoutStore';
+import { useWalletStore } from '../../store/walletStore';
 import { Database } from '../../database/Database';
+import { supabase } from '../../database/supabaseClient';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 
 export default function HomeScreen() {
@@ -21,14 +27,84 @@ export default function HomeScreen() {
   const { user, role } = useUserStore();
   const { totalEarnings, earningsList } = useCoachStore();
 
+  const handleHiddenAdminAccess = async () => {
+    const userId = Database.getCurrentUserId();
+    if (!userId) {
+      Alert.alert('Access Denied', 'Please log in first.');
+      return;
+    }
+    try {
+      const { data, error } = await supabase.from('users').select('role').eq('id', userId).single();
+      if (data && data.role === 'admin') {
+        router.push('/admin-panel' as any);
+      } else {
+        Alert.alert('Access Denied', 'You do not have administrative authorization.');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', 'Unable to verify administrative authorization.');
+    }
+  };
+
+  const [isHolding, setIsHolding] = useState(false);
+  const holdProgress = useRef(new Animated.Value(0)).current;
+  const holdTimeoutRef = useRef<any>(null);
+
+  const handlePressIn = () => {
+    setIsHolding(true);
+    holdProgress.setValue(0);
+    Animated.timing(holdProgress, {
+      toValue: 1,
+      duration: 5000,
+      useNativeDriver: false,
+    }).start();
+
+    holdTimeoutRef.current = setTimeout(async () => {
+      setIsHolding(false);
+      holdProgress.setValue(0);
+      await handleHiddenAdminAccess();
+    }, 5000);
+  };
+
+  const handlePressOut = () => {
+    setIsHolding(false);
+    if (holdTimeoutRef.current) {
+      clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = null;
+    }
+    holdProgress.stopAnimation();
+    holdProgress.setValue(0);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (holdTimeoutRef.current) {
+        clearTimeout(holdTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
+    const syncData = async () => {
+      try {
+        await Database.load();
+        useUserStore.getState().syncFromDB();
+        useUserProfileStore.getState().syncFromDB();
+        useBookingStore.getState().syncFromDB();
+        useCoachStore.getState().syncFromDB();
+        useWorkoutStore.getState().syncFromDB();
+        useWalletStore.getState().syncFromDB();
+        useMembershipStore.getState().syncFromDB();
+        useNotificationStore.getState().syncFromDB();
+      } catch (e) {
+        console.error('Home sync failed:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    syncData();
+  }, [bookings.length]);
 
   const upcomingBookings = bookings.filter((b) => b.status === 'upcoming');
   const pastBookings = bookings.filter((b) => b.status === 'completed');
@@ -117,15 +193,11 @@ export default function HomeScreen() {
   const greeting = getGreetingText();
 
   // Personal Fitness Score Calculation
-  const consistency = 92;
-  const frequency = 85;
   const dateStr = new Date().toLocaleDateString('en-CA');
   const streak = user.id ? Database.getStreak(user.id) : 0;
-  const recoveryVal = user.id ? (Database.getRecoveryScore(user.id, dateStr) ?? 80) : 80;
-  const mobility = 78;
-  const strength = 88;
-  const attendance = 96;
-  const fitnessScore = Math.round((consistency + frequency + recoveryVal + mobility + strength + attendance) / 6);
+  const userRecovery = user.id ? Database.getRecoveryScore(user.id, dateStr) : null;
+  const recoveryVal = userRecovery ?? 0;
+  const profileObj = user.id ? Database.getProfile(user.id) : null;
 
   // Trainer metric summary calculations
   const completedJobs = bookings.filter(b => b.status === 'completed');
@@ -190,13 +262,50 @@ export default function HomeScreen() {
     <SafeAreaViewWrapper>
       {/* Dynamic Header */}
       <View className="h-20 flex-row items-center justify-between px-6 bg-[#FCF5F5]">
-        <View>
-          <Text className="text-2xl font-bold tracking-[0.2em] text-[#E11D48]">
-            {role === 'trainer' ? 'VIRLA PRO' : 'VIRLA'}
-          </Text>
-          <Text className="text-[10px] font-medium tracking-[0.25em] text-zinc-500 uppercase mt-1">
-            Wellness At Your Doorstep
-          </Text>
+        <View className="relative flex-row items-center">
+          <TouchableOpacity
+            activeOpacity={1}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            className="pr-4 py-2"
+          >
+            <Text className="text-2xl font-bold tracking-[0.2em] text-[#E11D48]">
+              {role === 'trainer' ? 'VIRLA PRO' : 'VIRLA'}
+            </Text>
+            <Text className="text-[10px] font-medium tracking-[0.25em] text-zinc-500 uppercase mt-1">
+              Wellness At Your Doorstep
+            </Text>
+          </TouchableOpacity>
+
+          {isHolding && (
+            <View className="absolute right-0 top-3 w-8 h-8 items-center justify-center">
+              <Svg width={32} height={32} viewBox="0 0 32 32">
+                <Circle
+                  cx={16}
+                  cy={16}
+                  r={14}
+                  stroke="#E5E7EB"
+                  strokeWidth={2}
+                  fill="none"
+                />
+                <AnimatedCircle
+                  cx={16}
+                  cy={16}
+                  r={14}
+                  stroke="#E11D48"
+                  strokeWidth={2}
+                  fill="none"
+                  strokeDasharray={88}
+                  strokeDashoffset={holdProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [88, 0],
+                  })}
+                  strokeLinecap="round"
+                  transform="rotate(-90 16 16)"
+                />
+              </Svg>
+            </View>
+          )}
         </View>
         <View className="flex-row items-center gap-4">
           <TouchableOpacity
@@ -291,7 +400,7 @@ export default function HomeScreen() {
                       <ProgressRing progress={recoveryVal / 100} size={92} strokeWidth={8} activeColor="#E11D48" inactiveColor="#FFE4E6">
                         <View className="items-center justify-center">
                           <Text className="text-[#101828] text-[30px] font-bold tracking-tighter">
-                            {user.id ? (Database.getRecoveryScore(user.id, dateStr) ?? '--') : '87'}
+                            {userRecovery !== null ? userRecovery : '--'}
                           </Text>
                           <Text className="text-zinc-400 text-[11px] font-medium mt-0.5">/100</Text>
                         </View>
@@ -302,10 +411,10 @@ export default function HomeScreen() {
                     <View className="flex-1 gap-1.5 justify-center">
                       <Text className="text-[#E11D48] text-[13px] font-semibold tracking-wider uppercase">Recovery Score</Text>
                       <Text className="text-[#101828] text-[20px] font-semibold tracking-tight">
-                        {user.id ? (Database.getRecoveryScore(user.id, dateStr) ? (Database.getRecoveryScore(user.id, dateStr)! >= 80 ? 'Excellent Recovery' : 'Good Recovery') : 'No Logs Yet') : 'Excellent Recovery'}
+                        {user.id ? (userRecovery !== null ? (userRecovery >= 80 ? 'Excellent Recovery' : 'Good Recovery') : 'No Logs Today') : 'Unauthenticated'}
                       </Text>
                       <Text className="text-zinc-500 text-[15px] font-normal leading-snug">
-                        {user.id ? (Database.getRecoveryScore(user.id, dateStr) ? 'Ready for Strength Training Today.' : 'Log water or workouts to compute recovery.') : 'Ready for Strength Training Today.'}
+                        {user.id ? (userRecovery !== null ? 'Ready for Strength Training Today.' : 'Log water or workouts to compute recovery index.') : 'Please log in to track recovery.'}
                       </Text>
                       <View className="flex-row mt-1">
                         <View className="bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full flex-row items-center gap-1">
@@ -395,77 +504,81 @@ export default function HomeScreen() {
               <View className="gap-4">
                 <Text className="text-[#101828] text-[20px] font-semibold tracking-tight pl-1">Your Coach Today</Text>
                 
-                <View className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] shadow-sm gap-5">
-                  <View className="flex-row gap-4 items-center">
-                    {/* Left: Avatar image with rating overlay */}
-                    <View className="relative">
-                      <Image 
-                        source={{ uri: activeBooking?.trainerPhoto || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }} 
-                        className="w-18 h-18 rounded-full border border-zinc-150" 
-                      />
-                      {/* Rating Overlay */}
-                      <View className="absolute -top-1.5 -left-1.5 bg-white border border-zinc-100 px-1.5 py-0.5 rounded-lg shadow-xs items-center justify-center flex-row">
-                        <Text className="text-[11px] font-bold text-zinc-800">⭐ 4.9</Text>
+                {activeBooking ? (
+                  <View className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] shadow-sm gap-5">
+                    <View className="flex-row gap-4 items-center">
+                      {/* Left: Avatar image with rating overlay */}
+                      <View className="relative">
+                        <Image 
+                          source={{ uri: activeBooking.trainerPhoto || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }} 
+                          className="w-18 h-18 rounded-full border border-zinc-150" 
+                        />
+                        {/* Rating Overlay */}
+                        <View className="absolute -top-1.5 -left-1.5 bg-white border border-zinc-100 px-1.5 py-0.5 rounded-lg shadow-xs items-center justify-center flex-row">
+                          <Text className="text-[11px] font-bold text-zinc-800">⭐ 4.9</Text>
+                        </View>
                       </View>
-                    </View>
 
-                    {/* Right: Coach info */}
-                    <View className="flex-1 gap-1.5">
-                      <View className="flex-row items-center justify-between">
-                        <Text className="text-[#101828] text-[18px] font-semibold tracking-tight">
-                          {activeBooking?.trainerName || 'Karan Sharma'}
+                      {/* Right: Coach info */}
+                      <View className="flex-1 gap-1.5">
+                        <View className="flex-row items-center justify-between">
+                          <Text className="text-[#101828] text-[18px] font-semibold tracking-tight">
+                            {activeBooking.trainerName}
+                          </Text>
+                          <Feather name="chevron-right" size={14} color="#9CA3AF" />
+                        </View>
+                        <Text className="text-[#6B7280] text-[15px] font-normal leading-none">
+                          {activeBooking.trainerSpeciality || 'Strength & Conditioning Specialist'}
                         </Text>
-                        <Feather name="chevron-right" size={14} color="#9CA3AF" />
-                      </View>
-                      <Text className="text-[#6B7280] text-[15px] font-normal leading-none">
-                        {activeBooking?.trainerSpeciality || 'Strength & Conditioning Specialist'}
-                      </Text>
 
-                      {/* Stats row */}
-                      <View className="flex-row flex-wrap items-center gap-x-4 gap-y-1.5 mt-1">
-                        <View className="flex-row items-center gap-1">
-                          <Feather name="clock" size={12} color="#FF8A00" />
-                          <Text className="text-zinc-500 text-[11px] font-medium uppercase">
-                            Arriving {activeBooking?.time.split(' - ')[0] || '10:30 AM'}
-                          </Text>
-                        </View>
-                        <View className="flex-row items-center gap-1">
-                          <Feather name="map-pin" size={12} color="#3B82F6" />
-                          <Text className="text-zinc-500 text-[11px] font-medium uppercase">
-                            {activeBooking?.trainerDistance || '2.3 km'}
-                          </Text>
-                        </View>
-                        <View className="flex-row items-center gap-1">
-                          <Feather name="shield" size={12} color="#16C784" />
-                          <Text className="text-zinc-500 text-[11px] font-medium uppercase">
-                            Elite Coach
-                          </Text>
+                        {/* Stats row */}
+                        <View className="flex-row flex-wrap items-center gap-x-4 gap-y-1.5 mt-1">
+                          <View className="flex-row items-center gap-1">
+                            <Feather name="clock" size={12} color="#FF8A00" />
+                            <Text className="text-zinc-500 text-[11px] font-medium uppercase">
+                              Arriving {activeBooking.time.split(' - ')[0] || '10:30 AM'}
+                            </Text>
+                          </View>
+                          <View className="flex-row items-center gap-1">
+                            <Feather name="map-pin" size={12} color="#3B82F6" />
+                            <Text className="text-zinc-500 text-[11px] font-medium uppercase">
+                              {activeBooking.trainerDistance || '2.3 km'}
+                            </Text>
+                          </View>
+                          <View className="flex-row items-center gap-1">
+                            <Feather name="shield" size={12} color="#16C784" />
+                            <Text className="text-zinc-500 text-[11px] font-medium uppercase">
+                              Elite Coach
+                            </Text>
+                          </View>
                         </View>
                       </View>
                     </View>
-                  </View>
 
-                  <View className="h-[1px] bg-zinc-100" />
+                    <View className="h-[1px] bg-zinc-100" />
 
-                  {/* Track Coach Live CTA Button */}
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      if (activeBooking) {
+                    {/* Track Coach Live CTA Button */}
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => {
                         router.push({ pathname: '/session-detail', params: { id: activeBooking.id } });
-                      } else {
-                        Alert.alert('No Active Session', 'Your coach tracking line will activate once a training session is confirmed and in-progress.');
-                      }
-                    }}
-                    className="w-full py-4 bg-rose-50 rounded-2xl items-center justify-center flex-row gap-2"
-                    style={{ minHeight: 48 }}
-                  >
-                    <Feather name="map-pin" size={14} color="#E11D48" />
-                    <Text className="text-[#E11D48] text-[13px] font-bold uppercase tracking-wider">
-                      Track Coach Live
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                      }}
+                      className="w-full py-4 bg-rose-50 rounded-2xl items-center justify-center flex-row gap-2"
+                      style={{ minHeight: 48 }}
+                    >
+                      <Feather name="map-pin" size={14} color="#E11D48" />
+                      <Text className="text-[#E11D48] text-[13px] font-bold uppercase tracking-wider">
+                        Track Coach Live
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View className="bg-white border border-[#E5E7EB] p-8 rounded-[32px] shadow-sm items-center justify-center gap-3">
+                    <Text className="text-3xl">🏋️</Text>
+                    <Text className="text-[#101828] text-base font-semibold">No Active Coach Today</Text>
+                    <Text className="text-zinc-500 text-sm text-center">Your assigned coach tracking details will activate here on the day of your session.</Text>
+                  </View>
+                )}
               </View>
 
               {/* Today's Overview Section */}
@@ -594,10 +707,14 @@ export default function HomeScreen() {
                     </View>
                     <View className="gap-1">
                       <Text className="text-white text-[15px] font-semibold tracking-tight leading-relaxed">
-                        Your recovery is excellent today.
+                        {userRecovery !== null
+                          ? `Your recovery is ${userRecovery >= 80 ? 'excellent' : 'steady'} today.`
+                          : 'Personalized AI Insights Ready'}
                       </Text>
                       <Text className="text-white/70 text-[13px] font-normal leading-relaxed">
-                        A 60-min <Text className="text-[#FF7E7E] font-semibold">Strength Training</Text> session is recommended to maximize performance.
+                        {userRecovery !== null
+                          ? `A 60-min ${profileObj?.preferredWorkout || 'Strength Training'} session is recommended to maximize performance.`
+                          : 'Log hydration or complete your fitness profile to generate tailored workout suggestions.'}
                       </Text>
                     </View>
 

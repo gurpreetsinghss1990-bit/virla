@@ -179,6 +179,8 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     if (userId) {
       const list = Database.getBookings(userId);
       set({ bookings: list });
+    } else {
+      set({ bookings: [] });
     }
   }
 }));

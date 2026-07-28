@@ -300,6 +300,19 @@ export const useAIStore = create<AIState>((set, get) => ({
           quote: '"The best way to predict the future is to create it." — Peter Drucker'
         }
       });
+    } else {
+      set({
+        messages: [],
+        briefing: {
+          goals: [],
+          missedGoals: [],
+          upcomingInterview: '',
+          resumeReminder: '',
+          applicationsReminder: '',
+          learningRecommendation: '',
+          quote: ''
+        }
+      });
     }
   }
 }));

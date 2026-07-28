@@ -1,3 +1,4 @@
+import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Workout, Coach, Booking, NotificationItem, Invoice, TrainerEarning, ScheduleSlot } from '../types';
 
@@ -67,7 +68,7 @@ export interface TrainerApplication {
   id: string;
   createdAt: string;
   updatedAt: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'info_requested';
   
   // Step 1: Personal Info
   fullName: string;
@@ -113,6 +114,13 @@ export interface TrainerApplication {
   documentPan: string;
   documentSelfie: string;
   documentCertifications: string; // JSON string array
+  aadhaarStatus?: 'pending_verification' | 'verified' | 'rejected';
+  panStatus?: 'pending_verification' | 'verified' | 'rejected';
+  aadhaarVerificationNotes?: string;
+  panVerificationNotes?: string;
+  adminNotes?: string;
+  acceptedAgreementTimestamp?: string;
+  acceptedAgreementAppVersion?: string;
 }
 
 export interface SavedAddress {
@@ -136,12 +144,533 @@ export interface DBUser {
   email: string;
   passwordHash: string;
   avatar: string;
-  role: 'customer' | 'trainer';
+  role: 'customer' | 'trainer' | 'admin';
   status: 'active' | 'suspended';
   createdDate: string;
   lastLogin: string;
   deviceInfo: string;
   notificationPrefs: string; // JSON string
+}
+
+// ==================== MAPPERS ====================
+
+export function mapDBUser(row: any): DBUser {
+  return {
+    id: row.id,
+    name: row.name,
+    phone: row.phone,
+    email: row.email || '',
+    passwordHash: row.password_hash || '',
+    avatar: row.avatar || '',
+    role: row.role,
+    status: row.status,
+    createdDate: row.created_date || '',
+    lastLogin: row.last_login || '',
+    deviceInfo: row.device_info || '',
+    notificationPrefs: JSON.stringify(row.notification_prefs || {})
+  };
+}
+
+export function mapDBUserToPostgres(user: DBUser): any {
+  return {
+    id: user.id,
+    name: user.name,
+    phone: user.phone,
+    email: user.email,
+    password_hash: user.passwordHash,
+    avatar: user.avatar,
+    role: user.role,
+    status: user.status,
+    created_date: user.createdDate,
+    last_login: user.lastLogin,
+    device_info: user.deviceInfo,
+    notification_prefs: JSON.parse(user.notificationPrefs || '{}')
+  };
+}
+
+export function mapUserProfile(row: any): UserProfile {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    age: row.age || 0,
+    gender: row.gender || '',
+    height: row.height || '',
+    weight: row.weight || '',
+    fitnessGoal: row.fitness_goal || '',
+    preferredWorkout: row.preferred_workout || '',
+    emergencyContact: JSON.stringify(row.emergency_contact || {}),
+    medicalNotes: row.medical_notes || '',
+    membershipStatus: row.membership_status || '',
+    creditsBalance: row.credits_balance || 0,
+    trainerPreference: row.trainer_preference || '',
+    dob: row.dob || '',
+    fitnessLevel: row.fitness_level || '',
+    preferredLanguage: row.preferred_language || '',
+    city: row.city || '',
+    memberSince: row.member_since || '',
+    selectedGoals: row.selected_goals || []
+  };
+}
+
+export function mapUserProfileToPostgres(profile: UserProfile): any {
+  return {
+    id: profile.id,
+    user_id: profile.userId,
+    age: profile.age,
+    gender: profile.gender,
+    height: profile.height,
+    weight: profile.weight,
+    fitness_goal: profile.fitnessGoal,
+    preferred_workout: profile.preferredWorkout,
+    emergency_contact: JSON.parse(profile.emergencyContact || '{}'),
+    medical_notes: profile.medicalNotes,
+    membership_status: profile.membershipStatus,
+    credits_balance: profile.creditsBalance,
+    trainer_preference: profile.trainerPreference,
+    dob: profile.dob,
+    fitness_level: profile.fitnessLevel,
+    preferred_language: profile.preferredLanguage,
+    city: profile.city,
+    member_since: profile.memberSince,
+    selected_goals: profile.selectedGoals
+  };
+}
+
+export function mapCoach(row: any): Coach {
+  return {
+    id: row.id,
+    name: row.name,
+    photo: row.photo || '',
+    experience: row.experience || '',
+    rating: Number(row.rating) || 5.0,
+    specialty: row.specialty || '',
+    yearsExperience: row.years_experience || 0,
+    specialization: row.specialization || '',
+    languages: row.languages || [],
+    shortBio: row.short_bio || '',
+    price: row.price || 1200,
+    verifiedBadge: row.verified_badge ?? true,
+    certifications: row.certifications || [],
+    achievements: row.achievements || [],
+    reviews: row.reviews || [],
+    workoutSpecialties: row.workout_specialties || [],
+    availability: row.availability || [],
+    level: row.level || 'Associate',
+    completedSessions: row.completed_sessions || 0,
+    isFavourite: row.is_favourite ?? false,
+    weeklySlotsSubmitted: row.weekly_slots_submitted || 0,
+    remainingSlotChanges: row.remaining_slot_changes || 3,
+    retainerStatus: row.retainer_status || 'not_eligible',
+    attendanceRate: Number(row.attendance_rate) || 100.0,
+    punctualityRate: Number(row.punctuality_rate) || 100.0,
+    availabilityCompliance: Number(row.availability_compliance) || 100.0,
+    bankDetails: row.bank_details ? JSON.stringify(row.bank_details) : '',
+    emergencyContact: row.emergency_contact ? JSON.stringify(row.emergency_contact) : '',
+    aboutText: row.about_text || '',
+    workingRadius: row.working_radius || ''
+  };
+}
+
+export function mapCoachToPostgres(coach: Coach): any {
+  return {
+    id: coach.id,
+    name: coach.name,
+    photo: coach.photo,
+    experience: coach.experience,
+    rating: coach.rating,
+    specialty: coach.specialty,
+    years_experience: coach.yearsExperience,
+    specialization: coach.specialization,
+    languages: coach.languages,
+    short_bio: coach.shortBio,
+    completed_sessions: coach.completedSessions,
+    is_favourite: coach.isFavourite,
+    weekly_slots_submitted: coach.weeklySlotsSubmitted,
+    remaining_slot_changes: coach.remainingSlotChanges,
+    retainer_status: coach.retainerStatus,
+    attendance_rate: coach.attendanceRate,
+    punctuality_rate: coach.punctualityRate,
+    availability_compliance: coach.availabilityCompliance,
+    bank_details: coach.bankDetails ? JSON.parse(coach.bankDetails) : null,
+    emergency_contact: coach.emergencyContact ? JSON.parse(coach.emergencyContact) : null,
+    about_text: coach.aboutText,
+    availability: coach.availability,
+    working_radius: coach.workingRadius
+  };
+}
+
+export function mapWorkout(row: any): Workout {
+  return {
+    id: row.id,
+    title: row.title,
+    icon: row.icon || '',
+    description: row.description || '',
+    calories: row.calories || 300,
+    duration: row.duration || 45,
+    heroImage: row.hero_image || '',
+    category: row.category || '',
+    benefits: row.benefits || [],
+    difficulty: row.difficulty || 'Medium',
+    equipment: row.equipment || [],
+    homeVisitBadge: row.home_visit_badge ?? true,
+    sessionPrice: row.session_price || 1200,
+    rating: Number(row.rating) || 4.8,
+    reviews: row.reviews || [],
+    faqs: row.faqs || []
+  };
+}
+
+export function mapWorkoutToPostgres(w: Workout): any {
+  return {
+    id: w.id,
+    title: w.title,
+    icon: w.icon,
+    description: w.description,
+    calories: w.calories,
+    duration: w.duration,
+    hero_image: w.heroImage || '',
+    category: w.category || '',
+    benefits: w.benefits || [],
+    difficulty: w.difficulty || 'Medium',
+    equipment: w.equipment || [],
+    home_visit_badge: w.homeVisitBadge ?? true,
+    session_price: w.sessionPrice || 1200,
+    rating: w.rating || 5.0,
+    reviews: w.reviews || [],
+    faqs: w.faqs || []
+  };
+}
+
+export function mapBooking(row: any): Booking {
+  return {
+    id: row.id,
+    status: row.status,
+    timelineStatus: row.timeline_status,
+    otp: row.otp,
+    clientName: row.client_name || '',
+    clientPhone: row.client_phone || '',
+    trainerName: row.trainer_name || '',
+    trainerPhoto: row.trainer_photo || '',
+    date: row.date,
+    time: row.time,
+    workoutTitle: row.workout_title,
+    price: row.price,
+    address: row.address || '',
+    clientId: row.client_id || '',
+    trainerId: row.trainer_id || ''
+  };
+}
+
+export function mapBookingToPostgres(b: Booking): any {
+  return {
+    id: b.id,
+    status: b.status,
+    timeline_status: b.timelineStatus,
+    otp: b.otp,
+    client_name: b.clientName || '',
+    client_phone: b.clientPhone || '',
+    trainer_name: b.trainerName,
+    trainer_photo: b.trainerPhoto,
+    date: b.date,
+    time: b.time,
+    workout_title: b.workoutTitle,
+    price: b.price || 0,
+    address: b.address || '',
+    client_id: b.clientId || null,
+    trainer_id: b.trainerId || null
+  };
+}
+
+export function mapInvoice(row: any): Invoice {
+  return {
+    id: row.id,
+    type: row.type || 'paid',
+    amount: row.amount || '',
+    date: row.date || '',
+    status: row.status || 'paid',
+    credits: row.credits || 0
+  };
+}
+
+export function mapInvoiceToPostgres(inv: Invoice, userId: string): any {
+  return {
+    id: inv.id,
+    user_id: userId,
+    type: inv.type,
+    amount: inv.amount,
+    date: inv.date,
+    status: inv.status,
+    credits: inv.credits
+  };
+}
+
+export function mapHydrationLog(row: any): HydrationLog {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    date: row.date,
+    amount: row.amount
+  };
+}
+
+export function mapHydrationLogToPostgres(log: HydrationLog): any {
+  return {
+    id: log.id,
+    user_id: log.userId,
+    date: log.date,
+    amount: log.amount
+  };
+}
+
+export function mapCalorieLog(row: any): CalorieLog {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    date: row.date,
+    amount: row.amount
+  };
+}
+
+export function mapCalorieLogToPostgres(log: CalorieLog): any {
+  return {
+    id: log.id,
+    user_id: log.userId,
+    date: log.date,
+    amount: log.amount
+  };
+}
+
+export function mapNotificationItem(row: any): NotificationItem {
+  return {
+    id: row.id,
+    title: row.title,
+    body: row.body || '',
+    read: row.read ?? false,
+    timestamp: row.timestamp || '',
+    group: row.group || 'today',
+    icon: row.icon || ''
+  };
+}
+
+export function mapNotificationItemToPostgres(n: NotificationItem, userId: string): any {
+  return {
+    id: n.id,
+    user_id: userId,
+    title: n.title,
+    body: n.body,
+    read: n.read,
+    timestamp: n.timestamp,
+    group: n.group,
+    icon: n.icon || ''
+  };
+}
+
+export function mapChatMessage(row: any): ChatMessage {
+  return {
+    id: row.id,
+    chatId: row.chat_id,
+    sender: row.sender,
+    text: row.text,
+    timestamp: row.timestamp,
+    isPinned: row.is_pinned ?? false,
+    isFavorite: row.is_favorite ?? false
+  };
+}
+
+export function mapChatMessageToPostgres(msg: ChatMessage): any {
+  return {
+    id: msg.id,
+    chat_id: msg.chatId,
+    sender: msg.sender,
+    text: msg.text,
+    timestamp: msg.timestamp,
+    is_pinned: msg.isPinned,
+    is_favorite: msg.isFavorite
+  };
+}
+
+export function mapSavedAddress(row: any): SavedAddress {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    label: row.label,
+    name: row.name,
+    building: row.building,
+    street: row.street,
+    landmark: row.landmark || '',
+    city: row.city,
+    pinCode: row.pin_code,
+    gpsPlaceholder: row.gps_placeholder || '',
+    isDefault: row.is_default
+  };
+}
+
+export function mapSavedAddressToPostgres(addr: SavedAddress): any {
+  return {
+    id: addr.id,
+    user_id: addr.userId,
+    label: addr.label,
+    name: addr.name,
+    building: addr.building,
+    street: addr.street,
+    landmark: addr.landmark,
+    city: addr.city,
+    pin_code: addr.pinCode,
+    gps_placeholder: addr.gpsPlaceholder,
+    is_default: addr.isDefault
+  };
+}
+
+export function mapTrainerEarning(row: any): TrainerEarning {
+  return {
+    id: row.id,
+    bookingId: row.booking_id,
+    clientName: row.client_name,
+    amount: row.amount,
+    date: row.date,
+    type: row.type
+  };
+}
+
+export function mapTrainerEarningToPostgres(earn: TrainerEarning, trainerId: string): any {
+  return {
+    id: earn.id,
+    trainer_id: trainerId,
+    booking_id: earn.bookingId,
+    client_name: earn.clientName,
+    amount: earn.amount,
+    date: earn.date,
+    type: earn.type
+  };
+}
+
+export function mapTrainerApplication(row: any): TrainerApplication {
+  let certsObj: any = {};
+  try {
+    certsObj = row.document_certifications ? (typeof row.document_certifications === 'string' ? JSON.parse(row.document_certifications) : row.document_certifications) : {};
+  } catch (e) {
+    certsObj = {};
+  }
+
+  const certsList = Array.isArray(certsObj) ? certsObj : (certsObj.certifications || []);
+  const aadhaarStatus = certsObj.aadhaarStatus || 'pending_verification';
+  const panStatus = certsObj.panStatus || 'pending_verification';
+  const aadhaarVerificationNotes = certsObj.aadhaarVerificationNotes || '';
+  const panVerificationNotes = certsObj.panVerificationNotes || '';
+  const adminNotes = certsObj.adminNotes || '';
+  const acceptedAgreementTimestamp = certsObj.acceptedAgreementTimestamp || '';
+  const acceptedAgreementAppVersion = certsObj.acceptedAgreementAppVersion || '';
+
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    status: row.status,
+    fullName: row.full_name,
+    phone: row.phone,
+    email: row.email,
+    dob: row.dob,
+    gender: row.gender,
+    avatar: row.avatar || '',
+    address: row.address,
+    city: row.city,
+    state: row.state,
+    pinCode: row.pin_code,
+    emergencyContact: JSON.stringify(row.emergency_contact || {}),
+    primaryWorkout: row.primary_workout,
+    secondarySkills: row.secondary_skills,
+    yearsOfExperience: row.years_of_experience,
+    languages: row.languages,
+    aboutMe: row.about_me,
+    fitnessQualifications: row.fitness_qualifications,
+    workingDays: row.working_days || [],
+    availabilityMorning: row.availability_morning,
+    availabilityAfternoon: row.availability_afternoon,
+    availabilityEvening: row.availability_evening,
+    maxSessionsPerDay: row.max_sessions_per_day,
+    preferredWorkingRadius: row.preferred_working_radius,
+    preferredCities: row.preferred_cities || [],
+    bankAccountName: row.bank_account_name || '',
+    bankName: row.bank_name || '',
+    bankAccountNumber: row.bank_account_number || '',
+    bankIfsc: row.bank_ifsc || '',
+    bankUpiId: row.bank_upi_id || '',
+    panNumber: row.pan_number,
+    gstNumber: row.gst_number || '',
+    documentAadhaar: row.document_aadhaar,
+    documentPan: row.document_pan,
+    documentSelfie: row.document_selfie,
+    documentCertifications: JSON.stringify(certsList),
+    aadhaarStatus,
+    panStatus,
+    aadhaarVerificationNotes,
+    panVerificationNotes,
+    adminNotes,
+    acceptedAgreementTimestamp,
+    acceptedAgreementAppVersion
+  };
+}
+
+export function mapTrainerApplicationToPostgres(app: TrainerApplication): any {
+  let certsList = [];
+  try {
+    certsList = JSON.parse(app.documentCertifications || '[]');
+  } catch (e) {
+    certsList = [];
+  }
+
+  const certsObj = {
+    certifications: certsList,
+    aadhaarStatus: app.aadhaarStatus || 'pending_verification',
+    panStatus: app.panStatus || 'pending_verification',
+    aadhaarVerificationNotes: app.aadhaarVerificationNotes || '',
+    panVerificationNotes: app.panVerificationNotes || '',
+    adminNotes: app.adminNotes || '',
+    acceptedAgreementTimestamp: app.acceptedAgreementTimestamp || '',
+    acceptedAgreementAppVersion: app.acceptedAgreementAppVersion || ''
+  };
+
+  return {
+    id: app.id,
+    created_at: app.createdAt,
+    updated_at: app.updatedAt,
+    status: app.status,
+    full_name: app.fullName,
+    phone: app.phone,
+    email: app.email,
+    dob: app.dob,
+    gender: app.gender,
+    avatar: app.avatar,
+    address: app.address,
+    city: app.city,
+    state: app.state,
+    pin_code: app.pinCode,
+    emergency_contact: JSON.parse(app.emergencyContact || '{}'),
+    primary_workout: app.primaryWorkout,
+    secondary_skills: app.secondarySkills,
+    years_of_experience: app.yearsOfExperience,
+    languages: app.languages,
+    about_me: app.aboutMe,
+    fitness_qualifications: app.fitnessQualifications,
+    working_days: app.workingDays,
+    availability_morning: app.availabilityMorning,
+    availability_afternoon: app.availabilityAfternoon,
+    availability_evening: app.availabilityEvening,
+    max_sessions_per_day: app.maxSessionsPerDay,
+    preferred_working_radius: app.preferredWorkingRadius,
+    preferred_cities: app.preferredCities,
+    bank_account_name: app.bankAccountName || '',
+    bank_name: app.bankName || '',
+    bank_account_number: app.bankAccountNumber || '',
+    bank_ifsc: app.bankIfsc || '',
+    bank_upi_id: app.bankUpiId || '',
+    pan_number: app.panNumber,
+    gst_number: app.gstNumber,
+    document_aadhaar: app.documentAadhaar,
+    document_pan: app.documentPan,
+    document_selfie: app.documentSelfie,
+    document_certifications: certsObj
+  };
 }
 
 const STORAGE_KEY = 'virla_production_database';
@@ -185,7 +714,6 @@ class DatabaseClient {
   private isLoaded = false;
 
   constructor() {
-    // Non-blocking load
     this.load();
   }
 
@@ -198,8 +726,74 @@ class DatabaseClient {
   }
 
   async load(): Promise<void> {
+    console.log('[DEBUG-DB] Database.load() called. isLoaded:', this.isLoaded);
     if (this.isLoaded) return;
     try {
+      this.log('LoadDatabase', 'Loading database collections from Supabase...');
+      
+      const fetchPromise = Promise.all([
+        supabase.from('users').select('*'),
+        supabase.from('user_profiles').select('*'),
+        supabase.from('trainers').select('*'),
+        supabase.from('workouts').select('*'),
+        supabase.from('bookings').select('*'),
+        supabase.from('credit_transactions').select('*'),
+        supabase.from('hydration_logs').select('*'),
+        supabase.from('calorie_logs').select('*'),
+        supabase.from('notifications').select('*'),
+        supabase.from('chat_messages').select('*'),
+        supabase.from('addresses').select('*'),
+        supabase.from('trainer_earnings').select('*'),
+        supabase.from('trainer_applications').select('*')
+      ]);
+
+      const timeoutPromise = new Promise<any>((_, reject) =>
+        setTimeout(() => reject(new Error('Supabase load query timed out')), 2000)
+      );
+
+      const [
+        resUsers,
+        resProfiles,
+        resTrainers,
+        resWorkouts,
+        resBookings,
+        resTransactions,
+        resHydration,
+        resCalories,
+        resNotifications,
+        resMessages,
+        resAddresses,
+        resEarnings,
+        resApps
+      ] = await Promise.race([fetchPromise, timeoutPromise]);
+
+      // Populate local caches using mapper functions
+      this.schema.users = (resUsers.data || []).map(mapDBUser);
+      this.schema.profiles = (resProfiles.data || []).map(mapUserProfile);
+      this.schema.coaches = (resTrainers.data || []).map(mapCoach);
+      this.schema.workouts = (resWorkouts.data || []).map(mapWorkout);
+      this.schema.bookings = (resBookings.data || []).map(mapBooking);
+      this.schema.credit_transactions = (resTransactions.data || []).map(mapInvoice);
+      this.schema.hydration = (resHydration.data || []).map(mapHydrationLog);
+      this.schema.calories = (resCalories.data || []).map(mapCalorieLog);
+      this.schema.notifications = (resNotifications.data || []).map(mapNotificationItem);
+      this.schema.messages = (resMessages.data || []).map(mapChatMessage);
+      this.schema.addresses = (resAddresses.data || []).map(mapSavedAddress);
+      this.schema.earnings = (resEarnings.data || []).map(mapTrainerEarning);
+      this.schema.trainer_applications = (resApps.data || []).map(mapTrainerApplication);
+
+      // Seed workouts and trainers in Supabase if database is empty
+      await this.seedData();
+
+      console.log('[DEBUG-DB] Database.load() completed successfully from Supabase.');
+      this.isLoaded = true;
+      this.log('LoadDatabase', 'Successfully synchronized local cache from Supabase');
+      
+      this.save();
+    } catch (err) {
+      console.log('[DEBUG-DB] Database.load() error caught. Falling back. Error:', err);
+      console.error('[DB ERROR] Failed to load database from Supabase, trying AsyncStorage fallback:', err);
+      // Fallback to AsyncStorage cache if offline/error
       const data = await AsyncStorage.getItem(STORAGE_KEY);
       if (data) {
         const parsed = JSON.parse(data);
@@ -209,12 +803,7 @@ class DatabaseClient {
           trainer_applications: parsed.trainer_applications || []
         };
       }
-      // Guarantee reference tables are seeded
-      this.seedData();
       this.isLoaded = true;
-      this.log('LoadDatabase', 'Successfully loaded database from AsyncStorage');
-    } catch (err) {
-      console.error('[DB ERROR] Failed to load database:', err);
     }
   }
 
@@ -226,12 +815,12 @@ class DatabaseClient {
     }
   }
 
-  private seedData() {
+  private async seedData() {
     let mutated = false;
 
     // Seed coaches if empty
     if (this.schema.coaches.length === 0) {
-      this.schema.coaches = [
+      const initialCoaches: Coach[] = [
         {
           id: 'c-1',
           name: 'Karan Sharma',
@@ -333,12 +922,14 @@ class DatabaseClient {
           isFavourite: false
         }
       ];
+      this.schema.coaches = initialCoaches;
+      await supabase.from('trainers').insert(initialCoaches.map(mapCoachToPostgres));
       mutated = true;
     }
 
     // Seed workouts if empty
     if (this.schema.workouts.length === 0) {
-      this.schema.workouts = [
+      const initialWorkouts: Workout[] = [
         {
           id: 'w-1',
           title: 'PowerForge',
@@ -442,11 +1033,13 @@ class DatabaseClient {
           faqs: [{ question: 'Do I need boxing gloves?', answer: 'No, the trainer will bring sanitized, high-quality focus pads and gloves for you.' }]
         }
       ];
+      this.schema.workouts = initialWorkouts;
+      await supabase.from('workouts').insert(initialWorkouts.map(mapWorkoutToPostgres));
       mutated = true;
     }
 
     if (mutated) {
-      this.save();
+      await this.save();
     }
   }
 
@@ -490,28 +1083,37 @@ class DatabaseClient {
     const newProfile: UserProfile = {
       id: generateUUID('prof'),
       userId,
-      age: 28,
-      gender: 'Male',
-      height: '178 cm',
-      weight: '75 kg',
-      fitnessGoal: 'Gain Strength & Fit',
-      preferredWorkout: 'PowerForge',
-      emergencyContact: JSON.stringify({ name: 'Neha Sharma', relationship: 'Sister', phone: '+91 98200 11223' }),
+      age: 0,
+      gender: '',
+      height: '',
+      weight: '',
+      fitnessGoal: '',
+      preferredWorkout: '',
+      emergencyContact: '{}',
       medicalNotes: '',
-      membershipStatus: 'Elite Premium Member',
-      creditsBalance: 12,
-      trainerPreference: 'Karan Sharma',
-      dob: 'Oct 14, 1995',
-      fitnessLevel: 'Intermediate',
+      membershipStatus: 'Standard',
+      creditsBalance: 0,
+      trainerPreference: '',
+      dob: '',
+      fitnessLevel: '',
       preferredLanguage: 'English',
-      city: 'Mumbai',
-      memberSince: 'Jul 2025',
-      selectedGoals: ['Gain Strength & Fit']
+      city: '',
+      memberSince: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+      selectedGoals: []
     };
 
     this.schema.users.push(newUser);
     this.schema.profiles.push(newProfile);
     this.currentUserId = userId;
+
+    const { error } = await supabase.rpc('create_user_with_profile', {
+      user_row: mapDBUserToPostgres(newUser),
+      profile_row: mapUserProfileToPostgres(newProfile)
+    });
+
+    if (error) {
+      throw new Error(`Database signup failed: ${error.message}`);
+    }
 
     await this.save();
     this.log('UserRegistration', `Registered user ${name} (${phone})`);
@@ -536,6 +1138,8 @@ class DatabaseClient {
     user.lastLogin = new Date().toISOString();
     this.currentUserId = user.id;
 
+    await supabase.from('users').update({ last_login: user.lastLogin }).eq('id', user.id);
+
     await this.save();
     this.log('UserLogin', `Logged in user ${user.name} (${phone})`);
     return {
@@ -548,19 +1152,20 @@ class DatabaseClient {
     };
   }
 
-  async oauthLogin(provider: string, providerId: string, name: string): Promise<User> {
+  async oauthLogin(provider: string, providerId: string, name: string, email?: string, role: 'customer' | 'trainer' | 'admin' = 'customer'): Promise<User> {
     await this.load();
-    let user = this.schema.users.find(u => u.email === `${providerId}@${provider}.com`);
+    const userEmail = email || `${providerId}@${provider}.com`;
+    let user = this.schema.users.find(u => u.email === userEmail);
     if (!user) {
       const userId = generateUUID('u');
       user = {
         id: userId,
         name,
         phone: '',
-        email: `${providerId}@${provider}.com`,
+        email: userEmail,
         passwordHash: hashPassword(providerId),
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-        role: 'customer',
+        role,
         status: 'active',
         createdDate: new Date().toLocaleDateString(),
         lastLogin: new Date().toISOString(),
@@ -582,29 +1187,38 @@ class DatabaseClient {
       const newProfile: UserProfile = {
         id: generateUUID('prof'),
         userId,
-        age: 28,
-        gender: 'Male',
-        height: '178 cm',
-        weight: '75 kg',
-        fitnessGoal: 'Fat Loss & Strength',
-        preferredWorkout: 'PowerForge',
-        emergencyContact: JSON.stringify({ name: 'Neha Sharma', relationship: 'Sister', phone: '+91 98200 11223' }),
+        age: 0,
+        gender: '',
+        height: '',
+        weight: '',
+        fitnessGoal: '',
+        preferredWorkout: '',
+        emergencyContact: '{}',
         medicalNotes: '',
-        membershipStatus: 'Elite Premium Member',
-        creditsBalance: 12,
-        trainerPreference: 'Karan Sharma',
-        dob: 'Oct 14, 1995',
-        fitnessLevel: 'Intermediate',
+        membershipStatus: 'Standard',
+        creditsBalance: 0,
+        trainerPreference: '',
+        dob: '',
+        fitnessLevel: '',
         preferredLanguage: 'English',
-        city: 'Mumbai',
-        memberSince: 'Jul 2025',
-        selectedGoals: ['Fat Loss', 'Strength']
+        city: '',
+        memberSince: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        selectedGoals: []
       };
 
       this.schema.users.push(user);
       this.schema.profiles.push(newProfile);
+
+      const { error } = await supabase.rpc('create_user_with_profile', {
+        user_row: mapDBUserToPostgres(user),
+        profile_row: mapUserProfileToPostgres(newProfile)
+      });
+      if (error) {
+        throw new Error(`Database signup failed: ${error.message}`);
+      }
     } else {
       user.lastLogin = new Date().toISOString();
+      await supabase.from('users').update({ last_login: user.lastLogin }).eq('id', user.id);
     }
 
     this.currentUserId = user.id;
@@ -633,10 +1247,37 @@ class DatabaseClient {
     return this.schema.profiles.find(p => p.userId === userId) || null;
   }
 
+  updateUser(userId: string, fields: Partial<DBUser>): void {
+    const user = this.schema.users.find(u => u.id === userId);
+    if (user) {
+      Object.assign(user, fields);
+      
+      const pgUser = mapDBUserToPostgres(user);
+      const updateFields: any = {};
+      for (const k of Object.keys(fields)) {
+        const snakeKey = k.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+        updateFields[snakeKey] = pgUser[snakeKey];
+      }
+      supabase.from('users').update(updateFields).eq('id', userId).then();
+
+      this.save();
+      this.log('UpdateUser', `Updated user fields for ID ${userId}`);
+    }
+  }
+
   updateProfile(userId: string, fields: Partial<UserProfile>): void {
     const profile = this.getProfile(userId);
     if (profile) {
       Object.assign(profile, fields);
+      
+      const pgProfile = mapUserProfileToPostgres(profile);
+      const updateFields: any = {};
+      for (const k of Object.keys(fields)) {
+        const snakeKey = k.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+        updateFields[snakeKey] = pgProfile[snakeKey];
+      }
+      supabase.from('user_profiles').update(updateFields).eq('user_id', userId).then();
+
       this.save();
       this.log('UpdateProfile', `Updated profile fields for user ID ${userId}`);
     }
@@ -652,18 +1293,47 @@ class DatabaseClient {
   }
 
   updateCoach(coachId: string, fields: Partial<Coach>): void {
-    const coach = this.schema.coaches.find(c => c.id === coachId);
-    if (coach) {
-      Object.assign(coach, fields);
-      this.save();
-      this.log('UpdateCoach', `Updated profile fields for coach ID ${coachId}`);
+    let coach = this.schema.coaches.find(c => c.id === coachId);
+    if (!coach) {
+      const user = this.schema.users.find(u => u.id === coachId);
+      coach = {
+        id: coachId,
+        name: user ? user.name : 'Trainer Name',
+        photo: user ? user.avatar : 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=300&q=80',
+        experience: 'Not specified',
+        rating: 5.0,
+        specialty: 'Not specified',
+        yearsExperience: 0,
+        specialization: 'Not specified',
+        languages: ['English'],
+        shortBio: '',
+        completedSessions: 0,
+        aboutText: '',
+        availability: [],
+        workingRadius: '0 km',
+        bankDetails: '{}',
+        emergencyContact: '{}',
+        level: 'Associate',
+        isFavourite: false
+      };
+      this.schema.coaches.push(coach);
     }
+    
+    Object.assign(coach, fields);
+    
+    const pgCoach = mapCoachToPostgres(coach);
+    
+    supabase.from('trainers').upsert(pgCoach).then();
+
+    this.save();
+    this.log('UpdateCoach', `Upserted trainer record for ID ${coachId}`);
   }
 
   toggleFavouriteCoach(coachId: string): void {
     const coach = this.schema.coaches.find(c => c.id === coachId);
     if (coach) {
       coach.isFavourite = !coach.isFavourite;
+      supabase.from('trainers').update({ is_favourite: coach.isFavourite }).eq('id', coachId).then();
       this.save();
       this.log('ToggleFavouriteCoach', `Toggled favourite status of coach ${coach.name}`);
     }
@@ -675,7 +1345,7 @@ class DatabaseClient {
     if (userObj && userObj.role === 'trainer') {
       return this.schema.bookings.filter(b => b.trainerName === userObj.name);
     }
-    return this.schema.bookings.filter(b => b.id.includes(userId) || b.id.startsWith('b-'));
+    return this.schema.bookings.filter(b => b.clientId === userId || b.id.includes(userId) || b.id.startsWith('b-'));
   }
 
   addBooking(userId: string, bookingData: Omit<Booking, 'id' | 'status' | 'timelineStatus'>): Booking {
@@ -686,26 +1356,33 @@ class DatabaseClient {
       id: bookingId,
       status: 'upcoming',
       timelineStatus: 'booked',
-      otp
+      otp,
+      clientId: userId
     };
 
     this.schema.bookings.unshift(newBooking);
 
-    // Deduct credits
     const profile = this.getProfile(userId);
     if (profile) {
       profile.creditsBalance = Math.max(0, profile.creditsBalance - 1);
     }
 
-    // Ledger transaction
-    this.addLedgerTransaction(userId, {
+    const tx: Invoice = {
       id: generateUUID('tx'),
       type: 'paid',
-      amount: '₹0', // quota debit
+      amount: '₹0',
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
       status: 'paid',
       credits: -1
-    });
+    };
+
+    this.schema.credit_transactions.unshift(tx);
+
+    Promise.all([
+      supabase.from('bookings').insert(mapBookingToPostgres(newBooking)),
+      profile ? supabase.from('user_profiles').update({ credits_balance: profile.creditsBalance }).eq('user_id', userId) : Promise.resolve(),
+      supabase.from('credit_transactions').insert(mapInvoiceToPostgres(tx, userId))
+    ]).then();
 
     this.save();
     this.log('AddBooking', `User ${userId} booked ${bookingData.workoutTitle} with OTP ${otp}`);
@@ -719,32 +1396,27 @@ class DatabaseClient {
       booking.status = 'cancelled';
       booking.timelineStatus = 'session_closed';
 
-      if (isLate) {
-        // Late cancellation penalty - forfeit credit
-        this.addLedgerTransaction(userId, {
-          id: generateUUID('tx'),
-          type: 'paid',
-          amount: '₹0',
-          date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-          status: 'paid',
-          credits: -1
-        });
-        this.log('LateCancellationPenalty', `Fined user ${userId} for late cancellation of ${bookingId}`);
-      } else {
-        // Full refund
-        const profile = this.getProfile(userId);
-        if (profile) {
-          profile.creditsBalance += 1;
-        }
-        this.addLedgerTransaction(userId, {
-          id: generateUUID('tx'),
-          type: 'paid',
-          amount: '₹0',
-          date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-          status: 'paid',
-          credits: 1
-        });
+      const tx: Invoice = {
+        id: generateUUID('tx'),
+        type: 'paid',
+        amount: '₹0',
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+        status: 'paid',
+        credits: isLate ? -1 : 1
+      };
+      
+      this.schema.credit_transactions.unshift(tx);
+
+      const profile = this.getProfile(userId);
+      if (!isLate && profile) {
+        profile.creditsBalance += 1;
       }
+
+      Promise.all([
+        supabase.from('bookings').update({ status: booking.status, timeline_status: booking.timelineStatus }).eq('id', bookingId),
+        supabase.from('credit_transactions').insert(mapInvoiceToPostgres(tx, userId)),
+        (profile && !isLate) ? supabase.from('user_profiles').update({ credits_balance: profile.creditsBalance }).eq('user_id', userId) : Promise.resolve()
+      ]).then();
 
       this.save();
     }
@@ -757,6 +1429,14 @@ class DatabaseClient {
       booking.time = time;
       booking.status = 'upcoming';
       booking.timelineStatus = 'booked';
+      
+      supabase.from('bookings').update({
+        date: booking.date,
+        time: booking.time,
+        status: booking.status,
+        timeline_status: booking.timelineStatus
+      }).eq('id', bookingId).then();
+
       this.save();
       this.log('RescheduleBooking', `Rescheduled booking ${bookingId} to ${date} at ${time}`);
     }
@@ -769,6 +1449,12 @@ class DatabaseClient {
       if (timelineStatus === 'session_closed' || timelineStatus === 'workout_completed') {
         booking.status = 'completed';
       }
+      
+      supabase.from('bookings').update({
+        status: booking.status,
+        timeline_status: booking.timelineStatus
+      }).eq('id', bookingId).then();
+
       this.save();
       this.log('UpdateTimelineStatus', `Updated booking ${bookingId} status to ${timelineStatus}`);
     }
@@ -780,6 +1466,13 @@ class DatabaseClient {
       booking.ratingDetails = ratingDetails;
       booking.timelineStatus = 'session_closed';
       booking.status = 'completed';
+
+      supabase.from('bookings').update({
+        status: booking.status,
+        timeline_status: booking.timelineStatus,
+        rating_details: ratingDetails
+      }).eq('id', bookingId).then();
+
       this.save();
       this.log('RateSession', `Rated session ${bookingId} overall ${ratingDetails?.overallRating}`);
     }
@@ -793,7 +1486,11 @@ class DatabaseClient {
 
   logHydration(userId: string, date: string, amount: number): number {
     const id = generateUUID('hyd');
-    this.schema.hydration.push({ id, userId, date, amount });
+    const newLog = { id, userId, date, amount };
+    this.schema.hydration.push(newLog);
+    
+    supabase.from('hydration_logs').insert(mapHydrationLogToPostgres(newLog)).then();
+
     this.save();
     this.log('LogHydration', `Logged ${amount}ml of water for user ${userId}`);
     return this.getHydration(userId, date);
@@ -801,11 +1498,9 @@ class DatabaseClient {
 
   // Calories Operations
   getCalories(userId: string, date: string): number {
-    // Sum from calorie logs + completed sessions today
     const logs = this.schema.calories.filter(l => l.userId === userId && l.date === date);
     const manualKcal = logs.reduce((sum, curr) => sum + curr.amount, 0);
 
-    // Filter completed sessions today
     const sessionsKcal = this.schema.bookings
       .filter(b => b.status === 'completed' && b.date === date)
       .reduce((sum, curr) => sum + (curr.caloriesBurned || 300), 0);
@@ -815,7 +1510,11 @@ class DatabaseClient {
 
   logCalories(userId: string, date: string, amount: number): number {
     const id = generateUUID('cal');
-    this.schema.calories.push({ id, userId, date, amount });
+    const newLog = { id, userId, date, amount };
+    this.schema.calories.push(newLog);
+    
+    supabase.from('calorie_logs').insert(mapCalorieLogToPostgres(newLog)).then();
+
     this.save();
     this.log('LogCalories', `Logged ${amount}kcal for user ${userId}`);
     return this.getCalories(userId, date);
@@ -829,9 +1528,8 @@ class DatabaseClient {
 
     if (completedDates.length === 0) return 0;
 
-    // Parse unique dates
     const uniqueDates = Array.from(new Set(completedDates)).map(d => new Date(d));
-    uniqueDates.sort((a, b) => b.getTime() - a.getTime()); // desc
+    uniqueDates.sort((a, b) => b.getTime() - a.getTime());
 
     let streak = 0;
     const today = new Date();
@@ -839,7 +1537,6 @@ class DatabaseClient {
 
     let checkDate = new Date(today);
     
-    // Check if the user worked out today or yesterday to continue streak
     let workoutFound = uniqueDates.some(d => d.toDateString() === today.toDateString());
     if (!workoutFound) {
       checkDate.setDate(today.getDate() - 1);
@@ -863,7 +1560,6 @@ class DatabaseClient {
 
   // Recovery Score Calculation
   getRecoveryScore(userId: string, date: string): number | null {
-    // Return null if no workouts completed yet, and hydration is 0
     const workoutsCount = this.schema.bookings.filter(b => b.status === 'completed').length;
     const waterToday = this.getHydration(userId, date);
 
@@ -871,7 +1567,6 @@ class DatabaseClient {
       return null;
     }
 
-    // Dynamic recovery calculation
     const hydrationPercentage = Math.min(100, (waterToday / 2500) * 100);
     const streakBonus = Math.min(20, this.getStreak(userId) * 4);
     const score = Math.round(50 + (hydrationPercentage * 0.3) + streakBonus);
@@ -883,8 +1578,9 @@ class DatabaseClient {
     return this.schema.credit_transactions;
   }
 
-  addLedgerTransaction(userId: string, tx: Invoice) {
+  addLedgerTransaction(userId: string, tx: Invoice): void {
     this.schema.credit_transactions.unshift(tx);
+    supabase.from('credit_transactions').insert(mapInvoiceToPostgres(tx, userId)).then();
     this.save();
   }
 
@@ -926,6 +1622,11 @@ class DatabaseClient {
       profile.creditsBalance += credits;
     }
 
+    Promise.all([
+      supabase.from('credit_transactions').insert(mapInvoiceToPostgres(newTx, userId)),
+      profile ? supabase.from('user_profiles').update({ credits_balance: profile.creditsBalance }).eq('user_id', userId) : Promise.resolve()
+    ]).then();
+
     this.save();
     this.log('PurchaseCredits', `User ${userId} bought ${planName} for ${totalText} adding ${credits} credits`);
   }
@@ -944,6 +1645,9 @@ class DatabaseClient {
       group: 'today'
     };
     this.schema.notifications.unshift(newNotify);
+    
+    supabase.from('notifications').insert(mapNotificationItemToPostgres(newNotify, userId)).then();
+
     this.save();
     this.log('AddNotification', `Logged notification for user ${userId}: ${item.title}`);
     return newNotify;
@@ -953,6 +1657,7 @@ class DatabaseClient {
     const n = this.schema.notifications.find(item => item.id === id);
     if (n) {
       n.read = true;
+      supabase.from('notifications').update({ read: true }).eq('id', id).then();
       this.save();
     }
   }
@@ -961,17 +1666,18 @@ class DatabaseClient {
     this.schema.notifications.forEach(n => {
       n.read = true;
     });
+    supabase.from('notifications').update({ read: true }).eq('user_id', userId).then();
     this.save();
   }
 
   clearAllNotifications(userId: string): void {
     this.schema.notifications = [];
+    supabase.from('notifications').delete().eq('user_id', userId).then();
     this.save();
   }
 
   // Chats & Chat Messages
   getChats(userId: string): any[] {
-    // Dynamic listing of chats joined with mock coaches details
     return [
       {
         id: 'chat-c-1',
@@ -995,7 +1701,6 @@ class DatabaseClient {
   getChatMessages(chatId: string): ChatMessage[] {
     const list = this.schema.messages.filter(m => m.chatId === chatId);
     if (list.length === 0) {
-      // Seed initial messages for chat-c-1
       if (chatId === 'chat-c-1') {
         return [
           { id: 'm-init-1', chatId, sender: 'coach', text: "Hello! I'm preparing for our Strength session today.", timestamp: '10:05 AM' },
@@ -1016,8 +1721,10 @@ class DatabaseClient {
       timestamp: timeStr
     };
     this.schema.messages.push(msg);
-    this.save();
+    
+    supabase.from('chat_messages').insert(mapChatMessageToPostgres(msg)).then();
 
+    this.save();
     this.log('SendMessage', `Sent message: "${text}" in chat ${chatId}`);
     return msg;
   }
@@ -1029,7 +1736,7 @@ class DatabaseClient {
 
   private hasUnreadMessages(chatId: string): boolean {
     const list = this.getChatMessages(chatId);
-    return list.some(m => m.sender !== 'user' && m.id.startsWith('msg-u-')); // unread mock logic
+    return list.some(m => m.sender !== 'user' && m.id.startsWith('msg-u-'));
   }
 
   // Address Management
@@ -1050,9 +1757,12 @@ class DatabaseClient {
       this.schema.addresses.forEach(a => {
         a.isDefault = false;
       });
+      supabase.from('addresses').update({ is_default: false }).eq('user_id', userId).then();
     }
 
     this.schema.addresses.push(newAddr);
+    supabase.from('addresses').insert(mapSavedAddressToPostgres(newAddr)).then();
+
     this.save();
     return newAddr;
   }
@@ -1065,13 +1775,26 @@ class DatabaseClient {
         this.schema.addresses.forEach(a => {
           if (a.id !== id) a.isDefault = false;
         });
+        if (addr.userId) {
+          supabase.from('addresses').update({ is_default: false }).eq('user_id', addr.userId).neq('id', id).then();
+        }
       }
+      
+      const pgAddr = mapSavedAddressToPostgres(addr);
+      const updateFields: any = {};
+      for (const k of Object.keys(fields)) {
+        const snakeKey = k.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+        updateFields[snakeKey] = pgAddr[snakeKey];
+      }
+      supabase.from('addresses').update(updateFields).eq('id', id).then();
+
       this.save();
     }
   }
 
   deleteAddress(id: string): void {
     this.schema.addresses = this.schema.addresses.filter(a => a.id !== id);
+    supabase.from('addresses').delete().eq('id', id).then();
     this.save();
   }
 
@@ -1101,7 +1824,7 @@ class DatabaseClient {
     ];
   }
 
-  // Trainer Earnings & Schedules (Sprint 6 & 7)
+  // Trainer Earnings & Schedules
   getEarnings(userId: string): TrainerEarning[] {
     return this.schema.earnings;
   }
@@ -1109,15 +1832,22 @@ class DatabaseClient {
   addEarning(earning: Omit<TrainerEarning, 'id' | 'date'>): void {
     const date = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
     const id = generateUUID('earn');
-    this.schema.earnings.unshift({
+    const newEarn = {
       ...earning,
       id,
       date
-    });
+    };
+    this.schema.earnings.unshift(newEarn);
+    
+    if (earning.bookingId) {
+      // Find trainer user matching current trainer name or ID
+      const trainerId = this.currentUserId || '';
+      supabase.from('trainer_earnings').insert(mapTrainerEarningToPostgres(newEarn, trainerId)).then();
+    }
     this.save();
   }
 
-  submitTrainerApplication(appData: Omit<TrainerApplication, 'id' | 'createdAt' | 'updatedAt' | 'status'>): Promise<TrainerApplication> {
+  async submitTrainerApplication(appData: Omit<TrainerApplication, 'id' | 'createdAt' | 'updatedAt' | 'status'>): Promise<TrainerApplication> {
     const id = generateUUID('app');
     const newApp: TrainerApplication = {
       ...appData,
@@ -1127,21 +1857,64 @@ class DatabaseClient {
       status: 'pending'
     };
     this.schema.trainer_applications.unshift(newApp);
-    this.save();
-    return Promise.resolve(newApp);
+    
+    const { error } = await supabase.from('trainer_applications').insert(mapTrainerApplicationToPostgres(newApp));
+    if (error) {
+      throw new Error(`Failed to submit application: ${error.message}`);
+    }
+
+    await this.save();
+    return newApp;
+  }
+
+  async updateTrainerApplication(appId: string, appData: Partial<TrainerApplication>): Promise<TrainerApplication> {
+    await this.load();
+    const appIndex = this.schema.trainer_applications.findIndex(a => a.id === appId);
+    if (appIndex === -1) {
+      throw new Error('Application not found');
+    }
+    const updatedApp = {
+      ...this.schema.trainer_applications[appIndex],
+      ...appData,
+      updatedAt: new Date().toISOString(),
+      status: 'pending' as const
+    };
+    this.schema.trainer_applications[appIndex] = updatedApp;
+    
+    const { error } = await supabase
+      .from('trainer_applications')
+      .update(mapTrainerApplicationToPostgres(updatedApp))
+      .eq('id', appId);
+      
+    if (error) {
+      throw new Error(`Failed to update application: ${error.message}`);
+    }
+    
+    await this.save();
+    return updatedApp;
   }
 
   getTrainerApplication(phone: string): TrainerApplication | null {
     return this.schema.trainer_applications.find(a => a.phone === phone) || null;
   }
 
+  async fetchAllTrainerApplications(): Promise<TrainerApplication[]> {
+    const { data, error } = await supabase.from('trainer_applications').select('*');
+    if (error) {
+      throw new Error(`Failed to fetch applications: ${error.message}`);
+    }
+    this.schema.trainer_applications = (data || []).map(mapTrainerApplication);
+    return this.schema.trainer_applications;
+  }
+
   async approveTrainerApplication(appId: string): Promise<void> {
     const app = this.schema.trainer_applications.find(a => a.id === appId);
     if (app) {
       app.status = 'approved';
+      app.aadhaarStatus = 'verified';
+      app.panStatus = 'verified';
       app.updatedAt = new Date().toISOString();
 
-      // Check if user already exists
       let userObj = this.schema.users.find(u => u.phone === app.phone);
       if (!userObj) {
         userObj = {
@@ -1168,7 +1941,6 @@ class DatabaseClient {
         userObj.role = 'trainer';
       }
 
-      // Create coach profile if not exists
       let coachObj = this.schema.coaches.find(c => c.name === app.fullName);
       if (!coachObj) {
         const newCoach: Coach = {
@@ -1187,11 +1959,11 @@ class DatabaseClient {
           availability: app.workingDays,
           workingRadius: `${app.preferredWorkingRadius} km`,
           bankDetails: JSON.stringify({
-            accountName: app.bankAccountName,
-            bankName: app.bankName,
-            accountNumber: app.bankAccountNumber,
-            ifsc: app.bankIfsc,
-            upiId: app.bankUpiId
+            accountName: app.bankAccountName || '',
+            bankName: app.bankName || '',
+            accountNumber: app.bankAccountNumber || '',
+            ifsc: app.bankIfsc || '',
+            upiId: app.bankUpiId || ''
           }),
           emergencyContact: app.emergencyContact
         };
@@ -1199,7 +1971,6 @@ class DatabaseClient {
         coachObj = newCoach;
       }
 
-      // Create profile for trainer user
       let profileObj = this.schema.profiles.find(p => p.userId === userObj!.id);
       if (!profileObj) {
         profileObj = {
@@ -1226,6 +1997,23 @@ class DatabaseClient {
         this.schema.profiles.push(profileObj);
       }
 
+      const pgApp = mapTrainerApplicationToPostgres(app);
+      const [resApp, resUser, resTrainer, resProfile] = await Promise.all([
+        supabase.from('trainer_applications').update({ 
+          status: 'approved', 
+          updated_at: app.updatedAt,
+          document_certifications: pgApp.document_certifications
+        }).eq('id', appId),
+        supabase.from('users').upsert(mapDBUserToPostgres(userObj)),
+        supabase.from('trainers').upsert(mapCoachToPostgres(coachObj)),
+        supabase.from('user_profiles').upsert(mapUserProfileToPostgres(profileObj))
+      ]);
+
+      if (resApp.error) throw new Error(`Failed to update application: ${resApp.error.message}`);
+      if (resUser.error) throw new Error(`Failed to update user: ${resUser.error.message}`);
+      if (resTrainer.error) throw new Error(`Failed to insert trainer: ${resTrainer.error.message}`);
+      if (resProfile.error) throw new Error(`Failed to insert profile: ${resProfile.error.message}`);
+
       await this.save();
       this.log('ApproveTrainer', `Approved application for ${app.fullName} and generated trainer login.`);
     }
@@ -1234,10 +2022,52 @@ class DatabaseClient {
   async rejectTrainerApplication(appId: string): Promise<void> {
     const app = this.schema.trainer_applications.find(a => a.id === appId);
     if (app) {
+      if (app.status === 'approved') {
+        throw new Error('Cannot reject an already approved application');
+      }
       app.status = 'rejected';
+      app.aadhaarStatus = 'rejected';
+      app.panStatus = 'rejected';
       app.updatedAt = new Date().toISOString();
+      
+      const pgApp = mapTrainerApplicationToPostgres(app);
+      const { error } = await supabase.from('trainer_applications').update({ 
+        status: 'rejected', 
+        updated_at: app.updatedAt,
+        document_certifications: pgApp.document_certifications
+      }).eq('id', appId);
+      
+      if (error) {
+        throw new Error(`Failed to reject application: ${error.message}`);
+      }
+
       await this.save();
       this.log('RejectTrainer', `Rejected application for ${app.fullName}.`);
+    }
+  }
+
+  async requestMoreInfoTrainerApplication(appId: string): Promise<void> {
+    const app = this.schema.trainer_applications.find(a => a.id === appId);
+    if (app) {
+      if (app.status === 'approved') {
+        throw new Error('Cannot request additional information for an approved application');
+      }
+      app.status = 'info_requested';
+      app.updatedAt = new Date().toISOString();
+      
+      const pgApp = mapTrainerApplicationToPostgres(app);
+      const { error } = await supabase.from('trainer_applications').update({ 
+        status: 'info_requested', 
+        updated_at: app.updatedAt,
+        document_certifications: pgApp.document_certifications
+      }).eq('id', appId);
+      
+      if (error) {
+        throw new Error(`Failed to request info: ${error.message}`);
+      }
+
+      await this.save();
+      this.log('RequestMoreInfoTrainer', `Requested additional info for application of ${app.fullName}.`);
     }
   }
 }

@@ -9,38 +9,84 @@ import { useRouter } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import Svg, { Rect } from 'react-native-svg';
 import { LuxuryCard } from '../../components/LuxuryCard';
-import { Database } from '../../database/Database';
+import { Database, TrainerApplication } from '../../database/Database';
 
 export default function ProfileScreen() {
   const router = useRouter();
   
   // Sprints 1-9 Stores
-  const { user, role, setRole } = useUserStore();
+  const { user, role, setRole, setLoggedIn } = useUserStore();
   const { membership } = useMembershipStore();
   const { totalEarnings, earningsList } = useCoachStore();
   const { ledger } = useWalletStore();
-
-  // Sprint 10 Store
   const profile = useUserProfileStore();
+
+  const handleLogout = () => {
+    if (Platform.OS === 'web') {
+      const confirmLogout = window.confirm('Are you sure you want to sign out?');
+      if (confirmLogout) {
+        setLoggedIn(false);
+        router.replace('/get-started' as any);
+      }
+    } else {
+      Alert.alert(
+        'Sign Out',
+        'Are you sure you want to sign out?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Sign Out',
+            style: 'destructive',
+            onPress: () => {
+              setLoggedIn(false);
+              router.replace('/get-started' as any);
+            }
+          }
+        ]
+      );
+    }
+  };
+
+
+
+  const [hasApplied, setHasApplied] = useState(false);
+  const [userApplication, setUserApplication] = useState<TrainerApplication | null>(null);
+
+  const checkApplicationStatus = async () => {
+    const userPhone = profile.mobile;
+    if (userPhone) {
+      try {
+        const apps = await Database.fetchAllTrainerApplications();
+        const userApp = apps.find(a => a.phone === userPhone);
+        if (userApp) {
+          setHasApplied(true);
+          setUserApplication(userApp);
+        } else {
+          setHasApplied(false);
+          setUserApplication(null);
+        }
+      } catch (e) {}
+    }
+  };
 
   const shimmerAnim = useRef(new Animated.Value(0.3)).current;
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // Profile Edit fields local states
-  const [editName, setEditName] = useState(profile.name);
-  const [editMobile, setEditMobile] = useState(profile.mobile);
-  const [editEmail, setEditEmail] = useState(profile.email);
-  const [editGender, setEditGender] = useState(profile.gender);
-  const [editDob, setEditDob] = useState(profile.dob);
-  const [editHeight, setEditHeight] = useState(profile.height);
-  const [editWeight, setEditWeight] = useState(profile.weight);
-  const [editFitnessLevel, setEditFitnessLevel] = useState(profile.fitnessLevel);
-  const [editTargetGoal, setEditTargetGoal] = useState(profile.targetGoal);
-  const [editLanguage, setEditLanguage] = useState(profile.preferredLanguage);
-  const [editCity, setEditCity] = useState(profile.city);
+  const [editName, setEditName] = useState(profile.name || '');
+  const [editMobile, setEditMobile] = useState(profile.mobile || '');
+  const [editEmail, setEditEmail] = useState(profile.email || '');
+  const [editGender, setEditGender] = useState(profile.gender || '');
+  const [editDob, setEditDob] = useState(profile.dob || '');
+  const [editHeight, setEditHeight] = useState(profile.height || '');
+  const [editWeight, setEditWeight] = useState(profile.weight || '');
+  const [editFitnessLevel, setEditFitnessLevel] = useState(profile.fitnessLevel || '');
+  const [editTargetGoal, setEditTargetGoal] = useState(profile.targetGoal || '');
+  const [editLanguage, setEditLanguage] = useState(profile.preferredLanguage || '');
+  const [editCity, setEditCity] = useState(profile.city || '');
 
   // Trainer local states
-  const coach = Database.schema.coaches.find((c: any) => c.name === user.name) || Database.schema.coaches[0];
+  const coach = Database.schema.coaches.find((c: any) => c.name === user.name || c.id === user.id) || null;
   let parsedBankDetails = { accountName: '', bankName: '', accountNumber: '', ifsc: '', upiId: '' };
   try {
     if (coach && coach.bankDetails) {
@@ -49,7 +95,7 @@ export default function ProfileScreen() {
   } catch (e) {}
 
   const [isEditingTrainer, setIsEditingTrainer] = useState(false);
-  const [trainerBio, setTrainerBio] = useState(coach?.shortBio || 'Home wellness coach specialized in Strength & HIIT.');
+  const [trainerBio, setTrainerBio] = useState(coach?.shortBio || '');
   const [bankAccName, setBankAccName] = useState(parsedBankDetails.accountName || '');
   const [bankNameStr, setBankNameStr] = useState(parsedBankDetails.bankName || '');
   const [bankAccNumber, setBankAccNumber] = useState(parsedBankDetails.accountNumber || '');
@@ -57,8 +103,9 @@ export default function ProfileScreen() {
   const [bankUpiIdStr, setBankUpiIdStr] = useState(parsedBankDetails.upiId || '');
 
   const handleSaveTrainer = () => {
-    if (coach) {
-      Database.updateCoach(coach.id, {
+    const trainerId = user.id || coach?.id;
+    if (trainerId) {
+      Database.updateCoach(trainerId, {
         shortBio: trainerBio,
         bankDetails: JSON.stringify({
           accountName: bankAccName,
@@ -74,6 +121,8 @@ export default function ProfileScreen() {
   };
 
   useEffect(() => {
+    profile.syncFromDB();
+    checkApplicationStatus();
     Animated.loop(
       Animated.sequence([
         Animated.timing(shimmerAnim, { toValue: 0.7, duration: 1500, useNativeDriver: true }),
@@ -81,6 +130,32 @@ export default function ProfileScreen() {
       ])
     ).start();
   }, []);
+
+  useEffect(() => {
+    setEditName(profile.name || '');
+    setEditMobile(profile.mobile || '');
+    setEditEmail(profile.email || '');
+    setEditGender(profile.gender || '');
+    setEditDob(profile.dob || '');
+    setEditHeight(profile.height || '');
+    setEditWeight(profile.weight || '');
+    setEditFitnessLevel(profile.fitnessLevel || '');
+    setEditTargetGoal(profile.targetGoal || '');
+    setEditLanguage(profile.preferredLanguage || '');
+    setEditCity(profile.city || '');
+  }, [
+    profile.name,
+    profile.mobile,
+    profile.email,
+    profile.gender,
+    profile.dob,
+    profile.height,
+    profile.weight,
+    profile.fitnessLevel,
+    profile.targetGoal,
+    profile.preferredLanguage,
+    profile.city
+  ]);
 
   const handleSaveProfile = () => {
     profile.updateCoreProfile({
@@ -138,31 +213,33 @@ export default function ProfileScreen() {
       >
         <View className="px-6 pt-6 gap-6">
 
-          {/* Dual Role Switcher at the top */}
-          <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1.5 rounded-2xl">
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => setRole('customer')}
-              className={`flex-1 py-3.5 rounded-xl items-center justify-center ${
-                role === 'customer' ? 'bg-[#101828] shadow-sm' : ''
-              }`}
-            >
-              <Text className={`text-[10px] font-black uppercase tracking-wider ${role === 'customer' ? 'text-white' : 'text-[#6B7280]'}`}>
-                Client Account
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => setRole('trainer')}
-              className={`flex-1 py-3.5 rounded-xl items-center justify-center ${
-                role === 'trainer' ? 'bg-[#101828] shadow-sm' : ''
-              }`}
-            >
-              <Text className={`text-[10px] font-black uppercase tracking-wider ${role === 'trainer' ? 'text-white' : 'text-[#6B7280]'}`}>
-                Trainer Account
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {/* Dual Role Switcher at the top - ONLY for approved trainers */}
+          {user.role === 'trainer' && (
+            <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1.5 rounded-2xl">
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setRole('customer')}
+                className={`flex-1 py-3.5 rounded-xl items-center justify-center ${
+                  role === 'customer' ? 'bg-[#101828] shadow-sm' : ''
+                }`}
+              >
+                <Text className={`text-[10px] font-black uppercase tracking-wider ${role === 'customer' ? 'text-white' : 'text-[#6B7280]'}`}>
+                  Client Account
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setRole('trainer')}
+                className={`flex-1 py-3.5 rounded-xl items-center justify-center ${
+                  role === 'trainer' ? 'bg-[#101828] shadow-sm' : ''
+                }`}
+              >
+                <Text className={`text-[10px] font-black uppercase tracking-wider ${role === 'trainer' ? 'text-white' : 'text-[#6B7280]'}`}>
+                  Trainer Account
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* =============================================================== */}
           {/* ======================= CLIENT PROFILE ======================== */}
@@ -184,6 +261,8 @@ export default function ProfileScreen() {
                   <Text className="text-[#F5B942] text-[8px] font-black uppercase tracking-wider">Elite Member</Text>
                 </View>
               </View>
+
+
 
               {/* Apple Wallet Membership Credit Card */}
               <View className="gap-3">
@@ -294,7 +373,7 @@ export default function ProfileScreen() {
                     ].map((f, idx) => (
                       <View key={idx} className="flex-row justify-between py-1 border-b border-zinc-50 pb-2">
                         <Text className="text-zinc-400 text-xs font-semibold">{f.l}</Text>
-                        <Text className="text-zinc-950 text-xs font-black">{f.val}</Text>
+                        <Text className="text-zinc-950 text-xs font-black">{f.val || 'Not provided'}</Text>
                       </View>
                     ))}
                   </View>
@@ -358,6 +437,89 @@ export default function ProfileScreen() {
                   <Text className="text-zinc-400 text-[10px] text-center py-4">No recent activity logs found.</Text>
                 )}
               </LuxuryCard>
+
+              {/* Become a Trainer Promo Card for regular clients */}
+              {user.role !== 'trainer' && !hasApplied && (
+                <LuxuryCard 
+                  className="p-5 bg-rose-50 border border-rose-200/50"
+                  onPress={() => router.push('/trainer-application')}
+                >
+                  <View className="flex-row items-center justify-between w-full">
+                    <View className="flex-1 pr-4 gap-1">
+                      <Text className="text-[#E11D48] text-[9px] font-black uppercase tracking-widest">Join our team</Text>
+                      <Text className="text-zinc-950 text-sm font-black tracking-tight">Become a VIRLA Trainer</Text>
+                      <Text className="text-[#6B7280] text-[10px] font-medium leading-relaxed mt-0.5">
+                        Earn up to ₹1,200 per session with flexible hours and dedicated client matching.
+                      </Text>
+                    </View>
+                    <View className="w-10 h-10 rounded-full bg-[#E11D48] items-center justify-center shadow-md">
+                      <Feather name="chevron-right" size={18} color="white" />
+                    </View>
+                  </View>
+                </LuxuryCard>
+              )}
+
+              {user.role !== 'trainer' && hasApplied && userApplication && (
+                <LuxuryCard 
+                  className={`p-5 border ${
+                    userApplication.status === 'approved' ? 'bg-emerald-50 border-emerald-200' :
+                    userApplication.status === 'rejected' ? 'bg-rose-50 border-rose-200' :
+                    userApplication.status === 'info_requested' ? 'bg-amber-50 border-amber-200' :
+                    'bg-[#F7F8FC] border-zinc-200'
+                  }`}
+                  onPress={() => router.push('/trainer-application')}
+                >
+                  <View className="flex-row items-center justify-between w-full">
+                    <View className="flex-1 pr-4 gap-1">
+                      <Text className="text-zinc-500 text-[9px] font-black uppercase tracking-widest">Trainer Application</Text>
+                      
+                      <View className="flex-row items-center gap-1.5 mt-0.5">
+                        {userApplication.status === 'pending' && (
+                          <View className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full flex-row items-center gap-1">
+                            <View className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <Text className="text-emerald-800 text-[8px] font-black uppercase tracking-wider">Under Review</Text>
+                          </View>
+                        )}
+                        {userApplication.status === 'info_requested' && (
+                          <View className="px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-full flex-row items-center gap-1">
+                            <View className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            <Text className="text-amber-800 text-[8px] font-black uppercase tracking-wider">Info Required</Text>
+                          </View>
+                        )}
+                        {userApplication.status === 'rejected' && (
+                          <View className="px-2.5 py-1 bg-rose-50 border border-rose-200 rounded-full flex-row items-center gap-1">
+                            <View className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                            <Text className="text-rose-800 text-[8px] font-black uppercase tracking-wider">Rejected</Text>
+                          </View>
+                        )}
+                        {userApplication.status === 'approved' && (
+                          <View className="px-2.5 py-1 bg-emerald-100 border border-emerald-300 rounded-full flex-row items-center gap-1">
+                            <View className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                            <Text className="text-emerald-900 text-[8px] font-black uppercase tracking-wider">Approved</Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {userApplication.status === 'info_requested' && userApplication.adminNotes && (
+                        <View className="bg-white border border-amber-200 p-2 rounded-lg mt-1 w-full">
+                          <Text className="text-amber-800 text-[8px] font-black uppercase tracking-wider mb-0.5">Admin Request:</Text>
+                          <Text className="text-amber-950 text-[10px] font-semibold leading-relaxed">{userApplication.adminNotes}</Text>
+                        </View>
+                      )}
+
+                      <Text className="text-[#6B7280] text-[10px] font-medium leading-relaxed mt-1">
+                        {userApplication.status === 'info_requested' ? 'Tap to edit requested fields and resubmit.' :
+                         userApplication.status === 'rejected' ? 'Tap to view feedback and modify application.' :
+                         userApplication.status === 'approved' ? 'Congratulations! Tap to open trainer tools.' :
+                         'Our team is reviewing your uploaded qualifications. Average response is 24-48 hours.'}
+                      </Text>
+                    </View>
+                    <View className="w-10 h-10 rounded-full bg-zinc-900 items-center justify-center shadow-md">
+                      <Feather name="chevron-right" size={18} color="white" />
+                    </View>
+                  </View>
+                </LuxuryCard>
+              )}
             </>
           )}
 
@@ -374,9 +536,29 @@ export default function ProfileScreen() {
                 />
                 <Text className="text-[#101828] text-2xl font-black tracking-tight">{user.name}</Text>
                 <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">
-                  Certified Partner • {coach?.specialty || 'Wellness Coach'}
+                  {coach?.level || 'Associate'} • {coach?.specialty || 'Not specified'}
                 </Text>
               </View>
+
+              {(!bankAccName || !bankAccNumber) && (
+                <LuxuryCard 
+                  className="p-5 bg-amber-50 border border-amber-200/50 mb-4"
+                  onPress={() => router.push('/payout-setup')}
+                >
+                  <View className="flex-row items-center justify-between w-full">
+                    <View className="flex-1 pr-4 gap-1">
+                      <Text className="text-amber-800 text-[9px] font-black uppercase tracking-widest">Action Required</Text>
+                      <Text className="text-zinc-950 text-sm font-black tracking-tight">Configure Payout Account</Text>
+                      <Text className="text-[#6B7280] text-[10px] font-medium leading-relaxed mt-0.5">
+                        Please complete your payout details to receive payments for your sessions.
+                      </Text>
+                    </View>
+                    <View className="w-10 h-10 rounded-full bg-amber-500 items-center justify-center shadow-md">
+                      <Feather name="alert-triangle" size={18} color="white" />
+                    </View>
+                  </View>
+                </LuxuryCard>
+              )}
 
               {/* Editable Trainer Console Credentials */}
               <LuxuryCard className="p-5 gap-4" interactive={false}>
@@ -501,6 +683,18 @@ export default function ProfileScreen() {
               </LuxuryCard>
             </>
           )}
+
+
+
+          {/* Sign Out Button */}
+          <TouchableOpacity
+            onPress={handleLogout}
+            activeOpacity={0.8}
+            className="bg-red-50 border border-red-200/50 p-4 rounded-xl flex-row justify-center items-center mt-2 mb-24"
+          >
+            <Feather name="log-out" size={15} color="#EF4444" style={{ marginRight: 8 }} />
+            <Text className="text-red-600 text-xs font-black uppercase tracking-widest">Sign Out</Text>
+          </TouchableOpacity>
 
         </View>
       </ScrollView>

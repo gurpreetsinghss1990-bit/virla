@@ -51,6 +51,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     const userId = Database.getCurrentUserId();
     if (userId) {
       Database.purchasePlan(userId, planName, credits, priceText, gstText, totalText);
+      if (planName.toLowerCase().includes('elite')) {
+        Database.updateProfile(userId, { membershipStatus: 'Elite' });
+      }
       useUserStore.getState().syncFromDB();
       useMembershipStore.getState().syncFromDB();
       get().syncFromDB();
@@ -166,6 +169,14 @@ export const useWalletStore = create<WalletState>((set, get) => ({
           creditsUsed: used
         });
       }
+    } else {
+      set({
+        creditBalance: 0,
+        ledger: [],
+        payments: [],
+        lifetimePurchased: 0,
+        creditsUsed: 0
+      });
     }
   }
 }));

@@ -133,19 +133,19 @@ interface UserProfileState {
 }
 
 export const useUserProfileStore = create<UserProfileState>((set, get) => ({
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-  name: 'Viral Sharma',
-  mobile: '+91 99999 88888',
+  avatar: '',
+  name: '',
+  mobile: '',
   email: '',
-  gender: 'Male',
-  dob: 'Oct 14, 1995',
-  height: '178 cm',
-  weight: '75 kg',
-  fitnessLevel: 'Intermediate',
-  targetGoal: 'Fat Loss & Strength',
-  preferredLanguage: 'English',
-  city: 'Mumbai',
-  memberSince: 'Jul 2025',
+  gender: '',
+  dob: '',
+  height: '',
+  weight: '',
+  fitnessLevel: '',
+  targetGoal: '',
+  preferredLanguage: '',
+  city: '',
+  memberSince: '',
 
   // Stats (will be fetched/calculated dynamically)
   totalSessions: 0,
@@ -165,13 +165,13 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
     medicalConditions: '',
     pastInjuries: '',
     jointPain: '',
-    bloodPressure: '120/80 mmHg',
-    diabetes: 'No',
-    heartCondition: 'None',
-    asthma: 'No',
-    pregnancy: 'Not Applicable',
-    surgeries: 'None',
-    medication: 'None',
+    bloodPressure: '',
+    diabetes: '',
+    heartCondition: '',
+    asthma: '',
+    pregnancy: '',
+    surgeries: '',
+    medication: '',
     foodAllergies: '',
     workoutRestrictions: '',
     doctorNotes: '',
@@ -349,37 +349,58 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
           isDefault: addr.isDefault
         }));
 
-        const emergencyList: EmergencyContact[] = [];
-        if (profile.emergencyContact) {
-          const contact = JSON.parse(profile.emergencyContact);
-          emergencyList.push({
-            id: 'em-1',
-            name: contact.name,
-            relationship: contact.relationship,
-            phone: contact.phone,
-            isPrimary: true
-          });
+        let emergencyList: EmergencyContact[] = [];
+        try {
+          if (profile.emergencyContact && profile.emergencyContact.trim().startsWith('{')) {
+            const contact = JSON.parse(profile.emergencyContact);
+            if (contact) {
+              emergencyList.push({
+                id: 'em-1',
+                name: contact.name || '',
+                relationship: contact.relationship || '',
+                phone: contact.phone || '',
+                isPrimary: true
+              });
+            }
+          }
+        } catch (err) {
+          console.warn('[ProfileStore] Failed to parse emergency contact JSON:', err);
         }
 
-        const healthObj = profile.medicalNotes ? JSON.parse(profile.medicalNotes) : {};
+        let healthObj: any = {};
+        try {
+          if (profile.medicalNotes && profile.medicalNotes.trim().startsWith('{')) {
+            healthObj = JSON.parse(profile.medicalNotes);
+          }
+        } catch (err) {
+          console.warn('[ProfileStore] Failed to parse medical notes JSON:', err);
+        }
+
         const fullHealth: HealthProfile = {
           medicalConditions: healthObj.medicalConditions || '',
           pastInjuries: healthObj.pastInjuries || '',
           jointPain: healthObj.jointPain || '',
-          bloodPressure: healthObj.bloodPressure || '120/80 mmHg',
-          diabetes: healthObj.diabetes || 'No',
-          heartCondition: healthObj.heartCondition || 'None',
-          asthma: healthObj.asthma || 'No',
-          pregnancy: healthObj.pregnancy || 'Not Applicable',
-          surgeries: healthObj.surgeries || 'None',
-          medication: healthObj.medication || 'None',
+          bloodPressure: healthObj.bloodPressure || '',
+          diabetes: healthObj.diabetes || '',
+          heartCondition: healthObj.heartCondition || '',
+          asthma: healthObj.asthma || '',
+          pregnancy: healthObj.pregnancy || '',
+          surgeries: healthObj.surgeries || '',
+          medication: healthObj.medication || '',
           foodAllergies: healthObj.foodAllergies || '',
           workoutRestrictions: healthObj.workoutRestrictions || '',
           doctorNotes: healthObj.doctorNotes || '',
           emergencyMedicalNotes: healthObj.emergencyMedicalNotes || ''
         };
 
-        const notificationPrefs = userDb.notificationPrefs ? JSON.parse(userDb.notificationPrefs) : {};
+        let notificationPrefs: any = {};
+        try {
+          if (userDb.notificationPrefs && userDb.notificationPrefs.trim().startsWith('{')) {
+            notificationPrefs = JSON.parse(userDb.notificationPrefs);
+          }
+        } catch (err) {
+          console.warn('[ProfileStore] Failed to parse notification prefs JSON:', err);
+        }
 
         // Calculate dynamic stats
         const bookingsList = Database.getBookings(userId);
@@ -437,6 +458,48 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
           selectedGoals: (profile as any).selectedGoals || ['Strength', 'Fitness']
         });
       }
+    } else {
+      set({
+        name: '',
+        email: '',
+        mobile: '',
+        avatar: '',
+        gender: '',
+        dob: '',
+        height: '',
+        weight: '',
+        fitnessLevel: '',
+        targetGoal: '',
+        preferredLanguage: '',
+        city: '',
+        memberSince: '',
+        addresses: [],
+        emergencyContacts: [],
+        healthProfile: {
+          medicalConditions: '',
+          pastInjuries: '',
+          jointPain: '',
+          bloodPressure: '',
+          diabetes: '',
+          heartCondition: '',
+          asthma: '',
+          pregnancy: '',
+          surgeries: '',
+          medication: '',
+          foodAllergies: '',
+          workoutRestrictions: '',
+          doctorNotes: '',
+          emergencyMedicalNotes: ''
+        },
+        totalSessions: 0,
+        totalCalories: 0,
+        lifetimeSpend: '₹0',
+        cancelledSessions: 0,
+        hoursTrained: 0,
+        currentStreak: 0,
+        favoriteTrainer: 'None',
+        selectedGoals: []
+      });
     }
   }
 }));
