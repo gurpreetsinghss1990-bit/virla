@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Database } from '../database/Database';
 
 export interface Address {
   id: string;
@@ -15,71 +16,66 @@ interface AddressState {
   deleteAddress: (id: string) => void;
   setDefaultAddress: (id: string) => void;
   setSelectedAddressId: (id: string) => void;
+  syncFromDB: () => void;
 }
 
-const mockAddresses: Address[] = [
-  {
-    id: 'a-1',
-    label: 'Home',
-    addressLine: 'Flat 402, Sea Breeze Apts, Bandra West, Mumbai, Maharashtra 400050',
-    isDefault: true,
-  },
-  {
-    id: 'a-2',
-    label: 'Office',
-    addressLine: '9th Floor, Maker Chambers VI, Nariman Point, Mumbai, Maharashtra 400021',
-    isDefault: false,
-  },
-  {
-    id: 'a-3',
-    label: 'Saved Address',
-    addressLine: 'Bungalow 12, Windermere Society, Juhu, Mumbai, Maharashtra 400049',
-    isDefault: false,
-  },
-];
-
-export const useAddressStore = create<AddressState>((set) => ({
-  addresses: mockAddresses,
-  selectedAddressId: 'a-1',
-  addAddress: (addr) =>
-    set((state) => {
-      const id = `a-${Date.now()}`;
-      const newAddress = { ...addr, id };
-      const updatedAddresses = addr.isDefault
-        ? state.addresses.map((a) => ({ ...a, isDefault: false })).concat(newAddress)
-        : state.addresses.concat(newAddress);
-      return { addresses: updatedAddresses, selectedAddressId: addr.isDefault ? id : state.selectedAddressId };
-    }),
-  updateAddress: (id, updated) =>
-    set((state) => {
-      let updatedAddresses = state.addresses.map((a) =>
-        a.id === id ? { ...a, ...updated } : a
-      );
-      if (updated.isDefault) {
-        updatedAddresses = updatedAddresses.map((a) =>
-          a.id === id ? a : { ...a, isDefault: false }
-        );
+export const useAddressStore = create<AddressState>((set, get) => ({
+  addresses: [],
+  selectedAddressId: '',
+  addAddress: (addr) => {
+    const userId = Database.getCurrentUserId();
+    if (userId) {
+      const added = Database.addAddress(userId, {
+        label: addr.label as any,
+        name: addr.label,
+        building: addr.addressLine,
+        street: '',
+        landmark: '',
+        city: 'Mumbai',
+        pinCode: '',
+        isDefault: addr.isDefault
+      });
+      get().syncFromDB();
+      if (addr.isDefault) {
+        set({ selectedAddressId: added.id });
       }
-      return { addresses: updatedAddresses };
-    }),
-  deleteAddress: (id) =>
-    set((state) => {
-      const updated = state.addresses.filter((a) => a.id !== id);
-      // Fallback default
-      if (updated.length > 0 && !updated.some((a) => a.isDefault)) {
-        updated[0].isDefault = true;
-      }
-      return {
-        addresses: updated,
-        selectedAddressId: state.selectedAddressId === id ? (updated[0]?.id || '') : state.selectedAddressId,
-      };
-    }),
-  setDefaultAddress: (id) =>
-    set((state) => ({
-      addresses: state.addresses.map((a) => ({
-        ...a,
-        isDefault: a.id === id,
-      })),
-    })),
+    }
+  },
+  updateAddress: (id, updated) => {
+    Database.updateAddress(id, {
+      label: updated.label as any,
+      building: updated.addressLine,
+      isDefault: updated.isDefault
+    });
+    get().syncFromDB();
+  },
+  deleteAddress: (id) => {
+    Database.deleteAddress(id);
+    get().syncFromDB();
+    const { addresses } = get();
+    if (addresses.length > 0 && !addresses.some(a => a.isDefault)) {
+      Database.updateAddress(addresses[0].id, { isDefault: true } as any);
+      get().syncFromDB();
+    }
+  },
+  setDefaultAddress: (id) => {
+    Database.updateAddress(id, { isDefault: true } as any);
+    get().syncFromDB();
+  },
   setSelectedAddressId: (id) => set({ selectedAddressId: id }),
+  syncFromDB: () => {
+    const userId = Database.getCurrentUserId();
+    if (userId) {
+      const list = Database.getAddresses(userId).map(addr => ({
+        id: addr.id,
+        label: addr.label,
+        addressLine: addr.building + (addr.street ? `, ${addr.street}` : '') + (addr.city ? `, ${addr.city}` : ''),
+        isDefault: addr.isDefault
+      }));
+      set({
+        addresses: list,
+        selectedAddressId: get().selectedAddressId || list.find(a => a.isDefault)?.id || list[0]?.id || ''
+      });
+    }
+  }
 }));

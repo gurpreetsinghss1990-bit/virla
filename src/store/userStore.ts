@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Invoice } from '../types';
+import { Database } from '../database/Database';
 
 interface FamilyMember {
   id: string;
@@ -26,70 +27,104 @@ interface UserState {
   setRole: (role: 'customer' | 'trainer') => void;
   invoices: Invoice[];
   addInvoice: (invoice: Omit<Invoice, 'id' | 'date'>) => void;
+  syncFromDB: () => void;
 }
 
-const mockUser: User = {
-  id: 'u-1',
-  name: 'Viral',
-  email: 'viral@example.com',
+const emptyUser: User = {
+  id: '',
+  name: 'Guest User',
+  email: '',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
   location: 'Mumbai, India',
   role: 'customer',
 };
 
-const mockFamily: FamilyMember[] = [
-  { id: 'fm-1', name: 'Aarav Sharma', relation: 'Brother' },
-  { id: 'fm-2', name: 'Neha Sharma', relation: 'Sister' },
-  { id: 'fm-3', name: 'Vikram Sharma', relation: 'Father' },
-];
-
-const mockInvoices: Invoice[] = [
-  {
-    id: 'inv-101',
-    type: 'Elite Premium Annual Membership Plan',
-    amount: '₹14,999',
-    date: 'Jul 01, 2026',
-    status: 'paid',
-    credits: 16,
-  },
-  {
-    id: 'inv-102',
-    type: 'Concierge Top-up credit pack (5 Credits)',
-    amount: '₹4,500',
-    date: 'Jul 10, 2026',
-    status: 'paid',
-    credits: 5,
-  }
-];
-
 export const useUserStore = create<UserState>()(
   persist(
-    (set) => ({
-      user: mockUser,
-      familyMembers: mockFamily,
+    (set, get) => ({
+      user: emptyUser,
+      familyMembers: [],
       updateProfile: (profile) =>
-        set((state) => ({
-          user: { ...state.user, ...profile },
-        })),
+        set((state) => {
+          const updatedUser = { ...state.user, ...profile };
+          if (updatedUser.id) {
+            Database.updateProfile(updatedUser.id, {
+              name: updatedUser.name,
+              email: updatedUser.email,
+              avatar: updatedUser.avatar,
+            } as any);
+          }
+          return { user: updatedUser };
+        }),
       isLoggedIn: false,
       hasCompletedOnboarding: false,
-      setLoggedIn: (loggedIn) => set({ isLoggedIn: loggedIn }),
+      setLoggedIn: (loggedIn) => {
+        set({ isLoggedIn: loggedIn });
+        if (loggedIn) {
+          get().syncFromDB();
+        } else {
+          set({ user: emptyUser, familyMembers: [], invoices: [] });
+          Database.setCurrentUserId(null);
+        }
+      },
       setCompletedOnboarding: (completed) => set({ hasCompletedOnboarding: completed }),
-      // Sprint 6 state & actions
       role: 'customer',
-      setRole: (r) => set((state) => ({
-        role: r,
-        user: { ...state.user, role: r }
-      })),
-      invoices: mockInvoices,
+      setRole: (r) => set((state) => {
+        const updatedUser = { ...state.user, role: r };
+        if (updatedUser.id) {
+          Database.updateProfile(updatedUser.id, { role: r } as any);
+        }
+        return {
+          role: r,
+          user: updatedUser
+        };
+      }),
+      invoices: [],
       addInvoice: (inv) => set((state) => {
         const newInv: Invoice = {
           ...inv,
           id: `inv-${Date.now().toString().slice(-4)}`,
           date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
         };
+        const userId = state.user.id;
+        if (userId) {
+          Database.addLedgerTransaction(userId, newInv);
+        }
         return { invoices: [newInv, ...state.invoices] };
       }),
+      syncFromDB: () => {
+        const userId = Database.getCurrentUserId();
+        if (userId) {
+          const profile = Database.getProfile(userId);
+          const userDb = Database.getWorkouts() // arbitrary call to database load assurance
+            ? Database.schema.users.find(u => u.id === userId)
+            : null;
+          
+          if (userDb) {
+            const userObj: User = {
+              id: userDb.id,
+              name: userDb.name,
+              email: userDb.email,
+              avatar: userDb.avatar,
+              location: 'Mumbai, India',
+              role: userDb.role,
+            };
+
+            const dbInvoices = Database.getLedgerTransactions(userId);
+            const emergencyObj = profile?.emergencyContact ? JSON.parse(profile.emergencyContact) : null;
+            const familiesList: FamilyMember[] = emergencyObj 
+              ? [{ id: 'fm-1', name: emergencyObj.name, relation: emergencyObj.relationship }]
+              : [];
+
+            set({
+              user: userObj,
+              role: userDb.role,
+              invoices: dbInvoices,
+              familyMembers: familiesList
+            });
+          }
+        }
+      }
     }),
     {
       name: 'virla-user-storage',

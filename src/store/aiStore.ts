@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Database } from '../database/Database';
 
 export interface ChatMessage {
   id: string;
@@ -46,29 +47,14 @@ interface AIState {
   setVoiceActive: (active: boolean) => void;
   triggerVoicePrompt: (prompt: string) => void;
   triggerMockNotification: (type: 'resume' | 'questions' | 'practice' | 'milestone') => void;
+  syncFromDB: () => void;
 }
 
-const initialMessages: ChatMessage[] = [
-  {
-    id: 'msg-ai-1',
-    sender: 'virla',
-    text: "Hi Viral! I'm Virla, your AI Fitness & Career Companion. Ready to optimize your workouts or resume profiles today?",
-    timestamp: '10:00 AM'
-  }
-];
-
-const initialMemories: AIMemory[] = [
-  { key: 'Target Role', value: 'Tech Lead / Senior Software Engineer', category: 'Career Goals' },
-  { key: 'Preferred Companies', value: 'Google, Apple, Nike, Whoop', category: 'Preferred Companies' },
-  { key: 'Core Skills', value: 'TypeScript, React Native, Expo, System Design', category: 'Skills' },
-  { key: 'Weak Areas', value: 'System Architecture Scaling, Salary Negotiation', category: 'Weak Areas' }
-];
-
 const mockReplies: Record<string, string> = {
-  'improve resume': "Based on your target of Senior Engineer, we should quantify your impact. Rewrite your experience bullet to: 'Engineered cross-platform React Native apps, reducing load times by 35% and boosting retention by 22%.' Let's update this section next.",
+  'improve resume': "Based on your targets, let's quantify your impact. Rewrite your experience bullet to: 'Engineered cross-platform React Native apps, reducing load times by 35% and boosting retention by 22%.'",
   'prepare interview': "Let's run a mock behavioral loop. Google often asks: 'Describe a time you solved a complex architectural constraint under short deadlines.' Keep your answer focused on STAR methodology.",
   'find jobs': "I found 3 matching roles for you: 1. Senior Mobile Engineer (Google, Remote), 2. Tech Lead (Whoop, Bengaluru), 3. React Native Architect (Nike, Mumbai). Ready to tailor your applications?",
-  'salary negotiation': "Always let the company anchor the initial offer. When negotiating for Tech Lead roles, emphasize that your expertise in Expo cross-platform architectures mitigates their release risks.",
+  'salary negotiation': "Always let the company anchor the initial offer. When negotiating, emphasize that your expertise in Expo cross-platform architectures mitigates their release risks.",
   'practice hr': "HR mock question: 'Why are you looking to leave your current role?' Frame it around seeking technical scaling opportunities and driving larger product decisions.",
   'mock coding': "Let's practice a classic problem: 'Design a high-throughput notifications queue store in React Native'. Think about store persistence, caching, and state sync.",
   'update linkedin': "Upgrade your headline: 'Tech Lead | React Native & Expo Architect | Building High-Performance Consumer Apps'. This increases recruiter discovery hits by 40%.",
@@ -78,10 +64,14 @@ const mockReplies: Record<string, string> = {
 };
 
 export const useAIStore = create<AIState>((set, get) => ({
-  messages: initialMessages,
-  memories: initialMemories,
+  messages: [],
+  memories: [
+    { key: 'Target Role', value: 'Tech Lead / Senior Software Engineer', category: 'Career Goals' },
+    { key: 'Preferred Companies', value: 'Google, Apple, Nike, Whoop', category: 'Preferred Companies' },
+    { key: 'Core Skills', value: 'TypeScript, React Native, Expo, System Design', category: 'Skills' }
+  ],
   briefing: {
-    goals: ['Prepare System Design overview', 'Log morning cardio stretch session', 'Update resume experiences'],
+    goals: ['Log morning hydration stretch session', 'Prepare System Design overview', 'Complete 1 home-workout activity'],
     missedGoals: ['Practice salary negotiating prompts yesterday'],
     upcomingInterview: 'Mock Interview (Google Tech Lead) - Tomorrow @ 2:00 PM',
     resumeReminder: 'Tailor resume experience section for Senior Mobile Architect',
@@ -96,16 +86,19 @@ export const useAIStore = create<AIState>((set, get) => ({
   voiceState: 'listening',
 
   sendMessage: (text) => {
+    const userId = Database.getCurrentUserId() || 'guest';
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const userMsg: ChatMessage = {
-      id: `msg-u-${Date.now()}`,
-      sender: 'user',
-      text,
-      timestamp: timeStr
-    };
-
+    
+    // Save to DB
+    const userMsg = Database.sendChatMessage('ai-coach', text, 'user');
+    
     set((state) => ({
-      messages: [...state.messages, userMsg],
+      messages: [...state.messages, {
+        id: userMsg.id,
+        sender: 'user',
+        text: userMsg.text,
+        timestamp: userMsg.timestamp
+      }],
       isThinking: true
     }));
 
@@ -122,9 +115,10 @@ export const useAIStore = create<AIState>((set, get) => ({
 
     // Simulate streaming text reply (Apple Intelligence style)
     setTimeout(() => {
-      const aiMsgId = `msg-ai-${Date.now()}`;
+      const aiMsg = Database.sendChatMessage('ai-coach', responseText, 'virla' as any);
+      
       const placeholderMsg: ChatMessage = {
-        id: aiMsgId,
+        id: aiMsg.id,
         sender: 'virla',
         text: '',
         timestamp: timeStr,
@@ -144,14 +138,14 @@ export const useAIStore = create<AIState>((set, get) => ({
           clearInterval(interval);
           set((state) => ({
             messages: state.messages.map((m) =>
-              m.id === aiMsgId ? { ...m, text: responseText } : m
+              m.id === aiMsg.id ? { ...m, text: responseText } : m
             )
           }));
         } else {
           const partial = responseText.substring(0, currentLen);
           set((state) => ({
             messages: state.messages.map((m) =>
-              m.id === aiMsgId ? { ...m, text: partial } : m
+              m.id === aiMsg.id ? { ...m, text: partial } : m
             )
           }));
         }
@@ -165,7 +159,6 @@ export const useAIStore = create<AIState>((set, get) => ({
     const index = state.messages.findIndex(m => m.id === id);
     if (index === -1) return;
     
-    // Find the user prompt immediately preceding this AI message
     const prevUserMsg = state.messages.slice(0, index).reverse().find(m => m.sender === 'user');
     if (!prevUserMsg) return;
 
@@ -173,6 +166,11 @@ export const useAIStore = create<AIState>((set, get) => ({
     
     setTimeout(() => {
       const regeneratedText = `[Regenerated advice] Let's try another perspective on "${prevUserMsg.text}". Consider focusing on metrics and business outcomes to highlight leadership maturity.`;
+      
+      // Update in DB messages array
+      const dbMsg = Database.schema.messages.find(m => m.id === id);
+      if (dbMsg) dbMsg.text = regeneratedText;
+
       set((state) => ({
         isThinking: false,
         messages: state.messages.map(m =>
@@ -183,12 +181,15 @@ export const useAIStore = create<AIState>((set, get) => ({
   },
 
   deleteMessage: (id) => {
+    Database.schema.messages = Database.schema.messages.filter(m => m.id !== id);
     set((state) => ({
       messages: state.messages.filter(m => m.id !== id)
     }));
   },
 
   togglePinMessage: (id) => {
+    const dbMsg = Database.schema.messages.find(m => m.id === id);
+    if (dbMsg) dbMsg.isPinned = !dbMsg.isPinned;
     set((state) => ({
       messages: state.messages.map(m =>
         m.id === id ? { ...m, isPinned: !m.isPinned } : m
@@ -197,6 +198,8 @@ export const useAIStore = create<AIState>((set, get) => ({
   },
 
   toggleFavoriteMessage: (id) => {
+    const dbMsg = Database.schema.messages.find(m => m.id === id);
+    if (dbMsg) dbMsg.isFavorite = !dbMsg.isFavorite;
     set((state) => ({
       messages: state.messages.map(m =>
         m.id === id ? { ...m, isFavorite: !m.isFavorite } : m
@@ -225,7 +228,6 @@ export const useAIStore = create<AIState>((set, get) => ({
       voiceState: 'thinking'
     });
 
-    // Simulate voice intelligence processing
     setTimeout(() => {
       let voiceReply = "Processing your request. Adjusting your daily career objectives now.";
       const query = prompt.toLowerCase();
@@ -241,7 +243,6 @@ export const useAIStore = create<AIState>((set, get) => ({
   },
 
   triggerMockNotification: (type) => {
-    const notifyStore = useAIStore.getState();
     const configMap = {
       resume: {
         title: 'AI Smart Tip: Resume Upgrade 💡',
@@ -265,10 +266,40 @@ export const useAIStore = create<AIState>((set, get) => ({
       }
     };
     
-    // Connect to notificationStore dynamically
     const notificationStoreModule = require('./notificationStore');
     if (notificationStoreModule && notificationStoreModule.useNotificationStore) {
       notificationStoreModule.useNotificationStore.getState().addNotification(configMap[type]);
+    }
+  },
+
+  syncFromDB: () => {
+    const userId = Database.getCurrentUserId();
+    if (userId) {
+      const profile = Database.getProfile(userId);
+      const chatMessages = Database.getChatMessages('ai-coach');
+      const recs = Database.getAIRecommendations(userId);
+      
+      const goalList = recs.map(r => r.title);
+      
+      set({
+        messages: chatMessages.map(m => ({
+          id: m.id,
+          sender: m.sender === 'user' ? 'user' : 'virla',
+          text: m.text,
+          timestamp: m.timestamp,
+          isPinned: m.isPinned,
+          isFavorite: m.isFavorite
+        })),
+        briefing: {
+          goals: goalList.length > 0 ? goalList : ['Log morning hydration stretch session', 'Prepare System Design overview', 'Complete 1 home-workout activity'],
+          missedGoals: ['Practice salary negotiating prompts yesterday'],
+          upcomingInterview: 'Mock Interview (Google Tech Lead) - Tomorrow @ 2:00 PM',
+          resumeReminder: 'Tailor resume experience section for Senior Mobile Architect',
+          applicationsReminder: '3 applications pending follow-ups this week',
+          learningRecommendation: 'Review native modules bridges in React Native Expo',
+          quote: '"The best way to predict the future is to create it." — Peter Drucker'
+        }
+      });
     }
   }
 }));

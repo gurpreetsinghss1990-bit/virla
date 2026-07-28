@@ -10,6 +10,7 @@ import { useCoachStore } from '../../store/coachStore';
 import { useMembershipStore } from '../../store/membershipStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useUserStore } from '../../store/userStore';
+import { Database } from '../../database/Database';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 
 export default function HomeScreen() {
@@ -20,7 +21,6 @@ export default function HomeScreen() {
   const { user, role } = useUserStore();
   const { totalEarnings, earningsList } = useCoachStore();
 
-  // Simulated data loading
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,8 +35,10 @@ export default function HomeScreen() {
   const activeBooking = bookings.find(b => b.status === 'upcoming' && b.timelineStatus && b.timelineStatus !== 'session_closed' && b.timelineStatus !== 'booked');
 
   // Hydration state
-  const [waterMl, setWaterMl] = useState(750);
+  const [waterMl, setWaterMl] = useState(0);
+  const [caloriesToday, setCaloriesToday] = useState(0);
   const waterGoal = 2500;
+  const caloriesGoal = 600;
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -44,24 +46,31 @@ export default function HomeScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   // AI recommendations array
-  const recommendations = [
-    { title: 'Stretch Today', desc: 'Recovery Day: Release lower back tension with a reset session.' },
-    { title: 'Increase Intensity', desc: 'Optimal Recovery (84%): Great day for a high-intensity Forge Strength.' },
-    { title: 'Try Combat Core', desc: 'Build Cardio: Book a boxing conditioning slot for tomorrow.' },
-    { title: 'Book Next Session', desc: 'Keep the Streak: Schedule your mobility visit now.' }
-  ];
+  const [recs, setRecs] = useState<{ title: string; desc: string }[]>([]);
   const [recIdx, setRecIdx] = useState(0);
 
   useEffect(() => {
-    // Rotation of coach recommendations
-    const interval = setInterval(() => {
-      setRecIdx((prev) => (prev + 1) % recommendations.length);
-    }, 8000);
-    return () => clearInterval(interval);
-  }, []);
+    if (user.id) {
+      setRecs(Database.getAIRecommendations(user.id));
+    } else {
+      setRecs([
+        { title: 'Stretch Today', desc: 'Recovery Day: Release lower back tension with a reset session.' },
+        { title: 'Increase Intensity', desc: 'Optimal Recovery (80%): Great day for a high-intensity Forge Strength.' },
+        { title: 'Try Combat Core', desc: 'Build Cardio: Book a boxing conditioning slot for tomorrow.' },
+        { title: 'Book Next Session', desc: 'Keep the Streak: Schedule your mobility visit now.' }
+      ]);
+    }
+  }, [user.id, bookings]);
 
   useEffect(() => {
-    // Fade up animations
+    if (recs.length === 0) return;
+    const interval = setInterval(() => {
+      setRecIdx((prev) => (prev + 1) % recs.length);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [recs]);
+
+  useEffect(() => {
     fadeAnim.setValue(0);
     slideAnim.setValue(20);
     Animated.parallel([
@@ -77,7 +86,6 @@ export default function HomeScreen() {
       })
     ]).start();
 
-    // Pulse animation for AI card
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1.03, duration: 1500, useNativeDriver: true }),
@@ -86,14 +94,23 @@ export default function HomeScreen() {
     ).start();
   }, [role]);
 
+  useEffect(() => {
+    if (user.id) {
+      const dateStr = new Date().toLocaleDateString('en-CA');
+      setWaterMl(Database.getHydration(user.id, dateStr));
+      setCaloriesToday(Database.getCalories(user.id, dateStr));
+    }
+  }, [user.id, bookings]);
+
   const getGreetingText = () => {
     const hour = new Date().getHours();
+    const nameText = user.name || 'User';
     if (hour < 12) {
-      return { title: 'Good Morning, Viral', subtitle: 'Ready to build another strong day?' };
+      return { title: `Good Morning, ${nameText} 🌅`, subtitle: 'Ready to build another strong day?' };
     } else if (hour < 17) {
-      return { title: 'Good Afternoon, Viral', subtitle: 'Keep your momentum active today!' };
+      return { title: `Good Afternoon, ${nameText} ☀️`, subtitle: 'Keep your momentum active today!' };
     } else {
-      return { title: 'Good Evening, Viral', subtitle: 'How did your workout feel today?' };
+      return { title: `Good Evening, ${nameText} 🌙`, subtitle: 'How did your workout feel today?' };
     }
   };
 
@@ -102,19 +119,59 @@ export default function HomeScreen() {
   // Personal Fitness Score Calculation
   const consistency = 92;
   const frequency = 85;
-  const recoveryVal = 84;
+  const dateStr = new Date().toLocaleDateString('en-CA');
+  const streak = user.id ? Database.getStreak(user.id) : 0;
+  const recoveryVal = user.id ? (Database.getRecoveryScore(user.id, dateStr) ?? 80) : 80;
   const mobility = 78;
   const strength = 88;
   const attendance = 96;
   const fitnessScore = Math.round((consistency + frequency + recoveryVal + mobility + strength + attendance) / 6);
 
+  // Trainer metric summary calculations
+  const completedJobs = bookings.filter(b => b.status === 'completed');
+  const upcomingJobs = bookings.filter(b => b.status === 'upcoming');
+  const cancelledJobs = bookings.filter(b => b.status === 'cancelled');
+  const totalCompleted = completedJobs.length;
+  const totalUpcoming = upcomingJobs.length;
+
+  const trainerEarningsList = user.id ? Database.getEarnings(user.id) : [];
+  const monthlyEarnings = trainerEarningsList.reduce((acc, earn) => acc + (earn.amount > 0 ? earn.amount : 0), 0);
+
   const handleLogWater = () => {
-    setWaterMl(prev => Math.min(prev + 250, waterGoal));
-    Alert.alert('Hydration Logged', '+250ml added! Stay hydrated to maximize recovery index.');
+    if (user.id) {
+      const dateStr = new Date().toLocaleDateString('en-CA');
+      const newWater = Database.logHydration(user.id, dateStr, 250);
+      setWaterMl(newWater);
+      Alert.alert('Hydration Logged', '+250ml added! Stay hydrated to maximize recovery index.');
+    } else {
+      Alert.alert('Authentication Required', 'Please register or log in first');
+    }
   };
 
   const handleSupport = () => {
     Alert.alert('VIRLA VIP Concierge', 'Connecting to VIP wellness support line (+91 99999 88888)...');
+  };
+
+  const handleCommunicationCenter = () => {
+    Alert.alert(
+      'Communication Center',
+      'Select a destination to open:',
+      [
+        {
+          text: 'Notifications Center',
+          onPress: () => router.push('/notifications' as any),
+        },
+        {
+          text: 'Messages (Chats)',
+          onPress: () => router.push('/(tabs)/messages' as any),
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   const handleTrainerJobClick = (bookingId: string, currentTimeline: string) => {
@@ -144,7 +201,7 @@ export default function HomeScreen() {
         <View className="flex-row items-center gap-4">
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => router.push('/notifications' as any)}
+            onPress={handleCommunicationCenter}
             className="w-11 h-11 rounded-full border border-zinc-200 bg-white items-center justify-center relative"
             style={{ minWidth: 44, minHeight: 44 }}
           >
@@ -188,7 +245,7 @@ export default function HomeScreen() {
               {/* Greeting */}
               <View className="gap-2 px-1">
                 <Text className="text-[34px] font-bold tracking-tight text-[#101828] leading-tight">
-                  Good Evening, Viral 🌙
+                  {greeting.title}
                 </Text>
               </View>
 
@@ -231,9 +288,11 @@ export default function HomeScreen() {
                   <View className="flex-row items-center gap-5 py-1">
                     {/* Ring Container */}
                     <View className="w-[104px] h-[104px] bg-white rounded-full items-center justify-center shadow-xs">
-                      <ProgressRing progress={87 / 100} size={92} strokeWidth={8} activeColor="#E11D48" inactiveColor="#FFE4E6">
+                      <ProgressRing progress={recoveryVal / 100} size={92} strokeWidth={8} activeColor="#E11D48" inactiveColor="#FFE4E6">
                         <View className="items-center justify-center">
-                          <Text className="text-[#101828] text-[30px] font-bold tracking-tighter">87</Text>
+                          <Text className="text-[#101828] text-[30px] font-bold tracking-tighter">
+                            {user.id ? (Database.getRecoveryScore(user.id, dateStr) ?? '--') : '87'}
+                          </Text>
                           <Text className="text-zinc-400 text-[11px] font-medium mt-0.5">/100</Text>
                         </View>
                       </ProgressRing>
@@ -242,8 +301,12 @@ export default function HomeScreen() {
                     {/* Status Info */}
                     <View className="flex-1 gap-1.5 justify-center">
                       <Text className="text-[#E11D48] text-[13px] font-semibold tracking-wider uppercase">Recovery Score</Text>
-                      <Text className="text-[#101828] text-[20px] font-semibold tracking-tight">Excellent Recovery</Text>
-                      <Text className="text-zinc-500 text-[15px] font-normal leading-snug">Ready for Strength Training Today.</Text>
+                      <Text className="text-[#101828] text-[20px] font-semibold tracking-tight">
+                        {user.id ? (Database.getRecoveryScore(user.id, dateStr) ? (Database.getRecoveryScore(user.id, dateStr)! >= 80 ? 'Excellent Recovery' : 'Good Recovery') : 'No Logs Yet') : 'Excellent Recovery'}
+                      </Text>
+                      <Text className="text-zinc-500 text-[15px] font-normal leading-snug">
+                        {user.id ? (Database.getRecoveryScore(user.id, dateStr) ? 'Ready for Strength Training Today.' : 'Log water or workouts to compute recovery.') : 'Ready for Strength Training Today.'}
+                      </Text>
                       <View className="flex-row mt-1">
                         <View className="bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full flex-row items-center gap-1">
                           <Text className="text-amber-600 text-[9px] font-semibold tracking-wider">★ ELITE STATUS</Text>
@@ -417,12 +480,12 @@ export default function HomeScreen() {
                       <Text className="text-zinc-500 text-[11px] font-semibold uppercase tracking-wider">Calories</Text>
                     </View>
                     <View>
-                      <Text className="text-[#101828] text-[32px] font-bold tracking-tighter">380</Text>
-                      <Text className="text-zinc-400 text-[13px] font-medium mt-0.5">/600 kcal</Text>
+                      <Text className="text-[#101828] text-[32px] font-bold tracking-tighter">{caloriesToday}</Text>
+                      <Text className="text-zinc-400 text-[13px] font-medium mt-0.5">/{caloriesGoal} kcal</Text>
                     </View>
                     {/* Progress Bar */}
                     <View className="w-full h-1.5 bg-[#FFE4E6] rounded-full overflow-hidden">
-                      <View className="h-full bg-rose-500 rounded-full" style={{ width: '63%' }} />
+                      <View className="h-full bg-rose-500 rounded-full" style={{ width: `${Math.min(100, (caloriesToday / caloriesGoal) * 100)}%` }} />
                     </View>
                   </View>
 
@@ -465,7 +528,7 @@ export default function HomeScreen() {
                     </View>
                     {/* Progress Bar */}
                     <View className="w-full h-1.5 bg-[#EDE9FE] rounded-full overflow-hidden">
-                      <View className="h-full bg-violet-600 rounded-full" style={{ width: `${Math.min(100, (membership.availableCredits / membership.totalCredits) * 100)}%` }} />
+                      <View className="h-full bg-violet-600 rounded-full" style={{ width: `${Math.min(100, (membership.availableCredits / Math.max(1, membership.totalCredits)) * 100)}%` }} />
                     </View>
                   </TouchableOpacity>
 
@@ -476,12 +539,12 @@ export default function HomeScreen() {
                       <Text className="text-zinc-500 text-[11px] font-semibold uppercase tracking-wider">Workout Streak</Text>
                     </View>
                     <View>
-                      <Text className="text-[#101828] text-[32px] font-bold tracking-tighter">5</Text>
+                      <Text className="text-[#101828] text-[32px] font-bold tracking-tighter">{streak}</Text>
                       <Text className="text-zinc-400 text-[13px] font-medium mt-0.5">Active Days</Text>
                     </View>
                     {/* Progress Bar */}
                     <View className="w-full h-1.5 bg-[#FFE4E6] rounded-full overflow-hidden">
-                      <View className="h-full bg-[#EC4899] rounded-full" style={{ width: '71%' }} />
+                      <View className="h-full bg-[#EC4899] rounded-full" style={{ width: `${Math.min(100, (streak / 7) * 100)}%` }} />
                     </View>
                   </View>
                 </View>
@@ -558,19 +621,8 @@ export default function HomeScreen() {
               {/* Upcoming Session Section */}
               <View className="gap-4">
                 <Text className="text-[#101828] text-[20px] font-semibold tracking-tight pl-1">Upcoming Session</Text>
-                {(() => {
-                  const hasBooking = upcomingBookings.length > 0;
-                  const bookingData = hasBooking ? upcomingBookings[0] : {
-                    id: 'mock-1',
-                    workoutTitle: 'Strength Training',
-                    trainerName: 'Karan Sharma',
-                    trainerPhoto: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80',
-                    date: 'Jul 20, 2025',
-                    time: '10:30 AM',
-                    status: 'upcoming',
-                    timelineStatus: 'trainer_travelling'
-                  };
-
+                {upcomingBookings.length > 0 ? (() => {
+                  const bookingData = upcomingBookings[0];
                   const isTravelling = bookingData.timelineStatus === 'trainer_travelling';
 
                   return (
@@ -612,7 +664,7 @@ export default function HomeScreen() {
                             </View>
                             <View>
                               <Text className="text-zinc-950 text-[13px] font-semibold">Home</Text>
-                              <Text className="text-zinc-400 text-[11px] font-medium mt-0.5">Surat, Gujarat</Text>
+                              <Text className="text-zinc-400 text-[11px] font-medium mt-0.5">Mumbai, India</Text>
                             </View>
                           </View>
                         </View>
@@ -640,19 +692,24 @@ export default function HomeScreen() {
                       </View>
                     </View>
                   );
-                })()}
+                })() : (
+                  <View className="bg-white border border-[#E5E7EB] p-8 rounded-[32px] shadow-sm items-center justify-center gap-3">
+                    <Text className="text-3xl">🗓️</Text>
+                    <Text className="text-[#101828] text-base font-semibold">No Upcoming Sessions Scheduled</Text>
+                    <Text className="text-zinc-500 text-sm text-center">Schedule your next personal training session today.</Text>
+                  </View>
+                )}
               </View>
             </>
           )}
 
-          {/* ==================== TRAINER MODE DASHBOARD ==================== */}
           {role === 'trainer' && (
             <>
               {/* Trainer greeting & Ledger */}
               <View className="gap-4">
                 <View>
                   <Text className="text-[#101828] text-2xl font-bold tracking-tight leading-tight">
-                    Welcome back, Coach Karan Sharma
+                    Welcome back, Coach {user.name}
                   </Text>
                   <Text className="text-zinc-500 text-xs font-semibold leading-relaxed mt-1">
                     Pro Console • Availability and jobs tracking
@@ -666,35 +723,45 @@ export default function HomeScreen() {
                   <View className="flex-row flex-wrap justify-between gap-y-3.5">
                     <View className="w-[47%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
                       <Text className="text-zinc-500 text-[8px] font-bold uppercase">Current Rank</Text>
-                      <Text className="text-zinc-900 text-xs font-semibold">Associate Trainer</Text>
+                      <Text className="text-zinc-900 text-xs font-semibold">
+                        {totalCompleted >= 20 ? 'Elite Coach' : totalCompleted >= 5 ? 'Certified Coach' : 'Associate Coach'}
+                      </Text>
                     </View>
                     <View className="w-[47%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
                       <Text className="text-zinc-500 text-[8px] font-bold uppercase">Completed Sessions</Text>
-                      <Text className="text-zinc-900 text-xs font-semibold">420 Sessions</Text>
+                      <Text className="text-zinc-900 text-xs font-semibold">{totalCompleted} Sessions</Text>
                     </View>
                     <View className="w-[47%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
                       <Text className="text-zinc-500 text-[8px] font-bold uppercase">Average Rating</Text>
-                      <Text className="text-zinc-900 text-xs font-semibold">⭐ 4.91 / 5.0</Text>
+                      <Text className="text-zinc-900 text-xs font-semibold">⭐ {user.id ? (Database.schema.coaches.find(c => c.name === user.name)?.rating ?? 5.0) : 5.0} / 5.0</Text>
                     </View>
                     <View className="w-[47%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
                       <Text className="text-zinc-500 text-[8px] font-bold uppercase">Attendance Rate</Text>
                       <Text className="text-zinc-900 text-xs font-semibold">98%</Text>
                     </View>
                     <View className="w-[47%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
-                      <Text className="text-zinc-500 text-[8px] font-bold uppercase">Punctuality Rate</Text>
-                      <Text className="text-zinc-900 text-xs font-semibold">99%</Text>
+                      <Text className="text-zinc-500 text-[8px] font-bold uppercase">Completion Rate</Text>
+                      <Text className="text-[#E11D48] text-xs font-semibold">
+                        {totalCompleted > 0 ? `${Math.round((totalCompleted / (totalCompleted + cancelledJobs.length)) * 100)}%` : '100%'}
+                      </Text>
                     </View>
                     <View className="w-[47%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
-                      <Text className="text-zinc-500 text-[8px] font-bold uppercase">Retainer Status</Text>
-                      <Text className="text-red-500 text-xs font-semibold">Not Eligible</Text>
+                      <Text className="text-zinc-500 text-[8px] font-bold uppercase">Upcoming Sessions</Text>
+                      <Text className="text-indigo-600 text-xs font-semibold">{totalUpcoming} Pending</Text>
                     </View>
                     <View className="w-[47%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
                       <Text className="text-zinc-500 text-[8px] font-bold uppercase">Promotion Progress</Text>
-                      <Text className="text-amber-600 text-xs font-semibold">On Hold (84%)</Text>
+                      <Text className="text-amber-600 text-xs font-semibold">
+                        {totalCompleted >= 20 
+                          ? 'Max Level' 
+                          : totalCompleted >= 5 
+                            ? `${Math.min(100, Math.round((totalCompleted / 20) * 100))}% (to Elite)` 
+                            : `${Math.min(100, Math.round((totalCompleted / 5) * 100))}% (to Certified)`}
+                      </Text>
                     </View>
                     <View className="w-[47%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
-                      <Text className="text-zinc-500 text-[8px] font-bold uppercase">Weekly Earnings</Text>
-                      <Text className="text-emerald-600 text-xs font-semibold">₹6,400</Text>
+                      <Text className="text-zinc-500 text-[8px] font-bold uppercase">Monthly Earnings</Text>
+                      <Text className="text-emerald-600 text-xs font-semibold">₹{monthlyEarnings.toLocaleString('en-IN')}</Text>
                     </View>
                   </View>
                 </View>
@@ -702,20 +769,28 @@ export default function HomeScreen() {
                 {/* Today's Sessions List (Sprint 7.1) */}
                 <View className="gap-3">
                   <Text className="text-[#101828] text-xs font-semibold uppercase tracking-widest pl-1">Today's Visits</Text>
-                  <View className="bg-white border border-[#E5E7EB] p-4 rounded-2xl flex-row justify-between items-center shadow-xs">
-                    <View className="flex-row items-center gap-3">
-                      <View className="w-8 h-8 rounded-xl bg-indigo-50 items-center justify-center">
-                        <Feather name="clock" size={14} color="#4F46E5" />
+                  {bookings.filter(b => b.date.includes('Today') || b.date.includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' }))).length > 0 ? (
+                    bookings.filter(b => b.date.includes('Today') || b.date.includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' }))).map((booking) => (
+                      <View key={booking.id} className="bg-white border border-[#E5E7EB] p-4 rounded-2xl flex-row justify-between items-center shadow-xs">
+                        <View className="flex-row items-center gap-3">
+                          <View className="w-8 h-8 rounded-xl bg-indigo-50 items-center justify-center">
+                            <Feather name="clock" size={14} color="#4F46E5" />
+                          </View>
+                          <View>
+                            <Text className="text-zinc-900 text-xs font-semibold">{booking.workoutTitle} - {booking.address ? booking.address.split(',')[0] : 'Venue'}</Text>
+                            <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{booking.date} • {booking.time}</Text>
+                          </View>
+                        </View>
+                        <View className={`px-2 py-0.5 rounded-full ${booking.status === 'completed' ? 'bg-emerald-50' : 'bg-amber-50'}`}>
+                          <Text className={`text-[7px] font-bold uppercase ${booking.status === 'completed' ? 'text-emerald-600' : 'text-amber-600'}`}>{booking.status}</Text>
+                        </View>
                       </View>
-                      <View>
-                        <Text className="text-zinc-900 text-xs font-semibold">Forge Strength - Juhu</Text>
-                        <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Today • 08:00 AM</Text>
-                      </View>
+                    ))
+                  ) : (
+                    <View className="bg-white border border-[#E5E7EB] p-6 rounded-2xl items-center justify-center">
+                      <Text className="text-zinc-400 text-[9px] font-bold uppercase">No visits scheduled for today.</Text>
                     </View>
-                    <View className="bg-emerald-50 px-2 py-0.5 rounded-full">
-                      <Text className="text-emerald-600 text-[7px] font-bold uppercase">Completed</Text>
-                    </View>
-                  </View>
+                  )}
                 </View>
               </View>
 

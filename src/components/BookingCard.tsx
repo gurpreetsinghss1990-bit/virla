@@ -5,6 +5,9 @@ import { BookingStatusBadge } from './BookingStatusBadge';
 import { useBookingStore } from '../store/bookingStore';
 import { useRouter } from 'expo-router';
 import { LuxuryCard } from './LuxuryCard';
+import { Feather } from '@expo/vector-icons';
+
+import { useUserStore } from '../store/userStore';
 
 interface BookingCardProps {
   booking: Booking;
@@ -13,6 +16,7 @@ interface BookingCardProps {
 export function BookingCard({ booking }: BookingCardProps) {
   const router = useRouter();
   const { cancelSession, rescheduleSession } = useBookingStore();
+  const { role } = useUserStore();
 
   const handleCancel = () => {
     Alert.alert(
@@ -64,13 +68,18 @@ export function BookingCard({ booking }: BookingCardProps) {
   };
 
   const isUpcoming = booking.status === 'upcoming';
+  const isTrainer = role === 'trainer';
 
   return (
     <LuxuryCard className="p-5 mb-4" interactive={false}>
       {/* Top Section */}
       <View className="flex-row items-center justify-between mb-4 pb-4 border-b border-zinc-100">
-        <View className="flex-row items-center gap-3">
-          {isUpcoming ? (
+        <View className="flex-row items-center gap-3 flex-1 pr-2">
+          {isTrainer ? (
+            <View className="w-12 h-12 rounded-full bg-indigo-50 border border-indigo-150 items-center justify-center">
+              <Text className="text-lg">👤</Text>
+            </View>
+          ) : isUpcoming ? (
             <View className="w-12 h-12 rounded-full bg-zinc-100 border border-zinc-200 items-center justify-center">
               <Text className="text-lg">🧘</Text>
             </View>
@@ -80,17 +89,27 @@ export function BookingCard({ booking }: BookingCardProps) {
               className="w-12 h-12 rounded-full border border-zinc-150"
             />
           )}
-          <View>
+          <View className="flex-1">
             <Text className="text-[#101828] text-base font-extrabold tracking-tight">
-              {isUpcoming ? 'Professional Wellness Coach' : `Coach ${booking.trainerName}`}
+              {isTrainer ? 'Client: Viral' : (isUpcoming ? 'Professional Wellness Coach' : `Coach ${booking.trainerName}`)}
             </Text>
             <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider mt-0.5">
-              {isUpcoming ? `${booking.workoutTitle} • Details sent 5h prior` : `${booking.workoutTitle} • ₹${booking.price || 1200}`}
+              {isTrainer ? `${booking.workoutTitle} • 60 mins` : (isUpcoming ? `${booking.workoutTitle} • Details sent 5h prior` : `${booking.workoutTitle} • ₹${booking.price || 1200}`)}
             </Text>
           </View>
         </View>
         <BookingStatusBadge status={booking.status} />
       </View>
+
+      {/* Location address row for trainers */}
+      {isTrainer && booking.address && (
+        <View className="bg-zinc-50 px-4 py-2 rounded-xl mb-3 flex-row items-center gap-2">
+          <Feather name="map-pin" size={10} color="#6B7280" />
+          <Text className="text-zinc-500 text-[10px] font-semibold flex-1 leading-snug">
+            {booking.address}
+          </Text>
+        </View>
+      )}
 
       {/* Date & Time Row */}
       <View className="flex-row justify-between items-center bg-zinc-50 px-4 py-3 rounded-xl mb-4">
@@ -104,35 +123,67 @@ export function BookingCard({ booking }: BookingCardProps) {
 
       {/* Action Buttons */}
       <View className="flex-row gap-3">
-        {isUpcoming && (
-          <>
+        {isTrainer ? (
+          isUpcoming ? (
+            <>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => Alert.alert('Navigate', 'Opening Google Maps routing direction to Worli, Mumbai.')}
+                className="flex-1 bg-zinc-50 border border-zinc-200/60 py-3 rounded-xl items-center justify-center flex-row gap-1.5"
+              >
+                <Feather name="navigation" size={12} color="#101828" />
+                <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Navigate</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={handleViewDetails}
+                className="flex-1 py-3 rounded-xl items-center justify-center bg-[#E11D48] border border-[#E11D48]"
+              >
+                <Text className="text-white text-xs font-black uppercase tracking-wider">Open Console</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={handleReschedule}
-              className="flex-1 bg-zinc-50 border border-zinc-200/60 py-3 rounded-xl items-center justify-center"
+              onPress={handleViewDetails}
+              className="flex-1 py-3 rounded-xl items-center justify-center bg-[#101828] border border-[#101828]"
             >
-              <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Reschedule</Text>
+              <Text className="text-white text-xs font-black uppercase tracking-wider">View Summary</Text>
             </TouchableOpacity>
+          )
+        ) : (
+          <>
+            {isUpcoming && (
+              <>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={handleReschedule}
+                  className="flex-1 bg-zinc-50 border border-zinc-200/60 py-3 rounded-xl items-center justify-center"
+                >
+                  <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Reschedule</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={handleCancel}
+                  className="flex-1 bg-red-50/50 border border-red-100/50 py-3 rounded-xl items-center justify-center"
+                >
+                  <Text className="text-[#FF4D4F] text-xs font-black uppercase tracking-wider">Cancel</Text>
+                </TouchableOpacity>
+              </>
+            )}
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={handleCancel}
-              className="flex-1 bg-red-50/50 border border-red-100/50 py-3 rounded-xl items-center justify-center"
+              onPress={handleViewDetails}
+              className={`py-3 rounded-xl items-center justify-center bg-[#101828] border border-[#101828] ${
+                isUpcoming ? 'px-5' : 'flex-1'
+              }`}
             >
-              <Text className="text-[#FF4D4F] text-xs font-black uppercase tracking-wider">Cancel</Text>
+              <Text className="text-white text-xs font-black uppercase tracking-wider">
+                {isUpcoming ? 'Details' : 'View Details'}
+              </Text>
             </TouchableOpacity>
           </>
         )}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={handleViewDetails}
-          className={`py-3 rounded-xl items-center justify-center bg-[#101828] border border-[#101828] ${
-            isUpcoming ? 'px-5' : 'flex-1'
-          }`}
-        >
-          <Text className="text-white text-xs font-black uppercase tracking-wider">
-            {isUpcoming ? 'Details' : 'View Details'}
-          </Text>
-        </TouchableOpacity>
       </View>
     </LuxuryCard>
   );

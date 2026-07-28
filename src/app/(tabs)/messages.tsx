@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, Text, Image, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 import { LuxuryCard } from '../../components/LuxuryCard';
 
@@ -40,6 +42,8 @@ const mockChats: Chat[] = [
 ];
 
 export default function MessagesScreen() {
+  const router = useRouter();
+
   return (
     <SafeAreaViewWrapper>
       <ScrollView 
@@ -47,14 +51,25 @@ export default function MessagesScreen() {
         className="flex-1 bg-[#F7F8FC]"
         contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 140 }}
       >
-        {/* Header */}
-        <View className="mb-6">
-          <Text className="text-[#6B7280] text-xs font-extrabold uppercase tracking-widest">Chat Logs</Text>
-          <Text className="text-[#101828] text-3xl font-black tracking-tight mt-1">Messages</Text>
-          <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed mt-1">
-            Coordinate schedules and workouts directly with your coaches.
-          </Text>
+        {/* Header with Back Button */}
+        <View className="mb-4 flex-row items-center gap-3.5">
+          <TouchableOpacity 
+            activeOpacity={0.8}
+            onPress={() => router.back()} 
+            className="w-10 h-10 items-center justify-center bg-white rounded-full border border-zinc-200"
+            style={{ minWidth: 40, minHeight: 40 }}
+          >
+            <Ionicons name="arrow-back" size={20} color="#101828" />
+          </TouchableOpacity>
+          <View className="flex-1">
+            <Text className="text-[#6B7280] text-[10px] font-extrabold uppercase tracking-widest leading-none">Chat Logs</Text>
+            <Text className="text-[#101828] text-3xl font-black tracking-tight mt-1 leading-none">Messages</Text>
+          </View>
         </View>
+
+        <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed mb-6">
+          Coordinate schedules and workouts directly with your coaches.
+        </Text>
 
         {/* Chats List */}
         <LuxuryCard className="overflow-hidden" interactive={false}>

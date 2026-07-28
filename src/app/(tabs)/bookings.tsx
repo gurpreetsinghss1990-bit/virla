@@ -4,13 +4,24 @@ import { useBookingStore } from '../../store/bookingStore';
 import { BookingCard } from '../../components/BookingCard';
 import { EmptyState } from '../../components/EmptyState';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
+import { useUserStore } from '../../store/userStore';
 
-type FilterType = 'upcoming' | 'completed' | 'cancelled';
+type FilterType = 'upcoming' | 'completed' | 'cancelled' | 'today' | 'past';
 
 export default function BookingsScreen() {
   const { bookings } = useBookingStore();
+  const { role } = useUserStore();
   const [activeFilter, setActiveFilter] = useState<FilterType>('upcoming');
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Default to 'today' for trainers on load
+    if (role === 'trainer') {
+      setActiveFilter('today');
+    } else {
+      setActiveFilter('upcoming');
+    }
+  }, [role]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -19,17 +30,36 @@ export default function BookingsScreen() {
     return () => clearTimeout(timer);
   }, []);
 
-  const filteredBookings = bookings.filter((b) => b.status === activeFilter);
+  const filteredBookings = bookings.filter((b) => {
+    if (role === 'trainer') {
+      const isToday = b.date.includes('Today') || b.date.includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' }));
+      if (activeFilter === 'today') {
+        return isToday && b.status === 'upcoming';
+      }
+      if (activeFilter === 'upcoming') {
+        return b.status === 'upcoming';
+      }
+      if (activeFilter === 'past') {
+        return b.status === 'completed' || b.status === 'cancelled';
+      }
+      return false;
+    }
+    return b.status === activeFilter;
+  });
 
   const getFilterLabel = (type: FilterType) => {
     switch (type) {
-      case 'upcoming': return 'Upcoming';
+      case 'today': return "Today's";
+      case 'upcoming': return role === 'trainer' ? 'Weekly' : 'Upcoming';
+      case 'past': return 'Calendar History';
       case 'completed': return 'Completed';
       case 'cancelled': return 'Cancelled';
     }
   };
 
-  const filterOptions: FilterType[] = ['upcoming', 'completed', 'cancelled'];
+  const filterOptions: FilterType[] = role === 'trainer'
+    ? ['today', 'upcoming', 'past']
+    : ['upcoming', 'completed', 'cancelled'];
 
   return (
     <SafeAreaViewWrapper>
@@ -43,10 +73,16 @@ export default function BookingsScreen() {
         >
         {/* Page Header */}
         <View className="mb-6">
-          <Text className="text-[#6B7280] text-xs font-extrabold uppercase tracking-widest">My Schedule</Text>
-          <Text className="text-[#101828] text-3xl font-black tracking-tight mt-1">Booked Sessions</Text>
+          <Text className="text-[#6B7280] text-xs font-extrabold uppercase tracking-widest">
+            {role === 'trainer' ? 'PRO CONSOLE' : 'MY SCHEDULE'}
+          </Text>
+          <Text className="text-[#101828] text-3xl font-black tracking-tight mt-1">
+            {role === 'trainer' ? 'My Visits' : 'Booked Sessions'}
+          </Text>
           <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed mt-1">
-            Track and manage all your scheduled home wellness visits.
+            {role === 'trainer' 
+              ? 'Manage check-ins, accept client jobs, and log session summaries.'
+              : 'Track and manage all your scheduled home wellness visits.'}
           </Text>
         </View>
 
@@ -83,11 +119,13 @@ export default function BookingsScreen() {
             ))
           ) : (
             <EmptyState 
-              type={activeFilter === 'completed' ? 'no-sessions' : 'no-bookings'} 
+              type={activeFilter === 'completed' || activeFilter === 'past' ? 'no-sessions' : 'no-bookings'} 
               message={
-                activeFilter === 'upcoming' 
-                  ? 'Schedule your next premium at-home training session from the home dashboard.'
-                  : `You do not have any ${activeFilter} visits logged in your profile.`
+                role === 'trainer'
+                  ? `You have no ${activeFilter} visits listed in your current schedule.`
+                  : activeFilter === 'upcoming' 
+                    ? 'Schedule your next premium at-home training session from the home dashboard.'
+                    : `You do not have any ${activeFilter} visits logged in your profile.`
               }
             />
           )}

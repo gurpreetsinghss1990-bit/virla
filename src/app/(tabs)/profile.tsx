@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import Svg, { Rect } from 'react-native-svg';
 import { LuxuryCard } from '../../components/LuxuryCard';
+import { Database } from '../../database/Database';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -37,6 +38,40 @@ export default function ProfileScreen() {
   const [editTargetGoal, setEditTargetGoal] = useState(profile.targetGoal);
   const [editLanguage, setEditLanguage] = useState(profile.preferredLanguage);
   const [editCity, setEditCity] = useState(profile.city);
+
+  // Trainer local states
+  const coach = Database.schema.coaches.find((c: any) => c.name === user.name) || Database.schema.coaches[0];
+  let parsedBankDetails = { accountName: '', bankName: '', accountNumber: '', ifsc: '', upiId: '' };
+  try {
+    if (coach && coach.bankDetails) {
+      parsedBankDetails = JSON.parse(coach.bankDetails);
+    }
+  } catch (e) {}
+
+  const [isEditingTrainer, setIsEditingTrainer] = useState(false);
+  const [trainerBio, setTrainerBio] = useState(coach?.shortBio || 'Home wellness coach specialized in Strength & HIIT.');
+  const [bankAccName, setBankAccName] = useState(parsedBankDetails.accountName || '');
+  const [bankNameStr, setBankNameStr] = useState(parsedBankDetails.bankName || '');
+  const [bankAccNumber, setBankAccNumber] = useState(parsedBankDetails.accountNumber || '');
+  const [bankIfscStr, setBankIfscStr] = useState(parsedBankDetails.ifsc || '');
+  const [bankUpiIdStr, setBankUpiIdStr] = useState(parsedBankDetails.upiId || '');
+
+  const handleSaveTrainer = () => {
+    if (coach) {
+      Database.updateCoach(coach.id, {
+        shortBio: trainerBio,
+        bankDetails: JSON.stringify({
+          accountName: bankAccName,
+          bankName: bankNameStr,
+          accountNumber: bankAccNumber,
+          ifsc: bankIfscStr,
+          upiId: bankUpiIdStr
+        })
+      });
+      setIsEditingTrainer(false);
+      Alert.alert('Trainer Details Updated', 'Your banking credentials and bio have been successfully updated.');
+    }
+  };
 
   useEffect(() => {
     Animated.loop(
@@ -334,12 +369,98 @@ export default function ProfileScreen() {
               {/* Trainer Profile Header */}
               <View className="items-center mb-4">
                 <Image
-                  source={{ uri: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }}
-                  className="w-20 h-20 rounded-full border-2 border-[#F5B942] mb-3 shadow-lg"
+                  source={{ uri: user.avatar || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }}
+                  className="w-20 h-20 rounded-full border-2 border-[#E11D48] mb-3 shadow-lg"
                 />
-                <Text className="text-[#101828] text-2xl font-black tracking-tight">Coach Karan Sharma</Text>
-                <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">Certified Trainer • Strength & HIIT</Text>
+                <Text className="text-[#101828] text-2xl font-black tracking-tight">{user.name}</Text>
+                <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">
+                  Certified Partner • {coach?.specialty || 'Wellness Coach'}
+                </Text>
               </View>
+
+              {/* Editable Trainer Console Credentials */}
+              <LuxuryCard className="p-5 gap-4" interactive={false}>
+                <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
+                  <Text className="text-[#101828] text-xs font-black uppercase tracking-widest">Onboarding Credentials</Text>
+                  <TouchableOpacity onPress={() => { if (isEditingTrainer) { handleSaveTrainer(); } else { setIsEditingTrainer(true); } }}>
+                    <Text className="text-indigo-600 text-xs font-black uppercase tracking-widest">{isEditingTrainer ? 'Save' : 'Edit'}</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {isEditingTrainer ? (
+                  <View className="gap-3.5">
+                    <View className="gap-1">
+                      <Text className="text-zinc-500 text-[8px] font-black uppercase">Coach Short Bio</Text>
+                      <TextInput
+                        value={trainerBio}
+                        onChangeText={setTrainerBio}
+                        multiline
+                        className="border border-[#E5E7EB] bg-[#F7F8FC] p-3 rounded-xl text-xs text-zinc-900 font-semibold"
+                      />
+                    </View>
+                    <View className="gap-1">
+                      <Text className="text-zinc-500 text-[8px] font-black uppercase">Account Holder Name</Text>
+                      <TextInput
+                        value={bankAccName}
+                        onChangeText={setBankAccName}
+                        className="border border-[#E5E7EB] bg-[#F7F8FC] p-3 rounded-xl text-xs text-zinc-900 font-semibold"
+                      />
+                    </View>
+                    <View className="gap-1">
+                      <Text className="text-zinc-500 text-[8px] font-black uppercase">Bank Name</Text>
+                      <TextInput
+                        value={bankNameStr}
+                        onChangeText={setBankNameStr}
+                        className="border border-[#E5E7EB] bg-[#F7F8FC] p-3 rounded-xl text-xs text-zinc-900 font-semibold"
+                      />
+                    </View>
+                    <View className="gap-1">
+                      <Text className="text-zinc-500 text-[8px] font-black uppercase">Account Number</Text>
+                      <TextInput
+                        value={bankAccNumber}
+                        onChangeText={setBankAccNumber}
+                        keyboardType="number-pad"
+                        className="border border-[#E5E7EB] bg-[#F7F8FC] p-3 rounded-xl text-xs text-zinc-900 font-semibold"
+                      />
+                    </View>
+                    <View className="gap-1">
+                      <Text className="text-zinc-500 text-[8px] font-black uppercase">IFSC Code</Text>
+                      <TextInput
+                        value={bankIfscStr}
+                        onChangeText={setBankIfscStr}
+                        className="border border-[#E5E7EB] bg-[#F7F8FC] p-3 rounded-xl text-xs text-zinc-900 font-semibold"
+                      />
+                    </View>
+                    <View className="gap-1">
+                      <Text className="text-zinc-500 text-[8px] font-black uppercase">UPI ID</Text>
+                      <TextInput
+                        value={bankUpiIdStr}
+                        onChangeText={setBankUpiIdStr}
+                        className="border border-[#E5E7EB] bg-[#F7F8FC] p-3 rounded-xl text-xs text-zinc-900 font-semibold"
+                      />
+                    </View>
+                  </View>
+                ) : (
+                  <View className="gap-3">
+                    <View className="py-1 border-b border-zinc-50 pb-2">
+                      <Text className="text-zinc-400 text-xs font-semibold">Coach Bio</Text>
+                      <Text className="text-zinc-950 text-xs font-black mt-1 leading-normal">{trainerBio}</Text>
+                    </View>
+                    <View className="flex-row justify-between py-1 border-b border-zinc-50 pb-2">
+                      <Text className="text-zinc-400 text-xs font-semibold">Bank Name</Text>
+                      <Text className="text-zinc-950 text-xs font-black">{bankNameStr || 'Not Set'}</Text>
+                    </View>
+                    <View className="flex-row justify-between py-1 border-b border-zinc-50 pb-2">
+                      <Text className="text-zinc-400 text-xs font-semibold">Account Number</Text>
+                      <Text className="text-zinc-950 text-xs font-black">{bankAccNumber ? `•••• ${bankAccNumber.slice(-4)}` : 'Not Set'}</Text>
+                    </View>
+                    <View className="flex-row justify-between py-1 border-b border-zinc-50 pb-2">
+                      <Text className="text-zinc-400 text-xs font-semibold">UPI ID</Text>
+                      <Text className="text-zinc-950 text-xs font-black">{bankUpiIdStr || 'Not Set'}</Text>
+                    </View>
+                  </View>
+                )}
+              </LuxuryCard>
 
               {/* Trainer Ledger: Earnings List */}
               <LuxuryCard className="p-5 gap-4" interactive={false}>
@@ -369,11 +490,11 @@ export default function ProfileScreen() {
                 <Text className="text-[#101828] text-xs font-black uppercase tracking-widest">Safety Guidelines</Text>
                 <View className="gap-2.5 mt-1">
                   <View className="flex-row gap-2 items-start">
-                    <Feather name="check" size={12} color="#16C784" className="mt-0.5" />
+                    <Feather name="check" size={12} color="#16C784" style={{ marginTop: 2 }} />
                     <Text className="text-[#6B7280] text-[10px] leading-relaxed flex-1">Keep client safety OTP verify check-ins active for travel authentication.</Text>
                   </View>
                   <View className="flex-row gap-2 items-start">
-                    <Feather name="check" size={12} color="#16C784" className="mt-0.5" />
+                    <Feather name="check" size={12} color="#16C784" style={{ marginTop: 2 }} />
                     <Text className="text-[#6B7280] text-[10px] leading-relaxed flex-1">Complete mandatory post-session reports within 2 hours to release payout funds.</Text>
                   </View>
                 </View>

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { useUserStore } from './userStore';
 import { useMembershipStore } from './membershipStore';
+import { Database } from '../database/Database';
 
 export interface LedgerTransaction {
   id: string;
@@ -36,188 +37,135 @@ interface WalletState {
   refundCredit: (reason: string) => void;
   deductCreditLateCancel: (reason: string) => void;
   addBonusCredit: (reason: string) => void;
+  syncFromDB: () => void;
 }
 
-const mockLedger: LedgerTransaction[] = [
-  { id: 'tx-5', title: 'Cancelled Late (Late Penalty)', change: -1, date: 'Jul 14, 2026', type: 'penalty' },
-  { id: 'tx-4', title: 'Bonus Credit Awarded', change: 1, date: 'Jul 13, 2026', type: 'bonus' },
-  { id: 'tx-3', title: 'Booking b-2 Refunded', change: 1, date: 'Jul 12, 2026', type: 'refund' },
-  { id: 'tx-2', title: 'Booked Strength Session (Karan)', change: -1, date: 'Jul 11, 2026', type: 'booking' },
-  { id: 'tx-1', title: 'Purchased Premium Pack', change: 12, date: 'Jul 10, 2026', type: 'purchase' }
-];
-
-const mockPayments: PaymentRecord[] = [
-  {
-    id: 'pay-1',
-    invoiceNo: 'VR-2026-8910',
-    date: 'Jul 10, 2026',
-    planName: 'Premium Pack',
-    credits: 12,
-    amount: '₹8,474',
-    gst: '₹1,525',
-    total: '₹9,999',
-    method: 'Apple Pay (•••• 4920)',
-    status: 'completed'
-  },
-  {
-    id: 'pay-2',
-    invoiceNo: 'VR-2026-8742',
-    date: 'Jul 08, 2026',
-    planName: 'Single Session',
-    credits: 1,
-    amount: '₹846',
-    gst: '₹153',
-    total: '₹999',
-    method: 'UPI Auto-debit (viral@okaxis)',
-    status: 'refunded'
-  },
-  {
-    id: 'pay-3',
-    invoiceNo: 'VR-2026-8201',
-    date: 'Jul 01, 2026',
-    planName: 'Starter Pack',
-    credits: 8,
-    amount: '₹5,931',
-    gst: '₹1,068',
-    total: '₹6,999',
-    method: 'Apple Pay (•••• 4920)',
-    status: 'completed'
-  },
-  {
-    id: 'pay-4',
-    invoiceNo: 'VR-2026-7840',
-    date: 'Jun 28, 2026',
-    planName: 'Premium Pack',
-    credits: 12,
-    amount: '₹8,474',
-    gst: '₹1,525',
-    total: '₹9,999',
-    method: 'Credit Card (•••• 5821)',
-    status: 'failed'
-  }
-];
-
 export const useWalletStore = create<WalletState>((set, get) => ({
-  creditBalance: 12,
-  lifetimePurchased: 21,
-  creditsUsed: 9,
-  ledger: mockLedger,
-  payments: mockPayments,
+  creditBalance: 0,
+  lifetimePurchased: 0,
+  creditsUsed: 0,
+  ledger: [],
+  payments: [],
 
   purchasePlan: (planName, credits, priceText, totalText, gstText) => {
-    const { creditBalance, lifetimePurchased, payments, ledger } = get();
-    
-    // Add payments registry record
-    const newPay: PaymentRecord = {
-      id: `pay-${Date.now().toString().slice(-4)}`,
-      invoiceNo: `VR-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-      planName,
-      credits,
-      amount: priceText,
-      gst: gstText,
-      total: totalText,
-      method: 'Apple Pay (•••• 4920)',
-      status: 'completed'
-    };
-
-    // Add ledger record
-    const newTx: LedgerTransaction = {
-      id: `tx-${Date.now().toString().slice(-4)}`,
-      title: `Purchased ${planName}`,
-      change: credits,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-      type: 'purchase'
-    };
-
-    set({
-      creditBalance: creditBalance + credits,
-      lifetimePurchased: lifetimePurchased + credits,
-      payments: [newPay, ...payments],
-      ledger: [newTx, ...ledger]
-    });
-
-    // Sync with UserStore invoices list & MembershipStore credit counts
-    useUserStore.getState().addInvoice({
-      type: `${planName} Purchase`,
-      amount: totalText,
-      status: 'paid',
-      credits
-    });
-
-    // Sync with MembershipStore
-    useMembershipStore.getState().addCredits(credits);
+    const userId = Database.getCurrentUserId();
+    if (userId) {
+      Database.purchasePlan(userId, planName, credits, priceText, gstText, totalText);
+      useUserStore.getState().syncFromDB();
+      useMembershipStore.getState().syncFromDB();
+      get().syncFromDB();
+    }
   },
 
   useCredit: (reason) => {
-    const { creditBalance, creditsUsed, ledger } = get();
-    if (creditBalance <= 0) return false;
-
-    const newTx: LedgerTransaction = {
-      id: `tx-${Date.now().toString().slice(-4)}`,
-      title: reason,
-      change: -1,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-      type: 'booking'
-    };
-
-    set({
-      creditBalance: creditBalance - 1,
-      creditsUsed: creditsUsed + 1,
-      ledger: [newTx, ...ledger]
-    });
-
-    return true;
+    const userId = Database.getCurrentUserId();
+    if (userId) {
+      const profile = Database.getProfile(userId);
+      if (profile && profile.creditsBalance > 0) {
+        profile.creditsBalance -= 1;
+        Database.addLedgerTransaction(userId, {
+          id: Database.generateUUID('tx'),
+          type: 'booking' as any,
+          title: reason,
+          change: -1,
+          date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+        } as any);
+        useMembershipStore.getState().syncFromDB();
+        get().syncFromDB();
+        return true;
+      }
+    }
+    return false;
   },
 
   refundCredit: (reason) => {
-    const { creditBalance, creditsUsed, ledger } = get();
-    const newTx: LedgerTransaction = {
-      id: `tx-${Date.now().toString().slice(-4)}`,
-      title: reason,
-      change: 1,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-      type: 'refund'
-    };
-
-    set({
-      creditBalance: creditBalance + 1,
-      creditsUsed: Math.max(0, creditsUsed - 1),
-      ledger: [newTx, ...ledger]
-    });
+    const userId = Database.getCurrentUserId();
+    if (userId) {
+      const profile = Database.getProfile(userId);
+      if (profile) {
+        profile.creditsBalance += 1;
+        Database.addLedgerTransaction(userId, {
+          id: Database.generateUUID('tx'),
+          type: 'refund' as any,
+          title: reason,
+          change: 1,
+          date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+        } as any);
+        useMembershipStore.getState().syncFromDB();
+        get().syncFromDB();
+      }
+    }
   },
 
   deductCreditLateCancel: (reason) => {
-    const { creditBalance, creditsUsed, ledger } = get();
-    const newTx: LedgerTransaction = {
-      id: `tx-${Date.now().toString().slice(-4)}`,
-      title: reason,
-      change: -1,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-      type: 'penalty'
-    };
-
-    set({
-      creditBalance: Math.max(0, creditBalance - 1),
-      creditsUsed: creditsUsed + 1,
-      ledger: [newTx, ...ledger]
-    });
+    const userId = Database.getCurrentUserId();
+    if (userId) {
+      const profile = Database.getProfile(userId);
+      if (profile) {
+        profile.creditsBalance = Math.max(0, profile.creditsBalance - 1);
+        Database.addLedgerTransaction(userId, {
+          id: Database.generateUUID('tx'),
+          type: 'penalty' as any,
+          title: reason,
+          change: -1,
+          date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+        } as any);
+        useMembershipStore.getState().syncFromDB();
+        get().syncFromDB();
+      }
+    }
   },
 
   addBonusCredit: (reason) => {
-    const { creditBalance, lifetimePurchased, ledger } = get();
-    const newTx: LedgerTransaction = {
-      id: `tx-${Date.now().toString().slice(-4)}`,
-      title: reason,
-      change: 1,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-      type: 'bonus'
-    };
+    const userId = Database.getCurrentUserId();
+    if (userId) {
+      const profile = Database.getProfile(userId);
+      if (profile) {
+        profile.creditsBalance += 1;
+        Database.addLedgerTransaction(userId, {
+          id: Database.generateUUID('tx'),
+          type: 'bonus' as any,
+          title: reason,
+          change: 1,
+          date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+        } as any);
+        useMembershipStore.getState().syncFromDB();
+        get().syncFromDB();
+      }
+    }
+  },
 
-    set({
-      creditBalance: creditBalance + 1,
-      lifetimePurchased: lifetimePurchased + 1,
-      ledger: [newTx, ...ledger]
-    });
+  syncFromDB: () => {
+    const userId = Database.getCurrentUserId();
+    if (userId) {
+      const profile = Database.getProfile(userId);
+      if (profile) {
+        const ledgerList = Database.getLedgerTransactions(userId) as any[];
+        const paymentList = Database.getPayments(userId) as any[];
+        
+        // Calculate credits used and purchased
+        const purchased = ledgerList
+          .filter(t => t.change > 0)
+          .reduce((sum, curr) => sum + curr.credits, 0);
+
+        const used = ledgerList
+          .filter(t => t.change < 0)
+          .reduce((sum, curr) => sum + Math.abs(curr.credits || 1), 0);
+
+        set({
+          creditBalance: profile.creditsBalance,
+          ledger: ledgerList.map(tx => ({
+            id: tx.id,
+            title: tx.type === 'paid' ? `Purchased plan (${tx.credits} credits)` : tx.type,
+            change: tx.credits || 0,
+            date: tx.date,
+            type: tx.type === 'paid' ? 'purchase' : tx.type
+          })),
+          payments: paymentList,
+          lifetimePurchased: purchased,
+          creditsUsed: used
+        });
+      }
+    }
   }
 }));

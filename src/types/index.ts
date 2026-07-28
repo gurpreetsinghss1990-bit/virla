@@ -120,6 +120,10 @@ export interface Coach {
   attendanceRate?: number;
   punctualityRate?: number;
   availabilityCompliance?: number;
+  bankDetails?: string;
+  emergencyContact?: string;
+  aboutText?: string;
+  workingRadius?: string;
 }
 
 export interface NotificationItem {

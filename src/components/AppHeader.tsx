@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { View, Text, Image, TouchableOpacity, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useUserStore } from '../store/userStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { NotificationBadge } from './NotificationBadge';
@@ -11,8 +12,35 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ onNotificationPress, onAvatarPress }: AppHeaderProps) {
+  const router = useRouter();
   const { user } = useUserStore();
   const { unreadCount } = useNotificationStore();
+
+  const handlePress = () => {
+    if (onNotificationPress) {
+      onNotificationPress();
+    } else {
+      Alert.alert(
+        'Communication Center',
+        'Select a destination to open:',
+        [
+          {
+            text: 'Notifications Center',
+            onPress: () => router.push('/notifications' as any),
+          },
+          {
+            text: 'Messages (Chats)',
+            onPress: () => router.push('/(tabs)/messages' as any),
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+        ],
+        { cancelable: true }
+      );
+    }
+  };
 
   return (
     <View className="flex-row items-center justify-between px-6 py-4 bg-white border-b border-zinc-100">
@@ -45,7 +73,7 @@ export function AppHeader({ onNotificationPress, onAvatarPress }: AppHeaderProps
       {/* Notification Icon */}
       <TouchableOpacity
         activeOpacity={0.7}
-        onPress={onNotificationPress}
+        onPress={handlePress}
         className="w-10 h-10 rounded-full border border-zinc-100 items-center justify-center relative bg-zinc-50/50"
       >
         <Ionicons name="notifications-outline" size={20} color="#111111" />
