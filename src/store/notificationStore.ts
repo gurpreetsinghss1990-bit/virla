@@ -9,6 +9,7 @@ interface NotificationState {
   markAllAsRead: () => void;
   clearAll: () => void;
   addNotification: (notification: Omit<NotificationItem, 'id' | 'read' | 'timestamp' | 'group'>) => void;
+  deleteNotification: (id: string) => void;
   syncFromDB: () => void;
 }
 
@@ -40,6 +41,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     const userId = Database.getCurrentUserId();
     if (userId) {
       Database.addNotification(userId, n);
+      get().syncFromDB();
+    }
+  },
+  deleteNotification: (id) => {
+    const userId = Database.getCurrentUserId();
+    if (userId) {
+      Database.deleteNotification(userId, id);
       get().syncFromDB();
     }
   },

@@ -468,23 +468,59 @@ export function mapCalorieLogToPostgres(log: CalorieLog): any {
 }
 
 export function mapNotificationItem(row: any): NotificationItem {
+  let body = row.body || '';
+  let type: any = 'System';
+  let priority: any = 'medium';
+  let actionLabel = '';
+  let deepLink = '';
+  let expiry = '';
+
+  if (body.startsWith('{"is_meta":true')) {
+    try {
+      const parsed = JSON.parse(body);
+      body = parsed.body || '';
+      type = parsed.type || 'System';
+      priority = parsed.priority || 'medium';
+      actionLabel = parsed.actionLabel || '';
+      deepLink = parsed.deepLink || '';
+      expiry = parsed.expiry || '';
+    } catch (e) {
+      // fallback
+    }
+  }
+
   return {
     id: row.id,
     title: row.title,
-    body: row.body || '',
+    body: body,
     read: row.read ?? false,
     timestamp: row.timestamp || '',
     group: row.group || 'today',
-    icon: row.icon || ''
+    icon: row.icon || '',
+    type,
+    priority,
+    actionLabel,
+    deepLink,
+    expiry
   };
 }
 
 export function mapNotificationItemToPostgres(n: NotificationItem, userId: string): any {
+  const bodyPayload = JSON.stringify({
+    is_meta: true,
+    body: n.body,
+    type: n.type || 'System',
+    priority: n.priority || 'medium',
+    actionLabel: n.actionLabel || '',
+    deepLink: n.deepLink || '',
+    expiry: n.expiry || ''
+  });
+
   return {
     id: n.id,
     user_id: userId,
     title: n.title,
-    body: n.body,
+    body: bodyPayload,
     read: n.read,
     timestamp: n.timestamp,
     group: n.group,
@@ -1717,6 +1753,12 @@ class DatabaseClient {
   clearAllNotifications(userId: string): void {
     this.schema.notifications = [];
     supabase.from('notifications').delete().eq('user_id', userId).then();
+    this.save();
+  }
+
+  deleteNotification(userId: string, id: string): void {
+    this.schema.notifications = this.schema.notifications.filter(n => n.id !== id);
+    supabase.from('notifications').delete().eq('id', id).then();
     this.save();
   }
 

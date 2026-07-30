@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Switch, Alert, Platform } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Switch, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore } from '../store/userProfileStore';
@@ -10,7 +10,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { settings, updateGeneralSettings, notifications, updateNotificationPrefs } = useUserProfileStore();
-  const { setRole, setLoggedIn } = useUserStore();
+  const { setLoggedIn } = useUserStore();
 
   const handleAction = (label: string, detail: string) => {
     Alert.alert(label, detail);
@@ -140,7 +140,18 @@ export default function SettingsScreen() {
             
             <View className="flex-row justify-between items-center py-1">
               <View className="flex-1 pr-3">
-                <Text className="text-zinc-900 text-xs font-black">Booking Updates</Text>
+                <Text className="text-zinc-900 text-xs font-black">Push Notifications</Text>
+                <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Master toggle for push alerts</Text>
+              </View>
+              <Switch
+                value={notifications.pushNotifications}
+                onValueChange={(val) => updateNotificationPrefs({ pushNotifications: val })}
+              />
+            </View>
+
+            <View className="flex-row justify-between items-center py-1">
+              <View className="flex-1 pr-3">
+                <Text className="text-zinc-900 text-xs font-black">Booking Notifications</Text>
                 <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Get slots checks and matches alerts</Text>
               </View>
               <Switch
@@ -151,7 +162,7 @@ export default function SettingsScreen() {
 
             <View className="flex-row justify-between items-center py-1">
               <View className="flex-1 pr-3">
-                <Text className="text-zinc-900 text-xs font-black">Trainer Messages</Text>
+                <Text className="text-zinc-900 text-xs font-black">Trainer Updates</Text>
                 <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Real-time chat pushes from coaches</Text>
               </View>
               <Switch
@@ -162,7 +173,18 @@ export default function SettingsScreen() {
 
             <View className="flex-row justify-between items-center py-1">
               <View className="flex-1 pr-3">
-                <Text className="text-zinc-900 text-xs font-black">Offers & Promotions</Text>
+                <Text className="text-zinc-900 text-xs font-black">Membership & Credits Alerts</Text>
+                <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Alerts when credits run low or expire</Text>
+              </View>
+              <Switch
+                value={notifications.membershipAlerts}
+                onValueChange={(val) => updateNotificationPrefs({ membershipAlerts: val })}
+              />
+            </View>
+
+            <View className="flex-row justify-between items-center py-1">
+              <View className="flex-1 pr-3">
+                <Text className="text-zinc-900 text-xs font-black">Offers & Marketing</Text>
                 <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Receive discount codes and package campaigns</Text>
               </View>
               <Switch
@@ -173,12 +195,45 @@ export default function SettingsScreen() {
 
             <View className="flex-row justify-between items-center py-1">
               <View className="flex-1 pr-3">
-                <Text className="text-zinc-900 text-xs font-black">Push Notifications</Text>
-                <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Master toggle for push alerts</Text>
+                <Text className="text-zinc-900 text-xs font-black">SMS Notifications</Text>
+                <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Send transaction alerts via SMS</Text>
               </View>
               <Switch
-                value={notifications.pushNotifications}
-                onValueChange={(val) => updateNotificationPrefs({ pushNotifications: val })}
+                value={notifications.smsNotifications}
+                onValueChange={(val) => updateNotificationPrefs({ smsNotifications: val })}
+              />
+            </View>
+
+            <View className="flex-row justify-between items-center py-1">
+              <View className="flex-1 pr-3">
+                <Text className="text-zinc-900 text-xs font-black">Email Alerts</Text>
+                <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Receive session summaries and invoice bills</Text>
+              </View>
+              <Switch
+                value={notifications.emailNotifications}
+                onValueChange={(val) => updateNotificationPrefs({ emailNotifications: val })}
+              />
+            </View>
+
+            <View className="flex-row justify-between items-center py-1">
+              <View className="flex-1 pr-3">
+                <Text className="text-zinc-900 text-xs font-black">Sound Alerts</Text>
+                <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Play dynamic sound notification alerts</Text>
+              </View>
+              <Switch
+                value={notifications.workoutReminders}
+                onValueChange={(val) => updateNotificationPrefs({ workoutReminders: val })}
+              />
+            </View>
+
+            <View className="flex-row justify-between items-center py-1">
+              <View className="flex-1 pr-3">
+                <Text className="text-zinc-900 text-xs font-black">Vibration feedback</Text>
+                <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Trigger device vibration on push notifications</Text>
+              </View>
+              <Switch
+                value={notifications.progressReports}
+                onValueChange={(val) => updateNotificationPrefs({ progressReports: val })}
               />
             </View>
           </View>

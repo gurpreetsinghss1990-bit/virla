@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Membership } from '../types';
 import { useUserStore } from './userStore';
+import { useNotificationStore } from './notificationStore';
 import { Database } from '../database/Database';
 
 interface MembershipState {
@@ -51,6 +52,20 @@ export const useMembershipStore = create<MembershipState>((set, get) => ({
         profile.creditsBalance -= 1;
         Database.updateProfile(userId, { creditsBalance: profile.creditsBalance });
         get().syncFromDB();
+
+        // Trigger credits running low warning
+        if (profile.creditsBalance <= 2) {
+          useNotificationStore.getState().addNotification({
+            title: 'Credits Running Low ⚠️',
+            body: `You only have ${profile.creditsBalance} credits left in your wallet. Top up now to avoid session disruption.`,
+            type: 'Credits',
+            priority: 'high',
+            actionLabel: 'Buy Credits',
+            deepLink: '/membership',
+            icon: 'shopping-bag'
+          });
+        }
+
         return true;
       }
     }
@@ -85,6 +100,35 @@ export const useMembershipStore = create<MembershipState>((set, get) => ({
       Database.updateProfile(userId, { membershipStatus: tier });
       useUserStore.getState().syncFromDB();
       get().syncFromDB();
+
+      // Trigger notifications
+      useNotificationStore.getState().addNotification({
+        title: 'Membership Purchased 🎟️',
+        body: `Successfully upgraded to ${tier} Membership Subscription.`,
+        type: 'Membership',
+        priority: 'medium',
+        actionLabel: 'View Plan',
+        deepLink: '/membership',
+        icon: 'award'
+      });
+      useNotificationStore.getState().addNotification({
+        title: 'Credits Added 🪙',
+        body: `Plus ${credits} credits added to your fitness wallet.`,
+        type: 'Credits',
+        priority: 'low',
+        actionLabel: 'Check Wallet',
+        deepLink: '/membership',
+        icon: 'plus-circle'
+      });
+      useNotificationStore.getState().addNotification({
+        title: 'Payment Successful 💳',
+        body: `Payment of ${priceText} processed successfully. Invoice available.`,
+        type: 'Payments',
+        priority: 'low',
+        actionLabel: 'Invoice',
+        deepLink: '/membership',
+        icon: 'shopping-bag'
+      });
     }
   },
   buyCredits: (credits, priceText) => {
@@ -93,6 +137,26 @@ export const useMembershipStore = create<MembershipState>((set, get) => ({
       Database.purchasePlan(userId, `Top-up Cred Pack (${credits} Credits)`, credits, priceText, '₹0', priceText);
       useUserStore.getState().syncFromDB();
       get().syncFromDB();
+
+      // Trigger notifications
+      useNotificationStore.getState().addNotification({
+        title: 'Credits Added 🪙',
+        body: `Plus ${credits} top-up credits added to your fitness wallet.`,
+        type: 'Credits',
+        priority: 'low',
+        actionLabel: 'Check Wallet',
+        deepLink: '/membership',
+        icon: 'plus-circle'
+      });
+      useNotificationStore.getState().addNotification({
+        title: 'Payment Successful 💳',
+        body: `Payment of ${priceText} processed successfully. Invoice available.`,
+        type: 'Payments',
+        priority: 'low',
+        actionLabel: 'Invoice',
+        deepLink: '/membership',
+        icon: 'shopping-bag'
+      });
     }
   },
   syncFromDB: () => {

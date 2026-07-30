@@ -138,6 +138,11 @@ export interface NotificationItem {
   timestamp: string;
   group: 'today' | 'yesterday' | 'earlier';
   icon?: string;
+  type?: 'Bookings' | 'Membership' | 'Credits' | 'Payments' | 'Promotions' | 'Trainer Updates' | 'Safety' | 'System';
+  priority?: 'low' | 'medium' | 'high';
+  actionLabel?: string;
+  deepLink?: string;
+  expiry?: string;
 }
 
 // Sprint 6 additions for Ledgers

@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { Booking } from '../types';
 import { useMembershipStore } from './membershipStore';
-import { useCoachStore } from './coachStore';
 import { useNotificationStore } from './notificationStore';
 import { useWalletStore } from './walletStore';
 import { Database } from '../database/Database';
@@ -58,6 +57,77 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   },
   updateTimelineStatus: (id, status) => {
     Database.updateTimelineStatus(id, status);
+    const target = get().bookings.find(b => b.id === id);
+    if (target) {
+      const userId = Database.getCurrentUserId();
+      if (userId) {
+        let nTitle = '';
+        let nBody = '';
+        let nType: any = 'Bookings';
+        let nPriority: any = 'medium';
+        let nAction = '';
+        let nDeepLink = '';
+        let nIcon = 'bell';
+
+        if (status === 'trainer_assigned') {
+          nTitle = 'Trainer Assigned ⚡';
+          nBody = `Coach ${target.trainerName} (${target.trainerLevel || 'Certified'} Trainer) is assigned to your ${target.workoutTitle} session.`;
+          nType = 'Trainer Updates';
+          nAction = 'View Details';
+          nDeepLink = `/session-detail?id=${id}`;
+          nIcon = 'user-check';
+        } else if (status === 'trainer_accepted') {
+          nTitle = 'Booking Accepted 🤝';
+          nBody = `Coach ${target.trainerName} accepted your booking. They will arrive at the scheduled time.`;
+          nType = 'Trainer Updates';
+          nAction = 'View Coach';
+          nDeepLink = `/session-detail?id=${id}`;
+          nIcon = 'user-check';
+        } else if (status === 'trainer_travelling') {
+          nTitle = 'Coach On The Way 🚗';
+          nBody = `Coach ${target.trainerName} started travelling to your venue. Est. arrival: ${target.trainerArrivalTime || '15 mins'}.`;
+          nType = 'Trainer Updates';
+          nPriority = 'high';
+          nAction = 'Track Coach';
+          nDeepLink = `/session-detail?id=${id}`;
+          nIcon = 'navigation';
+        } else if (status === 'trainer_arrived') {
+          nTitle = 'Coach Arrived 🔔';
+          nBody = `Coach ${target.trainerName} has arrived at your location. Share check-in OTP to begin.`;
+          nType = 'Safety';
+          nPriority = 'high';
+          nAction = 'Reveal OTP';
+          nDeepLink = `/session-detail?id=${id}`;
+          nIcon = 'lock';
+        } else if (status === 'otp_verified' || status === 'workout_started') {
+          nTitle = 'Session Started ⚡';
+          nBody = `Your ${target.workoutTitle} session has officially started. Enjoy your workout!`;
+          nType = 'Bookings';
+          nAction = 'View Status';
+          nDeepLink = `/session-detail?id=${id}`;
+          nIcon = 'award';
+        } else if (status === 'workout_completed') {
+          nTitle = 'Session Completed 🏆';
+          nBody = `Well done! Your workout session is complete. Please rate your experience.`;
+          nType = 'Bookings';
+          nAction = 'Rate Coach';
+          nDeepLink = `/session-detail?id=${id}`;
+          nIcon = 'star';
+        }
+
+        if (nTitle) {
+          useNotificationStore.getState().addNotification({
+            title: nTitle,
+            body: nBody,
+            type: nType,
+            priority: nPriority,
+            actionLabel: nAction,
+            deepLink: nDeepLink,
+            icon: nIcon
+          });
+        }
+      }
+    }
     get().syncFromDB();
   },
   updateBookingRating: (id, ratingDetails) => {
@@ -65,19 +135,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     get().syncFromDB();
   },
   acceptBooking: (id) => {
-    const target = get().bookings.find(b => b.id === id);
-    if (target) {
-      Database.updateTimelineStatus(id, 'trainer_accepted');
-      const userId = Database.getCurrentUserId();
-      if (userId) {
-        useNotificationStore.getState().addNotification({
-          title: 'Booking Accepted 🔔',
-          body: `Coach ${target.trainerName} has accepted your job. They will begin travel at the scheduled time.`,
-          icon: 'user-check'
-        });
-      }
-      get().syncFromDB();
-    }
+    get().updateTimelineStatus(id, 'trainer_accepted');
   },
   triggerClientNoShow: (id) => {
     const target = get().bookings.find(b => b.id === id);
@@ -97,7 +155,6 @@ export const useBookingStore = create<BookingState>((set, get) => ({
         // Deduct/forfeit credit
         const profile = Database.getProfile(userId);
         if (profile) {
-          // already deducted when booked, but log a penalty ledger
           Database.addLedgerTransaction(userId, {
             id: Database.generateUUID('tx'),
             type: 'paid',
@@ -111,6 +168,10 @@ export const useBookingStore = create<BookingState>((set, get) => ({
         useNotificationStore.getState().addNotification({
           title: 'Client No-Show Logged ⚠️',
           body: `We logged a no-show for your scheduled session. 1 credit was forfeited, and travel compensation was sent to your coach.`,
+          type: 'Safety',
+          priority: 'high',
+          actionLabel: 'View Details',
+          deepLink: `/session-detail?id=${id}`,
           icon: 'rotate-ccw'
         });
         get().syncFromDB();
@@ -150,6 +211,10 @@ export const useBookingStore = create<BookingState>((set, get) => ({
         useNotificationStore.getState().addNotification({
           title: 'Trainer No-Show Logged 🚨',
           body: `Your coach failed to arrive. Your credit has been refunded, and we've added a FREE bonus credit to your account.`,
+          type: 'Safety',
+          priority: 'high',
+          actionLabel: 'Check Wallet',
+          deepLink: '/membership',
           icon: 'rotate-ccw'
         });
         get().syncFromDB();
