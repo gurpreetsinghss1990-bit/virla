@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore } from '../store/userProfileStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 
 export default function HealthProfileScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { healthProfile, updateHealthProfile } = useUserProfileStore();
 
   const [form, setForm] = useState(healthProfile);
@@ -35,7 +37,7 @@ export default function HealthProfileScreen() {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
@@ -51,8 +53,8 @@ export default function HealthProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-        <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 60 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} className="p-6" contentContainerStyle={{ paddingBottom: 60 }}>
           <View className="gap-5">
             
             <View>
@@ -99,6 +101,6 @@ export default function HealthProfileScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }

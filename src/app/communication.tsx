@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Image, Alert, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Alert, Animated, KeyboardAvoidingView, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
 import { useNotificationStore } from '../store/notificationStore';
@@ -15,6 +16,7 @@ interface ChatMessage {
 
 export default function CommunicationScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const bookingId = params.id as string;
 
@@ -26,12 +28,12 @@ export default function CommunicationScreen() {
 
   if (!booking) {
     return (
-      <SafeAreaView className="flex-1 bg-white justify-center items-center">
+      <View style={{ flex: 1, backgroundColor: 'white', paddingTop: insets.top }} className="justify-center items-center">
         <Text className="text-zinc-400 font-semibold">No booking details found.</Text>
         <TouchableOpacity onPress={() => router.back()} className="mt-4 bg-zinc-900 px-6 py-2 rounded-full">
           <Text className="text-white font-bold text-xs">Go Back</Text>
         </TouchableOpacity>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -138,8 +140,13 @@ export default function CommunicationScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
-      {/* Header */}
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
           <Ionicons name="arrow-back" size={20} color="#101828" />
@@ -217,7 +224,10 @@ export default function CommunicationScreen() {
       </ScrollView>
 
       {/* Bottom Message Input Bar */}
-      <View className="p-4 border-t border-zinc-150 bg-white flex-row gap-3 items-center">
+      <View 
+        style={{ paddingBottom: Math.max(insets.bottom, 16), paddingTop: 12, paddingHorizontal: 16 }}
+        className="border-t border-zinc-150 bg-white flex-row gap-3 items-center"
+      >
         <TextInput
           value={messageText}
           onChangeText={setMessageText}
@@ -232,6 +242,7 @@ export default function CommunicationScreen() {
           <Feather name="send" size={16} color="white" />
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }

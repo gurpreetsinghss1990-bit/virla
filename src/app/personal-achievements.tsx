@@ -1,10 +1,12 @@
 import React from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
 
 export default function PersonalAchievementsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const achievements = [
     { id: 'ach-1', title: 'First Workout', desc: 'Completed your 1st home session.', unlocked: true, icon: 'shield', color: 'text-indigo-600 bg-indigo-50 border-indigo-150' },
@@ -20,7 +22,7 @@ export default function PersonalAchievementsScreen() {
   const unlockedCount = achievements.filter(a => a.unlocked).length;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
@@ -82,6 +84,6 @@ export default function PersonalAchievementsScreen() {
 
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

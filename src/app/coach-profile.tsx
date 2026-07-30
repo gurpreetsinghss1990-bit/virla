@@ -1,11 +1,13 @@
 import React from 'react';
-import { View, Text, SafeAreaView, ScrollView, Image, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCoachStore } from '../store/coachStore';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function CoachProfileScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const coachId = params.id as string;
 
@@ -30,7 +32,7 @@ export default function CoachProfileScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <View style={{ flex: 1, backgroundColor: 'white', paddingTop: insets.top }}>
       {/* Header back button */}
       <View className="h-14 flex-row items-center px-6 border-b border-zinc-100">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
@@ -179,7 +181,7 @@ export default function CoachProfileScreen() {
       </ScrollView>
 
       {/* Book This Coach Button */}
-      <View className="p-6 bg-white border-t border-zinc-100">
+      <View style={{ paddingBottom: Math.max(insets.bottom, 24), paddingTop: 16, paddingHorizontal: 24 }} className="bg-white border-t border-zinc-100">
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={handleBookCoach}
@@ -190,6 +192,6 @@ export default function CoachProfileScreen() {
           </Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }

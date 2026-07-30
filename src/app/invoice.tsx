@@ -1,11 +1,13 @@
 import React from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useWalletStore } from '../store/walletStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 
 export default function InvoiceScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const invoiceId = params.id as string;
 
@@ -14,12 +16,12 @@ export default function InvoiceScreen() {
 
   if (!payment) {
     return (
-      <SafeAreaView className="flex-1 bg-white justify-center items-center">
+      <View style={{ flex: 1, backgroundColor: 'white', paddingTop: insets.top }} className="justify-center items-center">
         <Text className="text-zinc-400 font-semibold">No invoice records found.</Text>
         <TouchableOpacity onPress={() => router.back()} className="mt-4 bg-zinc-900 px-6 py-2 rounded-full">
           <Text className="text-white font-bold text-xs">Go Back</Text>
         </TouchableOpacity>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -28,7 +30,7 @@ export default function InvoiceScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
@@ -127,6 +129,6 @@ export default function InvoiceScreen() {
 
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

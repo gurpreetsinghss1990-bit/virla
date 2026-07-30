@@ -7,7 +7,7 @@ import { useMembershipStore } from '../store/membershipStore';
 export function RecommendationCard() {
   const { workouts } = useWorkoutStore();
   const { bookings, addBooking } = useBookingStore();
-  const { useCredit, membership } = useMembershipStore();
+  const { consumeCredit, membership } = useMembershipStore();
   const [booked, setBooked] = useState(false);
 
   const upcomingBookings = bookings.filter((b) => b.status === 'upcoming');
@@ -48,7 +48,7 @@ export function RecommendationCard() {
     }
 
     // Book session
-    const success = useCredit();
+    const success = consumeCredit();
     if (success) {
       addBooking({
         id: `b-auto-${Date.now()}`,

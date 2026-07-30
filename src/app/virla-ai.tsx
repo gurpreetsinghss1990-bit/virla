@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Alert, Animated, Clipboard, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Animated, Clipboard, KeyboardAvoidingView, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAIStore, ChatMessage, AIMemory } from '../store/aiStore';
 import { Feather, Ionicons } from '@expo/vector-icons';
@@ -7,6 +8,7 @@ import Svg, { Circle, Path, Defs, RadialGradient, Stop } from 'react-native-svg'
 
 export default function VirlaAIScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   
   // Bind AI Store
   const {
@@ -36,10 +38,10 @@ export default function VirlaAIScreen() {
   const [expandedKnowledgeCard, setExpandedKnowledgeCard] = useState<string | null>(null);
 
   // Voice conversation orb animation
-  const orbScale = useRef(new Animated.Value(1)).current;
-  const waveHeight1 = useRef(new Animated.Value(20)).current;
-  const waveHeight2 = useRef(new Animated.Value(15)).current;
-  const waveHeight3 = useRef(new Animated.Value(25)).current;
+  const [orbScale] = useState(() => new Animated.Value(1));
+  const [waveHeight1] = useState(() => new Animated.Value(20));
+  const [waveHeight2] = useState(() => new Animated.Value(15));
+  const [waveHeight3] = useState(() => new Animated.Value(25));
 
   // Voice status change actions
   useEffect(() => {
@@ -72,7 +74,7 @@ export default function VirlaAIScreen() {
     } else {
       orbScale.setValue(1);
     }
-  }, [isVoiceActive]);
+  }, [isVoiceActive, orbScale, waveHeight1, waveHeight2, waveHeight3]);
 
   const handleSend = () => {
     if (!chatInput.trim()) return;
@@ -122,7 +124,7 @@ export default function VirlaAIScreen() {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
@@ -413,7 +415,10 @@ export default function VirlaAIScreen() {
             </ScrollView>
 
             {/* Input message bar */}
-            <View className="p-4 border-t border-zinc-150 bg-white flex-row gap-3 items-center">
+            <View 
+              style={{ paddingBottom: Math.max(insets.bottom, 16), paddingTop: 12, paddingHorizontal: 16 }}
+              className="border-t border-zinc-150 bg-white flex-row gap-3 items-center"
+            >
               <TextInput
                 value={chatInput}
                 onChangeText={setChatInput}
@@ -529,6 +534,6 @@ export default function VirlaAIScreen() {
 
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }

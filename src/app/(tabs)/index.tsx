@@ -1,8 +1,10 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
 import Svg, { Rect, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 import { ProgressRing } from '../../components/ProgressRing';
@@ -46,7 +48,7 @@ export default function HomeScreen() {
   };
 
   const [isHolding, setIsHolding] = useState(false);
-  const holdProgress = useRef(new Animated.Value(0)).current;
+  const [holdProgress] = useState(() => new Animated.Value(0));
   const holdTimeoutRef = useRef<any>(null);
 
   const handlePressIn = () => {
@@ -117,9 +119,9 @@ export default function HomeScreen() {
   const caloriesGoal = 600;
 
   // Animations
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [fadeAnim] = useState(() => new Animated.Value(0));
+  const [slideAnim] = useState(() => new Animated.Value(20));
+  const [pulseAnim] = useState(() => new Animated.Value(1));
 
   // AI recommendations array
   const [recs, setRecs] = useState<{ title: string; desc: string }[]>([]);
@@ -168,7 +170,7 @@ export default function HomeScreen() {
         Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: true })
       ])
     ).start();
-  }, [role]);
+  }, [role, fadeAnim, slideAnim, pulseAnim]);
 
   useEffect(() => {
     if (user.id) {
@@ -191,6 +193,17 @@ export default function HomeScreen() {
   };
 
   const greeting = getGreetingText();
+  const nameText = user.name || 'User';
+  const hour = new Date().getHours();
+  const greetingPrefix = hour < 12 ? 'Good Morning, ' : hour < 17 ? 'Good Afternoon, ' : 'Good Evening, ';
+  const greetingSuffix = hour < 12 ? ' 🌅' : hour < 17 ? ' ☀️' : ' 🌙';
+  const totalGreetingLength = greetingPrefix.length + nameText.length + greetingSuffix.length;
+  
+  const dynamicGreetingFontSize = totalGreetingLength > 20 
+    ? Math.max(22, 34 - (totalGreetingLength - 20) * 0.8)
+    : 34;
+
+  const dynamicLetterSpacing = totalGreetingLength > 24 ? -0.3 : -0.7;
 
   // Personal Fitness Score Calculation
   const dateStr = new Date().toLocaleDateString('en-CA');
@@ -349,11 +362,18 @@ export default function HomeScreen() {
           className="px-6 pt-6 gap-8"
         >
           {/* ==================== CLIENT MODE DASHBOARD ==================== */}
-          {role === 'customer' && (
+          {(role === 'customer' || role === 'admin') && (
             <>
               {/* Greeting */}
               <View className="gap-2 px-1">
-                <Text className="text-[34px] font-bold tracking-tight text-[#101828] leading-tight">
+                <Text 
+                  style={{ 
+                    fontSize: dynamicGreetingFontSize, 
+                    letterSpacing: dynamicLetterSpacing,
+                    lineHeight: dynamicGreetingFontSize * 1.15
+                  }}
+                  className="font-bold text-[#101828]"
+                >
                   {greeting.title}
                 </Text>
               </View>
@@ -396,13 +416,27 @@ export default function HomeScreen() {
                   {/* Recovery score and ring row */}
                   <View className="flex-row items-center gap-5 py-1">
                     {/* Ring Container */}
-                    <View className="w-[104px] h-[104px] bg-white rounded-full items-center justify-center shadow-xs">
+                    <View 
+                      style={{
+                        width: 104,
+                        height: 104,
+                        borderRadius: 52,
+                        backgroundColor: '#FFFFFF',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        shadowColor: '#101828',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.04,
+                        shadowRadius: 12,
+                        elevation: 2,
+                      }}
+                    >
                       <ProgressRing progress={recoveryVal / 100} size={92} strokeWidth={8} activeColor="#E11D48" inactiveColor="#FFE4E6">
-                        <View className="items-center justify-center">
-                          <Text className="text-[#101828] text-[30px] font-bold tracking-tighter">
+                        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ fontSize: 28, fontWeight: '700', color: '#101828', letterSpacing: -1, lineHeight: 32 }}>
                             {userRecovery !== null ? userRecovery : '--'}
                           </Text>
-                          <Text className="text-zinc-400 text-[11px] font-medium mt-0.5">/100</Text>
+                          <Text style={{ fontSize: 10, fontWeight: '600', color: '#9CA3AF', marginTop: -2 }}>/100</Text>
                         </View>
                       </ProgressRing>
                     </View>
@@ -426,10 +460,17 @@ export default function HomeScreen() {
 
                   {/* Schedule Session Button */}
                   <TouchableOpacity
-                    activeOpacity={0.9}
+                    activeOpacity={0.95}
                     onPress={() => router.push('/booking' as any)}
-                    className="w-full h-14 bg-[#E11D48] rounded-[22px] justify-between items-center px-5 flex-row shadow-lg shadow-rose-900/10"
-                    style={{ minHeight: 48 }}
+                    className="w-full h-14 bg-[#E11D48] rounded-[22px] justify-between items-center px-5 flex-row"
+                    style={{
+                      minHeight: 56,
+                      shadowColor: '#E11D48',
+                      shadowOffset: { width: 0, height: 8 },
+                      shadowOpacity: 0.2,
+                      shadowRadius: 16,
+                      elevation: 4,
+                    }}
                   >
                     <View className="flex-row items-center gap-2.5">
                       <Feather name="calendar" size={16} color="white" />
@@ -463,8 +504,15 @@ export default function HomeScreen() {
                     <TouchableOpacity
                       key={item.id}
                       activeOpacity={0.85}
-                      onPress={() => router.push({ pathname: '/booking', params: { workoutId: item.id } })}
-                      className="w-36 p-5 rounded-[28px] relative overflow-hidden gap-10"
+                      onPress={() => router.push({
+                        pathname: '/booking',
+                        params: {
+                          workoutId: item.id,
+                          workoutType: item.title,
+                          workoutName: item.title,
+                        },
+                      })}
+                      className="w-36 p-5 rounded-[28px] relative overflow-hidden justify-between"
                       style={{ minHeight: 160 }}
                     >
                       {/* SVG Background Gradient */}
@@ -480,9 +528,11 @@ export default function HomeScreen() {
                         </Svg>
                       </View>
 
-                      {/* Icon container */}
-                      <View className="w-11 h-11 rounded-full bg-white/20 items-center justify-center self-start">
-                        <Text className="text-lg">{item.emoji}</Text>
+                      <View>
+                        {/* Icon container */}
+                        <View className="w-11 h-11 rounded-full bg-white/20 items-center justify-center self-start">
+                          <Text className="text-lg">{item.emoji}</Text>
+                        </View>
                       </View>
 
                       {/* Text contents and chevron */}
@@ -505,7 +555,16 @@ export default function HomeScreen() {
                 <Text className="text-[#101828] text-[20px] font-semibold tracking-tight pl-1">Your Coach Today</Text>
                 
                 {activeBooking ? (
-                  <View className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] shadow-sm gap-5">
+                  <View 
+                    className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-5"
+                    style={{
+                      shadowColor: '#101828',
+                      shadowOffset: { width: 0, height: 6 },
+                      shadowOpacity: 0.04,
+                      shadowRadius: 12,
+                      elevation: 3,
+                    }}
+                  >
                     <View className="flex-row gap-4 items-center">
                       {/* Left: Avatar image with rating overlay */}
                       <View className="relative">
@@ -514,7 +573,16 @@ export default function HomeScreen() {
                           className="w-18 h-18 rounded-full border border-zinc-150" 
                         />
                         {/* Rating Overlay */}
-                        <View className="absolute -top-1.5 -left-1.5 bg-white border border-zinc-100 px-1.5 py-0.5 rounded-lg shadow-xs items-center justify-center flex-row">
+                        <View 
+                          className="absolute -top-1.5 -left-1.5 bg-white border border-zinc-100 px-1.5 py-0.5 rounded-lg items-center justify-center flex-row"
+                          style={{
+                            shadowColor: '#101828',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.03,
+                            shadowRadius: 4,
+                            elevation: 1,
+                          }}
+                        >
                           <Text className="text-[11px] font-bold text-zinc-800">⭐ 4.9</Text>
                         </View>
                       </View>
@@ -563,8 +631,8 @@ export default function HomeScreen() {
                       onPress={() => {
                         router.push({ pathname: '/session-detail', params: { id: activeBooking.id } });
                       }}
-                      className="w-full py-4 bg-rose-50 rounded-2xl items-center justify-center flex-row gap-2"
-                      style={{ minHeight: 48 }}
+                      className="w-full bg-rose-50 rounded-2xl items-center justify-center flex-row gap-2"
+                      style={{ minHeight: 52 }}
                     >
                       <Feather name="map-pin" size={14} color="#E11D48" />
                       <Text className="text-[#E11D48] text-[13px] font-bold uppercase tracking-wider">
@@ -573,7 +641,16 @@ export default function HomeScreen() {
                     </TouchableOpacity>
                   </View>
                 ) : (
-                  <View className="bg-white border border-[#E5E7EB] p-8 rounded-[32px] shadow-sm items-center justify-center gap-3">
+                  <View 
+                    className="bg-white border border-[#E5E7EB] p-8 rounded-[32px] items-center justify-center gap-3"
+                    style={{
+                      shadowColor: '#101828',
+                      shadowOffset: { width: 0, height: 6 },
+                      shadowOpacity: 0.04,
+                      shadowRadius: 12,
+                      elevation: 3,
+                    }}
+                  >
                     <Text className="text-3xl">🏋️</Text>
                     <Text className="text-[#101828] text-base font-semibold">No Active Coach Today</Text>
                     <Text className="text-zinc-500 text-sm text-center">Your assigned coach tracking details will activate here on the day of your session.</Text>
@@ -583,7 +660,7 @@ export default function HomeScreen() {
 
               {/* Today's Overview Section */}
               <View className="gap-4">
-                <Text className="text-[#101828] text-[20px] font-semibold tracking-tight pl-1">Today's Overview</Text>
+                <Text className="text-[#101828] text-[20px] font-semibold tracking-tight pl-1">Today&apos;s Overview</Text>
 
                 <View className="flex-row flex-wrap justify-between gap-y-4">
                   {/* Calories Widget */}
@@ -670,8 +747,8 @@ export default function HomeScreen() {
                   className="w-full bg-[#1F1135] rounded-[32px] p-6 shadow-md relative overflow-hidden border border-zinc-800"
                   style={{
                     shadowColor: '#8B5CF6',
-                    shadowOffset: { width: 0, height: 10 },
-                    shadowOpacity: 0.1,
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: 0.15,
                     shadowRadius: 20,
                     elevation: 4,
                   }}
@@ -721,8 +798,15 @@ export default function HomeScreen() {
                     <TouchableOpacity
                       activeOpacity={0.85}
                       onPress={() => router.push('/virla-ai' as any)}
-                      className="h-11 bg-[#E11D48] rounded-[18px] justify-between items-center px-5 flex-row self-start gap-3 shadow-md shadow-rose-900/10"
-                      style={{ minHeight: 44 }}
+                      className="h-11 bg-[#E11D48] rounded-[18px] justify-between items-center px-5 flex-row self-start gap-3"
+                      style={{
+                        minHeight: 44,
+                        shadowColor: '#E11D48',
+                        shadowOffset: { width: 0, height: 6 },
+                        shadowOpacity: 0.15,
+                        shadowRadius: 12,
+                        elevation: 3,
+                      }}
                     >
                       <Text className="text-white text-[11px] font-bold uppercase tracking-wider">
                         View AI Plan
@@ -743,7 +827,16 @@ export default function HomeScreen() {
                   const isTravelling = bookingData.timelineStatus === 'trainer_travelling';
 
                   return (
-                    <View className="bg-white border border-[#E5E7EB] p-6 rounded-[32px] shadow-sm gap-4">
+                    <View 
+                      className="bg-white border border-[#E5E7EB] p-6 rounded-[32px] gap-4"
+                      style={{
+                        shadowColor: '#101828',
+                        shadowOffset: { width: 0, height: 6 },
+                        shadowOpacity: 0.04,
+                        shadowRadius: 12,
+                        elevation: 3,
+                      }}
+                    >
                       {/* Top: Coach avatar, title, and badge */}
                       <View className="flex-row justify-between items-start">
                         <View className="flex-row items-center gap-3">
@@ -800,8 +893,16 @@ export default function HomeScreen() {
                           <TouchableOpacity
                             activeOpacity={0.8}
                             onPress={() => router.push({ pathname: '/session-detail', params: { id: bookingData.id } })}
-                            className="w-11 h-11 rounded-full bg-[#16C784] items-center justify-center shadow-md shadow-emerald-700/10"
-                            style={{ minWidth: 44, minHeight: 44 }}
+                            className="w-11 h-11 rounded-full bg-[#16C784] items-center justify-center"
+                            style={{
+                              minWidth: 44,
+                              minHeight: 44,
+                              shadowColor: '#16C784',
+                              shadowOffset: { width: 0, height: 6 },
+                              shadowOpacity: 0.25,
+                              shadowRadius: 12,
+                              elevation: 3,
+                            }}
                           >
                             <Feather name="navigation" size={16} color="white" />
                           </TouchableOpacity>
@@ -810,7 +911,16 @@ export default function HomeScreen() {
                     </View>
                   );
                 })() : (
-                  <View className="bg-white border border-[#E5E7EB] p-8 rounded-[32px] shadow-sm items-center justify-center gap-3">
+                  <View 
+                    className="bg-white border border-[#E5E7EB] p-8 rounded-[32px] items-center justify-center gap-3"
+                    style={{
+                      shadowColor: '#101828',
+                      shadowOffset: { width: 0, height: 6 },
+                      shadowOpacity: 0.04,
+                      shadowRadius: 12,
+                      elevation: 3,
+                    }}
+                  >
                     <Text className="text-3xl">🗓️</Text>
                     <Text className="text-[#101828] text-base font-semibold">No Upcoming Sessions Scheduled</Text>
                     <Text className="text-zinc-500 text-sm text-center">Schedule your next personal training session today.</Text>
@@ -834,7 +944,16 @@ export default function HomeScreen() {
                 </View>
 
                 {/* Dashboard Analytics Card (Sprint 7.1) */}
-                <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+                <View 
+                  className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4"
+                  style={{
+                    shadowColor: '#101828',
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.04,
+                    shadowRadius: 12,
+                    elevation: 3,
+                  }}
+                >
                   <Text className="text-zinc-950 text-xs font-semibold uppercase tracking-wider pl-1">Dashboard Analytics</Text>
 
                   <View className="flex-row flex-wrap justify-between gap-y-3.5">
@@ -885,10 +1004,20 @@ export default function HomeScreen() {
 
                 {/* Today's Sessions List (Sprint 7.1) */}
                 <View className="gap-3">
-                  <Text className="text-[#101828] text-xs font-semibold uppercase tracking-widest pl-1">Today's Visits</Text>
+                  <Text className="text-[#101828] text-xs font-semibold uppercase tracking-widest pl-1">Today&apos;s Visits</Text>
                   {bookings.filter(b => b.date.includes('Today') || b.date.includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' }))).length > 0 ? (
                     bookings.filter(b => b.date.includes('Today') || b.date.includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' }))).map((booking) => (
-                      <View key={booking.id} className="bg-white border border-[#E5E7EB] p-4 rounded-2xl flex-row justify-between items-center shadow-xs">
+                      <View 
+                        key={booking.id} 
+                        className="bg-white border border-[#E5E7EB] p-4 rounded-2xl flex-row justify-between items-center"
+                        style={{
+                          shadowColor: '#101828',
+                          shadowOffset: { width: 0, height: 3 },
+                          shadowOpacity: 0.03,
+                          shadowRadius: 6,
+                          elevation: 1,
+                        }}
+                      >
                         <View className="flex-row items-center gap-3">
                           <View className="w-8 h-8 rounded-xl bg-indigo-50 items-center justify-center">
                             <Feather name="clock" size={14} color="#4F46E5" />
@@ -922,7 +1051,16 @@ export default function HomeScreen() {
                     const timeline = job.timelineStatus || 'booked';
 
                     return (
-                      <View className="bg-zinc-950 p-5 rounded-[28px] border border-zinc-800 shadow-xl gap-4">
+                      <View 
+                        className="bg-zinc-950 p-5 rounded-[28px] border border-zinc-800 gap-4"
+                        style={{
+                          shadowColor: '#000000',
+                          shadowOffset: { width: 0, height: 12 },
+                          shadowOpacity: 0.3,
+                          shadowRadius: 24,
+                          elevation: 6,
+                        }}
+                      >
                         <View className="flex-row justify-between items-start">
                           <View className="gap-1 flex-1 pr-3">
                             <Text className="text-zinc-500 text-[8px] font-semibold uppercase">Active Workout ID: {job.id}</Text>
@@ -1015,7 +1153,16 @@ export default function HomeScreen() {
                       </View>
                     );
                   })() : (
-                    <View className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center justify-center py-8 shadow-xs">
+                    <View 
+                      className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center justify-center py-8"
+                      style={{
+                        shadowColor: '#101828',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.03,
+                        shadowRadius: 8,
+                        elevation: 2,
+                      }}
+                    >
                       <Feather name="coffee" size={20} color="#9CA3AF" />
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mt-2">No active current visits</Text>
                     </View>
@@ -1031,7 +1178,14 @@ export default function HomeScreen() {
                       <TouchableOpacity
                         activeOpacity={0.8}
                         onPress={() => router.push({ pathname: '/session-detail' as any, params: { id: nextJob.id } })}
-                        className="bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-xs flex-row justify-between items-center"
+                        className="bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] flex-row justify-between items-center"
+                        style={{
+                          shadowColor: '#101828',
+                          shadowOffset: { width: 0, height: 4 },
+                          shadowOpacity: 0.03,
+                          shadowRadius: 8,
+                          elevation: 2,
+                        }}
                       >
                         <View className="flex-1 pr-3 gap-0.5">
                           <Text className="text-zinc-900 text-xs font-semibold">{nextJob.workoutTitle}</Text>
@@ -1041,7 +1195,16 @@ export default function HomeScreen() {
                       </TouchableOpacity>
                     );
                   })() : (
-                    <View className="bg-white border border-[#E5E7EB] p-6 rounded-[24px] items-center justify-center shadow-xs">
+                    <View 
+                      className="bg-white border border-[#E5E7EB] p-6 rounded-[24px] items-center justify-center"
+                      style={{
+                        shadowColor: '#101828',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.03,
+                        shadowRadius: 8,
+                        elevation: 2,
+                      }}
+                    >
                       <Text className="text-zinc-400 text-[9px] font-bold uppercase">No upcoming next visits booked</Text>
                     </View>
                   )}
@@ -1053,7 +1216,14 @@ export default function HomeScreen() {
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => router.push('/trainer-availability' as any)}
-                className="bg-indigo-50 border border-indigo-150 p-5 rounded-[28px] shadow-xs flex-row justify-between items-center"
+                className="bg-indigo-50 border border-indigo-150 p-5 rounded-[28px] flex-row justify-between items-center"
+                style={{
+                  shadowColor: '#4F46E5',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 8,
+                  elevation: 2,
+                }}
               >
                 <View className="flex-row items-center gap-3">
                   <Feather name="calendar" size={16} color="#4F46E5" />
@@ -1066,7 +1236,16 @@ export default function HomeScreen() {
               </TouchableOpacity>
 
               {/* Pro Trainer Schedule Slot restoration rules (Feature 10 availability) */}
-              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-3">
+              <View 
+                className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-3"
+                style={{
+                  shadowColor: '#101828',
+                  shadowOffset: { width: 0, height: 6 },
+                  shadowOpacity: 0.04,
+                  shadowRadius: 12,
+                  elevation: 3,
+                }}
+              >
                 <Text className="text-[#101828] text-xs font-bold uppercase tracking-wider border-b border-zinc-100 pb-3">Restored Availability log</Text>
                 <Text className="text-zinc-500 text-[10px] font-medium leading-relaxed">
                   Upon completion of any mandatory post-session client report, your corresponding slot block will automatically restore and reactivate for new bookings.
@@ -1092,8 +1271,10 @@ export default function HomeScreen() {
 }
 
 function SafeAreaViewWrapper({ children }: { children: React.ReactNode }) {
-  if (Platform.OS === 'ios') {
-    return <View className="flex-1 bg-[#FCF5F5] pt-12">{children}</View>;
-  }
-  return <View className="flex-1 bg-[#FCF5F5]">{children}</View>;
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ flex: 1, backgroundColor: '#FCF5F5', paddingTop: insets.top }}>
+      {children}
+    </View>
+  );
 }

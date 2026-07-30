@@ -1,20 +1,47 @@
 import React, { useState } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useWalletStore } from '../store/walletStore';
 import { useBookingStore } from '../store/bookingStore';
+import { useMembershipStore } from '../store/membershipStore';
+import { Database } from '../database/Database';
 import { Ionicons, Feather } from '@expo/vector-icons';
-import Svg, { Rect, Path } from 'react-native-svg';
 
 export default function WalletScreen() {
   const router = useRouter();
-  const { creditBalance, lifetimePurchased, creditsUsed, ledger } = useWalletStore();
+  const insets = useSafeAreaInsets();
+  const { creditBalance, lifetimePurchased, creditsUsed, ledger, transferCredits, clearCreditsForTesting } = useWalletStore();
   const { bookings } = useBookingStore();
+  const { membership, toggleExpiryDate, isExpired } = useMembershipStore();
+
+  const [transferPhone, setTransferPhone] = useState('');
+  const [transferAmount, setTransferAmount] = useState('');
+
+  const handleTransfer = () => {
+    if (!transferPhone.trim()) {
+      Alert.alert('Validation Error', 'Please enter a recipient phone number.');
+      return;
+    }
+    const amt = parseInt(transferAmount, 10);
+    if (isNaN(amt) || amt <= 0) {
+      Alert.alert('Validation Error', 'Please enter a valid credit amount greater than 0.');
+      return;
+    }
+    const res = transferCredits(transferPhone.trim(), amt);
+    if (res.success) {
+      Alert.alert('Transfer Successful', `Successfully shared ${amt} ${amt === 1 ? 'credit' : 'credits'} with ${transferPhone}.`);
+      setTransferPhone('');
+      setTransferAmount('');
+    } else {
+      Alert.alert('Transfer Failed', res.error || 'Unable to complete transfer.');
+    }
+  };
 
   const upcomingCount = bookings.filter(b => b.status === 'upcoming').length;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
@@ -54,7 +81,12 @@ export default function WalletScreen() {
               </View>
               <View className="items-end">
                 <Text className="text-zinc-600 text-[7px] font-black uppercase">Expiry Date</Text>
-                <Text className="text-white text-xs font-black mt-0.5">Aug 15, 2026</Text>
+                <View className="flex-row items-center gap-1 mt-0.5">
+                  <Text className="text-white text-xs font-black">{membership.renewalDate}</Text>
+                  {isExpired() && (
+                    <Text className="text-red-500 text-[8px] font-black uppercase">[Expired]</Text>
+                  )}
+                </View>
               </View>
             </View>
           </View>
@@ -77,6 +109,117 @@ export default function WalletScreen() {
               <Text className="text-[#4F46E5] text-xs font-black">{upcomingCount} active</Text>
             </View>
           </View>
+
+          {/* Transfer Credits Card */}
+          <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+            <View className="flex-row items-center gap-2 border-b border-zinc-50 pb-3">
+              <Feather name="send" size={16} color="#101828" />
+              <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Transfer Credits</Text>
+            </View>
+            
+            <Text className="text-zinc-500 text-[10px] font-semibold leading-relaxed">
+              Instantly share booking credits with your family or friends. Expired or insufficient credits cannot be transferred.
+            </Text>
+
+            <View className="gap-3.5">
+              <View>
+                <Text className="text-zinc-400 text-[8px] font-black uppercase mb-1">Recipient Phone Number</Text>
+                <TextInput
+                  placeholder="e.g. +91 99999 99999"
+                  placeholderTextColor="#9CA3AF"
+                  value={transferPhone}
+                  onChangeText={setTransferPhone}
+                  keyboardType="phone-pad"
+                  className="bg-zinc-50 border border-zinc-200/80 px-4 py-3 rounded-xl text-zinc-900 text-xs font-bold"
+                />
+              </View>
+
+              <View>
+                <Text className="text-zinc-400 text-[8px] font-black uppercase mb-1">Credits Amount</Text>
+                <TextInput
+                  placeholder="Quantity (e.g. 5)"
+                  placeholderTextColor="#9CA3AF"
+                  value={transferAmount}
+                  onChangeText={setTransferAmount}
+                  keyboardType="numeric"
+                  className="bg-zinc-50 border border-zinc-200/80 px-4 py-3 rounded-xl text-zinc-900 text-xs font-bold"
+                />
+              </View>
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={handleTransfer}
+                className="w-full bg-[#E11D48] py-3.5 rounded-xl items-center justify-center mt-1"
+              >
+                <Text className="text-white text-xs font-black uppercase">Confirm Transfer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* QA Development Controls */}
+          {typeof __DEV__ !== 'undefined' && __DEV__ && (
+            <View className="bg-red-50/50 border border-red-100 p-5 rounded-[28px] gap-4">
+              <View className="flex-row items-center gap-2 border-b border-red-100 pb-3">
+                <Feather name="tool" size={16} color="#B91C1C" />
+                <Text className="text-red-800 text-xs font-black uppercase tracking-wider">QA Testing Panel</Text>
+              </View>
+
+              <Text className="text-red-700 text-[9px] font-semibold leading-relaxed">
+                Use these tools to verify edge-case behaviors (such as memberships expiring or running out of credits) instantly.
+              </Text>
+
+              <View className="gap-2.5">
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    toggleExpiryDate();
+                    Alert.alert('Status Updated', `Membership expiry date toggled to: ${useMembershipStore.getState().membership.renewalDate}`);
+                  }}
+                  className="bg-white border border-red-200 py-3 rounded-xl items-center justify-center flex-row gap-2"
+                >
+                  <Feather name="clock" size={12} color="#B91C1C" />
+                  <Text className="text-red-800 text-[10px] font-black uppercase">
+                    {isExpired() ? 'Set Valid (Aug 15)' : 'Set Expired (Jul 15)'}
+                  </Text>
+                </TouchableOpacity>
+
+                <View className="flex-row gap-2">
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      clearCreditsForTesting();
+                      Alert.alert('Balance Cleared', 'Your active credit balance is now 0.');
+                    }}
+                    className="flex-1 bg-white border border-red-200 py-3 rounded-xl items-center justify-center flex-row gap-2"
+                  >
+                    <Feather name="trash-2" size={12} color="#B91C1C" />
+                    <Text className="text-red-800 text-[10px] font-black uppercase">Clear Credits</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      const userId = Database.getCurrentUserId();
+                      if (userId) {
+                        const profile = Database.getProfile(userId);
+                        if (profile) {
+                          profile.creditsBalance = 50;
+                          Database.updateProfile(userId, { creditsBalance: 50 });
+                          useWalletStore.getState().syncFromDB();
+                          useMembershipStore.getState().syncFromDB();
+                        }
+                      }
+                      Alert.alert('Balance Reset', 'Your credit balance has been reset to 50.');
+                    }}
+                    className="flex-1 bg-white border border-red-200 py-3 rounded-xl items-center justify-center flex-row gap-2"
+                  >
+                    <Feather name="refresh-cw" size={12} color="#B91C1C" />
+                    <Text className="text-red-800 text-[10px] font-black uppercase">Reset to 50</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
 
           {/* Credit ledger ledger logs transaction list (Feature 4) */}
           <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
@@ -121,6 +264,6 @@ export default function WalletScreen() {
 
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

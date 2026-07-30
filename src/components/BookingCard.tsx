@@ -129,7 +129,8 @@ export function BookingCard({ booking }: BookingCardProps) {
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => Alert.alert('Navigate', 'Opening Google Maps routing direction to Worli, Mumbai.')}
-                className="flex-1 bg-zinc-50 border border-zinc-200/60 py-3 rounded-xl items-center justify-center flex-row gap-1.5"
+                className="flex-1 bg-zinc-50 border py-3 rounded-xl items-center justify-center flex-row gap-1.5"
+                style={{ borderColor: 'rgba(228, 228, 231, 0.6)' }}
               >
                 <Feather name="navigation" size={12} color="#101828" />
                 <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Navigate</Text>
@@ -158,14 +159,19 @@ export function BookingCard({ booking }: BookingCardProps) {
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={handleReschedule}
-                  className="flex-1 bg-zinc-50 border border-zinc-200/60 py-3 rounded-xl items-center justify-center"
+                  className="flex-1 bg-zinc-50 border py-3 rounded-xl items-center justify-center"
+                  style={{ borderColor: 'rgba(228, 228, 231, 0.6)' }}
                 >
                   <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Reschedule</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={handleCancel}
-                  className="flex-1 bg-red-50/50 border border-red-100/50 py-3 rounded-xl items-center justify-center"
+                  className="flex-1 border py-3 rounded-xl items-center justify-center"
+                  style={{
+                    backgroundColor: 'rgba(254, 242, 242, 0.5)',
+                    borderColor: 'rgba(254, 226, 226, 0.5)',
+                  }}
                 >
                   <Text className="text-[#FF4D4F] text-xs font-black uppercase tracking-wider">Cancel</Text>
                 </TouchableOpacity>

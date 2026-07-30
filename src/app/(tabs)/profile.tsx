@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, Switch, Image, Alert, TouchableOpacity, TextInput, Animated, Platform } from 'react-native';
+import { View, Text, ScrollView, Switch, Image, Alert, TouchableOpacity, TextInput, Animated, Platform, KeyboardAvoidingView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUserStore } from '../../store/userStore';
 import { useMembershipStore } from '../../store/membershipStore';
 import { useCoachStore } from '../../store/coachStore';
@@ -206,11 +207,15 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaViewWrapper>
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
-        contentContainerStyle={{ paddingBottom: 140 }}
-        className="bg-[#F7F8FC] flex-1"
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1"
       >
+        <ScrollView 
+          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={{ paddingBottom: 140 }}
+          className="bg-[#F7F8FC] flex-1"
+        >
         <View className="px-6 pt-6 gap-6">
 
           {/* Dual Role Switcher at the top - ONLY for approved trainers */}
@@ -244,7 +249,7 @@ export default function ProfileScreen() {
           {/* =============================================================== */}
           {/* ======================= CLIENT PROFILE ======================== */}
           {/* =============================================================== */}
-          {role === 'customer' && (
+          {(role === 'customer' || role === 'admin') && (
             <>
               {/* Client Profile Header */}
               <View className="items-center mb-4">
@@ -697,14 +702,17 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
         </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaViewWrapper>
   );
 }
 
 function SafeAreaViewWrapper({ children }: { children: React.ReactNode }) {
-  if (Platform.OS === 'ios') {
-    return <View className="flex-1 bg-[#F7F8FC] pt-12">{children}</View>;
-  }
-  return <View className="flex-1 bg-[#F7F8FC]">{children}</View>;
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
+      {children}
+    </View>
+  );
 }

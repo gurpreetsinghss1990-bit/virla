@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, SafeAreaView, TouchableOpacity, Animated } from 'react-native';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import Svg, { Circle, Path, Rect, Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { useUserStore } from '../store/userStore';
 import { PageIndicator } from '../presentation/components/PageIndicator';
 
 export default function OnboardingScreen() {
-  const router = useRouter();
   const { setCompletedOnboarding } = useUserStore();
 
   const [currentSlide, setCurrentSlide] = useState(0);

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Animated, TouchableWithoutFeedback, View, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 
 interface LuxuryCardProps {
@@ -16,7 +16,7 @@ export function LuxuryCard({
   style,
   interactive = true,
 }: LuxuryCardProps) {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [scaleAnim] = useState(() => new Animated.Value(1));
   const isClickable = !!onPress;
 
   const handlePressIn = () => {

@@ -135,6 +135,12 @@ export interface SavedAddress {
   pinCode: string;
   gpsPlaceholder?: string;
   isDefault: boolean;
+  
+  lat?: number;
+  lng?: number;
+  apartment?: string;
+  floor?: string;
+  notes?: string;
 }
 
 export interface DBUser {
@@ -357,7 +363,17 @@ export function mapBooking(row: any): Booking {
     price: row.price,
     address: row.address || '',
     clientId: row.client_id || '',
-    trainerId: row.trainer_id || ''
+    trainerId: row.trainer_id || '',
+    trainerLevel: row.trainer_level,
+    trainerRating: Number(row.trainer_rating) || 5.0,
+    trainerCompletedSessions: row.trainer_completed_sessions,
+    trainerSpeciality: row.trainer_speciality,
+    trainerLanguages: row.trainer_languages || [],
+    trainerDistance: row.trainer_distance,
+    trainerArrivalTime: row.trainer_arrival_time,
+    caloriesBurned: row.calories_burned,
+    durationMinutes: row.duration_minutes,
+    ratingDetails: row.rating_details ? JSON.parse(row.rating_details) : undefined,
   };
 }
 
@@ -377,13 +393,24 @@ export function mapBookingToPostgres(b: Booking): any {
     price: b.price || 0,
     address: b.address || '',
     client_id: b.clientId || null,
-    trainer_id: b.trainerId || null
+    trainer_id: b.trainerId || null,
+    trainer_level: b.trainerLevel,
+    trainer_rating: b.trainerRating,
+    trainer_completed_sessions: b.trainerCompletedSessions,
+    trainer_speciality: b.trainerSpeciality,
+    trainer_languages: b.trainerLanguages,
+    trainer_distance: b.trainerDistance,
+    trainer_arrival_time: b.trainerArrivalTime,
+    calories_burned: b.caloriesBurned,
+    duration_minutes: b.durationMinutes,
+    rating_details: b.ratingDetails ? JSON.stringify(b.ratingDetails) : null,
   };
 }
 
 export function mapInvoice(row: any): Invoice {
   return {
     id: row.id,
+    userId: row.user_id,
     type: row.type || 'paid',
     amount: row.amount || '',
     date: row.date || '',
@@ -501,7 +528,12 @@ export function mapSavedAddress(row: any): SavedAddress {
     city: row.city,
     pinCode: row.pin_code,
     gpsPlaceholder: row.gps_placeholder || '',
-    isDefault: row.is_default
+    isDefault: row.is_default,
+    lat: row.lat || 0,
+    lng: row.lng || 0,
+    apartment: row.apartment || '',
+    floor: row.floor || '',
+    notes: row.notes || ''
   };
 }
 
@@ -517,7 +549,12 @@ export function mapSavedAddressToPostgres(addr: SavedAddress): any {
     city: addr.city,
     pin_code: addr.pinCode,
     gps_placeholder: addr.gpsPlaceholder,
-    is_default: addr.isDefault
+    is_default: addr.isDefault,
+    lat: addr.lat || 0,
+    lng: addr.lng || 0,
+    apartment: addr.apartment || '',
+    floor: addr.floor || '',
+    notes: addr.notes || ''
   };
 }
 
@@ -1244,7 +1281,14 @@ class DatabaseClient {
 
   // Profile Operations
   getProfile(userId: string): UserProfile | null {
-    return this.schema.profiles.find(p => p.userId === userId) || null;
+    const profile = this.schema.profiles.find(p => p.userId === userId) || null;
+    if (profile && typeof __DEV__ !== 'undefined' && __DEV__) {
+      const user = this.schema.users.find(u => u.id === userId);
+      if (user && user.role === 'admin' && profile.creditsBalance === 0) {
+        profile.creditsBalance = 50;
+      }
+    }
+    return profile;
   }
 
   updateUser(userId: string, fields: Partial<DBUser>): void {
@@ -1502,7 +1546,7 @@ class DatabaseClient {
     const manualKcal = logs.reduce((sum, curr) => sum + curr.amount, 0);
 
     const sessionsKcal = this.schema.bookings
-      .filter(b => b.status === 'completed' && b.date === date)
+      .filter(b => b.status === 'completed' && b.clientId === userId && b.date === date)
       .reduce((sum, curr) => sum + (curr.caloriesBurned || 300), 0);
 
     return manualKcal + sessionsKcal;
@@ -1575,7 +1619,7 @@ class DatabaseClient {
 
   // Invoices & Purchases
   getLedgerTransactions(userId: string): Invoice[] {
-    return this.schema.credit_transactions;
+    return this.schema.credit_transactions.filter(t => t.userId === userId);
   }
 
   addLedgerTransaction(userId: string, tx: Invoice): void {
@@ -1741,7 +1785,7 @@ class DatabaseClient {
 
   // Address Management
   getAddresses(userId: string): SavedAddress[] {
-    return this.schema.addresses;
+    return this.schema.addresses.filter(a => a.userId === userId);
   }
 
   addAddress(userId: string, addr: Omit<SavedAddress, 'id' | 'userId'>): SavedAddress {

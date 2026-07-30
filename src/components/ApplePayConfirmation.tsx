@@ -11,7 +11,7 @@ interface ApplePayConfirmationProps {
 export function ApplePayConfirmation({ onConfirm, priceText = '₹1,200', creditsText = '1 Credit' }: ApplePayConfirmationProps) {
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [scaleAnim] = useState(() => new Animated.Value(1));
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {

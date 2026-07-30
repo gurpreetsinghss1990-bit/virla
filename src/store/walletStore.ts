@@ -33,11 +33,13 @@ interface WalletState {
   
   // Actions
   purchasePlan: (planName: string, credits: number, priceText: string, totalText: string, gstText: string) => void;
-  useCredit: (reason: string) => boolean;
+  spendCredit: (reason: string) => boolean;
   refundCredit: (reason: string) => void;
   deductCreditLateCancel: (reason: string) => void;
   addBonusCredit: (reason: string) => void;
   syncFromDB: () => void;
+  transferCredits: (toPhone: string, amount: number) => { success: boolean; error?: string };
+  clearCreditsForTesting: () => void;
 }
 
 export const useWalletStore = create<WalletState>((set, get) => ({
@@ -60,7 +62,10 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     }
   },
 
-  useCredit: (reason) => {
+  spendCredit: (reason) => {
+    if (useMembershipStore.getState().isExpired()) {
+      return false;
+    }
     const userId = Database.getCurrentUserId();
     if (userId) {
       const profile = Database.getProfile(userId);
@@ -137,7 +142,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       }
     }
   },
-
   syncFromDB: () => {
     const userId = Database.getCurrentUserId();
     if (userId) {
@@ -177,6 +181,51 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         lifetimePurchased: 0,
         creditsUsed: 0
       });
+    }
+  },
+  transferCredits: (toPhone: string, amount: number) => {
+    if (useMembershipStore.getState().isExpired()) {
+      return { success: false, error: 'Cannot transfer credits: your membership has expired.' };
+    }
+    const currentBalance = get().creditBalance;
+    if (amount <= 0) {
+      return { success: false, error: 'Transfer amount must be greater than 0.' };
+    }
+    if (currentBalance < amount) {
+      return { success: false, error: 'Insufficient credits available for transfer.' };
+    }
+    const userId = Database.getCurrentUserId();
+    if (userId) {
+      const profile = Database.getProfile(userId);
+      if (profile) {
+        profile.creditsBalance -= amount;
+        Database.updateProfile(userId, { creditsBalance: profile.creditsBalance });
+        
+        Database.addLedgerTransaction(userId, {
+          id: Database.generateUUID('tx'),
+          type: 'penalty' as any,
+          title: `Transferred ${amount} credits to ${toPhone}`,
+          change: -amount,
+          date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+        } as any);
+
+        get().syncFromDB();
+        useMembershipStore.getState().syncFromDB();
+        return { success: true };
+      }
+    }
+    return { success: false, error: 'An unexpected error occurred during transfer.' };
+  },
+  clearCreditsForTesting: () => {
+    const userId = Database.getCurrentUserId();
+    if (userId) {
+      const profile = Database.getProfile(userId);
+      if (profile) {
+        profile.creditsBalance = 0;
+        Database.updateProfile(userId, { creditsBalance: 0 });
+        get().syncFromDB();
+        useMembershipStore.getState().syncFromDB();
+      }
     }
   }
 }));

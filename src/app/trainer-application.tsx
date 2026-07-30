@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Switch, StyleSheet, Platform } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Switch, StyleSheet, Platform, KeyboardAvoidingView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Database, TrainerApplication } from '../database/Database';
 import { LuxuryCard } from '../components/LuxuryCard';
@@ -414,7 +415,7 @@ export default function TrainerApplicationScreen() {
                 Thank you for your interest in becoming a VIRLA Partner Coach.
               </Text>
               <Text className="text-zinc-600 text-xs leading-relaxed">
-                VIRLA is India's premium home fitness platform connecting verified fitness professionals with customers seeking high-quality in-home wellness services. We believe in professionalism, transparency, fair earnings, and long-term career growth.
+                VIRLA is India&apos;s premium home fitness platform connecting verified fitness professionals with customers seeking high-quality in-home wellness services. We believe in professionalism, transparency, fair earnings, and long-term career growth.
               </Text>
 
               <LuxuryCard className="p-5 gap-3.5" interactive={false}>
@@ -557,7 +558,7 @@ export default function TrainerApplicationScreen() {
                   Physical Contact Policy
                 </Text>
                 <Text className="text-zinc-500 text-[11px] leading-relaxed">
-                  Trainers must maintain professional boundaries at all times. Avoid unnecessary physical contact. Physical assistance should only be provided for technique correction or safety with the customer's explicit consent.
+                  Trainers must maintain professional boundaries at all times. Avoid unnecessary physical contact. Physical assistance should only be provided for technique correction or safety with the customer&apos;s explicit consent.
                 </Text>
                 <Text className="text-rose-600 text-[9.5px] font-black uppercase">
                   ⚠️ Any inappropriate behaviour will result in permanent removal from the platform.
@@ -734,7 +735,11 @@ export default function TrainerApplicationScreen() {
         <View className="w-10" />
       </View>
 
-      <ScrollView 
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+        className="flex-1"
+      >
+        <ScrollView 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 140 }}
         className="flex-1 bg-[#F7F8FC]"
@@ -777,7 +782,7 @@ export default function TrainerApplicationScreen() {
             </View>
 
             <Text className="text-zinc-400 text-[10px] text-center font-medium leading-relaxed mt-2">
-              We'll notify you through the VIRLA app once your application has been reviewed.
+              We&apos;ll notify you through the VIRLA app once your application has been reviewed.
             </Text>
 
             <TouchableOpacity
@@ -1150,22 +1155,17 @@ export default function TrainerApplicationScreen() {
             </View>
           </>
         )}
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaViewWrapper>
   );
 }
 
 function SafeAreaViewWrapper({ children }: { children: React.ReactNode }) {
-  if (Platform.OS === 'ios') {
-    return <View style={styles.container}>{children}</View>;
-  }
-  return <View className="flex-1 bg-[#F7F8FC]">{children}</View>;
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
+      {children}
+    </View>
+  );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F7F8FC',
-    paddingTop: 48
-  }
-});

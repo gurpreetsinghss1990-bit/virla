@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useWorkoutStore } from '../store/workoutStore';
 import { WorkoutDetailCard } from '../components/WorkoutDetailCard';
@@ -8,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function WorkoutDetailScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const workoutId = params.id as string;
   
@@ -26,7 +28,11 @@ export default function WorkoutDetailScreen() {
   const handleStartBooking = () => {
     router.push({
       pathname: '/booking',
-      params: { workoutId: workout.id },
+      params: {
+        workoutId: workout.id,
+        workoutType: workout.category,
+        workoutName: workout.title,
+      },
     });
   };
 
@@ -35,9 +41,9 @@ export default function WorkoutDetailScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <View className="flex-1 bg-white">
       {/* Floating Header back button */}
-      <View className="absolute top-12 left-6 z-10">
+      <View style={{ top: insets.top + 12 }} className="absolute left-6 z-10">
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => router.back()}
@@ -51,7 +57,7 @@ export default function WorkoutDetailScreen() {
       <WorkoutDetailCard workout={workout} />
 
       {/* Fixed Booking Footer */}
-      <View className="p-6 bg-white border-t border-zinc-100">
+      <View style={{ paddingBottom: Math.max(insets.bottom, 24), paddingTop: 16, paddingHorizontal: 24 }} className="bg-white border-t border-zinc-100">
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={handleStartBooking}
@@ -62,6 +68,6 @@ export default function WorkoutDetailScreen() {
           </Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }

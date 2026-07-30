@@ -1,11 +1,13 @@
 import React from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useWalletStore } from '../store/walletStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 
 export default function PaymentHistoryScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { payments } = useWalletStore();
 
   const handleInvoiceClick = (id: string) => {
@@ -16,7 +18,7 @@ export default function PaymentHistoryScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
@@ -109,6 +111,6 @@ export default function PaymentHistoryScreen() {
 
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

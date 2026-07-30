@@ -19,8 +19,8 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ type, onAction, actionText, message }: EmptyStateProps) {
-  const scaleAnim = React.useRef(new Animated.Value(0.95)).current;
-  const opacityAnim = React.useRef(new Animated.Value(0)).current;
+  const [scaleAnim] = React.useState(() => new Animated.Value(0.95));
+  const [opacityAnim] = React.useState(() => new Animated.Value(0));
 
   React.useEffect(() => {
     Animated.parallel([
@@ -36,7 +36,7 @@ export function EmptyState({ type, onAction, actionText, message }: EmptyStatePr
         useNativeDriver: true,
       }),
     ]).start();
-  }, [type]);
+  }, [type, scaleAnim, opacityAnim]);
 
   const getContent = () => {
     switch (type) {
@@ -183,8 +183,13 @@ export function EmptyState({ type, onAction, actionText, message }: EmptyStatePr
       style={{
         opacity: opacityAnim,
         transform: [{ scale: scaleAnim }],
+        shadowColor: '#101828',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
       }}
-      className="bg-white border border-[#E5E7EB] p-8 rounded-[32px] items-center justify-center shadow-sm"
+      className="bg-white border border-[#E5E7EB] p-8 rounded-[32px] items-center justify-center"
     >
       <View className="mb-4">{content.icon}</View>
       <Text className="text-[#111827] text-lg font-black tracking-tight text-center">{content.title}</Text>
@@ -195,7 +200,14 @@ export function EmptyState({ type, onAction, actionText, message }: EmptyStatePr
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={onAction}
-          className="mt-6 bg-[#111827] px-6 py-3.5 rounded-2xl shadow-xs"
+          className="mt-6 bg-[#111827] px-6 py-3.5 rounded-2xl"
+          style={{
+            shadowColor: '#111827',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 2,
+            elevation: 1,
+          }}
         >
           <Text className="text-white text-xs font-extrabold tracking-wide uppercase">
             {actionText || content.defaultActionText}

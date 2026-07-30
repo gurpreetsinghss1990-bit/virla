@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Animated, TouchableOpacity, Text, ActivityIndicator, View } from 'react-native';
 
 interface SecondaryButtonProps {
@@ -18,7 +18,7 @@ export function SecondaryButton({
   disabled = false,
   icon,
 }: SecondaryButtonProps) {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [scaleAnim] = useState(() => new Animated.Value(1));
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {

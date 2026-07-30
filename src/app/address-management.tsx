@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert, Switch, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Switch, KeyboardAvoidingView, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore, SavedAddress } from '../store/userProfileStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 
 export default function AddressManagementScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { addresses, addAddress, updateAddress, deleteAddress, setDefaultAddress } = useUserProfileStore();
 
   const [showForm, setShowForm] = useState(false);
@@ -95,7 +97,7 @@ export default function AddressManagementScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
@@ -111,8 +113,8 @@ export default function AddressManagementScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-        <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 60 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} className="p-6" contentContainerStyle={{ paddingBottom: 60 }}>
           <View className="gap-6">
             
             <View>
@@ -292,6 +294,6 @@ export default function AddressManagementScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }

@@ -143,6 +143,7 @@ export interface NotificationItem {
 // Sprint 6 additions for Ledgers
 export interface Invoice {
   id: string;
+  userId?: string;
   type: string;
   amount: string;
   date: string;

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, Image, ScrollView, TextInput, Alert, Animated, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Image, ScrollView, TextInput, Alert, Animated, Platform, KeyboardAvoidingView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
 import { useNotificationStore } from '../store/notificationStore';
@@ -11,6 +12,7 @@ import { SkeletonLoader } from '../components/SkeletonLoader';
 
 export default function SessionDetailScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const bookingId = params.id as string;
 
@@ -32,7 +34,7 @@ export default function SessionDetailScreen() {
 
   // Fallback status alignment for 11-stage timeline
   const currentStatus = booking?.timelineStatus || 'booked';
-  const isPendingDetails = role === 'customer' && 
+  const isPendingDetails = (role === 'customer' || role === 'admin') && 
     (currentStatus === 'booked' || currentStatus === 'trainer_assigned' || currentStatus === 'trainer_accepted');
 
   // Trainer active states
@@ -57,8 +59,8 @@ export default function SessionDetailScreen() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   // Animations
-  const carAnim = useRef(new Animated.Value(0)).current;
-  const pulseScale = useRef(new Animated.Value(1)).current;
+  const [carAnim] = useState(() => new Animated.Value(0));
+  const [pulseScale] = useState(() => new Animated.Value(1));
 
   const stagesList = [
     'booked',
@@ -96,7 +98,7 @@ export default function SessionDetailScreen() {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [currentStatus]);
+  }, [currentStatus, carAnim, pulseScale]);
 
   if (loading) {
     return <SkeletonLoader layout="session-detail" />;
@@ -104,12 +106,12 @@ export default function SessionDetailScreen() {
 
   if (!booking) {
     return (
-      <SafeAreaView className="flex-1 bg-white justify-center items-center">
+      <View style={{ flex: 1, backgroundColor: 'white', paddingTop: insets.top }} className="justify-center items-center">
         <Text className="text-zinc-400 font-semibold">No booking details found.</Text>
         <TouchableOpacity onPress={() => router.back()} className="mt-4 bg-zinc-900 px-6 py-2 rounded-full">
           <Text className="text-white font-bold text-xs">Go Back</Text>
         </TouchableOpacity>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -248,7 +250,7 @@ export default function SessionDetailScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
@@ -320,8 +322,35 @@ export default function SessionDetailScreen() {
         </ScrollView>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 120 }}>
-        <View className="gap-6">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1"
+      >
+        <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 120 }}>
+          <View className="gap-6">
+            {/* Premium Success Confirmation Banner */}
+            {currentStatus === 'booked' && (
+              <View 
+              className="bg-emerald-50 border border-emerald-100 p-5 rounded-[28px] gap-3"
+              style={{
+                shadowColor: '#10B981',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.04,
+                shadowRadius: 10,
+                elevation: 2,
+              }}
+            >
+              <View className="flex-row items-center gap-2">
+                <View className="w-5 h-5 rounded-full bg-emerald-500 items-center justify-center">
+                  <Feather name="check" size={10} color="white" />
+                </View>
+                <Text className="text-emerald-800 text-xs font-black uppercase tracking-wider">🎉 YOUR SESSION IS CONFIRMED</Text>
+              </View>
+              <Text className="text-emerald-700 text-[10px] font-bold leading-relaxed">
+                We&apos;ll match you with the best available VIRLA Wellness Coach. The trainer&apos;s profile will be shared approximately 5 hours before your session.
+              </Text>
+            </View>
+          )}
 
           {/* Trainer Status Card (Feature 3) */}
           <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm flex-row gap-4 items-center">
@@ -339,10 +368,17 @@ export default function SessionDetailScreen() {
               <Text className="text-zinc-400 text-[8px] font-bold mt-0.5">
                 {isPendingDetails ? '🚗 Details released 5 hours prior to session' : '🚗 Vehicle: White Activa 5G (MH02EA4920)'}
               </Text>
-              <View className="flex-row items-center gap-1.5 mt-1.5">
-                <View className="bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
-                  <Text className="text-[#4F46E5] text-[7px] font-black uppercase tracking-wider">{getLiveStatusText()}</Text>
-                </View>
+              <View className="flex-row items-center gap-1.5 mt-1.5 flex-wrap">
+                {currentStatus === 'booked' ? (
+                  <View className="bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-full flex-row items-center gap-1">
+                    <View className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <Text className="text-emerald-800 text-[8px] font-black uppercase tracking-wider">🟢 BOOKING CONFIRMED</Text>
+                  </View>
+                ) : (
+                  <View className="bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+                    <Text className="text-[#4F46E5] text-[7px] font-black uppercase tracking-wider">{getLiveStatusText()}</Text>
+                  </View>
+                )}
                 {currentStatus === 'trainer_travelling' && (
                   <Text className="text-zinc-500 text-[9px] font-bold">📍 2 km away (ETA: 12m)</Text>
                 )}
@@ -382,7 +418,7 @@ export default function SessionDetailScreen() {
           </View>
 
           {/* OTP Entry Code display */}
-          {currentStatus === 'trainer_arrived' && role === 'customer' && (
+          {currentStatus === 'trainer_arrived' && (role === 'customer' || role === 'admin') && (
             <View className="bg-zinc-950 p-6 rounded-[28px] border border-zinc-800 shadow-xl items-center justify-center gap-2">
               <Text className="text-zinc-500 text-[8px] font-black uppercase">Coach Waiting For OTP</Text>
               <Text className="text-white text-3xl font-black mt-1 tracking-widest">{booking.otp}</Text>
@@ -472,7 +508,7 @@ export default function SessionDetailScreen() {
           )}
 
           {/* Ratings review submission panel */}
-          {currentStatus === 'customer_review_pending' && role === 'customer' && (
+          {currentStatus === 'customer_review_pending' && (role === 'customer' || role === 'admin') && (
             <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
               <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1 border-b border-zinc-100 pb-3">Rate session experience</Text>
               
@@ -539,6 +575,7 @@ export default function SessionDetailScreen() {
 
         </View>
       </ScrollView>
-    </SafeAreaView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }

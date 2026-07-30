@@ -24,3 +24,4 @@ export * from './EmptyState';
 export * from './ApplePayConfirmation';
 export * from './SkeletonLoader';
 export * from './LuxuryCard';
+export * from './BookingSuccessAnimation';

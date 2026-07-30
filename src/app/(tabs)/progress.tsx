@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Animated, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Animated, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProgressRing } from '../../components/ProgressRing';
 import { EmptyState } from '../../components/EmptyState';
 import { LuxuryCard } from '../../components/LuxuryCard';
@@ -425,8 +426,10 @@ export default function ProgressScreen() {
 }
 
 function SafeAreaViewWrapper({ children }: { children: React.ReactNode }) {
-  if (Platform.OS === 'ios') {
-    return <View className="flex-1 bg-[#F7F8FC] pt-12">{children}</View>;
-  }
-  return <View className="flex-1 bg-[#F7F8FC]">{children}</View>;
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
+      {children}
+    </View>
+  );
 }

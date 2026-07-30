@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useCoachStore } from '../store/coachStore';
 import { ProgressRing } from '../components/ProgressRing';
@@ -7,6 +8,7 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 
 export default function TrainerAvailabilityScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { 
     weeklySchedule, 
     remainingSlotChanges, 
@@ -102,7 +104,7 @@ export default function TrainerAvailabilityScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
@@ -336,6 +338,6 @@ export default function TrainerAvailabilityScreen() {
 
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

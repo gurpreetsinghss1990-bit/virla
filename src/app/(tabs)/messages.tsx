@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LuxuryCard } from '../../components/LuxuryCard';
 
@@ -77,6 +78,7 @@ export default function MessagesScreen() {
             <TouchableOpacity
               key={chat.id}
               activeOpacity={0.7}
+              onPress={() => router.push({ pathname: '/communication' as any, params: { id: chat.id, name: chat.name } })}
               className={`flex-row items-center p-5 ${
                 idx > 0 ? 'border-t border-zinc-150' : ''
               }`}
@@ -118,8 +120,10 @@ export default function MessagesScreen() {
 }
 
 function SafeAreaViewWrapper({ children }: { children: React.ReactNode }) {
-  if (Platform.OS === 'ios') {
-    return <View className="flex-1 bg-[#F7F8FC] pt-12">{children}</View>;
-  }
-  return <View className="flex-1 bg-[#F7F8FC]">{children}</View>;
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
+      {children}
+    </View>
+  );
 }

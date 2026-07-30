@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 interface ProgressRingProps {
@@ -27,7 +27,12 @@ export function ProgressRing({
 
   return (
     <View style={{ width: size, height: size }} className="justify-center items-center relative">
-      <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }} className="absolute">
+      <Svg 
+        width={size} 
+        height={size} 
+        style={{ transform: [{ rotate: '-90deg' }], overflow: 'visible' }} 
+        className="absolute"
+      >
         <Defs>
           {/* Luxury circular progress gradient (Blue -> Purple -> Gold) */}
           <LinearGradient id="ringProgressGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -59,7 +64,11 @@ export function ProgressRing({
           fill="none"
         />
       </Svg>
-      {children}
+      {children && (
+        <View style={StyleSheet.absoluteFill} className="items-center justify-center">
+          {children}
+        </View>
+      )}
     </View>
   );
 }

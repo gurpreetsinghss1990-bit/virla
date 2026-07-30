@@ -1,8 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, Animated, Dimensions, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useNotificationStore } from '../store/notificationStore';
 
 import { useUserStore } from '../store/userStore';
 
@@ -13,7 +12,6 @@ const TAB_BAR_WIDTH = windowWidth - CONTAINER_MARGIN - CONTAINER_PADDING;
 
 export function BottomNavigation({ state, descriptors, navigation }: any) {
   const router = useRouter();
-  const { unreadCount } = useNotificationStore();
   const { role } = useUserStore();
 
   // Filter out messages from the visible routes
@@ -27,7 +25,7 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
   const visibleActiveIndex = visibleRoutes.findIndex((r: any) => r.name === currentRouteName);
 
   // Animation values
-  const slideAnim = useRef(new Animated.Value(0)).current;
+  const [slideAnim] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     if (visibleActiveIndex === -1) {
@@ -86,8 +84,14 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
 
   return (
     <View 
-      className="absolute bottom-6 left-6 right-6 bg-white/95 border border-white/80 rounded-[32px] flex-row items-center py-3.5 px-1.5 shadow-2xl"
-      style={styles.navBar}
+      className="absolute bottom-6 left-6 right-6 border rounded-[32px] flex-row items-center py-3.5 px-1.5"
+      style={[
+        styles.navBar,
+        {
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          borderColor: 'rgba(255, 255, 255, 0.8)',
+        }
+      ]}
     >
       {/* Sliding Active Pill Indicator */}
       <Animated.View
@@ -146,8 +150,17 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
                 <TouchableOpacity
                   activeOpacity={0.9}
                   onPress={() => router.push('/booking' as any)}
-                  className="w-12 h-12 rounded-full bg-[#E11D48] items-center justify-center shadow-md shadow-rose-950/20"
-                  style={{ marginTop: -18, minHeight: 48, minWidth: 48 }}
+                  className="w-12 h-12 rounded-full bg-[#E11D48] items-center justify-center"
+                  style={{
+                    marginTop: -18,
+                    minHeight: 48,
+                    minWidth: 48,
+                    shadowColor: '#E11D48',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 8,
+                    elevation: 4,
+                  }}
                 >
                   <Feather name="plus" size={24} color="white" />
                 </TouchableOpacity>
@@ -173,9 +186,12 @@ const styles = StyleSheet.create({
   },
   activePill: {
     position: 'absolute',
+    left: 6,
+    top: '50%',
+    marginTop: -21, // half of height 42
     height: 42,
     backgroundColor: 'rgba(225, 29, 72, 0.06)', // Soft rose brand tint
-    borderRadius: 22,
+    borderRadius: 21,
     borderWidth: 1,
     borderColor: 'rgba(225, 29, 72, 0.1)',
   }

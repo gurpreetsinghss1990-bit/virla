@@ -5,12 +5,15 @@ import { Database } from '../database/Database';
 
 interface MembershipState {
   membership: Membership;
-  useCredit: () => boolean;
+  customRenewalDate: string | null;
+  consumeCredit: () => boolean;
   refundCredit: (amount: number) => void;
   addCredits: (amount: number) => void;
   purchaseMembership: (tier: string, credits: number, priceText: string) => void;
   buyCredits: (credits: number, priceText: string) => void;
   syncFromDB: () => void;
+  toggleExpiryDate: () => void;
+  isExpired: () => boolean;
 }
 
 const emptyMembership: Membership = {
@@ -22,9 +25,27 @@ const emptyMembership: Membership = {
 
 export const useMembershipStore = create<MembershipState>((set, get) => ({
   membership: emptyMembership,
-  useCredit: () => {
+  customRenewalDate: null,
+  isExpired: () => {
+    const renewalDateStr = get().membership.renewalDate;
+    if (!renewalDateStr || renewalDateStr === 'Not Scheduled' || renewalDateStr === 'Not Active') return false;
+    const renewalDate = new Date(renewalDateStr);
+    const now = new Date();
+    return renewalDate.getTime() <= now.getTime();
+  },
+  toggleExpiryDate: () => {
+    const current = get().membership.renewalDate;
+    const isExpired = current === 'Jul 15, 2026';
+    const newDate = isExpired ? 'Aug 15, 2026' : 'Jul 15, 2026';
+    set({ customRenewalDate: newDate });
+    get().syncFromDB();
+  },
+  consumeCredit: () => {
     const userId = Database.getCurrentUserId();
     if (userId) {
+      if (get().isExpired()) {
+        return false;
+      }
       const profile = Database.getProfile(userId);
       if (profile && profile.creditsBalance > 0) {
         profile.creditsBalance -= 1;
@@ -90,7 +111,7 @@ export const useMembershipStore = create<MembershipState>((set, get) => ({
             tier: profile.membershipStatus || 'Standard',
             totalCredits: totalPurchased,
             availableCredits: profile.creditsBalance,
-            renewalDate: 'Aug 15, 2026',
+            renewalDate: get().customRenewalDate || 'Aug 15, 2026',
           }
         });
       }

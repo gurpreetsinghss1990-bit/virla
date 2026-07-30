@@ -1,11 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated } from 'react-native';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import { useUserStore } from '../store/userStore';
 import { bootstrapApp } from '../utils/bootstrap';
 
 export default function SplashScreen() {
-  const router = useRouter();
   
   // Animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;       // For the entire screen container

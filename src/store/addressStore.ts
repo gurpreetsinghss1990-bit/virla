@@ -3,15 +3,25 @@ import { Database } from '../database/Database';
 
 export interface Address {
   id: string;
-  label: string; // 'Home' | 'Office' | 'Saved Address' etc.
+  label: 'Home' | 'Office' | 'Gym' | 'Custom';
   addressLine: string;
+  building: string;
+  street: string;
+  landmark: string;
+  city: string;
+  pinCode: string;
   isDefault: boolean;
+  lat: number;
+  lng: number;
+  apartment?: string;
+  floor?: string;
+  notes?: string;
 }
 
 interface AddressState {
   addresses: Address[];
   selectedAddressId: string;
-  addAddress: (address: Omit<Address, 'id'>) => void;
+  addAddress: (address: Omit<Address, 'id' | 'addressLine'>) => void;
   updateAddress: (id: string, updated: Partial<Address>) => void;
   deleteAddress: (id: string) => void;
   setDefaultAddress: (id: string) => void;
@@ -28,12 +38,17 @@ export const useAddressStore = create<AddressState>((set, get) => ({
       const added = Database.addAddress(userId, {
         label: addr.label as any,
         name: addr.label,
-        building: addr.addressLine,
-        street: '',
-        landmark: '',
-        city: 'Mumbai',
-        pinCode: '',
-        isDefault: addr.isDefault
+        building: addr.building || '',
+        street: addr.street || '',
+        landmark: addr.landmark || '',
+        city: addr.city || 'Mumbai',
+        pinCode: addr.pinCode || '',
+        isDefault: addr.isDefault,
+        lat: addr.lat || 19.0176,
+        lng: addr.lng || 72.8164,
+        apartment: addr.apartment || '',
+        floor: addr.floor || '',
+        notes: addr.notes || ''
       });
       get().syncFromDB();
       if (addr.isDefault) {
@@ -44,8 +59,17 @@ export const useAddressStore = create<AddressState>((set, get) => ({
   updateAddress: (id, updated) => {
     Database.updateAddress(id, {
       label: updated.label as any,
-      building: updated.addressLine,
-      isDefault: updated.isDefault
+      building: updated.building,
+      street: updated.street,
+      landmark: updated.landmark,
+      city: updated.city,
+      pinCode: updated.pinCode,
+      isDefault: updated.isDefault,
+      lat: updated.lat,
+      lng: updated.lng,
+      apartment: updated.apartment,
+      floor: updated.floor,
+      notes: updated.notes
     });
     get().syncFromDB();
   },
@@ -68,9 +92,19 @@ export const useAddressStore = create<AddressState>((set, get) => ({
     if (userId) {
       const list = Database.getAddresses(userId).map(addr => ({
         id: addr.id,
-        label: addr.label,
+        label: addr.label || 'Custom',
         addressLine: addr.building + (addr.street ? `, ${addr.street}` : '') + (addr.city ? `, ${addr.city}` : ''),
-        isDefault: addr.isDefault
+        building: addr.building || '',
+        street: addr.street || '',
+        landmark: addr.landmark || '',
+        city: addr.city || 'Mumbai',
+        pinCode: addr.pinCode || '',
+        isDefault: addr.isDefault,
+        lat: addr.lat || 19.0176,
+        lng: addr.lng || 72.8164,
+        apartment: addr.apartment || '',
+        floor: addr.floor || '',
+        notes: addr.notes || ''
       }));
       set({
         addresses: list,

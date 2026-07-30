@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBookingStore } from '../../store/bookingStore';
 import { BookingCard } from '../../components/BookingCard';
 import { EmptyState } from '../../components/EmptyState';
@@ -11,17 +12,14 @@ type FilterType = 'upcoming' | 'completed' | 'cancelled' | 'today' | 'past';
 export default function BookingsScreen() {
   const { bookings } = useBookingStore();
   const { role } = useUserStore();
-  const [activeFilter, setActiveFilter] = useState<FilterType>('upcoming');
+  const [prevRole, setPrevRole] = useState(role);
+  const [activeFilter, setActiveFilter] = useState<FilterType>(role === 'trainer' ? 'today' : 'upcoming');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Default to 'today' for trainers on load
-    if (role === 'trainer') {
-      setActiveFilter('today');
-    } else {
-      setActiveFilter('upcoming');
-    }
-  }, [role]);
+  if (role !== prevRole) {
+    setPrevRole(role);
+    setActiveFilter(role === 'trainer' ? 'today' : 'upcoming');
+  }
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -96,8 +94,15 @@ export default function BookingsScreen() {
                 activeOpacity={0.8}
                 onPress={() => setActiveFilter(opt)}
                 className={`flex-1 py-3.5 rounded-xl items-center justify-center ${
-                  isActive ? 'bg-[#101828] shadow-sm' : ''
+                  isActive ? 'bg-[#101828]' : ''
                 }`}
+                style={isActive ? {
+                  shadowColor: '#101828',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 2,
+                } : undefined}
               >
                 <Text 
                   className={`text-[10px] font-black uppercase tracking-wider ${
@@ -137,8 +142,10 @@ export default function BookingsScreen() {
 }
 
 function SafeAreaViewWrapper({ children }: { children: React.ReactNode }) {
-  if (Platform.OS === 'ios') {
-    return <View className="flex-1 bg-[#F7F8FC] pt-12">{children}</View>;
-  }
-  return <View className="flex-1 bg-[#F7F8FC]">{children}</View>;
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
+      {children}
+    </View>
+  );
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Animated, StyleSheet, Dimensions } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -8,7 +8,7 @@ interface SkeletonLoaderProps {
 }
 
 export function SkeletonLoader({ layout = 'home' }: SkeletonLoaderProps) {
-  const shimmerAnim = useRef(new Animated.Value(0.3)).current;
+  const [shimmerAnim] = useState(() => new Animated.Value(0.3));
 
   useEffect(() => {
     // Shimmering pulse effect (repeating loop)

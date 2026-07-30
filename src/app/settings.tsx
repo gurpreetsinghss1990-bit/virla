@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Switch, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Switch, Alert, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore } from '../store/userProfileStore';
 import { useUserStore } from '../store/userStore';
@@ -7,6 +8,7 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { settings, updateGeneralSettings, notifications, updateNotificationPrefs } = useUserProfileStore();
   const { setRole, setLoggedIn } = useUserStore();
 
@@ -33,7 +35,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
@@ -220,6 +222,6 @@ export default function SettingsScreen() {
 
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

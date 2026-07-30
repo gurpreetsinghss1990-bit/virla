@@ -1,17 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Alert, Image, Animated, Dimensions, Platform } from 'react-native';
+/* eslint-disable react-hooks/set-state-in-effect */
+import React, { useState, useEffect } from 'react';
+import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Alert, Image, Animated } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useWorkoutStore } from '../store/workoutStore';
 import { useBookingStore } from '../store/bookingStore';
 import { useMembershipStore } from '../store/membershipStore';
 import { useAddressStore } from '../store/addressStore';
 import { useCoachStore } from '../store/coachStore';
 import { useNotificationStore } from '../store/notificationStore';
-import { EmptyState, ApplePayConfirmation } from '../components';
+import { EmptyState, ApplePayConfirmation, BookingSuccessAnimation } from '../components';
 import { Ionicons, Feather } from '@expo/vector-icons';
-import Svg, { Circle, Line, Path, Rect, Defs, RadialGradient, Stop } from 'react-native-svg';
-
-const { width } = Dimensions.get('window');
+import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
 
 // 5 Premium experiences specified
 interface Experience {
@@ -28,11 +26,11 @@ const EXPERIENCES: Experience[] = [
   {
     id: 'exp-strength',
     title: 'Forge Strength',
-    description: 'Built for strength & muscle training at home',
+    description: 'Resistance training structured to build lean muscle and agility',
     icon: 'dumbbell',
-    gradientColors: ['#EF4444', '#B91C1C'],
+    gradientColors: ['#FF5A5F', '#FF385C'],
     emoji: '🏋️‍♂️',
-    duration: 60,
+    duration: 50,
   },
   {
     id: 'exp-flow',
@@ -46,7 +44,7 @@ const EXPERIENCES: Experience[] = [
   {
     id: 'exp-rhythm',
     title: 'Rhythm Burn',
-    description: 'High-energy dance cardio conditioning beats',
+    description: 'High-intensity dance cardio to burn maximum calories',
     icon: 'music',
     gradientColors: ['#EC4899', '#BE185D'],
     emoji: '💃',
@@ -55,20 +53,20 @@ const EXPERIENCES: Experience[] = [
   {
     id: 'exp-reset',
     title: 'Reset Studio',
-    description: 'Active stretch, recovery, and decompression',
+    description: 'Deep stretch, myofascial release, and guided breathwork recovery',
     icon: 'coffee',
-    gradientColors: ['#3B82F6', '#1D4ED8'],
-    emoji: '🛌',
-    duration: 45,
+    gradientColors: ['#64748B', '#475569'],
+    emoji: '🧘‍♂️',
+    duration: 50,
   },
   {
     id: 'exp-combat',
     title: 'Combat Core',
-    description: 'Boxing conditioning, core drills, speed agility',
+    description: 'Shadow boxing, kick drills, and core conditioning',
     icon: 'activity',
     gradientColors: ['#F59E0B', '#D97706'],
     emoji: '🥊',
-    duration: 60,
+    duration: 55,
   },
 ];
 
@@ -76,16 +74,62 @@ export default function BookingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const initialWorkoutId = params.workoutId as string;
+  const initialWorkoutType = params.workoutType as string;
+  const initialWorkoutName = params.workoutName as string;
 
   const { addBooking } = useBookingStore();
-  const { membership, useCredit } = useMembershipStore();
+  const { consumeCredit } = useMembershipStore();
   const { addresses, addAddress, selectedAddressId, setSelectedAddressId } = useAddressStore();
   const { coaches } = useCoachStore();
   const { addNotification } = useNotificationStore();
 
   // Booking Wizard Steps (1 to 6)
   const [step, setStep] = useState(1);
-  const [selectedExperience, setSelectedExperience] = useState<Experience>(EXPERIENCES[0]);
+
+  const getInitialExperience = () => {
+    const searchString = [initialWorkoutId, initialWorkoutType, initialWorkoutName]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    if (searchString) {
+      if (
+        searchString.includes('yoga') || 
+        searchString.includes('flow') || 
+        searchString.includes('pilates') || 
+        searchString.includes('mind & body') || 
+        searchString.includes('w-2') || 
+        searchString.includes('w-3')
+      ) {
+        return EXPERIENCES[1];
+      } else if (
+        searchString.includes('dance') || 
+        searchString.includes('rhythm') || 
+        searchString.includes('cardio') || 
+        searchString.includes('w-4')
+      ) {
+        return EXPERIENCES[2];
+      } else if (
+        searchString.includes('stretch') || 
+        searchString.includes('recovery') || 
+        searchString.includes('reset') || 
+        searchString.includes('mobility') || 
+        searchString.includes('w-5')
+      ) {
+        return EXPERIENCES[3];
+      } else if (
+        searchString.includes('boxing') || 
+        searchString.includes('combat') || 
+        searchString.includes('kickboxing') || 
+        searchString.includes('w-8')
+      ) {
+        return EXPERIENCES[4];
+      }
+    }
+    return EXPERIENCES[0];
+  };
+
+  const [selectedExperience, setSelectedExperience] = useState<Experience>(() => getInitialExperience());
   const [trainerPref, setTrainerPref] = useState<'any' | 'female' | 'male' | 'favourite'>('any');
   const [selectedTrainerId, setSelectedTrainerId] = useState<string>('');
   
@@ -96,13 +140,34 @@ export default function BookingScreen() {
   const [addrLine, setAddrLine] = useState('');
   const [addrDefault, setAddrDefault] = useState(false);
 
+  // Location SPRINT 4 states
+  const [gpsPermission, setGpsPermission] = useState<'prompt' | 'granted' | 'denied'>('prompt');
+  const [gpsSignalFailure, setGpsSignalFailure] = useState(false);
+  const [networkFailure, setNetworkFailure] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [activeCoords, setActiveCoords] = useState({ lat: 19.0176, lng: 72.8164 });
+  const [etaText, setEtaText] = useState('~12 mins travel');
+  const [distanceText, setDistanceText] = useState('3.2 km');
+  const [isLocationOutsideCoverage, setIsLocationOutsideCoverage] = useState(false);
+  const [successBookingId, setSuccessBookingId] = useState('');
+
   // Date selection
   const [dateSelectionType, setDateSelectionType] = useState<'today' | 'tomorrow' | 'weekend' | 'calendar'>('today');
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    return today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  });
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
 
-  // Time slots selection
-  const [timePeriod, setTimePeriod] = useState<'morning' | 'afternoon' | 'evening' | 'night'>('morning');
+  const getDefaultTimePeriod = () => {
+    const hour = new Date().getHours();
+    if (hour >= 6 && hour < 12) return 'morning';
+    if (hour >= 12 && hour < 17) return 'afternoon';
+    if (hour >= 17 && hour < 21) return 'evening';
+    return 'night';
+  };
+  const [timePeriod, setTimePeriod] = useState<'morning' | 'afternoon' | 'evening' | 'night'>(() => getDefaultTimePeriod());
   const [selectedTime, setSelectedTime] = useState('');
 
   // Matchmaker and reveal state
@@ -111,26 +176,87 @@ export default function BookingScreen() {
   const [matchedCoach, setMatchedCoach] = useState<any>(null);
 
   // Layout Animation
-  const slideAnim = useRef(new Animated.Value(0)).current;
-  const radarAnim = useRef(new Animated.Value(0)).current;
+  const [slideAnim] = useState(() => new Animated.Value(0));
+  const [radarAnim] = useState(() => new Animated.Value(0));
 
   // Initial workout matching logic for Sprint 3 compatibility
   useEffect(() => {
-    if (initialWorkoutId) {
-      const lower = initialWorkoutId.toLowerCase();
+    const searchString = [initialWorkoutId, initialWorkoutType, initialWorkoutName]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    if (searchString) {
       let matchedExp = EXPERIENCES[0];
-      if (lower.includes('yoga') || lower.includes('flow') || lower.includes('pilates')) {
+      if (
+        searchString.includes('yoga') || 
+        searchString.includes('flow') || 
+        searchString.includes('pilates') || 
+        searchString.includes('mind & body') || 
+        searchString.includes('w-2') || 
+        searchString.includes('w-3')
+      ) {
         matchedExp = EXPERIENCES[1];
-      } else if (lower.includes('dance') || lower.includes('rhythm')) {
+      } else if (
+        searchString.includes('dance') || 
+        searchString.includes('rhythm') || 
+        searchString.includes('cardio') || 
+        searchString.includes('w-4')
+      ) {
         matchedExp = EXPERIENCES[2];
-      } else if (lower.includes('stretch') || lower.includes('recovery') || lower.includes('reset')) {
+      } else if (
+        searchString.includes('stretch') || 
+        searchString.includes('recovery') || 
+        searchString.includes('reset') || 
+        searchString.includes('mobility') || 
+        searchString.includes('w-5')
+      ) {
         matchedExp = EXPERIENCES[3];
-      } else if (lower.includes('boxing') || lower.includes('combat') || lower.includes('kickboxing')) {
+      } else if (
+        searchString.includes('boxing') || 
+        searchString.includes('combat') || 
+        searchString.includes('kickboxing') || 
+        searchString.includes('w-8')
+      ) {
         matchedExp = EXPERIENCES[4];
       }
       setSelectedExperience(matchedExp);
     }
-  }, [initialWorkoutId]);
+  }, [initialWorkoutId, initialWorkoutType, initialWorkoutName]);
+
+  useEffect(() => {
+    if (step === 3 && selectedAddressId) {
+      const addr = addresses.find(a => a.id === selectedAddressId);
+      if (addr) {
+        const lower = addr.addressLine.toLowerCase();
+        if (lower.includes('pune') || lower.includes('delhi') || lower.includes('bangalore') || lower.includes('kolkata')) {
+          setIsLocationOutsideCoverage(true);
+          setEtaText('N/A (Out of bounds)');
+          setDistanceText('> 100 km');
+        } else if (lower.includes('juhu')) {
+          setIsLocationOutsideCoverage(false);
+          setEtaText('~18 mins travel');
+          setDistanceText('6.5 km');
+          setActiveCoords({ lat: 19.1076, lng: 72.8264 });
+        } else if (lower.includes('bandra')) {
+          setIsLocationOutsideCoverage(false);
+          setEtaText('~12 mins travel');
+          setDistanceText('3.2 km');
+          setActiveCoords({ lat: 19.0596, lng: 72.8295 });
+        } else if (lower.includes('worli')) {
+          setIsLocationOutsideCoverage(false);
+          setEtaText('~20 mins travel');
+          setDistanceText('8.4 km');
+          setActiveCoords({ lat: 18.9986, lng: 72.8174 });
+        } else {
+          setIsLocationOutsideCoverage(false);
+          setEtaText('~15 mins travel');
+          setDistanceText('5.0 km');
+          setActiveCoords({ lat: 19.0176, lng: 72.8164 });
+        }
+      }
+    }
+  }, [selectedAddressId, step, addresses]);
 
   // Set selected date based on shortcuts
   useEffect(() => {
@@ -169,7 +295,7 @@ export default function BookingScreen() {
         })
       ).start();
     }
-  }, [step]);
+  }, [step, radarAnim]);
 
   // Step transitions
   const triggerTransition = (nextStep: number) => {
@@ -209,9 +335,15 @@ export default function BookingScreen() {
       Alert.alert('Preference Required', 'Please choose another trainer preference.');
       return;
     }
-    if (step === 3 && locationType === 'saved' && !selectedAddressId) {
-      Alert.alert('Location Required', 'Please choose a saved address.');
-      return;
+    if (step === 3) {
+      if (locationType === 'saved' && !selectedAddressId) {
+        Alert.alert('Location Required', 'Please choose a saved address.');
+        return;
+      }
+      if (isLocationOutsideCoverage) {
+        Alert.alert('Outside Coverage', 'The selected address lies outside the VIRLA active fitness coverage zone.');
+        return;
+      }
     }
     if (step === 4 && !selectedDate) {
       Alert.alert('Date Required', 'Please select a date.');
@@ -293,10 +425,32 @@ export default function BookingScreen() {
       Alert.alert('Incomplete Form', 'Please enter both label and address.');
       return;
     }
+
+    if (networkFailure) {
+      Alert.alert('Network Error', 'Network Connection Timeout. Please check your internet connection.');
+      return;
+    }
+
+    // Check coverage
+    const inputCity = addrLine.toLowerCase();
+    if (inputCity.includes('pune') || inputCity.includes('delhi') || inputCity.includes('bangalore') || inputCity.includes('kolkata')) {
+      Alert.alert('Outside Coverage', 'Reject addresses outside coverage. VIRLA currently only serves Mumbai and local suburbs.');
+      return;
+    }
+
     addAddress({
-      label: addrLabel.trim(),
-      addressLine: addrLine.trim(),
+      label: addrLabel.trim() as any,
+      building: addrLine.trim(),
+      street: '',
+      landmark: '',
+      city: 'Mumbai',
+      pinCode: '',
       isDefault: addrDefault,
+      lat: activeCoords.lat,
+      lng: activeCoords.lng,
+      apartment: '',
+      floor: '',
+      notes: ''
     });
     setShowAddressForm(false);
     setAddrLabel('');
@@ -306,7 +460,7 @@ export default function BookingScreen() {
   };
 
   const handleConfirmBooking = () => {
-    const success = useCredit();
+    const success = consumeCredit();
     if (!success) {
       Alert.alert('Credits Low', 'You do not have enough credits. Please renew your membership.');
       return;
@@ -346,31 +500,40 @@ export default function BookingScreen() {
       body: `Get ready! Your VIRLA ${selectedExperience.title} session is scheduled for tomorrow at ${selectedTime}.`,
     });
 
-    // Route to session detail for timeline simulation
-    router.replace({
-      pathname: '/session-detail',
-      params: { id: bookingId },
-    });
+    // Set success booking ID
+    setSuccessBookingId(bookingId);
+
+    // Advance to step 7 (Success Celebration Component)
+    setStep(7);
   };
 
   // Helper arrays for Step 5 Slots
-  const morningSlots = [
+  interface SlotItem {
+    time: string;
+    tag: string;
+    isPrime: boolean;
+    isBooked?: boolean;
+  }
+
+  const morningSlots: SlotItem[] = [
     { time: '06:00 AM - 07:00 AM', tag: 'High Demand', isPrime: false },
     { time: '07:00 AM - 08:00 AM', tag: 'Almost Full', isPrime: true },
     { time: '08:00 AM - 09:00 AM', tag: 'Only 2 left', isPrime: true },
     { time: '10:00 AM - 11:00 AM', tag: '', isPrime: false },
   ];
-  const afternoonSlots = [
+  const afternoonSlots: SlotItem[] = [
     { time: '12:00 PM - 01:00 PM', tag: '', isPrime: false },
+    { time: '01:00 PM - 02:00 PM', tag: 'Fully Booked', isPrime: false, isBooked: true },
     { time: '02:00 PM - 03:00 PM', tag: 'High Demand', isPrime: false },
     { time: '04:00 PM - 05:00 PM', tag: 'Almost Full', isPrime: false },
   ];
-  const eveningSlots = [
+  const eveningSlots: SlotItem[] = [
     { time: '05:00 PM - 06:00 PM', tag: 'Only 2 left', isPrime: true },
     { time: '06:00 PM - 07:00 PM', tag: 'High Demand', isPrime: true },
     { time: '07:00 PM - 08:00 PM', tag: 'Almost Full', isPrime: false },
+    { time: '08:00 PM - 09:00 PM', tag: 'Fully Booked', isPrime: false, isBooked: true },
   ];
-  const nightSlots = [
+  const nightSlots: SlotItem[] = [
     { time: '09:00 PM - 10:00 PM', tag: 'Only 1 left', isPrime: false },
     { time: '10:00 PM - 11:00 PM', tag: '', isPrime: false },
   ];
@@ -382,22 +545,91 @@ export default function BookingScreen() {
     return nightSlots;
   };
 
+  const isTimeSlotPassed = (timeSlotStr: string, dateStr: string) => {
+    const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (dateStr !== todayStr) {
+      return false;
+    }
+
+    const startTimePart = timeSlotStr.split(' - ')[0]; // e.g. "06:00 AM"
+    const [timeVal, modifier] = startTimePart.split(' '); // ["06:00", "AM"]
+    let [hours, minutes] = timeVal.split(':').map(Number);
+
+    if (modifier === 'PM' && hours < 12) {
+      hours += 12;
+    }
+    if (modifier === 'AM' && hours === 12) {
+      hours = 0;
+    }
+
+    const slotDateTime = new Date();
+    slotDateTime.setHours(hours, minutes, 0, 0);
+
+    const now = new Date();
+    return slotDateTime.getTime() <= now.getTime();
+  };
+
+  const getFilteredSlotsForPeriod = () => {
+    const rawSlots = getSlotsForPeriod();
+    const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (selectedDate === todayStr) {
+      return rawSlots.filter(slot => !isTimeSlotPassed(slot.time, selectedDate));
+    }
+    return rawSlots;
+  };
+
+  const renderBadge = (slotObj: any) => {
+    if (slotObj.isBooked) {
+      return (
+        <View className="bg-zinc-100 border border-zinc-200 px-2.5 py-1 rounded-full flex-row items-center gap-1">
+          <Text className="text-zinc-500 text-[9px] font-black uppercase tracking-wider">⛔ Fully Booked</Text>
+        </View>
+      );
+    }
+    if (slotObj.tag === 'High Demand') {
+      return (
+        <View className="bg-red-50 border border-red-100 px-2.5 py-1 rounded-full flex-row items-center gap-1">
+          <Text className="text-red-500 text-[9px] font-black uppercase tracking-wider">🔥 High Demand</Text>
+        </View>
+      );
+    }
+    if (slotObj.tag === 'Almost Full' || slotObj.tag === 'Only 2 left' || slotObj.tag === 'Only 1 left') {
+      return (
+        <View className="bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-full flex-row items-center gap-1">
+          <Text className="text-amber-600 text-[9px] font-black uppercase tracking-wider">⚠ Only 2 Left</Text>
+        </View>
+      );
+    }
+    if (slotObj.isPrime) {
+      return (
+        <View className="bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full flex-row items-center gap-1">
+          <Text className="text-indigo-600 text-[9px] font-black uppercase tracking-wider">⭐ Prime Time</Text>
+        </View>
+      );
+    }
+    return null;
+  };
+
   return (
-    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
       {/* Header back button */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
-        <TouchableOpacity onPress={handleBack} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#101828" />
-        </TouchableOpacity>
+        {step < 7 ? (
+          <TouchableOpacity onPress={handleBack} className="w-8 h-8 items-center justify-center">
+            <Ionicons name="arrow-back" size={20} color="#101828" />
+          </TouchableOpacity>
+        ) : (
+          <View className="w-8" />
+        )}
         <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
-          {step <= 5 ? `Step ${step} of 5` : 'Trainer Match'}
+          {step <= 5 ? `Step ${step} of 5` : step === 6 ? 'Trainer Match' : 'Success'}
         </Text>
       </View>
 
-      <View className="flex-1">
-        {step <= 6 ? (
-          <ScrollView showsVerticalScrollIndicator={false} className="flex-1" contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
-            <Animated.View style={{ transform: [{ translateY: slideAnim }] }} className="gap-6">
+      <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+        {step <= 7 ? (
+          <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
+            <View className="gap-6">
               
               {/* STEP 1: EXPERIENCE SELECTOR */}
               {step === 1 && (
@@ -418,16 +650,30 @@ export default function BookingScreen() {
                             setSelectedExperience(exp);
                             setTimeout(() => triggerTransition(2), 250);
                           }}
-                          className={`p-5 rounded-[28px] border flex-row items-center justify-between shadow-xs ${
+                          className={`p-5 rounded-[28px] border flex-row items-center justify-between ${
                             isSelected 
-                              ? 'bg-zinc-950 border-zinc-950 shadow-md' 
+                              ? 'bg-zinc-950 border-zinc-950' 
                               : 'bg-white border-[#E5E7EB]'
                           }`}
+                          style={{
+                            shadowColor: '#101828',
+                            shadowOffset: { width: 0, height: isSelected ? 4 : 1 },
+                            shadowOpacity: isSelected ? 0.08 : 0.02,
+                            shadowRadius: isSelected ? 8 : 2,
+                            elevation: isSelected ? 3 : 1,
+                          }}
                         >
                           <View className="flex-row items-center gap-4 flex-1">
                             <View 
-                              style={{ backgroundColor: exp.gradientColors[0] }} 
-                              className="w-12 h-12 rounded-2xl items-center justify-center shadow-xs"
+                              style={{ 
+                                backgroundColor: exp.gradientColors[0],
+                                shadowColor: '#101828',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.02,
+                                shadowRadius: 2,
+                                elevation: 1,
+                              }} 
+                              className="w-12 h-12 rounded-2xl items-center justify-center"
                             >
                               <Text className="text-xl">{exp.emoji}</Text>
                             </View>
@@ -483,9 +729,16 @@ export default function BookingScreen() {
                               setTimeout(() => triggerTransition(3), 250);
                             }
                           }}
-                          className={`w-[47%] p-5 rounded-[24px] border items-center justify-center gap-2.5 shadow-xs ${
+                          className={`w-[47%] p-5 rounded-[24px] border items-center justify-center gap-2.5 ${
                             isSelected ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-[#E5E7EB]'
                           }`}
+                          style={{
+                            shadowColor: '#101828',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.02,
+                            shadowRadius: 2,
+                            elevation: 1,
+                          }}
                         >
                           <Feather name={pref.icon as any} size={20} color={isSelected ? '#F59E0B' : '#6B7280'} />
                           <View className="items-center">
@@ -570,8 +823,15 @@ export default function BookingScreen() {
                             else setShowAddressForm(false);
                           }}
                           className={`flex-1 py-3 rounded-xl items-center justify-center ${
-                            isActive ? 'bg-[#101828] shadow-sm' : ''
+                            isActive ? 'bg-[#101828]' : ''
                           }`}
+                          style={isActive ? {
+                            shadowColor: '#101828',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.08,
+                            shadowRadius: 4,
+                            elevation: 2,
+                          } : undefined}
                         >
                           <Text className={`text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-white' : 'text-[#6B7280]'}`}>
                             {opt.label}
@@ -594,9 +854,16 @@ export default function BookingScreen() {
                               setSelectedAddressId(addr.id);
                               setTimeout(() => triggerTransition(4), 250);
                             }}
-                            className={`p-5 rounded-[24px] border flex-row items-start gap-3.5 shadow-xs ${
-                              isSelected ? 'bg-white border-zinc-950 shadow-sm' : 'bg-white border-[#E5E7EB]'
+                            className={`p-5 rounded-[24px] border flex-row items-start gap-3.5 ${
+                              isSelected ? 'bg-white border-zinc-950' : 'bg-white border-[#E5E7EB]'
                             }`}
+                            style={{
+                              shadowColor: '#101828',
+                              shadowOffset: { width: 0, height: isSelected ? 2 : 1 },
+                              shadowOpacity: isSelected ? 0.08 : 0.02,
+                              shadowRadius: isSelected ? 4 : 2,
+                              elevation: isSelected ? 2 : 1,
+                            }}
                           >
                             <View className={`w-8 h-8 rounded-xl items-center justify-center ${isSelected ? 'bg-zinc-900' : 'bg-zinc-100'}`}>
                               <Feather name={addr.label === 'Home' ? 'home' : addr.label === 'Office' ? 'briefcase' : 'map-pin'} size={14} color={isSelected ? 'white' : '#6B7280'} />
@@ -622,7 +889,16 @@ export default function BookingScreen() {
 
                   {/* Add New Address Form */}
                   {showAddressForm && (
-                    <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4 shadow-sm">
+                    <View 
+                      className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4"
+                      style={{
+                        shadowColor: '#101828',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.04,
+                        shadowRadius: 6,
+                        elevation: 2,
+                      }}
+                    >
                       <Text className="text-[#101828] text-xs font-black uppercase tracking-wider pl-1">New Address details</Text>
                       <View className="gap-3">
                         <TextInput
@@ -674,20 +950,135 @@ export default function BookingScreen() {
                     </View>
                   )}
 
-                  {/* Apple Maps Style Card (Feature 3) */}
-                  <View className="bg-white border border-[#E5E7EB] rounded-[30px] p-4.5 shadow-sm overflow-hidden gap-3.5 mt-2">
+                  {/* Apple Maps Style Card */}
+                  <View 
+                    className="bg-white border border-[#E5E7EB] rounded-[30px] p-4.5 overflow-hidden gap-3.5 mt-2"
+                    style={{
+                      shadowColor: '#101828',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.05,
+                      shadowRadius: 8,
+                      elevation: 2,
+                    }}
+                  >
                     <View className="flex-row justify-between items-center px-1">
                       <View className="flex-row items-center gap-2">
                         <Feather name="navigation" size={14} color="#3B82F6" />
-                        <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Coverage Radius</Text>
+                        <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Map & GPS Validation</Text>
                       </View>
-                      <View className="bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
-                        <Text className="text-blue-600 text-[8px] font-black uppercase">Active GPS</Text>
+                      <View className={`px-2 py-0.5 rounded-full border ${
+                        isLocationOutsideCoverage 
+                          ? 'bg-red-50 border-red-150' 
+                          : gpsPermission === 'granted' 
+                          ? 'bg-blue-50 border border-blue-100' 
+                          : 'bg-zinc-50 border border-zinc-100'
+                      }`}>
+                        <Text className={`text-[8px] font-black uppercase ${
+                          isLocationOutsideCoverage ? 'text-red-500' : 'text-blue-600'
+                        }`}>
+                          {isLocationOutsideCoverage ? '⛔ Out of Coverage' : gpsPermission === 'granted' ? 'Active GPS' : 'GPS Idle'}
+                        </Text>
                       </View>
                     </View>
 
-                    {/* SVG Map Graphic */}
-                    <View className="h-44 bg-[#E0F2FE]/45 border border-[#BAE6FD]/40 rounded-2xl relative overflow-hidden items-center justify-center">
+                    {/* Search bar inside Map */}
+                    <View className="relative z-30">
+                      <View className="flex-row items-center bg-zinc-50 border border-zinc-200 px-3.5 py-1 rounded-xl">
+                        <Feather name="search" size={14} color="#6B7280" />
+                        <TextInput
+                          placeholder="Search addresses (e.g. Bandra, Pune...)"
+                          placeholderTextColor="#9CA3AF"
+                          value={searchQuery}
+                          onChangeText={(t) => {
+                            setSearchQuery(t);
+                            setShowSearchDropdown(true);
+                          }}
+                          className="flex-1 text-xs font-semibold text-zinc-900 ml-2 py-1.5"
+                        />
+                        {searchQuery.length > 0 && (
+                          <TouchableOpacity onPress={() => { setSearchQuery(''); setShowSearchDropdown(false); }}>
+                            <Feather name="x" size={12} color="#6B7280" />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+
+                      {/* Dropdown list of presets */}
+                      {showSearchDropdown && searchQuery.length > 0 && (
+                        <View 
+                          className="absolute top-11 left-0 right-0 bg-white border border-zinc-200 rounded-xl z-50 max-h-48 overflow-hidden"
+                          style={{
+                            shadowColor: '#101828',
+                            shadowOffset: { width: 0, height: 6 },
+                            shadowOpacity: 0.1,
+                            shadowRadius: 12,
+                            elevation: 6,
+                          }}
+                        >
+                          {[
+                            { name: 'Bandra West, Mumbai', desc: 'Active VIRLA service zone', out: false, coords: { lat: 19.0596, lng: 72.8295 }, eta: '~12 mins', dist: '3.2 km' },
+                            { name: 'Juhu Scheme, Mumbai', desc: 'Active VIRLA service zone', out: false, coords: { lat: 19.1076, lng: 72.8264 }, eta: '~18 mins', dist: '6.5 km' },
+                            { name: 'Worli Naka, Mumbai', desc: 'Active VIRLA service zone', out: false, coords: { lat: 18.9986, lng: 72.8174 }, eta: '~20 mins', dist: '8.4 km' },
+                            { name: 'Pune Central Station', desc: 'Outside active service zone', out: true, coords: { lat: 18.5204, lng: 73.8567 }, eta: 'N/A', dist: '150 km' },
+                            { name: 'Connaught Place, Delhi', desc: 'Outside active service zone', out: true, coords: { lat: 28.6304, lng: 77.2177 }, eta: 'N/A', dist: '1400 km' }
+                          ]
+                            .filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                            .map((item, idx) => (
+                              <TouchableOpacity
+                                key={idx}
+                                onPress={() => {
+                                  if (networkFailure) {
+                                    Alert.alert('Network Error', 'Network Connection Timeout. Please check your internet connection.');
+                                    return;
+                                  }
+                                  setSearchQuery(item.name);
+                                  setShowSearchDropdown(false);
+                                  setIsLocationOutsideCoverage(item.out);
+                                  setEtaText(item.eta);
+                                  setDistanceText(item.dist);
+                                  setActiveCoords(item.coords);
+
+                                  // Add the searched location as a temporary selected custom address
+                                  if (item.out) {
+                                    Alert.alert('Outside Coverage Area', 'This address lies outside the VIRLA service coverage zone.');
+                                  } else {
+                                    addAddress({
+                                      label: 'Custom' as any,
+                                      building: item.name,
+                                      street: '',
+                                      landmark: '',
+                                      city: 'Mumbai',
+                                      pinCode: '',
+                                      isDefault: false,
+                                      lat: item.coords.lat,
+                                      lng: item.coords.lng,
+                                      apartment: '',
+                                      floor: '',
+                                      notes: ''
+                                    });
+                                  }
+                                }}
+                                className="p-3 border-b border-zinc-100 flex-row justify-between items-center"
+                              >
+                                <View className="flex-1 pr-2">
+                                  <Text className="text-zinc-900 text-xs font-bold">{item.name}</Text>
+                                  <Text className="text-zinc-400 text-[8px] font-semibold">{item.desc}</Text>
+                                </View>
+                                <Feather name="arrow-up-left" size={12} color="#9CA3AF" />
+                              </TouchableOpacity>
+                            ))
+                          }
+                        </View>
+                      )}
+                    </View>
+
+                    {/* SVG Map Graphic with dynamic pin movement based on active coordinates */}
+                    <View 
+                      className="h-44 border rounded-2xl relative overflow-hidden items-center justify-center"
+                      style={{
+                        backgroundColor: 'rgba(224, 242, 254, 0.45)',
+                        borderColor: 'rgba(186, 230, 253, 0.4)',
+                      }}
+                    >
                       <Svg width="100%" height="100%" className="absolute">
                         {/* Map roads/grids */}
                         <Line x1="10%" y1="0%" x2="10%" y2="100%" stroke="#BAE6FD" strokeWidth={1} strokeDasharray="4 4" />
@@ -696,51 +1087,160 @@ export default function BookingScreen() {
                         <Line x1="0%" y1="35%" x2="100%" y2="35%" stroke="#BAE6FD" strokeWidth={2} />
                         <Line x1="0%" y1="70%" x2="100%" y2="70%" stroke="#BAE6FD" strokeWidth={1} strokeDasharray="4 4" />
                         
-                        {/* Area details */}
-                        <Circle cx="120" cy="50" r="28" fill="#DDB1FC" opacity={0.3} />
-                        <Circle cx="280" cy="120" r="35" fill="#3B82F6" opacity={0.1} />
+                        {/* Map Suburbs visual marks */}
+                        <SvgText x="15" y="25" fill="#93C5FD" fontSize="8" fontWeight="bold">JUHU</SvgText>
+                        <SvgText x="15" y="145" fill="#93C5FD" fontSize="8" fontWeight="bold">BANDRA</SvgText>
+                        <SvgText x="270" y="85" fill="#93C5FD" fontSize="8" fontWeight="bold">WORLI</SvgText>
+
+                        {/* Coverage Boundary Circles */}
+                        <Circle cx="160" cy="90" r="85" stroke="#60A5FA" strokeWidth="1" fill="#93C5FD" fillOpacity="0.08" strokeDasharray="3 3" />
                       </Svg>
 
-                      {/* Radar Pulse Wave Animation */}
-                      <Animated.View
-                        style={{
-                          position: 'absolute',
-                          width: 80,
-                          height: 80,
-                          borderRadius: 40,
-                          borderWidth: 1.5,
-                          borderColor: '#3B82F6',
-                          backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                          transform: [
-                            {
-                              scale: radarAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0.6, 2.8],
-                              }),
-                            },
-                          ],
-                          opacity: radarAnim.interpolate({
-                            inputRange: [0, 0.8, 1],
-                            outputRange: [0.7, 0.4, 0],
-                          }),
-                        }}
-                      />
+                      {/* Radar Pulse Wave Animation temporarily disabled */}
 
-                      {/* Location PIN */}
-                      <View className="w-9 h-9 rounded-full bg-blue-600 border-2 border-white items-center justify-center shadow-lg relative z-20">
-                        <Feather name="map-pin" size={14} color="white" />
+                      {/* Location PIN (moves slightly based on coordinates) */}
+                      <View 
+                        className={`w-9 h-9 rounded-full ${
+                          isLocationOutsideCoverage ? 'bg-red-500' : 'bg-blue-600'
+                        } border-2 border-white items-center justify-center relative z-20`}
+                        style={{
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 4 },
+                          shadowOpacity: 0.3,
+                          shadowRadius: 6,
+                          elevation: 5,
+                        }}
+                      >
+                        <Feather name={isLocationOutsideCoverage ? 'alert-triangle' : 'map-pin'} size={14} color="white" />
                       </View>
                     </View>
 
+                    {/* GPS Actions & Simulation Controls */}
+                    <View className="gap-2.5">
+                      <View className="flex-row gap-2">
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          onPress={() => {
+                            if (gpsSignalFailure) {
+                              Alert.alert('GPS Signal Failure', 'GPS Connection Error: Unable to acquire satellite signal. Please check your GPS signal strength or input address manually.');
+                              return;
+                            }
+                            if (networkFailure) {
+                              Alert.alert('Network Error', 'Network Connection Timeout. Please check your internet connection.');
+                              return;
+                            }
+
+                            if (gpsPermission === 'denied') {
+                              Alert.alert('Permissions Denied', 'Location Access Denied. Please enable location permissions in device settings.');
+                              return;
+                            }
+
+                            if (gpsPermission === 'prompt') {
+                              Alert.alert(
+                                'Location Access',
+                                'Allow VIRLA to access this device\'s location?',
+                                [
+                                  {
+                                    text: 'Deny',
+                                    onPress: () => setGpsPermission('denied')
+                                  },
+                                  {
+                                    text: 'Allow',
+                                    onPress: () => {
+                                      setGpsPermission('granted');
+                                      setIsLocationOutsideCoverage(false);
+                                      setEtaText('~18 mins travel');
+                                      setDistanceText('6.5 km');
+                                      setActiveCoords({ lat: 19.1076, lng: 72.8264 });
+                                      addAddress({
+                                        label: 'Custom' as any,
+                                        building: 'Juhu Beach Road, Juhu, Mumbai, Maharashtra 400049',
+                                        street: '',
+                                        landmark: '',
+                                        city: 'Mumbai',
+                                        pinCode: '400049',
+                                        isDefault: false,
+                                        lat: 19.1076,
+                                        lng: 72.8264,
+                                        apartment: '',
+                                        floor: '',
+                                        notes: ''
+                                      });
+                                      Alert.alert('GPS Connected', 'Located at: Juhu, Mumbai. Saved to your location choices.');
+                                    }
+                                  }
+                                ]
+                              );
+                            } else {
+                              setIsLocationOutsideCoverage(false);
+                              setEtaText('~18 mins travel');
+                              setDistanceText('6.5 km');
+                              setActiveCoords({ lat: 19.1076, lng: 72.8264 });
+                            }
+                          }}
+                          className="flex-1 bg-zinc-950 py-3.5 rounded-xl flex-row items-center justify-center gap-2"
+                        >
+                          <Feather name="crosshair" size={12} color="white" />
+                          <Text className="text-white text-xs font-black uppercase">Use Current Location</Text>
+                        </TouchableOpacity>
+
+                        {typeof __DEV__ !== 'undefined' && __DEV__ && (
+                          <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={() => {
+                              setGpsPermission('prompt');
+                              Alert.alert('Permissions Reset', 'Location permission prompts reset. Tapping "Use Current Location" will request again.');
+                            }}
+                            className="bg-zinc-100 border border-zinc-200 px-3.5 rounded-xl items-center justify-center"
+                          >
+                            <Feather name="refresh-cw" size={12} color="#6B7280" />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+
+                      {/* Mock Testing Simulation Controls */}
+                      {typeof __DEV__ !== 'undefined' && __DEV__ && (
+                        <View className="bg-red-50/55 border border-red-100 p-3.5 rounded-2xl gap-2 mt-1">
+                          <Text className="text-red-800 text-[8px] font-black uppercase tracking-wider">QA GPS & Network Simulators</Text>
+                          <View className="flex-row gap-2.5">
+                            <TouchableOpacity
+                              activeOpacity={0.8}
+                              onPress={() => setGpsSignalFailure(!gpsSignalFailure)}
+                              className={`flex-1 py-2 px-3 rounded-lg border ${
+                                gpsSignalFailure ? 'bg-red-100 border-red-200' : 'bg-white border-zinc-200'
+                              }`}
+                            >
+                              <Text className={`text-[8px] font-black text-center uppercase ${gpsSignalFailure ? 'text-red-700' : 'text-zinc-500'}`}>
+                                {gpsSignalFailure ? '🚫 GPS Signals Jammed' : '📡 Simulate Weak GPS'}
+                              </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              activeOpacity={0.8}
+                              onPress={() => setNetworkFailure(!networkFailure)}
+                              className={`flex-1 py-2 px-3 rounded-lg border ${
+                                networkFailure ? 'bg-red-100 border-red-200' : 'bg-white border-zinc-200'
+                              }`}
+                            >
+                              <Text className={`text-[8px] font-black text-center uppercase ${networkFailure ? 'text-red-700' : 'text-zinc-500'}`}>
+                                {networkFailure ? '📶 Network Offline' : '🔌 Simulate Net Out'}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Travel details summary card */}
                     <View className="flex-row justify-between items-center bg-zinc-50 border border-zinc-100 p-3.5 rounded-2xl">
                       <View className="gap-1 flex-1">
-                        <Text className="text-[#6B7280] text-[8px] font-bold uppercase">Estimated travel time</Text>
-                        <Text className="text-zinc-900 text-xs font-extrabold">🚀 ETA: ~12 mins travel</Text>
+                        <Text className="text-[#6B7280] text-[8px] font-bold uppercase">Estimated Distance</Text>
+                        <Text className="text-zinc-900 text-xs font-extrabold">📍 Distance: {distanceText}</Text>
                       </View>
                       <View className="w-[1px] h-8 bg-[#E5E7EB] mx-3" />
                       <View className="gap-1 flex-1 items-end">
-                        <Text className="text-[#6B7280] text-[8px] font-bold uppercase">Covers Areas</Text>
-                        <Text className="text-zinc-900 text-[10px] font-extrabold text-right">Bandra, Juhu, Worli, Nariman</Text>
+                        <Text className="text-[#6B7280] text-[8px] font-bold uppercase">Travel Estimate</Text>
+                        <Text className="text-zinc-900 text-xs font-extrabold text-right">🚀 ETA: {etaText}</Text>
                       </View>
                     </View>
                   </View>
@@ -774,9 +1274,16 @@ export default function BookingScreen() {
                               setTimeout(() => triggerTransition(5), 250);
                             }
                           }}
-                          className={`flex-1 p-3.5 rounded-2xl border items-center justify-center gap-1 shadow-xs ${
+                          className={`flex-1 p-3.5 rounded-2xl border items-center justify-center gap-1 ${
                             isSelected ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-[#E5E7EB]'
                           }`}
+                          style={{
+                            shadowColor: '#101828',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.02,
+                            shadowRadius: 2,
+                            elevation: 1,
+                          }}
                         >
                           <Text className={`text-[10px] font-black uppercase tracking-wider ${isSelected ? 'text-white' : 'text-[#101828]'}`}>
                             {capsule.label}
@@ -791,7 +1298,16 @@ export default function BookingScreen() {
 
                   {/* Date picker grid panel */}
                   {showCalendarPicker && (
-                    <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4 shadow-sm">
+                    <View 
+                      className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4"
+                      style={{
+                        shadowColor: '#101828',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.04,
+                        shadowRadius: 6,
+                        elevation: 2,
+                      }}
+                    >
                       <Text className="text-[#101828] text-xs font-black uppercase tracking-wider text-center">Select Available Date</Text>
                       <View className="flex-row flex-wrap justify-between gap-y-3">
                         {Array.from({ length: 12 }).map((_, i) => {
@@ -857,8 +1373,15 @@ export default function BookingScreen() {
                           activeOpacity={0.8}
                           onPress={() => setTimePeriod(period.id as any)}
                           className={`flex-1 py-3 rounded-xl items-center justify-center ${
-                            isActive ? 'bg-[#101828] shadow-sm' : ''
+                            isActive ? 'bg-[#101828]' : ''
                           }`}
+                          style={isActive ? {
+                            shadowColor: '#101828',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.08,
+                            shadowRadius: 4,
+                            elevation: 2,
+                          } : undefined}
                         >
                           <Text className={`text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-white' : 'text-[#6B7280]'}`}>
                             {period.label}
@@ -870,54 +1393,68 @@ export default function BookingScreen() {
 
                   {/* Slots listing for period */}
                   <View className="gap-3.5">
-                    {getSlotsForPeriod().map((slotObj, idx) => {
+                    {getFilteredSlotsForPeriod().map((slotObj, idx) => {
                       const isPicked = selectedTime === slotObj.time;
+                      const isDisabled = !!slotObj.isBooked;
+
                       return (
                         <TouchableOpacity
                           key={idx}
-                          activeOpacity={0.8}
+                          disabled={isDisabled}
+                          activeOpacity={isDisabled ? 1 : 0.8}
                           onPress={() => {
                             setSelectedTime(slotObj.time);
                             setTimeout(() => handleNext(), 250);
                           }}
-                          className={`p-4.5 rounded-[24px] border flex-row justify-between items-center shadow-xs ${
-                            isPicked ? 'bg-zinc-950 border-zinc-950 shadow-md' : 'bg-white border-[#E5E7EB]'
+                          style={{
+                            height: 76,
+                            shadowColor: '#101828',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: isPicked ? 0.15 : 0.04,
+                            shadowRadius: 6,
+                            elevation: 2,
+                          }}
+                          className={`px-5 rounded-[20px] border flex-row justify-between items-center ${
+                            isDisabled
+                              ? 'bg-zinc-100 border-zinc-200 opacity-60'
+                              : isPicked
+                              ? 'bg-[#E11D48] border-[#E11D48]'
+                              : 'bg-white border-[#E5E7EB]'
                           }`}
                         >
                           <View className="flex-row items-center gap-3.5">
-                            <Feather name="clock" size={14} color={isPicked ? '#F59E0B' : '#6B7280'} />
-                            <Text className={`text-xs font-black tracking-tight ${isPicked ? 'text-white' : 'text-zinc-900'}`}>
-                              {slotObj.time}
-                            </Text>
-                            {slotObj.isPrime && (
-                              <View className="bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full flex-row items-center gap-0.5">
-                                <Text className="text-amber-500 text-[8px] font-black uppercase tracking-wider">★ Prime Time</Text>
-                              </View>
-                            )}
-                          </View>
-                          
-                          {/* Remaining slot tag */}
-                          {slotObj.tag ? (
-                            <View className={`px-2 py-1 rounded-lg ${
-                              slotObj.tag.includes('left') || slotObj.tag.includes('1')
-                                ? 'bg-red-50' 
-                                : slotObj.tag.includes('Full') 
-                                ? 'bg-amber-50' 
-                                : 'bg-indigo-50'
-                            }`}>
-                              <Text className={`text-[8px] font-black uppercase tracking-wider ${
-                                slotObj.tag.includes('left') || slotObj.tag.includes('1')
-                                  ? 'text-red-500'
-                                  : slotObj.tag.includes('Full')
-                                  ? 'text-amber-600'
-                                  : 'text-indigo-600'
-                              }`}>
-                                {slotObj.tag}
+                            <Feather 
+                              name="clock" 
+                              size={15} 
+                              color={isDisabled ? '#9CA3AF' : isPicked ? 'white' : '#101828'} 
+                            />
+                            <View className="gap-0.5">
+                              <Text 
+                                className={`text-xs font-black tracking-tight ${
+                                  isDisabled ? 'text-zinc-400 line-through' : isPicked ? 'text-white' : 'text-zinc-900'
+                                }`}
+                              >
+                                {slotObj.time}
+                              </Text>
+                              <Text className={`text-[8px] font-bold ${isPicked ? 'text-rose-200' : 'text-[#6B7280]'}`}>
+                                {isDisabled ? 'UNAVAILABLE' : 'AVAILABLE SLOT'}
                               </Text>
                             </View>
-                          ) : (
-                            <View className="w-5 h-5 rounded-full border border-zinc-200" />
-                          )}
+                          </View>
+                          
+                          {/* Right badge or checkmark indicator */}
+                          <View className="flex-row items-center gap-2">
+                            {renderBadge(slotObj)}
+                            {isPicked ? (
+                              <View className="w-5 h-5 rounded-full bg-white items-center justify-center">
+                                <Feather name="check" size={12} color="#E11D48" />
+                              </View>
+                            ) : isDisabled ? (
+                              <Text className="text-zinc-400 text-[9px] font-black uppercase tracking-wider">FULL</Text>
+                            ) : (
+                              <View className="w-5 h-5 rounded-full border border-zinc-200 bg-zinc-50" />
+                            )}
+                          </View>
                         </TouchableOpacity>
                       );
                     })}
@@ -930,7 +1467,16 @@ export default function BookingScreen() {
                 <View className="gap-6 pb-6">
                   {!matchDone ? (
                     /* MATCHMAKER SCREEN (Feature 6) */
-                    <View className="bg-white border border-[#E5E7EB] p-8 rounded-[32px] items-center justify-center shadow-xs py-16 gap-6">
+                    <View 
+                      className="bg-white border border-[#E5E7EB] p-8 rounded-[32px] items-center justify-center py-16 gap-6"
+                      style={{
+                        shadowColor: '#101828',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.02,
+                        shadowRadius: 2,
+                        elevation: 1,
+                      }}
+                    >
                       <View className="relative w-20 h-20 items-center justify-center">
                         <Svg width={80} height={80} viewBox="0 0 80 80" className="absolute">
                           <Circle cx={40} cy={40} r={35} stroke="#E5E7EB" strokeWidth={4} fill="none" />
@@ -988,7 +1534,16 @@ export default function BookingScreen() {
                       </View>
 
                       {/* Coach Detail Card (Obscured pre-booking) */}
-                      <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+                      <View 
+                        className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4"
+                        style={{
+                          shadowColor: '#101828',
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.04,
+                          shadowRadius: 6,
+                          elevation: 2,
+                        }}
+                      >
                         <View className="flex-row gap-4 items-center">
                           {/* Generic Avatar Placeholder */}
                           <View className="w-16 h-16 rounded-full bg-zinc-100 border border-zinc-200 items-center justify-center">
@@ -1018,7 +1573,16 @@ export default function BookingScreen() {
                       </View>
 
                       {/* Workout Session Details */}
-                      <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+                      <View 
+                        className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4"
+                        style={{
+                          shadowColor: '#101828',
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.04,
+                          shadowRadius: 6,
+                          elevation: 2,
+                        }}
+                      >
                         <Text className="text-[#101828] text-xs font-black uppercase tracking-wider border-b border-zinc-100 pb-3">Session Summary</Text>
                         
                         <View className="gap-3">
@@ -1054,7 +1618,28 @@ export default function BookingScreen() {
                 </View>
               )}
 
-            </Animated.View>
+              {/* STEP 7: SUCCESS EXPERIENCE */}
+              {step === 7 && (
+                <BookingSuccessAnimation
+                  workoutTitle={selectedExperience.title}
+                  workoutDuration={selectedExperience.duration}
+                  selectedDate={selectedDate}
+                  selectedTime={selectedTime}
+                  locationAddress={addresses.find(a => a.id === selectedAddressId)?.addressLine || 'Selected Location'}
+                  successBookingId={successBookingId}
+                  onViewSession={(id) => {
+                    router.replace({
+                      pathname: '/session-detail',
+                      params: { id },
+                    });
+                  }}
+                  onBackToHome={() => {
+                    router.replace('/(tabs)');
+                  }}
+                />
+              )}
+
+            </View>
           </ScrollView>
         ) : null}
       </View>
@@ -1072,7 +1657,14 @@ export default function BookingScreen() {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={handleNext}
-            className="flex-1 py-4 bg-zinc-950 rounded-2xl items-center justify-center shadow-sm"
+            className="flex-1 py-4 bg-zinc-950 rounded-2xl items-center justify-center"
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.05,
+              shadowRadius: 4,
+              elevation: 2,
+            }}
           >
             <Text className="text-white text-xs font-black uppercase tracking-wider">Continue</Text>
           </TouchableOpacity>
