@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { View, Text, SafeAreaView, TouchableOpacity, Animated } from 'react-native';
 import { router } from 'expo-router';
 import Svg, { Circle, Path, Rect, Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
@@ -10,9 +10,9 @@ export default function OnboardingScreen() {
 
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  // Animations
-  const floatAnim = useRef(new Animated.Value(0)).current;
-  const fadeContentAnim = useRef(new Animated.Value(1)).current;
+  // Animation values using useMemo to avoid render-phase ref reads
+  const floatAnim = useMemo(() => new Animated.Value(0), []);
+  const fadeContentAnim = useMemo(() => new Animated.Value(1), []);
 
   useEffect(() => {
     // 1. Gently floating illustration loop

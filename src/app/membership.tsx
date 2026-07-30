@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, Animated, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -147,13 +147,13 @@ export default function MembershipScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Animations
-  const slideUpAnim = useRef(new Animated.Value(600)).current;
-  const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const progressAnim = useRef(new Animated.Value(0)).current;
+  // Animations using useMemo to avoid render-phase ref reads
+  const slideUpAnim = useMemo(() => new Animated.Value(600), []);
+  const overlayOpacity = useMemo(() => new Animated.Value(0), []);
+  const progressAnim = useMemo(() => new Animated.Value(0), []);
 
   // Swipe slider state
-  const swipeX = useRef(new Animated.Value(0)).current;
+  const swipeX = useMemo(() => new Animated.Value(0), []);
 
   const openPlanDetails = (plan: Plan) => {
     setSelectedPlan(plan);
@@ -470,7 +470,7 @@ export default function MembershipScreen() {
                     </View>
 
                     <View className="gap-3">
-                      <Text className="text-[#101828] text-xs font-black uppercase">What's included</Text>
+                      <Text className="text-[#101828] text-xs font-black uppercase">What&apos;s included</Text>
                       {[
                         'Book any workout category (Strength, Flow, Cardio, Reset, Combat)',
                         'Pause anytime options (up to validity limits)',

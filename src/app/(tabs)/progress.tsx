@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Animated, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProgressRing } from '../../components/ProgressRing';
@@ -14,8 +14,7 @@ import { Database } from '../../database/Database';
 
 export default function ProgressScreen() {
   const [activeRange, setActiveRange] = useState<RangeType>('weekly');
-  const [isEmpty, setIsEmpty] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useMemo(() => new Animated.Value(0), []);
 
   const { totalSessions, totalCalories } = useUserProfileStore();
   const { user, role } = useUserStore();
@@ -30,20 +29,13 @@ export default function ProgressScreen() {
   const trainerEarningsList = user.id ? Database.getEarnings(user.id) : [];
   const monthlyEarnings = trainerEarningsList.reduce((acc, earn) => acc + (earn.amount > 0 ? earn.amount : 0), 0);
 
-  useEffect(() => {
+  const isEmpty = useMemo(() => {
     const userId = Database.getCurrentUserId();
-    if (!userId) {
-      setIsEmpty(true);
-    } else {
-      const bookingsCount = Database.getBookings(userId).filter(b => b.status === 'completed').length;
-      const dateStr = new Date().toLocaleDateString('en-CA');
-      const hydrationLogged = Database.getHydration(userId, dateStr);
-      if (bookingsCount === 0 && hydrationLogged === 0) {
-        setIsEmpty(true);
-      } else {
-        setIsEmpty(false);
-      }
-    }
+    if (!userId) return true;
+    const bookingsCount = Database.getBookings(userId).filter(b => b.status === 'completed').length;
+    const dateStr = new Date().toLocaleDateString('en-CA');
+    const hydrationLogged = Database.getHydration(userId, dateStr);
+    return bookingsCount === 0 && hydrationLogged === 0;
   }, [totalSessions, totalCalories, user.id]);
 
   useEffect(() => {
@@ -53,7 +45,7 @@ export default function ProgressScreen() {
       duration: 500,
       useNativeDriver: true,
     }).start();
-  }, [activeRange]);
+  }, [activeRange, fadeAnim]);
 
   const getStats = () => {
     const userId = Database.getCurrentUserId();
@@ -280,7 +272,7 @@ export default function ProgressScreen() {
                         <Text className="text-[#101828] text-xs font-extrabold">{rev.clientName} • {rev.workout}</Text>
                         <Text className="text-zinc-400 text-[9px] font-semibold">{rev.date}</Text>
                       </View>
-                      <Text className="text-[#6B7280] text-xs italic">"{rev.comment}"</Text>
+                      <Text className="text-[#6B7280] text-xs italic">&ldquo;{rev.comment}&rdquo;</Text>
                       <View className="flex-row gap-0.5 mt-0.5">
                         {Array.from({ length: rev.rating }).map((_, i) => (
                           <Feather key={i} name="star" size={10} color="#F5B942" style={{ marginRight: 2 }} />

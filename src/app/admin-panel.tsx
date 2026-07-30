@@ -39,7 +39,9 @@ export default function AdminPanelScreen() {
   };
 
   useEffect(() => {
-    checkAdminAuth();
+    Promise.resolve().then(() => {
+      checkAdminAuth();
+    });
   }, []);
 
   const loadApplications = async () => {
@@ -57,7 +59,9 @@ export default function AdminPanelScreen() {
 
   useEffect(() => {
     if (isAdminAuthorized === true) {
-      loadApplications();
+      Promise.resolve().then(() => {
+        loadApplications();
+      });
     }
   }, [isAdminAuthorized]);
 

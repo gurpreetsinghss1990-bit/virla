@@ -170,7 +170,7 @@ export default function CoachProfileScreen() {
                       </View>
                     </View>
                     <Text className="text-zinc-500 text-xs font-medium leading-relaxed">
-                      "{rev.comment}"
+                      &ldquo;{rev.comment}&rdquo;
                     </Text>
                   </View>
                 ))}

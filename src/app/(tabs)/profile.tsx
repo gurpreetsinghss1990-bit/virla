@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, ScrollView, Switch, Image, Alert, TouchableOpacity, TextInput, Animated, Platform, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUserStore } from '../../store/userStore';
@@ -70,7 +70,7 @@ export default function ProfileScreen() {
     }
   };
 
-  const shimmerAnim = useRef(new Animated.Value(0.3)).current;
+  const shimmerAnim = useMemo(() => new Animated.Value(0.3), []);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // Profile Edit fields local states
@@ -123,27 +123,33 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     profile.syncFromDB();
-    checkApplicationStatus();
-    Animated.loop(
+    Promise.resolve().then(() => {
+      checkApplicationStatus();
+    });
+    const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(shimmerAnim, { toValue: 0.7, duration: 1500, useNativeDriver: true }),
         Animated.timing(shimmerAnim, { toValue: 0.3, duration: 1500, useNativeDriver: true })
       ])
-    ).start();
-  }, []);
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [shimmerAnim]);
 
   useEffect(() => {
-    setEditName(profile.name || '');
-    setEditMobile(profile.mobile || '');
-    setEditEmail(profile.email || '');
-    setEditGender(profile.gender || '');
-    setEditDob(profile.dob || '');
-    setEditHeight(profile.height || '');
-    setEditWeight(profile.weight || '');
-    setEditFitnessLevel(profile.fitnessLevel || '');
-    setEditTargetGoal(profile.targetGoal || '');
-    setEditLanguage(profile.preferredLanguage || '');
-    setEditCity(profile.city || '');
+    Promise.resolve().then(() => {
+      setEditName(profile.name || '');
+      setEditMobile(profile.mobile || '');
+      setEditEmail(profile.email || '');
+      setEditGender(profile.gender || '');
+      setEditDob(profile.dob || '');
+      setEditHeight(profile.height || '');
+      setEditWeight(profile.weight || '');
+      setEditFitnessLevel(profile.fitnessLevel || '');
+      setEditTargetGoal(profile.targetGoal || '');
+      setEditLanguage(profile.preferredLanguage || '');
+      setEditCity(profile.city || '');
+    });
   }, [
     profile.name,
     profile.mobile,

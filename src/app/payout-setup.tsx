@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -14,27 +14,23 @@ export default function PayoutSetupScreen() {
   const user = useUserStore(state => state.user);
   const insets = useSafeAreaInsets();
   
-  const [accountHolderName, setAccountHolderName] = useState('');
-  const [bankName, setBankName] = useState('');
-  const [bankAccountNumber, setBankAccountNumber] = useState('');
-  const [bankIfsc, setBankIfsc] = useState('');
-  const [bankUpiId, setBankUpiId] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
   const coach = Database.schema.coaches.find((c: any) => c.name === user.name || c.id === user.id) || null;
 
-  useEffect(() => {
+  const initialBankDetails = useMemo(() => {
     if (coach && coach.bankDetails) {
       try {
-        const parsed = JSON.parse(coach.bankDetails);
-        setAccountHolderName(parsed.accountName || '');
-        setBankName(parsed.bankName || '');
-        setBankAccountNumber(parsed.accountNumber || '');
-        setBankIfsc(parsed.ifsc || '');
-        setBankUpiId(parsed.upiId || '');
+        return JSON.parse(coach.bankDetails);
       } catch (e) {}
     }
+    return {};
   }, [coach]);
+
+  const [accountHolderName, setAccountHolderName] = useState(initialBankDetails.accountName || '');
+  const [bankName, setBankName] = useState(initialBankDetails.bankName || '');
+  const [bankAccountNumber, setBankAccountNumber] = useState(initialBankDetails.accountNumber || '');
+  const [bankIfsc, setBankIfsc] = useState(initialBankDetails.ifsc || '');
+  const [bankUpiId, setBankUpiId] = useState(initialBankDetails.upiId || '');
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSave = async () => {
     if (!accountHolderName || !bankName || !bankAccountNumber || !bankIfsc) {

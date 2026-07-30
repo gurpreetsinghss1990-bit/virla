@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, Animated } from 'react-native';
 import { router } from 'expo-router';
 import { useUserStore } from '../store/userStore';
@@ -6,10 +6,10 @@ import { bootstrapApp } from '../utils/bootstrap';
 
 export default function SplashScreen() {
   
-  // Animation refs
-  const fadeAnim = useRef(new Animated.Value(0)).current;       // For the entire screen container
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;    // For logo scale
-  const dotScale = useRef(new Animated.Value(1)).current;       // For blue/purple dot pulsing
+  // Animation values using useMemo to avoid render-phase ref reads
+  const fadeAnim = useMemo(() => new Animated.Value(0), []);       // For the entire screen container
+  const scaleAnim = useMemo(() => new Animated.Value(0.9), []);    // For logo scale
+  const dotScale = useMemo(() => new Animated.Value(1), []);       // For blue/purple dot pulsing
 
   useEffect(() => {
     // 1. Fade in the screen and scale up the logo smoothly
