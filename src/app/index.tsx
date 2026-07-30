@@ -122,7 +122,7 @@ export default function SplashScreen() {
             style={{ 
               transform: [{ scale: dotScale }] 
             }} 
-            className="w-3.5 h-3.5 rounded-full bg-indigo-600 ml-2" 
+            className="w-3.5 h-3.5 rounded-full bg-[#E11D48] ml-2" 
           />
         </View>
         

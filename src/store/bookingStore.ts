@@ -3,6 +3,7 @@ import { Booking } from '../types';
 import { useMembershipStore } from './membershipStore';
 import { useNotificationStore } from './notificationStore';
 import { useWalletStore } from './walletStore';
+import { useUserProfileStore } from './userProfileStore';
 import { Database } from '../database/Database';
 
 interface BookingState {
@@ -83,6 +84,13 @@ export const useBookingStore = create<BookingState>((set, get) => ({
           nAction = 'View Coach';
           nDeepLink = `/session-detail?id=${id}`;
           nIcon = 'user-check';
+        } else if (status === 'trainer_preparing') {
+          nTitle = 'Coach Preparing 🎒';
+          nBody = `Coach ${target.trainerName} is preparing fitness gear for your ${target.workoutTitle} session.`;
+          nType = 'Trainer Updates';
+          nAction = 'View Status';
+          nDeepLink = `/session-detail?id=${id}`;
+          nIcon = 'clock';
         } else if (status === 'trainer_travelling') {
           nTitle = 'Coach On The Way 🚗';
           nBody = `Coach ${target.trainerName} started travelling to your venue. Est. arrival: ${target.trainerArrivalTime || '15 mins'}.`;
@@ -132,6 +140,10 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   },
   updateBookingRating: (id, ratingDetails) => {
     Database.updateBookingRating(id, ratingDetails);
+    const userId = Database.getCurrentUserId();
+    if (userId) {
+      useUserProfileStore.getState().syncFromDB();
+    }
     get().syncFromDB();
   },
   acceptBooking: (id) => {
@@ -225,18 +237,27 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     const target = get().bookings.find(b => b.id === id);
     if (target) {
       const b = Database.schema.bookings.find(x => x.id === id);
-      if (b) {
+      const userId = Database.getCurrentUserId() || target.clientId;
+      if (b && userId) {
         b.questionnaire = questionnaire;
         b.timelineStatus = 'trainer_report_submitted';
         b.status = 'completed';
+        
+        // Progress Automation: log calories automatically
+        const caloriesBurned = target.caloriesBurned || 380;
+        const dateStr = new Date().toLocaleDateString('en-CA');
+        Database.logCalories(userId, dateStr, caloriesBurned);
       }
       Database.addEarning({
         bookingId: id,
-        clientName: 'Viral',
+        clientName: target.clientName || 'Viral',
         amount: 800,
         type: 'session',
       });
       get().syncFromDB();
+      if (userId) {
+        useUserProfileStore.getState().syncFromDB();
+      }
     }
   },
   syncFromDB: () => {

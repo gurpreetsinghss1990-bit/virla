@@ -26,23 +26,12 @@ export default function CommunicationScreen() {
 
   const booking = bookings.find((b) => b.id === bookingId) || bookings[0];
 
-  if (!booking) {
-    return (
-      <View style={{ flex: 1, backgroundColor: 'white', paddingTop: insets.top }} className="justify-center items-center">
-        <Text className="text-zinc-400 font-semibold">No booking details found.</Text>
-        <TouchableOpacity onPress={() => router.back()} className="mt-4 bg-zinc-900 px-6 py-2 rounded-full">
-          <Text className="text-white font-bold text-xs">Go Back</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   const [messageText, setMessageText] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'm-1',
       sender: 'trainer',
-      text: `Hello Viral! I'm preparing for our ${booking.workoutTitle} session.`,
+      text: `Hello Viral! I'm preparing for our ${booking?.workoutTitle || ''} session.`,
       time: '10:05 AM'
     },
     {
@@ -55,6 +44,21 @@ export default function CommunicationScreen() {
 
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+  }, [messages, isTyping]);
+
+  if (!booking) {
+    return (
+      <View style={{ flex: 1, backgroundColor: 'white', paddingTop: insets.top }} className="justify-center items-center">
+        <Text className="text-zinc-400 font-semibold">No booking details found.</Text>
+        <TouchableOpacity onPress={() => router.back()} className="mt-4 bg-zinc-900 px-6 py-2 rounded-full">
+          <Text className="text-white font-bold text-xs">Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const handleSendMessage = () => {
     if (!messageText.trim()) return;
@@ -89,10 +93,6 @@ export default function CommunicationScreen() {
       });
     }, 2000);
   };
-
-  useEffect(() => {
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-  }, [messages, isTyping]);
 
   const handleCall = () => {
     Alert.alert(
@@ -222,6 +222,40 @@ export default function CommunicationScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Quick Messages Bar */}
+      <View className="bg-zinc-50 border-t border-zinc-100 py-2.5 px-4">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-2">
+          {["I've arrived.", "I'm running 5 minutes late.", "Please come downstairs.", "I'm at the gate."].map((msgText, idx) => (
+            <TouchableOpacity
+              key={idx}
+              onPress={() => {
+                const userMsg: ChatMessage = {
+                  id: `msg-${Date.now()}-${idx}`,
+                  sender: 'customer',
+                  text: msgText,
+                  time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                };
+                setMessages(prev => [...prev, userMsg]);
+                setIsTyping(true);
+                setTimeout(() => {
+                  setIsTyping(false);
+                  const replyMsg: ChatMessage = {
+                    id: `msg-${Date.now() + 1}`,
+                    sender: 'trainer',
+                    text: 'Got it! I will see you shortly.',
+                    time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                  };
+                  setMessages(prev => [...prev, replyMsg]);
+                }, 1200);
+              }}
+              className="bg-white border border-zinc-200 px-3.5 py-1.5 rounded-full mr-2"
+            >
+              <Text className="text-zinc-700 text-[9px] font-bold">{msgText}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {/* Bottom Message Input Bar */}
       <View 

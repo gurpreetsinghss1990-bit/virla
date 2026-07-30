@@ -352,12 +352,41 @@ export default function HomeScreen() {
       {loading ? (
         <SkeletonLoader layout="home" />
       ) : (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 140 }}
-          className="bg-[#FCF5F5] flex-1"
-        >
-        <Animated.View
+        <View className="flex-1 bg-[#FCF5F5]">
+          {activeBooking && (role === 'customer' || role === 'admin') && (
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => router.push({ pathname: '/session-detail' as any, params: { id: activeBooking.id } })}
+              className="mx-6 mt-3 mb-1 p-3.5 bg-indigo-950 border border-indigo-900 rounded-2xl flex-row items-center justify-between shadow-md"
+            >
+              <View className="flex-row items-center gap-3 flex-1">
+                <View className="w-2 h-2 rounded-full bg-rose-500" />
+                <View className="flex-1">
+                  <Text className="text-indigo-250 text-[8px] font-black uppercase tracking-wider">Live Concierge Update</Text>
+                  <Text className="text-white text-[11px] font-extrabold mt-0.5" numberOfLines={1}>
+                    {activeBooking.timelineStatus === 'trainer_assigned' && `Coach assigned for ${activeBooking.workoutTitle}`}
+                    {activeBooking.timelineStatus === 'trainer_accepted' && `Coach Karan accepted your booking`}
+                    {activeBooking.timelineStatus === 'trainer_preparing' && `Coach Karan is preparing your session gear`}
+                    {activeBooking.timelineStatus === 'trainer_travelling' && `Coach Karan is on the way`}
+                    {activeBooking.timelineStatus === 'trainer_arrived' && `Coach Karan has arrived at your gate!`}
+                    {activeBooking.timelineStatus === 'otp_verified' && `Check-in Verified. Starting workout.`}
+                    {activeBooking.timelineStatus === 'workout_started' && `Workout in progress (active session)`}
+                    {activeBooking.timelineStatus === 'workout_completed' && `Workout complete! Submit rating feedback.`}
+                    {activeBooking.timelineStatus === 'trainer_report_submitted' && `Report submitted. Rate your session.`}
+                    {activeBooking.timelineStatus === 'customer_review_pending' && `Rating review pending.`}
+                  </Text>
+                </View>
+              </View>
+              <Feather name="chevron-right" size={14} color="#A5B4FC" />
+            </TouchableOpacity>
+          )}
+
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 140 }}
+            className="bg-[#FCF5F5] flex-1"
+          >
+            <Animated.View
           style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
           className="px-6 pt-6 gap-8"
         >
@@ -1265,6 +1294,7 @@ export default function HomeScreen() {
 
         </Animated.View>
       </ScrollView>
+      </View>
       )}
     </SafeAreaViewWrapper>
   );

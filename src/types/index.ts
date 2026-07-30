@@ -57,7 +57,7 @@ export interface Booking {
   };
   
   // Sprint 5 additions
-  timelineStatus?: 'booked' | 'trainer_assigned' | 'trainer_accepted' | 'trainer_travelling' | 'trainer_arrived' | 'otp_verified' | 'workout_started' | 'workout_completed' | 'trainer_report_submitted' | 'customer_review_pending' | 'session_closed';
+  timelineStatus?: 'booked' | 'trainer_assigned' | 'trainer_accepted' | 'trainer_preparing' | 'trainer_travelling' | 'trainer_arrived' | 'otp_verified' | 'workout_started' | 'workout_completed' | 'trainer_report_submitted' | 'customer_review_pending' | 'session_closed';
   trainerLevel?: 'Associate' | 'Certified' | 'Elite';
   trainerRating?: number;
   trainerCompletedSessions?: number;

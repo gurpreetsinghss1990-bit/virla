@@ -1,22 +1,24 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import { useUserProfileStore } from '../store/userProfileStore';
 
 export default function PersonalAchievementsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { totalSessions, currentStreak } = useUserProfileStore();
 
   const achievements = [
-    { id: 'ach-1', title: 'First Workout', desc: 'Completed your 1st home session.', unlocked: true, icon: 'shield', color: 'text-indigo-600 bg-indigo-50 border-indigo-150' },
-    { id: 'ach-2', title: '10 Sessions club', desc: 'Log 10 complete workout slots.', unlocked: true, icon: 'award', color: 'text-emerald-600 bg-emerald-50 border-emerald-150' },
-    { id: 'ach-3', title: 'Morning Warrior', desc: 'Complete any workout before 9:00 AM.', unlocked: true, icon: 'sun', color: 'text-amber-600 bg-amber-50 border-amber-150' },
-    { id: 'ach-4', title: 'Consistency Streak', desc: 'Maintain a 5-day active workout streak.', unlocked: true, icon: 'zap', color: 'text-orange-500 bg-orange-50 border-orange-150' },
-    { id: 'ach-5', title: '50 Sessions Legend', desc: 'Reach 50 scheduled workout hours.', unlocked: false, icon: 'lock', color: 'text-zinc-400 bg-zinc-50 border-zinc-150' },
-    { id: 'ach-6', title: '100 Sessions Centenary', desc: 'Complete 100 sessions with Master Elite coaches.', unlocked: false, icon: 'lock', color: 'text-zinc-400 bg-zinc-50 border-zinc-150' },
-    { id: 'ach-7', title: 'Weekend Champion', desc: 'Log 10 Saturday/Sunday sessions.', unlocked: false, icon: 'lock', color: 'text-zinc-400 bg-zinc-50 border-zinc-150' },
-    { id: 'ach-8', title: 'Weight Loss Target', desc: 'Log a 5kg weight reduction update.', unlocked: false, icon: 'lock', color: 'text-zinc-400 bg-zinc-50 border-zinc-150' }
+    { id: 'ach-1', title: 'First Workout', desc: 'Completed your 1st home session.', unlocked: totalSessions >= 1, icon: 'shield', color: totalSessions >= 1 ? 'text-indigo-600 bg-indigo-50 border-indigo-150' : 'text-zinc-400 bg-zinc-50 border-zinc-150' },
+    { id: 'ach-2', title: '10 Sessions club', desc: 'Log 10 complete workout slots.', unlocked: totalSessions >= 10, icon: 'award', color: totalSessions >= 10 ? 'text-emerald-600 bg-emerald-50 border-emerald-150' : 'text-zinc-400 bg-zinc-50 border-zinc-150' },
+    { id: 'ach-3', title: 'Morning Warrior', desc: 'Complete any workout before 9:00 AM.', unlocked: totalSessions >= 3, icon: 'sun', color: totalSessions >= 3 ? 'text-amber-600 bg-amber-50 border-amber-150' : 'text-zinc-400 bg-zinc-50 border-zinc-150' },
+    { id: 'ach-4', title: 'Consistency Streak', desc: 'Maintain a 5-day active workout streak.', unlocked: currentStreak >= 5, icon: 'zap', color: currentStreak >= 5 ? 'text-orange-500 bg-orange-50 border-orange-150' : 'text-zinc-400 bg-zinc-50 border-zinc-150' },
+    { id: 'ach-5', title: '50 Sessions Legend', desc: 'Reach 50 scheduled workout hours.', unlocked: totalSessions >= 50, icon: 'lock', color: totalSessions >= 50 ? 'text-indigo-600 bg-indigo-50 border-indigo-150' : 'text-zinc-400 bg-zinc-50 border-zinc-150' },
+    { id: 'ach-6', title: '100 Sessions Centenary', desc: 'Complete 100 sessions with Master Elite coaches.', unlocked: totalSessions >= 100, icon: 'lock', color: totalSessions >= 100 ? 'text-[#D97706] bg-amber-50 border-amber-150' : 'text-zinc-400 bg-zinc-50 border-zinc-150' },
+    { id: 'ach-7', title: 'Weekend Champion', desc: 'Log 10 Saturday/Sunday sessions.', unlocked: totalSessions >= 15, icon: 'lock', color: totalSessions >= 15 ? 'text-[#4F46E5] bg-indigo-50 border-indigo-150' : 'text-zinc-400 bg-zinc-50 border-zinc-150' },
+    { id: 'ach-8', title: 'Weight Loss Target', desc: 'Log a 5kg weight reduction update.', unlocked: totalSessions >= 5, icon: 'lock', color: totalSessions >= 5 ? 'text-rose-600 bg-rose-50 border-rose-150' : 'text-zinc-400 bg-zinc-50 border-zinc-150' }
   ];
 
   const unlockedCount = achievements.filter(a => a.unlocked).length;
