@@ -14,4 +14,5 @@ export const AssignmentConfig = {
   cooldownDurationMin: 15,      // Cooldown in minutes after completing a session
   maxDailySessions: 4,          // Maximum daily sessions allowed per trainer
   maxConsecutiveSessions: 2,    // Maximum consecutive sessions before mandatory rest
+  trainerDelayAlertDelayMin: 5, // Alert customer if trainer has not checked in 5 minutes after scheduled start
 };

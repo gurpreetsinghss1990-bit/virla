@@ -1021,20 +1021,22 @@ export default function HomeScreen() {
                           </View>
                           <View className="w-[48%] gap-0.5">
                             <Text className="text-white/50 text-[9px] font-bold uppercase">Water Goal</Text>
-                            <Text className="text-white text-xs font-black" numberOfLines={1}>{savedPlan.hydrationGoal.split(' ')[0]} L</Text>
+                            <Text className="text-white text-xs font-black" numberOfLines={1}>
+                              {savedPlan.hydrationGoal ? savedPlan.hydrationGoal.split(' ')[0] : '2'} L
+                            </Text>
                           </View>
                           <View className="w-[48%] gap-0.5">
                             <Text className="text-white/50 text-[9px] font-bold uppercase">Next Session</Text>
                             <Text className="text-white text-xs font-black" numberOfLines={1}>
-                              {upcomingBookings.length > 0 
-                                ? `${upcomingBookings[0].date.split(',')[0]} @ ${upcomingBookings[0].time}` 
+                              {upcomingBookings.length > 0 && upcomingBookings[0]?.date
+                                ? `${upcomingBookings[0].date.split(',')[0]} @ ${upcomingBookings[0].time}`
                                 : 'None scheduled'}
                             </Text>
                           </View>
                         </View>
                         
                         <View className="gap-0.5">
-                          <Text className="text-white/50 text-[9px] font-bold uppercase">Today's Workout</Text>
+                          <Text className="text-white/50 text-[9px] font-bold uppercase">{"Today's"} Workout</Text>
                           <Text className="text-white text-[11px] font-semibold leading-relaxed pr-6" numberOfLines={1}>
                             {savedPlan.workoutRecommendation}
                           </Text>
@@ -1195,7 +1197,7 @@ export default function HomeScreen() {
                     Good Morning, {user.name === 'Guest User' || user.name === 'Viral' ? 'Rahul' : user.name.split(' ')[0]}
                   </Text>
                   <Text className="text-zinc-500 text-xs font-semibold leading-relaxed mt-1">
-                    VIRLA PRO Console • Today's Sessions & Requests
+                    VIRLA PRO Console • {"Today's"} Sessions & Requests
                   </Text>
                 </View>
 
@@ -1254,7 +1256,7 @@ export default function HomeScreen() {
 
                   <View className="flex-row flex-wrap justify-between gap-y-3 px-1">
                     <View className="w-[48%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
-                      <Text className="text-zinc-400 text-[8px] font-bold uppercase">Today's Earnings</Text>
+                      <Text className="text-zinc-400 text-[8px] font-bold uppercase">{"Today's"} Earnings</Text>
                       <Text className="text-emerald-700 text-xs font-extrabold">
                         ₹{(bookings.filter(b => b.status === 'upcoming' && b.timelineStatus === 'trainer_accepted' && (b.date.includes('Today') || b.date.includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' })))).length * 1200).toLocaleString('en-IN')}
                       </Text>
@@ -1308,7 +1310,7 @@ export default function HomeScreen() {
 
                 {/* Today's Scheduled Sessions */}
                 <View className="gap-3 mt-1">
-                  <Text className="text-[#101828] text-xs font-semibold uppercase tracking-widest pl-1">Today's Scheduled Sessions</Text>
+                  <Text className="text-[#101828] text-xs font-semibold uppercase tracking-widest pl-1">{"Today's"} Scheduled Sessions</Text>
                   {bookings.filter(b => b.timelineStatus === 'trainer_accepted' && (b.date.includes('Today') || b.date.includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' })))).length > 0 ? (
                     bookings.filter(b => b.timelineStatus === 'trainer_accepted' && (b.date.includes('Today') || b.date.includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' })))).map((booking) => (
                       <TouchableOpacity 

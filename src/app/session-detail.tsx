@@ -10,6 +10,7 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { SessionEngine } from '../services/SessionEngine';
+import { AssignmentConfig } from '../config/AssignmentConfig';
 
 // Map coordinates path waypoints (scaled to fit beautiful SVG canvas)
 const waypoints = [
@@ -34,7 +35,8 @@ export default function SessionDetailScreen() {
     triggerTrainerNoShow, 
     submitQuestionnaire,
     updateBookingNote,
-    reassignTrainer
+    reassignTrainer,
+    syncFromDB
   } = useBookingStore();
   
   const { addNotification } = useNotificationStore();
@@ -67,30 +69,69 @@ export default function SessionDetailScreen() {
   const [editedNote, setEditedNote] = useState('');
 
   const [timeLeft, setTimeLeft] = useState(60);
+  const [graceTimeLeft, setGraceTimeLeft] = useState(0);
+  const [workoutTimeLeft, setWorkoutTimeLeft] = useState(0);
+  const [showCustomerOtpInput, setShowCustomerOtpInput] = useState(false);
+  const [customerOtpInput, setCustomerOtpInput] = useState('');
+  const [hasDelayedAlertFired, setHasDelayedAlertFired] = useState(false);
 
   useEffect(() => {
-    if (role === 'trainer' && currentStatus === 'booked' && booking) {
-      const calculateTimeLeft = () => {
-        const elapsed = Math.floor((Date.now() - (booking.createdAt || Date.now())) / 1000);
-        return Math.max(0, 60 - elapsed);
-      };
+    if (!booking) return;
 
-      setTimeLeft(calculateTimeLeft());
+    const calculateTimeLeft = () => {
+      const elapsed = Math.floor((Date.now() - (booking.createdAt || Date.now())) / 1000);
+      return Math.max(0, 60 - elapsed);
+    };
 
-      const timer = setInterval(() => {
+    if (role === 'trainer' && currentStatus === 'booked') {
+      setTimeout(() => setTimeLeft(calculateTimeLeft()), 0);
+    }
+
+    const updateTimers = () => {
+      if (role === 'trainer' && currentStatus === 'booked') {
         const nextTime = calculateTimeLeft();
         if (nextTime <= 0) {
-          clearInterval(timer);
-          reassignTrainer(booking.id);
+          reassignTrainer(booking.id, 'timeout');
           router.back();
           return;
         }
         setTimeLeft(nextTime);
-      }, 1000);
+      }
 
-      return () => clearInterval(timer);
-    }
-  }, [booking?.id, booking?.createdAt, role, currentStatus]);
+      if (currentStatus === 'trainer_arrived') {
+        const grace = SessionEngine.getGracePeriodSecondsLeft(booking);
+        setGraceTimeLeft(grace);
+      } else if (currentStatus === 'workout_started') {
+        const work = SessionEngine.getWorkoutSecondsLeft(booking);
+        setWorkoutTimeLeft(work);
+      }
+
+      // Check if trainer is delayed (has not checked in past delay threshold after scheduled start time)
+      if (
+        role === 'customer' &&
+        !hasDelayedAlertFired &&
+        ['trainer_accepted', 'trainer_preparing', 'trainer_travelling'].includes(currentStatus)
+      ) {
+        const sessionStart = SessionEngine.getSessionStartDate(booking);
+        const alertThreshold = sessionStart.getTime() + AssignmentConfig.trainerDelayAlertDelayMin * 60 * 1000;
+        if (Date.now() > alertThreshold) {
+          setHasDelayedAlertFired(true);
+          addNotification({
+            title: 'Trainer Delayed ⚠️',
+            body: 'Trainer appears delayed.',
+            icon: 'clock',
+            type: 'System',
+            priority: 'high'
+          });
+        }
+      }
+    };
+
+    updateTimers();
+    const interval = setInterval(updateTimers, 1000);
+
+    return () => clearInterval(interval);
+  }, [booking?.id, booking?.createdAt, currentStatus, role]);
 
   const getSessionStartDate = (): Date => {
     try {
@@ -273,40 +314,58 @@ export default function SessionDetailScreen() {
     );
   }
 
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
   // Verification actions with double safeguards
   const handleVerifyOtp = () => {
-    if (otpInput === booking.otp) {
+    const success = SessionEngine.verifyOTP(booking.id, otpInput);
+    if (success) {
       Alert.alert(
-        'Confirm Check-In',
-        'Are you sure you want to verify check-in and start the active session?',
+        'Check-In Verified',
+        'Verification code correct. Starting the workout session.',
         [
-          { text: 'Cancel', style: 'cancel' },
           {
-            text: 'Yes, Start Session',
+            text: "Let's Go",
             onPress: () => {
-              updateTimelineStatus(booking.id, 'otp_verified');
-              addNotification({
-                title: 'Check-in Verified 🔓',
-                body: 'Secure OTP entry code check completed. Initiating workout active timer.',
-                icon: 'lock'
-              });
               setOtpInput('');
-              
-              // Automatically advance to workout started
-              setTimeout(() => {
-                updateTimelineStatus(booking.id, 'workout_started');
-                addNotification({
-                  title: 'Workout Started 🏋️‍♂️',
-                  body: `Coach ${booking.trainerName} started your active session. Warmup drills underway.`,
-                  icon: 'user-check'
-                });
-              }, 500);
+              syncFromDB();
+              addNotification({
+                title: 'Workout Started 🏋️‍♂️',
+                body: `Coach ${booking.trainerName} started your active session. Warmup drills underway.`,
+                icon: 'user-check'
+              });
             }
           }
         ]
       );
     } else {
-      Alert.alert('Verification Failed', 'The security OTP code does not match the client\'s check-in pin.');
+      Alert.alert('Verification Failed', 'Incorrect or expired OTP entered. Please try again.');
+    }
+  };
+
+  const handleVerifyCustomerOtp = () => {
+    const success = SessionEngine.verifyOTP(booking.id, customerOtpInput);
+    if (success) {
+      Alert.alert(
+        'Session Started 🏋️‍♂️',
+        'Verification successful! Enjoy your session.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setCustomerOtpInput('');
+              setShowCustomerOtpInput(false);
+              syncFromDB();
+            }
+          }
+        ]
+      );
+    } else {
+      Alert.alert('Verification Failed', 'Incorrect or expired OTP entered. Please try again.');
     }
   };
 
@@ -559,7 +618,7 @@ export default function SessionDetailScreen() {
             <View className="bg-zinc-50 border border-zinc-200 p-4 rounded-2xl flex-row items-start gap-2.5">
               <Feather name="lock" size={13} color="#9CA3AF" style={{ marginTop: 2 }} />
               <Text className="text-zinc-505 text-[9px] font-semibold leading-relaxed flex-1">
-                Before you accept this booking, communication options are locked and customer contact information (Name, exact Address, Phone Number) remains private under VIRLA's privacy policies.
+                Before you accept this booking, communication options are locked and customer contact information (Name, exact Address, Phone Number) remains private under {"VIRLA's"} privacy policies.
               </Text>
             </View>
           </View>
@@ -969,36 +1028,167 @@ export default function SessionDetailScreen() {
                     <Text className="text-white text-[8px] font-black uppercase">Share GPS</Text>
                   </TouchableOpacity>
                 </View>
+
+                {/* Dynamic Concierge Action Buttons */}
+                {role === 'trainer' && (
+                  <View className="border-t border-zinc-100 pt-3.5 mt-1 gap-3">
+                    {(currentStatus === 'trainer_accepted' || currentStatus === 'trainer_preparing') && (
+                      <TouchableOpacity
+                        onPress={() => {
+                          handleNavigateAddress();
+                          updateTimelineStatus(booking.id, 'trainer_travelling');
+                        }}
+                        className="w-full bg-[#E11D48] py-3.5 rounded-[18px] items-center justify-center flex-row gap-2 shadow-sm"
+                      >
+                        <Feather name="navigation" size={14} color="white" />
+                        <Text className="text-white text-xs font-black uppercase">Start Navigation</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {currentStatus === 'trainer_travelling' && (
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (!SessionEngine.canCheckIn(booking)) {
+                            Alert.alert('Check-In Locked', 'You can check in 30 minutes before the scheduled session.');
+                          } else {
+                            try {
+                              SessionEngine.checkIn(booking.id);
+                              syncFromDB();
+                              Alert.alert('Checked In', 'You have successfully checked in at the customer location.');
+                            } catch (err: any) {
+                              Alert.alert('Check-In Error', err.message || 'Could not check in.');
+                            }
+                          }
+                        }}
+                        className="w-full bg-[#E11D48] py-3.5 rounded-[18px] items-center justify-center flex-row gap-2 shadow-sm"
+                      >
+                        <Feather name="check-circle" size={14} color="white" />
+                        <Text className="text-white text-xs font-black uppercase">Check In</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
               </View>
             )}
 
             {/* OTP Display and Trainer Entry Verification */}
             {currentStatus === 'trainer_arrived' && (role === 'customer' || role === 'admin') && (
-              <View className="bg-zinc-950 p-6 rounded-[28px] border border-zinc-800 shadow-xl items-center justify-center gap-3">
-                <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-widest">Share OTP with Coach Karan</Text>
-                <Text className="text-white text-4xl font-black mt-1 tracking-widest">{booking.otp || '3049'}</Text>
-                <Text className="text-zinc-500 text-[8px] font-bold text-center leading-relaxed">Give this 4-digit code to the trainer to verify and start session.</Text>
+              <View className="bg-zinc-950 p-6 rounded-[28px] border border-zinc-800 shadow-xl gap-4">
+                <View className="flex-row items-center gap-2">
+                  <View className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                  <Text className="text-emerald-400 text-[10px] font-black uppercase tracking-wider">Trainer Checked In</Text>
+                </View>
+                <Text className="text-white text-base font-bold">Your trainer has arrived. Please begin your session.</Text>
+                
+                {!showCustomerOtpInput ? (
+                  <TouchableOpacity
+                    onPress={() => setShowCustomerOtpInput(true)}
+                    className="w-full bg-[#E11D48] py-4 rounded-[20px] items-center justify-center shadow-sm"
+                  >
+                    <Text className="text-white text-sm font-black uppercase">Start Session</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View className="gap-4 border-t border-zinc-900 pt-4">
+                    <View className="items-center justify-center bg-zinc-900/40 p-4 rounded-2xl gap-1">
+                      <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-widest">Share OTP with Coach</Text>
+                      <Text className="text-white text-4xl font-black tracking-widest mt-1">{booking.otp || '------'}</Text>
+                      <Text className="text-zinc-500 text-[8px] font-bold text-center leading-relaxed mt-1">
+                        Give this 6-digit code to your coach, or verify directly below.
+                      </Text>
+                    </View>
+
+                    <View className="gap-2">
+                      <Text className="text-zinc-400 text-[9px] font-bold uppercase pl-0.5">Or enter OTP on your phone</Text>
+                      <TextInput
+                        value={customerOtpInput}
+                        onChangeText={setCustomerOtpInput}
+                        placeholder="0 0 0 0 0 0"
+                        placeholderTextColor="#4B5563"
+                        keyboardType="numeric"
+                        maxLength={6}
+                        className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-center text-white text-2xl font-black tracking-widest"
+                      />
+                      <View className="flex-row gap-2 mt-1">
+                        <TouchableOpacity
+                          onPress={() => setShowCustomerOtpInput(false)}
+                          className="flex-1 bg-zinc-800 py-3.5 rounded-xl items-center justify-center"
+                        >
+                          <Text className="text-zinc-400 text-xs font-black uppercase">Back</Text>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity
+                          onPress={handleVerifyCustomerOtp}
+                          className="flex-[1.5] bg-[#E11D48] py-3.5 rounded-xl items-center justify-center"
+                        >
+                          <Text className="text-white text-xs font-black uppercase">Verify & Start</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                )}
               </View>
             )}
 
             {currentStatus === 'trainer_arrived' && role === 'trainer' && (
-              <View className="bg-zinc-950 p-5 rounded-[28px] border border-zinc-850 gap-4">
-                <View>
-                  <Text className="text-white text-xs font-black uppercase tracking-wider">Client check-in security OTP</Text>
-                  <Text className="text-zinc-500 text-[8px] font-bold mt-0.5">Enter the 4-digit code provided by the client.</Text>
+              <View className="bg-zinc-950 p-5 rounded-[28px] border border-zinc-850 gap-4 shadow-xl">
+                <View className="flex-row justify-between items-center border-b border-zinc-900 pb-3">
+                  <View className="flex-1">
+                    <Text className="text-white text-xs font-black uppercase tracking-wider">Client check-in security OTP</Text>
+                    <Text className="text-zinc-500 text-[8px] font-bold mt-0.5">Enter the 6-digit code provided by the client.</Text>
+                  </View>
+                  <View className="bg-amber-950/40 border border-amber-900/30 px-3.5 py-1.5 rounded-full flex-row items-center gap-1.5 shadow-sm">
+                    <Feather name="clock" size={10} color="#F59E0B" />
+                    <Text className="text-amber-500 text-[9px] font-black">{formatTime(graceTimeLeft)}</Text>
+                  </View>
                 </View>
-                <TextInput
-                  value={otpInput}
-                  onChangeText={setOtpInput}
-                  placeholder="0 0 0 0"
-                  placeholderTextColor="#4B5563"
-                  keyboardType="numeric"
-                  maxLength={4}
-                  className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-center text-white text-2xl font-black tracking-widest"
-                />
-                <TouchableOpacity onPress={handleVerifyOtp} className="w-full bg-[#4F46E5] py-3.5 rounded-xl items-center justify-center">
-                  <Text className="text-white text-xs font-black uppercase">Verify Check-In</Text>
-                </TouchableOpacity>
+
+                {graceTimeLeft > 0 ? (
+                  <View className="gap-3">
+                    <TextInput
+                      value={otpInput}
+                      onChangeText={setOtpInput}
+                      placeholder="0 0 0 0 0 0"
+                      placeholderTextColor="#4B5563"
+                      keyboardType="numeric"
+                      maxLength={6}
+                      className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-center text-white text-2xl font-black tracking-widest"
+                    />
+                    <TouchableOpacity
+                      onPress={handleVerifyOtp}
+                      className="w-full bg-[#E11D48] py-3.5 rounded-xl items-center justify-center"
+                    >
+                      <Text className="text-white text-xs font-black uppercase">Verify Check-In</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View className="gap-4">
+                    <View className="bg-red-950/20 border border-red-900/30 p-4.5 rounded-2xl items-center gap-2">
+                      <Feather name="alert-triangle" size={24} color="#EF4444" />
+                      <Text className="text-white text-xs font-bold text-center">Grace Period Expired</Text>
+                      <Text className="text-zinc-500 text-[8px] font-medium text-center leading-normal">
+                        Customer has not arrived or checked in within the 15-minute window.
+                      </Text>
+                    </View>
+                    <View className="flex-row gap-3">
+                      <TouchableOpacity
+                        onPress={() => {
+                          triggerClientNoShow(booking.id);
+                          Alert.alert('Customer No-Show', 'Report logged successfully.');
+                          router.back();
+                        }}
+                        className="flex-1 bg-rose-950 border border-rose-900 py-3.5 rounded-xl items-center justify-center"
+                      >
+                        <Text className="text-rose-400 text-xs font-black uppercase">Customer No Show</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => Alert.alert('Contact Support', 'Connecting to VIRLA partner coordinator...')}
+                        className="flex-1 bg-zinc-900 border border-zinc-800 py-3.5 rounded-xl items-center justify-center"
+                      >
+                        <Text className="text-white text-xs font-black uppercase">Contact Support</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
               </View>
             )}
 
@@ -1006,17 +1196,23 @@ export default function SessionDetailScreen() {
             {currentStatus === 'workout_started' && (
               <View className="bg-zinc-950 p-6 rounded-[28px] border border-zinc-800 items-center justify-center gap-3 shadow-xl">
                 <Text className="text-emerald-400 text-[8px] font-black uppercase tracking-wider">WORKOUT IN PROGRESS</Text>
-                <Text className="text-white text-4xl font-black tracking-tight">
-                  {Math.floor(elapsedSeconds / 60).toString().padStart(2, '0')}:
-                  {(elapsedSeconds % 60).toString().padStart(2, '0')}
-                </Text>
+                <Text className="text-white text-4xl font-black tracking-tight">{formatTime(workoutTimeLeft)}</Text>
                 <Text className="text-zinc-500 text-[9px] font-bold text-center leading-none">Activity tracker is active. Warm-up Drills logs are online.</Text>
                 {role === 'trainer' && (
                   <TouchableOpacity
-                    onPress={() => setShowQuestionnaire(true)}
-                    className="mt-3 bg-emerald-500 px-6 py-2.5 rounded-full"
+                    disabled={workoutTimeLeft > 0}
+                    onPress={() => {
+                      SessionEngine.completeSession(booking.id);
+                      syncFromDB();
+                      Alert.alert('Workout Completed', 'Workout session has been completed.');
+                    }}
+                    className={`mt-3 px-6 py-2.5 rounded-full ${
+                      workoutTimeLeft > 0 ? 'bg-zinc-850 opacity-40' : 'bg-emerald-500'
+                    }`}
                   >
-                    <Text className="text-white text-[8px] font-black uppercase tracking-wider">Complete Workout</Text>
+                    <Text className="text-white text-[8px] font-black uppercase tracking-wider">
+                      {workoutTimeLeft > 0 ? 'Workout in Progress' : 'Complete Session'}
+                    </Text>
                   </TouchableOpacity>
                 )}
               </View>

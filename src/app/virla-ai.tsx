@@ -43,10 +43,12 @@ export default function VirlaAIScreen() {
   // If a plan already exists, default to displaying it
   useEffect(() => {
     if (savedPlan) {
-      setGeneratedPlan(savedPlan);
+      setTimeout(() => setGeneratedPlan(savedPlan), 0);
     } else {
-      setGeneratedPlan(null);
-      setStep(1);
+      setTimeout(() => {
+        setGeneratedPlan(null);
+        setStep(1);
+      }, 0);
     }
   }, [savedPlan]);
 
