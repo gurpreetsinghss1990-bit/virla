@@ -192,6 +192,16 @@ export default function BookingScreen() {
   const [slideAnim] = useState(() => new Animated.Value(0));
   const [radarAnim] = useState(() => new Animated.Value(0));
 
+  // Synchronize database content on mount in case of direct deep link / refresh
+  useEffect(() => {
+    try {
+      useCoachStore.getState().syncFromDB();
+      useAddressStore.getState().syncFromDB();
+    } catch (err) {
+      console.warn('Direct store sync failed on mount:', err);
+    }
+  }, []);
+
   // Initial workout matching logic for Sprint 3 compatibility
   useEffect(() => {
     const searchString = [initialWorkoutId, initialWorkoutType, initialWorkoutName]
@@ -449,26 +459,39 @@ export default function BookingScreen() {
     const bookingId = `b-${Date.now()}`;
     const targetAddress = addresses.find(a => a.id === selectedAddressId)?.addressLine || 'Selected Location';
 
+    const fallbackCoach = {
+      id: 'c-1',
+      name: 'Karan Sharma',
+      photo: 'https://images.unsplash.com/photo-1548690312-e3b507d8c110?auto=format&fit=crop&w=400&q=80',
+      level: 'Certified Elite',
+      rating: 4.9,
+      completedSessions: 320,
+      specialty: 'Strength & HIIT',
+      languages: 'English, Hindi',
+      price: 1200
+    };
+    const activeCoach = matchedCoach || coaches[0] || fallbackCoach;
+
     // Simulate network delay to prevent duplicate submissions and test loading states
     setTimeout(() => {
       try {
         const tempBooking = {
           id: bookingId,
-          trainerName: matchedCoach.name,
-          trainerPhoto: matchedCoach.photo,
+          trainerName: activeCoach.name,
+          trainerPhoto: activeCoach.photo,
           workoutTitle: selectedExperience.title,
           date: selectedDate,
           time: selectedTime,
-          price: matchedCoach.price || 1200,
+          price: activeCoach.price || 1200,
           address: targetAddress,
           goal: selectedExperience.title,
           timelineStatus: 'booked' as const,
           status: 'upcoming' as const,
-          trainerLevel: matchedCoach.level || 'Certified',
-          trainerRating: matchedCoach.rating,
-          trainerCompletedSessions: matchedCoach.completedSessions || 150,
-          trainerSpeciality: matchedCoach.specialty,
-          trainerLanguages: matchedCoach.languages,
+          trainerLevel: activeCoach.level || 'Certified',
+          trainerRating: activeCoach.rating,
+          trainerCompletedSessions: activeCoach.completedSessions || 150,
+          trainerSpeciality: activeCoach.specialty,
+          trainerLanguages: activeCoach.languages,
           trainerDistance: '2.5 km',
           trainerArrivalTime: '15 mins',
           trainerNote: trainerNote.trim() || undefined,
@@ -476,7 +499,7 @@ export default function BookingScreen() {
         };
 
         const ratedTrainers = AssignmentEngine.rankTrainers(tempBooking);
-        let assignedCoach = matchedCoach;
+        let assignedCoach = activeCoach;
         let poolIds: string[] = [];
         let score = 0;
         let reason = 'Matched Fav / Specialty Fallback';
@@ -488,7 +511,7 @@ export default function BookingScreen() {
           score = topRating.score;
           reason = `Highest scorer in pool (Rank 1 of ${ratedTrainers.length})`;
         } else {
-          poolIds = [matchedCoach.id];
+          poolIds = [activeCoach.id];
           score = 80;
         }
 
