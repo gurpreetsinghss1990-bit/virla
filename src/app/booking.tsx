@@ -849,15 +849,7 @@ export default function BookingScreen() {
                           key={pref.id}
                           activeOpacity={0.8}
                           onPress={() => {
-                            setTrainerPref(pref.id as any);
-                            if (pref.id === 'favourite') {
-                              const favs = coaches.filter(c => c.isFavourite);
-                              if (favs.length > 0) {
-                                setSelectedTrainerId(favs[0].id);
-                              }
-                            } else {
-                              setTimeout(() => triggerTransition(3), 250);
-                            }
+                            console.log("Male/Female preference pressed: " + pref.id);
                           }}
                           className={`w-[47%] p-5 rounded-[24px] border items-center justify-center gap-2.5 ${
                             isSelected ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-[#E5E7EB]'
