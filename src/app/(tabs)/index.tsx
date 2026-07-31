@@ -1128,7 +1128,7 @@ export default function HomeScreen() {
                           <View className="gap-3 flex-1">
                             <View>
                               <Text className="text-zinc-950 text-[13px] font-semibold">{bookingData.date}</Text>
-                              <Text className="text-zinc-400 text-[11px] font-medium mt-0.5">{bookingData.time.split(' - ')[0]}</Text>
+                              <Text className="text-zinc-400 text-[11px] font-medium mt-0.5">{bookingData.time ? bookingData.time.split(' - ')[0] : ''}</Text>
                             </View>
                             <View>
                               <Text className="text-zinc-950 text-[13px] font-semibold">Home</Text>

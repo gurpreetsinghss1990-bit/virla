@@ -465,25 +465,25 @@ export default function VirlaAIScreen() {
                 <View className="gap-3.5">
                   <View className="gap-1">
                     <Text className="text-rose-500 text-[9px] font-black uppercase tracking-wide">Breakfast</Text>
-                    {generatedPlan.breakfastSuggestions.map((x, i) => (
+                    {(generatedPlan.breakfastSuggestions || []).map((x, i) => (
                       <Text key={i} className="text-zinc-700 text-xs font-medium">• {x}</Text>
                     ))}
                   </View>
                   <View className="gap-1 border-t border-zinc-50 pt-2">
                     <Text className="text-rose-500 text-[9px] font-black uppercase tracking-wide">Lunch</Text>
-                    {generatedPlan.lunchSuggestions.map((x, i) => (
+                    {(generatedPlan.lunchSuggestions || []).map((x, i) => (
                       <Text key={i} className="text-zinc-700 text-xs font-medium">• {x}</Text>
                     ))}
                   </View>
                   <View className="gap-1 border-t border-zinc-50 pt-2">
                     <Text className="text-rose-500 text-[9px] font-black uppercase tracking-wide">Dinner</Text>
-                    {generatedPlan.dinnerSuggestions.map((x, i) => (
+                    {(generatedPlan.dinnerSuggestions || []).map((x, i) => (
                       <Text key={i} className="text-zinc-700 text-xs font-medium">• {x}</Text>
                     ))}
                   </View>
                   <View className="gap-1 border-t border-zinc-50 pt-2">
                     <Text className="text-rose-500 text-[9px] font-black uppercase tracking-wide">Healthy Snacks</Text>
-                    {generatedPlan.snackSuggestions.map((x, i) => (
+                    {(generatedPlan.snackSuggestions || []).map((x, i) => (
                       <Text key={i} className="text-zinc-700 text-xs font-medium">• {x}</Text>
                     ))}
                   </View>
@@ -502,11 +502,11 @@ export default function VirlaAIScreen() {
                 <View className="gap-3">
                   <View className="gap-1">
                     <Text className="text-zinc-400 text-[9px] font-bold uppercase">Sleep Routine</Text>
-                    <Text className="text-zinc-900 text-xs font-semibold leading-relaxed">{generatedPlan.sleepRecommendation}</Text>
+                    <Text className="text-zinc-900 text-xs font-semibold leading-relaxed">{generatedPlan.sleepRecommendation || '8 hours of restful sleep'}</Text>
                   </View>
                   <View className="gap-1 border-t border-zinc-50 pt-2">
                     <Text className="text-zinc-400 text-[9px] font-bold uppercase">Recovery Advice</Text>
-                    <Text className="text-zinc-900 text-xs font-semibold leading-relaxed">{generatedPlan.recoveryAdvice}</Text>
+                    <Text className="text-zinc-900 text-xs font-semibold leading-relaxed">{generatedPlan.recoveryAdvice || 'Light stretching post workout'}</Text>
                   </View>
                 </View>
               </View>
@@ -521,7 +521,7 @@ export default function VirlaAIScreen() {
                 </View>
 
                 <View className="gap-2.5">
-                  {generatedPlan.weeklyProgressGoals.map((g, idx) => (
+                  {(generatedPlan.weeklyProgressGoals || []).map((g, idx) => (
                     <View key={idx} className="flex-row items-center gap-2">
                       <Feather name="check" size={12} color="#10B981" />
                       <Text className="text-zinc-700 text-xs font-semibold flex-1">{g}</Text>

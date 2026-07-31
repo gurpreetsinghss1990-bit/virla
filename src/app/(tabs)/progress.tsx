@@ -14,6 +14,7 @@ import { Database } from '../../database/Database';
 
 export default function ProgressScreen() {
   const [activeRange, setActiveRange] = useState<RangeType>('weekly');
+  const [simulateEmpty, setSimulateEmpty] = useState(false);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
 
   const { totalSessions, totalCalories } = useUserProfileStore();
@@ -30,13 +31,14 @@ export default function ProgressScreen() {
   const monthlyEarnings = trainerEarningsList.reduce((acc, earn) => acc + (earn.amount > 0 ? earn.amount : 0), 0);
 
   const isEmpty = useMemo(() => {
+    if (simulateEmpty) return true;
     const userId = Database.getCurrentUserId();
     if (!userId) return true;
     const bookingsCount = Database.getBookings(userId).filter(b => b.status === 'completed').length;
     const dateStr = new Date().toLocaleDateString('en-CA');
     const hydrationLogged = Database.getHydration(userId, dateStr);
     return bookingsCount === 0 && hydrationLogged === 0;
-  }, [totalSessions, totalCalories, user.id]);
+  }, [totalSessions, totalCalories, user.id, simulateEmpty]);
 
   useEffect(() => {
     fadeAnim.setValue(0);
@@ -136,7 +138,7 @@ export default function ProgressScreen() {
             {role !== 'trainer' && (
               <TouchableOpacity 
                 activeOpacity={0.8}
-                onPress={() => setIsEmpty(!isEmpty)}
+                onPress={() => setSimulateEmpty(!simulateEmpty)}
                 className="bg-[#101828] px-3 py-1.5 rounded-lg"
               >
                 <Text className="text-amber-400 text-[8px] font-black uppercase tracking-wider">
