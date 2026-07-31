@@ -248,6 +248,7 @@ export default function BookingScreen() {
   }, [initialWorkoutId, initialWorkoutType, initialWorkoutName]);
 
   useEffect(() => {
+    console.log('[DEBUG-BOOKING] useEffect location check ran. step:', step, 'selectedAddressId:', selectedAddressId, 'addressesCount:', addresses.length);
     if (step === 3 && selectedAddressId) {
       const addr = addresses.find(a => a.id === selectedAddressId);
       if (addr) {
@@ -283,6 +284,7 @@ export default function BookingScreen() {
 
   // Set selected date based on shortcuts
   useEffect(() => {
+    console.log('[DEBUG-BOOKING] useEffect dateSelectionType ran. type:', dateSelectionType);
     const today = new Date();
     if (dateSelectionType === 'today') {
       const formatted = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -308,6 +310,7 @@ export default function BookingScreen() {
 
   // Pulse animation for radar scanning map
   useEffect(() => {
+    console.log('[DEBUG-BOOKING] useEffect radar animation ran. step:', step);
     if (step === 3) {
       radarAnim.setValue(0);
       Animated.loop(
@@ -322,6 +325,7 @@ export default function BookingScreen() {
 
   // Step transitions
   const triggerTransition = (nextStep: number) => {
+    console.log('[DEBUG-BOOKING] triggerTransition start. target:', nextStep);
     Animated.sequence([
       Animated.timing(slideAnim, {
         toValue: -10,
@@ -340,6 +344,7 @@ export default function BookingScreen() {
       })
     ]).start();
     
+    console.log('[DEBUG-BOOKING] triggerTransition setting step state to:', nextStep);
     setStep(nextStep);
   };
 
@@ -722,6 +727,7 @@ export default function BookingScreen() {
     });
   };
 
+  console.log('[DEBUG-BOOKING] Render start. step:', step, 'trainerPref:', trainerPref, 'selectedAddressId:', selectedAddressId, 'addressesCount:', addresses.length);
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
       {/* Header back button */}
@@ -756,7 +762,7 @@ export default function BookingScreen() {
             <View className="gap-6">
               
               {/* STEP 1: EXPERIENCE SELECTOR */}
-              {step === 1 && (
+              {step === 1 && (console.log('[DEBUG-BOOKING] Rendering step 1 block'), true) && (
                 <View className="gap-5">
                   <View>
                     <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Training Experience</Text>
@@ -823,7 +829,7 @@ export default function BookingScreen() {
               )}
 
               {/* STEP 2: TRAINER PREFERENCE */}
-              {step === 2 && (
+              {step === 2 && (console.log('[DEBUG-BOOKING] Rendering step 2 block'), true) && (
                 <View className="gap-5">
                   <View>
                     <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Concierge Match</Text>
@@ -923,7 +929,7 @@ export default function BookingScreen() {
               )}
 
               {/* STEP 3: LOCATION & MAP */}
-              {step === 3 && (
+              {step === 3 && (console.log('[DEBUG-BOOKING] Rendering step 3 block'), true) && (
                 <View className="gap-5">
                   <View>
                     <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Training Venue</Text>
