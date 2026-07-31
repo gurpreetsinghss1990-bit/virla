@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, Workout, Coach, Booking, NotificationItem, Invoice, TrainerEarning, ScheduleSlot } from '../types';
+import { User, Workout, Coach, Booking, NotificationItem, Invoice, TrainerEarning, ScheduleSlot, AssignmentLog } from '../types';
 
 // Simple UUID generator
 export function generateUUID(prefix = 'id'): string {
@@ -374,6 +374,8 @@ export function mapBooking(row: any): Booking {
     caloriesBurned: row.calories_burned,
     durationMinutes: row.duration_minutes,
     ratingDetails: row.rating_details ? JSON.parse(row.rating_details) : undefined,
+    trainerNote: row.trainer_note || undefined,
+    createdAt: row.created_at ? Number(row.created_at) : undefined,
   };
 }
 
@@ -404,6 +406,8 @@ export function mapBookingToPostgres(b: Booking): any {
     calories_burned: b.caloriesBurned,
     duration_minutes: b.durationMinutes,
     rating_details: b.ratingDetails ? JSON.stringify(b.ratingDetails) : null,
+    trainer_note: b.trainerNote || null,
+    created_at: b.createdAt || null,
   };
 }
 
@@ -764,7 +768,8 @@ class DatabaseClient {
     addresses: SavedAddress[];
     earnings: TrainerEarning[];
     schedules: ScheduleSlot[];
-    trainer_applications: TrainerApplication[];
+    trainer_applications: any[];
+    assignment_logs: AssignmentLog[];
   } = {
     users: [],
     profiles: [],
@@ -780,7 +785,8 @@ class DatabaseClient {
     addresses: [],
     earnings: [],
     schedules: [],
-    trainer_applications: []
+    trainer_applications: [],
+    assignment_logs: []
   };
 
   private currentUserId: string | null = null;
@@ -1540,6 +1546,98 @@ class DatabaseClient {
     }
   }
 
+  updateBookingNote(bookingId: string, trainerNote: string): void {
+    const booking = this.schema.bookings.find(b => b.id === bookingId);
+    if (booking) {
+      booking.trainerNote = trainerNote;
+      supabase.from('bookings').update({
+        trainer_note: trainerNote
+      }).eq('id', bookingId).then();
+      this.save();
+      this.log('UpdateBookingNote', `Updated note for booking ${bookingId} to: ${trainerNote}`);
+    }
+  }
+
+  updateBookingTrainer(bookingId: string, trainer: {
+    trainerName?: string;
+    trainerPhoto?: string;
+    trainerLevel?: string;
+    trainerRating?: number;
+    trainerCompletedSessions?: number;
+    trainerSpeciality?: string;
+    trainerLanguages?: string[];
+    price?: number;
+    createdAt?: number;
+    currentTrainerIndex?: number;
+    status?: Booking['status'];
+    timelineStatus?: Booking['timelineStatus'];
+  }): void {
+    const booking = this.schema.bookings.find(b => b.id === bookingId);
+    if (booking) {
+      if (trainer.trainerName !== undefined) booking.trainerName = trainer.trainerName;
+      if (trainer.trainerPhoto !== undefined) booking.trainerPhoto = trainer.trainerPhoto;
+      if (trainer.trainerLevel !== undefined) booking.trainerLevel = trainer.trainerLevel as any;
+      if (trainer.trainerRating !== undefined) booking.trainerRating = trainer.trainerRating;
+      if (trainer.trainerCompletedSessions !== undefined) booking.trainerCompletedSessions = trainer.trainerCompletedSessions;
+      if (trainer.trainerSpeciality !== undefined) booking.trainerSpeciality = trainer.trainerSpeciality;
+      if (trainer.trainerLanguages !== undefined) booking.trainerLanguages = trainer.trainerLanguages;
+      if (trainer.price !== undefined) booking.price = trainer.price;
+      if (trainer.createdAt !== undefined) booking.createdAt = trainer.createdAt;
+      if (trainer.currentTrainerIndex !== undefined) booking.currentTrainerIndex = trainer.currentTrainerIndex;
+      if (trainer.status !== undefined) booking.status = trainer.status;
+      if (trainer.timelineStatus !== undefined) booking.timelineStatus = trainer.timelineStatus;
+      
+      supabase.from('bookings').update({
+        trainer_name: trainer.trainerName || booking.trainerName,
+        trainer_photo: trainer.trainerPhoto || booking.trainerPhoto,
+        trainer_level: trainer.trainerLevel || booking.trainerLevel,
+        trainer_rating: trainer.trainerRating !== undefined ? trainer.trainerRating : booking.trainerRating,
+        trainer_completed_sessions: trainer.trainerCompletedSessions !== undefined ? trainer.trainerCompletedSessions : booking.trainerCompletedSessions,
+        trainer_speciality: trainer.trainerSpeciality || booking.trainerSpeciality,
+        trainer_languages: trainer.trainerLanguages || booking.trainerLanguages,
+        price: trainer.price !== undefined ? trainer.price : booking.price,
+        created_at: trainer.createdAt || booking.createdAt || null,
+        current_trainer_index: trainer.currentTrainerIndex ?? booking.currentTrainerIndex ?? null,
+        status: trainer.status || booking.status,
+        timeline_status: trainer.timelineStatus || booking.timelineStatus || null
+      }).eq('id', bookingId).then();
+
+      this.save();
+      this.log('ReassignTrainer', `Reassigned booking ${bookingId} to trainer ${trainer.trainerName || 'No Trainer Available'}`);
+    }
+  }
+
+  updateBookingSessionDetails(bookingId: string, details: {
+    status?: Booking['status'];
+    timelineStatus?: Booking['timelineStatus'];
+    otp?: string;
+    gracePeriodStartedAt?: number;
+    otpExpiresAt?: number;
+    workoutStartedAt?: number;
+  }): void {
+    const booking = this.schema.bookings.find(b => b.id === bookingId);
+    if (booking) {
+      if (details.status !== undefined) booking.status = details.status;
+      if (details.timelineStatus !== undefined) booking.timelineStatus = details.timelineStatus;
+      if (details.otp !== undefined) booking.otp = details.otp;
+      if (details.gracePeriodStartedAt !== undefined) booking.gracePeriodStartedAt = details.gracePeriodStartedAt;
+      if (details.otpExpiresAt !== undefined) booking.otpExpiresAt = details.otpExpiresAt;
+      if (details.workoutStartedAt !== undefined) booking.workoutStartedAt = details.workoutStartedAt;
+      
+      supabase.from('bookings').update({
+        status: booking.status,
+        timeline_status: booking.timelineStatus,
+        otp: booking.otp,
+        grace_period_started_at: booking.gracePeriodStartedAt,
+        otp_expires_at: booking.otpExpiresAt,
+        workout_started_at: booking.workoutStartedAt
+      }).eq('id', bookingId).then(() => {});
+
+      this.save();
+      this.log('UpdateBookingSessionDetails', `Updated session details for booking ${bookingId} to status: ${booking.status}, timeline: ${booking.timelineStatus}`);
+    }
+  }
+
   updateBookingRating(bookingId: string, ratingDetails: Booking['ratingDetails']): void {
     const booking = this.schema.bookings.find(b => b.id === bookingId);
     if (booking) {
@@ -2038,7 +2136,7 @@ class DatabaseClient {
           specialty: app.primaryWorkout,
           yearsExperience: app.yearsOfExperience,
           specialization: `${app.primaryWorkout}, ${app.secondarySkills}`,
-          languages: app.languages.split(',').map(s => s.trim()),
+          languages: app.languages.split(',').map((s: string) => s.trim()),
           shortBio: app.aboutMe,
           completedSessions: 0,
           aboutText: app.fitnessQualifications,
@@ -2154,6 +2252,32 @@ class DatabaseClient {
 
       await this.save();
       this.log('RequestMoreInfoTrainer', `Requested additional info for application of ${app.fullName}.`);
+    }
+  }
+
+  logAssignmentEvent(event: Omit<AssignmentLog, 'id' | 'timestamp'>): void {
+    const log: AssignmentLog = {
+      ...event,
+      id: generateUUID('log'),
+      timestamp: Date.now()
+    };
+    if (!this.schema.assignment_logs) {
+      this.schema.assignment_logs = [];
+    }
+    this.schema.assignment_logs.push(log);
+    
+    // Asynchronously update supabase schema log if possible
+    supabase.from('assignment_logs').insert([log]).then(() => {});
+    
+    this.save();
+    console.log(`[ASSIGNMENT ENGINE EVENT] Booking ID: ${log.bookingId} | Trainer ID: ${log.trainerId} | Action: ${log.action.toUpperCase()} | Score: ${log.score.toFixed(1)} | Reason: ${log.reason}`);
+  }
+
+  updateTrainerOnlineStatus(coachId: string, isOnline: boolean): void {
+    const coach = this.schema.coaches.find(c => c.id === coachId);
+    if (coach) {
+      coach.isOnline = isOnline;
+      this.save();
     }
   }
 }

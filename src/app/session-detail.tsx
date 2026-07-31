@@ -9,6 +9,7 @@ import { useUserProfileStore } from '../store/userProfileStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { SkeletonLoader } from '../components/SkeletonLoader';
+import { SessionEngine } from '../services/SessionEngine';
 
 // Map coordinates path waypoints (scaled to fit beautiful SVG canvas)
 const waypoints = [
@@ -31,7 +32,9 @@ export default function SessionDetailScreen() {
     updateBookingRating, 
     triggerClientNoShow, 
     triggerTrainerNoShow, 
-    submitQuestionnaire 
+    submitQuestionnaire,
+    updateBookingNote,
+    reassignTrainer
   } = useBookingStore();
   
   const { addNotification } = useNotificationStore();
@@ -57,9 +60,96 @@ export default function SessionDetailScreen() {
   const currentStatus = booking?.timelineStatus || 'booked';
   
   const isPendingDetails = (role === 'customer' || role === 'admin') && 
-    (currentStatus === 'booked' || currentStatus === 'trainer_assigned');
+    currentStatus === 'booked';
 
   // Input & Questionnaire state variables
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [editedNote, setEditedNote] = useState('');
+
+  const [timeLeft, setTimeLeft] = useState(60);
+
+  useEffect(() => {
+    if (role === 'trainer' && currentStatus === 'booked' && booking) {
+      const calculateTimeLeft = () => {
+        const elapsed = Math.floor((Date.now() - (booking.createdAt || Date.now())) / 1000);
+        return Math.max(0, 60 - elapsed);
+      };
+
+      setTimeLeft(calculateTimeLeft());
+
+      const timer = setInterval(() => {
+        const nextTime = calculateTimeLeft();
+        if (nextTime <= 0) {
+          clearInterval(timer);
+          reassignTrainer(booking.id);
+          router.back();
+          return;
+        }
+        setTimeLeft(nextTime);
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [booking?.id, booking?.createdAt, role, currentStatus]);
+
+  const getSessionStartDate = (): Date => {
+    try {
+      if (!booking) return new Date();
+      let datePart = booking.date;
+      if (datePart.startsWith('Today, ')) {
+        datePart = datePart.replace('Today, ', '');
+      } else if (datePart.startsWith('Tomorrow, ')) {
+        datePart = datePart.replace('Tomorrow, ', '');
+      }
+
+      const timePart = booking.time.split('-')[0].trim();
+      const combined = `${datePart} ${timePart}`;
+      const d = new Date(combined);
+      if (!isNaN(d.getTime())) {
+        return d;
+      }
+    } catch (e) {
+      console.log('Error parsing date:', e);
+    }
+    const fallback = new Date();
+    fallback.setHours(fallback.getHours() + 2);
+    return fallback;
+  };
+
+  const getMinutesToSession = () => {
+    if (!booking) return 0;
+    const sessionDate = getSessionStartDate();
+    const now = new Date();
+    return (sessionDate.getTime() - now.getTime()) / (1000 * 60);
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'booked':
+        return 'Searching for Trainer';
+      case 'trainer_assigned':
+        return 'Trainer Assigned';
+      case 'trainer_accepted':
+        return 'Trainer Accepted';
+      case 'trainer_preparing':
+        return 'Session Scheduled';
+      case 'trainer_travelling':
+        return 'Trainer En Route';
+      case 'trainer_arrived':
+        return 'Trainer Arrived';
+      case 'otp_verified':
+      case 'workout_started':
+        return 'Session In Progress';
+      case 'workout_completed':
+      case 'trainer_report_submitted':
+      case 'customer_review_pending':
+      case 'session_closed':
+        return 'Session Completed';
+      default:
+        return 'Searching for Trainer';
+    }
+  };
+
   const [otpInput, setOtpInput] = useState('');
   const [showQuestionnaire, setShowQuestionnaire] = useState(false);
   const [mobilityScore, setMobilityScore] = useState(5);
@@ -315,6 +405,212 @@ export default function SessionDetailScreen() {
   const remainingDistance = (3.2 * (1 - journeyProgress)).toFixed(1);
   const remainingEta = Math.max(0, Math.ceil(12 * (1 - journeyProgress)));
 
+  if (role === 'trainer' && currentStatus === 'booked') {
+    const customerId = `VIRLA-C${booking.id.slice(-6).toUpperCase()}`;
+    const customerGender = booking.id.charCodeAt(booking.id.length - 1) % 2 === 0 ? 'Female' : 'Male';
+
+    return (
+      <View style={{ flex: 1, backgroundColor: '#F8F9FC', paddingTop: insets.top }}>
+        {/* Header */}
+        <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
+          <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
+            <Ionicons name="arrow-back" size={20} color="#101828" />
+          </TouchableOpacity>
+          <Text className="text-[#101828] text-xs font-black uppercase tracking-widest">
+            Booking Details
+          </Text>
+          <View className="w-8" />
+        </View>
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 24, paddingBottom: 140 }}>
+          <View className="gap-6">
+            
+            {/* Status Banner */}
+            <View 
+              className="bg-rose-50 border border-rose-100 p-5 rounded-[28px] flex-row justify-between items-center"
+              style={{
+                shadowColor: '#E11D48',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.02,
+                shadowRadius: 8,
+                elevation: 1,
+              }}
+            >
+              <View className="gap-1 flex-1 pr-3">
+                <Text className="text-[#E11D48] text-xs font-black uppercase tracking-wider">Request Pending Review</Text>
+                <Text className="text-zinc-500 text-[10px] font-semibold">Please accept or decline this session request</Text>
+              </View>
+              <View className="bg-[#E11D48] px-3.5 py-1.5 rounded-full flex-row items-center gap-1.5 shadow-sm">
+                <Feather name="clock" size={12} color="white" />
+                <Text className="text-white text-xs font-black">{timeLeft}s</Text>
+              </View>
+            </View>
+
+            {/* Booking Details Card */}
+            <View 
+              className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-4"
+              style={{
+                shadowColor: '#101828',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.02,
+                shadowRadius: 8,
+                elevation: 1,
+              }}
+            >
+              <View className="flex-row items-center gap-2.5 border-b border-zinc-100 pb-3.5">
+                <View className="w-7 h-7 rounded-full bg-rose-50 items-center justify-center">
+                  <Feather name="info" size={13} color="#E11D48" />
+                </View>
+                <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Session Overview</Text>
+              </View>
+
+              <View className="gap-3">
+                <View className="flex-row justify-between border-b border-zinc-55 pb-2">
+                  <Text className="text-zinc-405 text-[10px] font-bold uppercase">Workout Type</Text>
+                  <Text className="text-zinc-900 text-xs font-black">{booking.workoutTitle}</Text>
+                </View>
+
+                <View className="flex-row justify-between border-b border-zinc-55 pb-2">
+                  <Text className="text-zinc-405 text-[10px] font-bold uppercase">Date & Time</Text>
+                  <Text className="text-zinc-900 text-xs font-black">{booking.date} @ {booking.time}</Text>
+                </View>
+
+                <View className="flex-row justify-between border-b border-zinc-55 pb-2">
+                  <Text className="text-zinc-405 text-[10px] font-bold uppercase">Duration</Text>
+                  <Text className="text-zinc-900 text-xs font-black">{booking.durationMinutes || 60} minutes</Text>
+                </View>
+
+                <View className="flex-row justify-between border-b border-zinc-55 pb-2">
+                  <Text className="text-zinc-405 text-[10px] font-bold uppercase">Client Reference</Text>
+                  <Text className="text-zinc-900 text-xs font-black">{customerId}</Text>
+                </View>
+
+                <View className="flex-row justify-between border-b border-zinc-55 pb-2">
+                  <Text className="text-zinc-405 text-[10px] font-bold uppercase">Gender</Text>
+                  <Text className="text-zinc-900 text-xs font-black">{customerGender}</Text>
+                </View>
+
+                <View className="flex-row justify-between border-b border-zinc-55 pb-2">
+                  <Text className="text-zinc-405 text-[10px] font-bold uppercase">Type</Text>
+                  <Text className="text-zinc-900 text-xs font-black">Solo Session</Text>
+                </View>
+
+                <View className="flex-row justify-between border-b border-zinc-55 pb-2">
+                  <Text className="text-zinc-405 text-[10px] font-bold uppercase">Approximate Location</Text>
+                  <Text className="text-zinc-900 text-xs font-black">{booking.address ? booking.address.split(',')[0] : 'Selected Locality'}</Text>
+                </View>
+
+                <View className="flex-row justify-between">
+                  <Text className="text-zinc-405 text-[10px] font-bold uppercase">Session Value</Text>
+                  <Text className="text-emerald-700 text-xs font-black">₹{booking.price || 1200} (1 Credit)</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Preparation Note Card */}
+            <View 
+              className="bg-white border border-[#E5E7EB] p-5 rounded-[28px]"
+              style={{
+                shadowColor: '#101828',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.02,
+                shadowRadius: 8,
+                elevation: 1,
+              }}
+            >
+              <View className="flex-row items-center gap-2.5 mb-3">
+                <View className="w-7 h-7 rounded-full bg-rose-50 items-center justify-center">
+                  <Feather name="file-text" size={13} color="#E11D48" />
+                </View>
+                <Text className="text-zinc-955 text-xs font-black uppercase tracking-wider">Client Preparation Note</Text>
+              </View>
+              <Text className="text-zinc-650 text-xs font-semibold leading-relaxed">
+                {booking.trainerNote ? booking.trainerNote : 'No preparation notes.'}
+              </Text>
+            </View>
+
+            {/* Session Policies Card */}
+            <View 
+              className="bg-amber-50/20 border border-amber-100/50 p-4.5 rounded-[28px] flex-row items-center justify-between"
+            >
+              <View className="flex-row items-center gap-3.5 flex-1 pr-3">
+                <View className="w-9 h-9 rounded-full bg-amber-100/40 items-center justify-center">
+                  <Feather name="shield" size={15} color="#D97706" />
+                </View>
+                <View className="flex-1 gap-0.5">
+                  <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Session Policies</Text>
+                  <Text className="text-[#6B7280] text-[9px] font-medium leading-normal">
+                    Important details regarding preparation, travel safety, and cancellation.
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => router.push('/legal-center')}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                className="border border-rose-200 px-3.5 py-1.5 rounded-full flex-row items-center bg-white shadow-sm"
+              >
+                <Text className="text-[#E11D48] text-[9px] font-black uppercase tracking-wide">View Details</Text>
+                <Feather name="chevron-right" size={10} color="#E11D48" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Privacy Warning Banner */}
+            <View className="bg-zinc-50 border border-zinc-200 p-4 rounded-2xl flex-row items-start gap-2.5">
+              <Feather name="lock" size={13} color="#9CA3AF" style={{ marginTop: 2 }} />
+              <Text className="text-zinc-505 text-[9px] font-semibold leading-relaxed flex-1">
+                Before you accept this booking, communication options are locked and customer contact information (Name, exact Address, Phone Number) remains private under VIRLA's privacy policies.
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* Action Buttons Panel */}
+        <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-zinc-100 p-6 flex-row gap-3">
+          <TouchableOpacity
+            onPress={() => {
+              reassignTrainer(booking.id, 'declined');
+              Alert.alert('Request Declined', 'You have declined this session request.');
+              router.back();
+            }}
+            className="flex-1 bg-zinc-50 border border-zinc-200 py-4.5 rounded-[20px] items-center justify-center"
+          >
+            <Text className="text-zinc-650 text-sm font-black uppercase">Decline</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            onPress={() => {
+              Alert.alert(
+                'Accept Booking?',
+                'By accepting this booking you agree to complete the session. Once accepted it cannot be cancelled except through VIRLA Support.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Accept',
+                    onPress: () => {
+                      updateTimelineStatus(booking.id, 'trainer_accepted');
+                      Alert.alert('Booking Accepted', 'You have accepted the session request.');
+                    }
+                  }
+                ]
+              );
+            }}
+            className="flex-[1.5] bg-[#E11D48] py-4.5 rounded-[20px] items-center justify-center"
+            style={{
+              shadowColor: '#E11D48',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
+              elevation: 2,
+            }}
+          >
+            <Text className="text-white text-sm font-black uppercase">Accept Booking</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: '#F8F9FC', paddingTop: insets.top }}>
       {/* Header */}
@@ -405,9 +701,64 @@ export default function SessionDetailScreen() {
               <View className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
               <View className="flex-1">
                 <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Active Concierge Status</Text>
-                <Text className="text-[#101828] text-sm font-black mt-0.5 capitalize">{currentStatus.replace(/_/g, ' ')}</Text>
+                <Text className="text-[#101828] text-sm font-black mt-0.5">{getStatusText(currentStatus)}</Text>
               </View>
             </View>
+
+            {/* Section 2: Booking Summary Card */}
+            {role === 'customer' && (
+              <View 
+                className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4"
+                style={{
+                  shadowColor: '#101828',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.02,
+                  shadowRadius: 6,
+                  elevation: 1,
+                }}
+              >
+                <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">Booking Summary</Text>
+                
+                <View className="gap-3">
+                  <View className="flex-row justify-between items-center">
+                    <Text className="text-[#6B7280] text-xs font-semibold">Workout Type</Text>
+                    <Text className="text-[#101828] text-xs font-extrabold">{booking.workoutTitle}</Text>
+                  </View>
+                  <View className="flex-row justify-between items-center">
+                    <Text className="text-[#6B7280] text-xs font-semibold">Date</Text>
+                    <Text className="text-[#101828] text-xs font-extrabold">{booking.date}</Text>
+                  </View>
+                  <View className="flex-row justify-between items-center">
+                    <Text className="text-[#6B7280] text-xs font-semibold">Time</Text>
+                    <Text className="text-[#101828] text-xs font-extrabold">{booking.time}</Text>
+                  </View>
+                  <View className="flex-row justify-between items-center">
+                    <Text className="text-[#6B7280] text-xs font-semibold">Duration</Text>
+                    <Text className="text-[#101828] text-xs font-extrabold">{booking.durationMinutes || 60} Mins</Text>
+                  </View>
+                  <View className="flex-row justify-between items-center">
+                    <Text className="text-[#6B7280] text-xs font-semibold">Solo / Couple</Text>
+                    <Text className="text-[#101828] text-xs font-extrabold">Solo Session</Text>
+                  </View>
+                  <View className="flex-row justify-between items-center">
+                    <Text className="text-[#6B7280] text-xs font-semibold">Trainer Preference</Text>
+                    <Text className="text-[#101828] text-xs font-extrabold">
+                      {booking.preferredCoachId ? 'Favorite Trainer' : 'No Preference'}
+                    </Text>
+                  </View>
+                  <View className="flex-row justify-between items-center">
+                    <Text className="text-[#6B7280] text-xs font-semibold">Credits Used</Text>
+                    <Text className="text-[#101828] text-xs font-extrabold">1 Credit</Text>
+                  </View>
+                  <View className="flex-row justify-between items-start">
+                    <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">Location</Text>
+                    <Text className="text-[#101828] text-xs font-extrabold max-w-[65%] text-right leading-relaxed">
+                      {booking.address || 'Selected Location'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
 
             {/* Module 2: Premium Animated SVG Live Map */}
             {(currentStatus === 'trainer_travelling' || currentStatus === 'trainer_arrived') && (
@@ -541,44 +892,85 @@ export default function SessionDetailScreen() {
               </View>
             )}
 
-            {/* Module 5: Customer Communication controls */}
-            <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
-              <View className="flex-row justify-between items-center">
-                <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">Concierge Controls</Text>
-                {!isPendingDetails && (
-                  <TouchableOpacity onPress={handleNavigateAddress} className="flex-row items-center gap-1">
-                    <Feather name="navigation" size={10} color="#4F46E5" />
-                    <Text className="text-[#4F46E5] text-[9px] font-bold uppercase">Navigate Address</Text>
+            {/* Section 6: Secure Communication Module */}
+            {role === 'customer' && (
+              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+                <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">Secure Communication</Text>
+                
+                <View className="flex-row gap-3">
+                  {/* Secure Message */}
+                  <TouchableOpacity 
+                    onPress={handleMessage} 
+                    className="flex-1 bg-zinc-950 py-3.5 rounded-2xl items-center justify-center flex-row gap-2"
+                  >
+                    <Feather name="message-square" size={14} color="white" />
+                    <Text className="text-white text-xs font-bold">Secure Message</Text>
                   </TouchableOpacity>
+
+                  {/* Secure Call */}
+                  <View className="flex-1">
+                    <TouchableOpacity 
+                      onPress={getMinutesToSession() <= 60 ? handleCall : undefined} 
+                      activeOpacity={getMinutesToSession() <= 60 ? 0.8 : 1}
+                      className={`py-3.5 rounded-2xl items-center justify-center flex-row gap-2 ${
+                        getMinutesToSession() <= 60 ? 'bg-zinc-950' : 'bg-zinc-100 border border-zinc-200 opacity-60'
+                      }`}
+                    >
+                      <Feather name="phone" size={14} color={getMinutesToSession() <= 60 ? 'white' : '#9CA3AF'} />
+                      <Text className={`text-xs font-bold ${getMinutesToSession() <= 60 ? 'text-white' : 'text-[#9CA3AF]'}`}>Secure Call</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Helper text if Call is disabled */}
+                {getMinutesToSession() > 60 && (
+                  <Text className="text-zinc-500 text-[8px] font-semibold text-center mt-0.5 leading-none">
+                    Calling will be available 60 minutes before your session.
+                  </Text>
                 )}
               </View>
-              
-              <View className="flex-row justify-between">
-                <TouchableOpacity 
-                  onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Communication channel opens 5 hours prior to session.') : handleCall} 
-                  className="w-[30%] bg-zinc-900 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5"
-                >
-                  <Feather name="phone" size={12} color="white" />
-                  <Text className="text-white text-[8px] font-black uppercase">Call Coach</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Communication channel opens 5 hours prior to session.') : handleMessage} 
-                  className="w-[30%] bg-zinc-900 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5"
-                >
-                  <Feather name="message-square" size={12} color="white" />
-                  <Text className="text-white text-[8px] font-black uppercase">Chat Board</Text>
-                </TouchableOpacity>
+            )}
 
-                <TouchableOpacity 
-                  onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Live tracking GPS details lock opens 5 hours prior.') : handleShareLocation} 
-                  className="w-[30%] bg-zinc-900 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5"
-                >
-                  <Feather name="map-pin" size={12} color="white" />
-                  <Text className="text-white text-[8px] font-black uppercase">Share GPS</Text>
-                </TouchableOpacity>
+            {/* Original Module 5 for Trainers */}
+            {role !== 'customer' && (
+              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+                <View className="flex-row justify-between items-center">
+                  <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">Concierge Controls</Text>
+                  {!isPendingDetails && (
+                    <TouchableOpacity onPress={handleNavigateAddress} className="flex-row items-center gap-1">
+                      <Feather name="navigation" size={10} color="#4F46E5" />
+                      <Text className="text-[#4F46E5] text-[9px] font-bold uppercase">Navigate Address</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                
+                <View className="flex-row justify-between">
+                  <TouchableOpacity 
+                    onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Communication channel opens 5 hours prior to session.') : handleCall} 
+                    className="w-[30%] bg-zinc-900 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5"
+                  >
+                    <Feather name="phone" size={12} color="white" />
+                    <Text className="text-white text-[8px] font-black uppercase">Call Client</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Communication channel opens 5 hours prior to session.') : handleMessage} 
+                    className="w-[30%] bg-zinc-900 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5"
+                  >
+                    <Feather name="message-square" size={12} color="white" />
+                    <Text className="text-white text-[8px] font-black uppercase">Chat Board</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Live tracking GPS details lock opens 5 hours prior.') : handleShareLocation} 
+                    className="w-[30%] bg-zinc-900 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5"
+                  >
+                    <Feather name="map-pin" size={12} color="white" />
+                    <Text className="text-white text-[8px] font-black uppercase">Share GPS</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
+            )}
 
             {/* OTP Display and Trainer Entry Verification */}
             {currentStatus === 'trainer_arrived' && (role === 'customer' || role === 'admin') && (

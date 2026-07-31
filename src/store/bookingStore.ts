@@ -5,6 +5,7 @@ import { useNotificationStore } from './notificationStore';
 import { useWalletStore } from './walletStore';
 import { useUserProfileStore } from './userProfileStore';
 import { Database } from '../database/Database';
+import { AssignmentEngine } from '../services/AssignmentEngine';
 
 interface BookingState {
   bookings: Booking[];
@@ -13,12 +14,22 @@ interface BookingState {
   addBooking: (booking: Omit<Booking, 'status'>) => void;
   updateTimelineStatus: (id: string, status: Booking['timelineStatus']) => void;
   updateBookingRating: (id: string, ratingDetails: Booking['ratingDetails']) => void;
+  updateBookingNote: (id: string, note: string) => void;
+  updateBookingSessionDetails: (id: string, details: {
+    status?: Booking['status'];
+    timelineStatus?: Booking['timelineStatus'];
+    otp?: string;
+    gracePeriodStartedAt?: number;
+    otpExpiresAt?: number;
+    workoutStartedAt?: number;
+  }) => void;
   
   // Sprint 6 state machine actions
   acceptBooking: (id: string) => void;
   triggerClientNoShow: (id: string) => void;
   triggerTrainerNoShow: (id: string) => void;
   submitQuestionnaire: (id: string, questionnaire: NonNullable<Booking['questionnaire']>) => void;
+  reassignTrainer: (bookingId: string, action?: 'declined' | 'timeout') => void;
   syncFromDB: () => void;
 }
 
@@ -29,6 +40,17 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     if (userId) {
       const target = get().bookings.find(b => b.id === id);
       if (target && target.status === 'upcoming') {
+        // Log cancellation event for the current assigned trainer
+        const currentCoach = Database.schema.coaches.find(c => c.name === target.trainerName);
+        const currentCoachId = currentCoach?.id || 'unknown';
+        Database.logAssignmentEvent({
+          bookingId: id,
+          trainerId: currentCoachId,
+          score: 0,
+          reason: 'Customer cancelled the booking request',
+          action: 'cancelled'
+        });
+
         Database.cancelBooking(userId, id);
         
         useMembershipStore.getState().syncFromDB();
@@ -57,6 +79,25 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     }
   },
   updateTimelineStatus: (id, status) => {
+    if (status === 'trainer_accepted') {
+      const target = get().bookings.find(b => b.id === id);
+      if (target) {
+        const currentCoach = Database.schema.coaches.find(c => c.name === target.trainerName);
+        const currentCoachId = currentCoach?.id || 'unknown';
+        const rated = AssignmentEngine.rankTrainers(target);
+        const ratingMatch = rated.find(r => r.coach.id === currentCoachId);
+        const score = ratingMatch?.score || 85;
+
+        Database.logAssignmentEvent({
+          bookingId: id,
+          trainerId: currentCoachId,
+          score: score,
+          reason: 'Trainer manually accepted booking request',
+          action: 'accepted'
+        });
+      }
+    }
+
     Database.updateTimelineStatus(id, status);
     const target = get().bookings.find(b => b.id === id);
     if (target) {
@@ -146,8 +187,99 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     }
     get().syncFromDB();
   },
+  updateBookingNote: (id, note) => {
+    Database.updateBookingNote(id, note);
+    get().syncFromDB();
+  },
+  updateBookingSessionDetails: (id, details) => {
+    Database.updateBookingSessionDetails(id, details);
+    get().syncFromDB();
+  },
   acceptBooking: (id) => {
     get().updateTimelineStatus(id, 'trainer_accepted');
+  },
+  reassignTrainer: (bookingId, action) => {
+    const booking = get().bookings.find(b => b.id === bookingId);
+    if (!booking) return;
+
+    const allCoaches = Database.schema.coaches;
+    if (allCoaches.length === 0) return;
+
+    // Retrieve current coach to log the decline/timeout event
+    const currentCoach = allCoaches.find(c => c.name === booking.trainerName);
+    const currentCoachId = currentCoach?.id || 'unknown';
+
+    // Log the trainer's action (decline or timeout)
+    Database.logAssignmentEvent({
+      bookingId: bookingId,
+      trainerId: currentCoachId,
+      score: 0,
+      reason: action === 'declined' ? 'Trainer manually declined the request' : '60-second response window expired',
+      action: action || 'timeout'
+    });
+
+    const pool = booking.assignedTrainersPool || [];
+    const currentIndex = booking.currentTrainerIndex ?? 0;
+    const nextIndex = currentIndex + 1;
+
+    if (nextIndex < pool.length) {
+      const nextCoachId = pool[nextIndex];
+      const nextCoach = allCoaches.find(c => c.id === nextCoachId);
+      
+      if (nextCoach) {
+        // Calculate dynamic score for logging purposes
+        const rated = AssignmentEngine.rankTrainers(booking);
+        const matchRating = rated.find(r => r.coach.id === nextCoachId);
+        const score = matchRating?.score || 75;
+
+        // Log the new assignment event
+        Database.logAssignmentEvent({
+          bookingId: bookingId,
+          trainerId: nextCoachId,
+          score: score,
+          reason: `Sequential fallback to Rank ${nextIndex + 1} of pool`,
+          action: 'assigned'
+        });
+
+        Database.updateBookingTrainer(bookingId, {
+          trainerName: nextCoach.name,
+          trainerPhoto: nextCoach.photo,
+          trainerLevel: nextCoach.level || 'Certified',
+          trainerRating: nextCoach.rating,
+          trainerCompletedSessions: nextCoach.completedSessions || 150,
+          trainerSpeciality: nextCoach.specialty,
+          trainerLanguages: nextCoach.languages || [],
+          price: nextCoach.price || 1200,
+          createdAt: Date.now(),
+          currentTrainerIndex: nextIndex,
+        });
+
+        get().syncFromDB();
+
+        useNotificationStore.getState().addNotification({
+          title: 'Booking Reassigned ⚡',
+          body: `Booking request reassigned to Coach ${nextCoach.name}.`,
+          icon: 'user-check',
+        });
+        return;
+      }
+    }
+
+    // Fallback: If no more trainers are in the pool, cancel the request
+    Database.updateBookingTrainer(bookingId, {
+      status: 'cancelled',
+      timelineStatus: 'session_closed',
+      trainerName: 'No Trainer Available',
+      createdAt: Date.now(),
+    });
+
+    get().syncFromDB();
+
+    useNotificationStore.getState().addNotification({
+      title: 'No Coaches Available ⚠️',
+      body: `We could not find an available trainer for your session. Your credits have been returned.`,
+      icon: 'alert-circle',
+    });
   },
   triggerClientNoShow: (id) => {
     const target = get().bookings.find(b => b.id === id);

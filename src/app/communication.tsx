@@ -12,6 +12,7 @@ interface ChatMessage {
   sender: 'customer' | 'trainer';
   text: string;
   time: string;
+  pending?: boolean;
 }
 
 export default function CommunicationScreen() {
@@ -25,6 +26,37 @@ export default function CommunicationScreen() {
   const { refundCredit } = useWalletStore();
 
   const booking = bookings.find((b) => b.id === bookingId) || bookings[0];
+
+  const getSessionStartDate = (): Date => {
+    try {
+      if (!booking) return new Date();
+      let datePart = booking.date;
+      if (datePart.startsWith('Today, ')) {
+        datePart = datePart.replace('Today, ', '');
+      } else if (datePart.startsWith('Tomorrow, ')) {
+        datePart = datePart.replace('Tomorrow, ', '');
+      }
+
+      const timePart = booking.time.split('-')[0].trim();
+      const combined = `${datePart} ${timePart}`;
+      const d = new Date(combined);
+      if (!isNaN(d.getTime())) {
+        return d;
+      }
+    } catch (e) {
+      console.log('Error parsing date:', e);
+    }
+    const fallback = new Date();
+    fallback.setHours(fallback.getHours() + 2);
+    return fallback;
+  };
+
+  const getMinutesToSession = () => {
+    if (!booking) return 0;
+    const sessionDate = getSessionStartDate();
+    const now = new Date();
+    return (sessionDate.getTime() - now.getTime()) / (1000 * 60);
+  };
 
   const [messageText, setMessageText] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -67,31 +99,72 @@ export default function CommunicationScreen() {
       id: `msg-${Date.now()}`,
       sender: 'customer',
       text: messageText.trim(),
-      time: '10:10 AM'
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
     };
 
-    setMessages(prev => [...prev, userMsg]);
-    setMessageText('');
+    const isDelayed = getMinutesToSession() > 60;
 
-    // Trigger typing indicator and trainer auto-reply
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-      const replyMsg: ChatMessage = {
-        id: `msg-${Date.now() + 1}`,
-        sender: 'trainer',
-        text: 'Got it! I am loading the gear and will target exactly that. See you shortly.',
-        time: '10:11 AM'
-      };
-      setMessages(prev => [...prev, replyMsg]);
-      
-      // Push mock notify updates
-      addNotification({
-        title: `Message from ${booking.trainerName} 💬`,
-        body: 'Got it! I am loading the gear and will target exactly that.',
-        icon: 'user-check'
-      });
-    }, 2000);
+    if (isDelayed) {
+      // 2 minute delay
+      const pendingMsg = { ...userMsg, pending: true };
+      setMessages(prev => [...prev, pendingMsg]);
+      setMessageText('');
+
+      setTimeout(() => {
+        // Mark user message as delivered
+        setMessages(prev => prev.map(m => m.id === userMsg.id ? { ...m, pending: false } : m));
+        
+        // Push notification for delivery
+        addNotification({
+          title: 'Message Delivered ⚡',
+          body: `Your message to Coach ${booking.trainerName} was delivered.`,
+          icon: 'message-square'
+        });
+
+        // Trigger typing indicator for trainer's response
+        setIsTyping(true);
+        
+        setTimeout(() => {
+          setIsTyping(false);
+          const replyMsg: ChatMessage = {
+            id: `msg-${Date.now() + 1}`,
+            sender: 'trainer',
+            text: 'Got it! I am loading the gear and will target exactly that. See you shortly.',
+            time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+          };
+          setMessages(prev => [...prev, replyMsg]);
+          
+          // Push notification for trainer's reply
+          addNotification({
+            title: `Message from ${booking.trainerName} 💬`,
+            body: 'Got it! I am loading the gear and will target exactly that.',
+            icon: 'user-check'
+          });
+        }, 3000); // Trainer typing simulation
+      }, 120000); // 2 minutes (120,000 ms) delay
+    } else {
+      // Instant message
+      setMessages(prev => [...prev, userMsg]);
+      setMessageText('');
+
+      setIsTyping(true);
+      setTimeout(() => {
+        setIsTyping(false);
+        const replyMsg: ChatMessage = {
+          id: `msg-${Date.now() + 1}`,
+          sender: 'trainer',
+          text: 'Got it! I am loading the gear and will target exactly that. See you shortly.',
+          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+        };
+        setMessages(prev => [...prev, replyMsg]);
+        
+        addNotification({
+          title: `Message from ${booking.trainerName} 💬`,
+          body: 'Got it! I am loading the gear and will target exactly that.',
+          icon: 'user-check'
+        });
+      }, 1200);
+    }
   };
 
   const handleCall = () => {
@@ -205,9 +278,17 @@ export default function CommunicationScreen() {
                 <Text className={`text-xs font-semibold leading-relaxed ${isMe ? 'text-white' : 'text-zinc-900'}`}>
                   {msg.text}
                 </Text>
-                <Text className={`text-[7px] font-bold uppercase mt-1 text-right ${isMe ? 'text-zinc-400' : 'text-zinc-400'}`}>
-                  {msg.time}
-                </Text>
+                <View className="flex-row items-center gap-1 mt-1 justify-end flex-wrap">
+                  <Text className={`text-[7px] font-bold uppercase ${isMe ? 'text-zinc-400' : 'text-zinc-400'}`}>
+                    {msg.time}
+                  </Text>
+                  {msg.pending && (
+                    <View className="flex-row items-center gap-0.5 ml-1 bg-zinc-800 px-1 py-0.5 rounded">
+                      <Feather name="clock" size={7} color="#9CA3AF" />
+                      <Text className="text-[6px] text-zinc-400 font-black uppercase">Pending (2m delay)</Text>
+                    </View>
+                  )}
+                </View>
               </View>
             );
           })}
@@ -236,18 +317,59 @@ export default function CommunicationScreen() {
                   text: msgText,
                   time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
                 };
-                setMessages(prev => [...prev, userMsg]);
-                setIsTyping(true);
-                setTimeout(() => {
-                  setIsTyping(false);
-                  const replyMsg: ChatMessage = {
-                    id: `msg-${Date.now() + 1}`,
-                    sender: 'trainer',
-                    text: 'Got it! I will see you shortly.',
-                    time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-                  };
-                  setMessages(prev => [...prev, replyMsg]);
-                }, 1200);
+
+                const isDelayed = getMinutesToSession() > 60;
+                if (isDelayed) {
+                  const pendingMsg = { ...userMsg, pending: true };
+                  setMessages(prev => [...prev, pendingMsg]);
+                  
+                  setTimeout(() => {
+                    setMessages(prev => prev.map(m => m.id === userMsg.id ? { ...m, pending: false } : m));
+                    
+                    addNotification({
+                      title: 'Message Delivered ⚡',
+                      body: `Your message to Coach ${booking.trainerName} was delivered.`,
+                      icon: 'message-square'
+                    });
+
+                    setIsTyping(true);
+                    setTimeout(() => {
+                      setIsTyping(false);
+                      const replyMsg: ChatMessage = {
+                        id: `msg-${Date.now() + 1}`,
+                        sender: 'trainer',
+                        text: 'Got it! I will see you shortly.',
+                        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                      };
+                      setMessages(prev => [...prev, replyMsg]);
+                      
+                      addNotification({
+                        title: `Message from ${booking.trainerName} 💬`,
+                        body: 'Got it! I will see you shortly.',
+                        icon: 'user-check'
+                      });
+                    }, 3000);
+                  }, 120000);
+                } else {
+                  setMessages(prev => [...prev, userMsg]);
+                  setIsTyping(true);
+                  setTimeout(() => {
+                    setIsTyping(false);
+                    const replyMsg: ChatMessage = {
+                      id: `msg-${Date.now() + 1}`,
+                      sender: 'trainer',
+                      text: 'Got it! I will see you shortly.',
+                      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                    };
+                    setMessages(prev => [...prev, replyMsg]);
+                    
+                    addNotification({
+                      title: `Message from ${booking.trainerName} 💬`,
+                      body: 'Got it! I will see you shortly.',
+                      icon: 'user-check'
+                    });
+                  }, 1200);
+                }
               }}
               className="bg-white border border-zinc-200 px-3.5 py-1.5 rounded-full mr-2"
             >

@@ -48,6 +48,7 @@ export interface Booking {
   address?: string;
   goal?: string;
   preferredCoachId?: string;
+  trainerNote?: string;
   familyMember?: {
     name: string;
     age: number;
@@ -88,6 +89,12 @@ export interface Booking {
   clientPhone?: string;
   clientId?: string;
   trainerId?: string;
+  createdAt?: number;
+  assignedTrainersPool?: string[];
+  currentTrainerIndex?: number;
+  gracePeriodStartedAt?: number;
+  otpExpiresAt?: number;
+  workoutStartedAt?: number;
 }
 
 export interface Coach {
@@ -128,6 +135,7 @@ export interface Coach {
   emergencyContact?: string;
   aboutText?: string;
   workingRadius?: string;
+  isOnline?: boolean;
 }
 
 export interface NotificationItem {
@@ -173,5 +181,15 @@ export interface ScheduleSlot {
   isPrime: boolean;
   isBooked: boolean;
   isAvailable: boolean;
+}
+
+export interface AssignmentLog {
+  id: string;
+  bookingId: string;
+  trainerId: string;
+  timestamp: number;
+  score: number;
+  reason: string;
+  action: string;
 }
 

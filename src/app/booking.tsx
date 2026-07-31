@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Alert, Image, Animated, Modal } from 'react-native';
+import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Alert, Image, Animated, Modal, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
 import { useMembershipStore } from '../store/membershipStore';
@@ -10,6 +10,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { EmptyState, ApplePayConfirmation, BookingSuccessAnimation } from '../components';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
+import { AssignmentEngine } from '../services/AssignmentEngine';
 
 // 5 Premium experiences specified
 interface Experience {
@@ -72,6 +73,7 @@ const EXPERIENCES: Experience[] = [
 
 export default function BookingScreen() {
   const router = useRouter();
+  const noteInputRef = React.useRef<TextInput>(null);
   const params = useLocalSearchParams();
   const initialWorkoutId = params.workoutId as string;
   const initialWorkoutType = params.workoutType as string;
@@ -183,6 +185,8 @@ export default function BookingScreen() {
   const [matchStage, setMatchStage] = useState(0);
   const [matchDone, setMatchDone] = useState(false);
   const [matchedCoach, setMatchedCoach] = useState<any>(null);
+  const [trainerNote, setTrainerNote] = useState('');
+  const [isConfirming, setIsConfirming] = useState(false);
 
   // Layout Animation
   const [slideAnim] = useState(() => new Animated.Value(0));
@@ -363,8 +367,8 @@ export default function BookingScreen() {
         Alert.alert('Time Required', 'Please select a time slot.');
         return;
       }
-      // Begin matchmaker directly when advancing to step 6
-      startMatchmaker();
+      // Synchronously finalize coach match when transitioning to step 6
+      finalizeMatch();
     }
     triggerTransition(step + 1);
   };
@@ -432,51 +436,107 @@ export default function BookingScreen() {
   // Legacy add address handler removed in favor of Step 3 Redesign Add Address wizard modal
 
   const handleConfirmBooking = () => {
+    if (isConfirming) return;
+    setIsConfirming(true);
+
     const success = consumeCredit();
     if (!success) {
       Alert.alert('Credits Low', 'You do not have enough credits. Please renew your membership.');
+      setIsConfirming(false);
       return;
     }
 
     const bookingId = `b-${Date.now()}`;
     const targetAddress = addresses.find(a => a.id === selectedAddressId)?.addressLine || 'Selected Location';
 
-    addBooking({
-      id: bookingId,
-      trainerName: matchedCoach.name,
-      trainerPhoto: matchedCoach.photo,
-      workoutTitle: selectedExperience.title,
-      date: selectedDate,
-      time: selectedTime,
-      price: matchedCoach.price || 1200,
-      address: targetAddress,
-      goal: selectedExperience.title,
-      timelineStatus: 'booked',
-      trainerLevel: matchedCoach.level || 'Certified',
-      trainerRating: matchedCoach.rating,
-      trainerCompletedSessions: matchedCoach.completedSessions || 150,
-      trainerSpeciality: matchedCoach.specialty,
-      trainerLanguages: matchedCoach.languages,
-      trainerDistance: `${(1.5 + Math.random() * 2).toFixed(1)} km`,
-      trainerArrivalTime: `${Math.round(10 + Math.random() * 10)} mins`,
-    });
+    // Simulate network delay to prevent duplicate submissions and test loading states
+    setTimeout(() => {
+      try {
+        const tempBooking = {
+          id: bookingId,
+          trainerName: matchedCoach.name,
+          trainerPhoto: matchedCoach.photo,
+          workoutTitle: selectedExperience.title,
+          date: selectedDate,
+          time: selectedTime,
+          price: matchedCoach.price || 1200,
+          address: targetAddress,
+          goal: selectedExperience.title,
+          timelineStatus: 'booked' as const,
+          status: 'upcoming' as const,
+          trainerLevel: matchedCoach.level || 'Certified',
+          trainerRating: matchedCoach.rating,
+          trainerCompletedSessions: matchedCoach.completedSessions || 150,
+          trainerSpeciality: matchedCoach.specialty,
+          trainerLanguages: matchedCoach.languages,
+          trainerDistance: '2.5 km',
+          trainerArrivalTime: '15 mins',
+          trainerNote: trainerNote.trim() || undefined,
+          createdAt: Date.now(),
+        };
 
-    // S5 notification triggering
-    addNotification({
-      title: 'Trainer Assigned ⚡',
-      body: `Coach ${matchedCoach.name} (${matchedCoach.level} Trainer) is assigned to your ${selectedExperience.title} session on ${selectedDate} at ${selectedTime}.`,
-    });
+        const ratedTrainers = AssignmentEngine.rankTrainers(tempBooking);
+        let assignedCoach = matchedCoach;
+        let poolIds: string[] = [];
+        let score = 0;
+        let reason = 'Matched Fav / Specialty Fallback';
 
-    addNotification({
-      title: 'Workout Tomorrow 📅',
-      body: `Get ready! Your VIRLA ${selectedExperience.title} session is scheduled for tomorrow at ${selectedTime}.`,
-    });
+        if (ratedTrainers.length > 0) {
+          const topRating = ratedTrainers[0];
+          assignedCoach = topRating.coach;
+          poolIds = ratedTrainers.map(rt => rt.coach.id);
+          score = topRating.score;
+          reason = `Highest scorer in pool (Rank 1 of ${ratedTrainers.length})`;
+        } else {
+          poolIds = [matchedCoach.id];
+          score = 80;
+        }
 
-    // Set success booking ID
-    setSuccessBookingId(bookingId);
+        addBooking({
+          ...tempBooking,
+          trainerName: assignedCoach.name,
+          trainerPhoto: assignedCoach.photo,
+          price: assignedCoach.price || 1200,
+          trainerLevel: assignedCoach.level || 'Certified',
+          trainerRating: assignedCoach.rating,
+          trainerCompletedSessions: assignedCoach.completedSessions || 150,
+          trainerSpeciality: assignedCoach.specialty,
+          trainerLanguages: assignedCoach.languages,
+          trainerDistance: `${(1.5 + Math.random() * 2).toFixed(1)} km`,
+          trainerArrivalTime: `${Math.round(10 + Math.random() * 10)} mins`,
+          assignedTrainersPool: poolIds,
+          currentTrainerIndex: 0,
+        });
 
-    // Advance to step 7 (Success Celebration Component)
-    setStep(7);
+        // Log the assignment event
+        const DatabaseModule = require('../database/Database');
+        DatabaseModule.Database.logAssignmentEvent({
+          bookingId: bookingId,
+          trainerId: assignedCoach.id,
+          score: score,
+          reason: reason,
+          action: 'assigned'
+        });
+
+        // S5 notification triggering
+        addNotification({
+          title: 'Trainer Assigned ⚡',
+          body: `Coach ${assignedCoach.name} (${assignedCoach.level} Trainer) is assigned to your ${selectedExperience.title} session on ${selectedDate} at ${selectedTime}.`,
+        });
+
+        addNotification({
+          title: 'Workout Tomorrow 📅',
+          body: `Get ready! Your VIRLA ${selectedExperience.title} session is scheduled for tomorrow at ${selectedTime}.`,
+        });
+
+        setSuccessBookingId(bookingId);
+        setStep(7);
+      } catch (err) {
+        Alert.alert('Error', 'Unable to complete your booking. Please try again.');
+      } finally {
+        setIsConfirming(false);
+      }
+    }, 1800);
   };
 
   // Helper arrays for Step 5 Slots
@@ -582,24 +642,93 @@ export default function BookingScreen() {
     return null;
   };
 
+  const getWorkoutImage = (id: string) => {
+    switch (id) {
+      case 'exp-strength':
+        return 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80';
+      case 'exp-flow':
+        return 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80';
+      case 'exp-rhythm':
+        return 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=800&q=80';
+      case 'exp-reset':
+        return 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?auto=format&fit=crop&w=800&q=80';
+      case 'exp-combat':
+        return 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?auto=format&fit=crop&w=800&q=80';
+      default:
+        return 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80';
+    }
+  };
+
+  const getFormattedDateLabel = () => {
+    const today = new Date();
+    const todayStr = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    
+    if (selectedDate === todayStr) {
+      return `Today, ${selectedDate}`;
+    } else if (selectedDate === tomorrowStr) {
+      return `Tomorrow, ${selectedDate}`;
+    }
+    return selectedDate;
+  };
+
+  const handleChipPress = (chip: string) => {
+    if (chip === 'Other') {
+      noteInputRef.current?.focus();
+      return;
+    }
+    setTrainerNote((prev) => {
+      const trimmed = prev.trim();
+      if (prev.includes(chip)) {
+        const regex = new RegExp(`\\s*${chip},?\\s*|\\s*,?\\s*${chip}`, 'g');
+        let next = prev.replace(regex, '').trim();
+        next = next.replace(/,\s*,/g, ',').replace(/^,|,$/g, '').trim();
+        return next;
+      } else {
+        if (trimmed.length === 0) {
+          return chip;
+        }
+        const suffix = `, ${chip}`;
+        if (trimmed.length + suffix.length <= 250) {
+          return `${trimmed}${suffix}`;
+        }
+        return prev;
+      }
+    });
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
       {/* Header back button */}
-      <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
+      <View className={`border-b border-[#E5E7EB] bg-white ${step === 6 ? 'py-3 px-6 flex-row items-center justify-between' : 'h-14 flex-row items-center px-6'}`}>
         {step < 7 ? (
-          <TouchableOpacity onPress={handleBack} className="w-8 h-8 items-center justify-center">
+          <TouchableOpacity onPress={handleBack} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} className="w-8 h-8 items-center justify-center">
             <Ionicons name="arrow-back" size={20} color="#101828" />
           </TouchableOpacity>
         ) : (
           <View className="w-8" />
         )}
-        <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
-          {step <= 5 ? `Step ${step} of 5` : step === 6 ? 'Trainer Match' : 'Success'}
-        </Text>
+        {step === 6 ? (
+          <View className="flex-1 items-center mr-8">
+            <Text className="text-[#101828] text-base font-black tracking-tight">Review & Confirm Booking</Text>
+            <Text className="text-[#6B7280] text-[9px] font-semibold mt-0.5">Please review your session details before confirming</Text>
+          </View>
+        ) : (
+          <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
+            {step <= 5 ? `Step ${step} of 5` : 'Success'}
+          </Text>
+        )}
       </View>
 
-      <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
-        {step <= 7 ? (
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+          {step <= 7 ? (
           <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
             <View className="gap-6">
               
@@ -1719,159 +1848,281 @@ export default function BookingScreen() {
                 </View>
               )}
 
-              {/* STEP 6: MATCHMAKER SIMULATOR & SUMMARY */}
+              {/* STEP 6: REVIEW & CONFIRM BOOKING SCREEN (NEW) */}
               {step === 6 && (
                 <View className="gap-6 pb-6">
-                  {!matchDone ? (
-                    /* MATCHMAKER SCREEN (Feature 6) */
-                    <View 
-                      className="bg-white border border-[#E5E7EB] p-8 rounded-[32px] items-center justify-center py-16 gap-6"
-                      style={{
-                        shadowColor: '#101828',
-                        shadowOffset: { width: 0, height: 1 },
-                        shadowOpacity: 0.02,
-                        shadowRadius: 2,
-                        elevation: 1,
-                      }}
-                    >
-                      <View className="relative w-20 h-20 items-center justify-center">
-                        <Svg width={80} height={80} viewBox="0 0 80 80" className="absolute">
-                          <Circle cx={40} cy={40} r={35} stroke="#E5E7EB" strokeWidth={4} fill="none" />
-                          <Circle cx={40} cy={40} r={35} stroke="#4F46E5" strokeWidth={4} fill="none" strokeDasharray="220" strokeDashoffset={220 - (220 * (matchStage + 1)) / 6} strokeLinecap="round" />
-                        </Svg>
-                        <Feather name="compass" size={28} color="#4F46E5" className="animate-spin" />
+                  {/* Section 1 — Booking Summary Card */}
+                  <View 
+                    className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4"
+                    style={{
+                      shadowColor: '#101828',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.02,
+                      shadowRadius: 6,
+                      elevation: 1,
+                    }}
+                  >
+                    {/* Card Header: Calendar Icon, Title, Edit Button */}
+                    <View className="flex-row justify-between items-center">
+                      <View className="flex-row items-center gap-2.5">
+                        <View className="w-7 h-7 rounded-full bg-rose-50 items-center justify-center">
+                          <Feather name="calendar" size={13} color="#E11D48" />
+                        </View>
+                        <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Booking Summary</Text>
+                      </View>
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => triggerTransition(1)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        className="bg-rose-50 border border-rose-100 rounded-lg px-2.5 py-1.5 flex-row items-center gap-1"
+                      >
+                        <Feather name="edit-2" size={10} color="#E11D48" />
+                        <Text className="text-[#E11D48] text-[10px] font-black uppercase">Edit</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Workout Info: Thumbnail, Title, Solo Badge */}
+                    <View className="flex-row gap-4 items-center mt-1">
+                      <Image 
+                        source={{ uri: getWorkoutImage(selectedExperience.id) }} 
+                        className="w-20 h-20 rounded-[20px] bg-zinc-50 border border-zinc-100" 
+                      />
+                      <View className="flex-1 gap-1.5">
+                        <Text className="text-[#101828] text-base font-black tracking-tight">{selectedExperience.title}</Text>
+                        <View className="flex-row">
+                          <View className="bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full flex-row items-center gap-1.5">
+                            <Feather name="user" size={8} color="#E11D48" />
+                            <Text className="text-[#E11D48] text-[8px] font-black uppercase">Solo Session</Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Summary Row Items */}
+                    <View className="mt-2">
+                      {/* Date Row */}
+                      <View className="border-t border-dashed border-[#E5E7EB] py-3.5 flex-row justify-between items-center">
+                        <View className="flex-row items-center gap-2">
+                          <Feather name="calendar" size={13} color="#6B7280" />
+                          <Text className="text-[#6B7280] text-xs font-semibold">Date</Text>
+                        </View>
+                        <Text className="text-[#101828] text-xs font-extrabold">{getFormattedDateLabel()}</Text>
                       </View>
 
-                      <View className="items-center gap-1.5">
-                        <Text className="text-[#101828] text-lg font-black tracking-tight">Finding your perfect coach…</Text>
-                        <Text className="text-[#6B7280] text-xs font-semibold uppercase tracking-wider mt-1 text-center max-w-[80%] leading-relaxed">
-                          Checking matches for: {selectedExperience.title}
+                      {/* Time Row */}
+                      <View className="border-t border-dashed border-[#E5E7EB] py-3.5 flex-row justify-between items-center">
+                        <View className="flex-row items-center gap-2">
+                          <Feather name="clock" size={13} color="#6B7280" />
+                          <Text className="text-[#6B7280] text-xs font-semibold">Time</Text>
+                        </View>
+                        <Text className="text-[#101828] text-xs font-extrabold">
+                          {selectedTime} <Text className="text-[#6B7280] font-medium">({selectedExperience.duration} min workout)</Text>
                         </Text>
                       </View>
 
-                      {/* Status stages steps */}
-                      <View className="w-full gap-3 mt-4 px-2">
-                        {[
-                          'User Books Session (Initiated)',
-                          'Find Trainers Available For That Exact Time Slot',
-                          'Filter Trainers Within Supported Distance Radius',
-                          'Sort By: Availability, Distance, Average Rating, Completed Sessions',
-                          'Automatically Assign Best Matching Trainer',
-                          'Trainer Confirms Booking & Customer Receives Confirmation'
-                        ].map((label, idx) => {
-                          const isDone = matchStage > idx;
-                          const isActive = matchStage === idx;
-                          return (
-                            <View key={idx} className="flex-row items-center gap-3">
-                              {isDone ? (
-                                <View className="w-4 h-4 rounded-full bg-green-500 items-center justify-center">
-                                  <Feather name="check" size={10} color="white" />
-                                </View>
-                              ) : isActive ? (
-                                <View className="w-4 h-4 rounded-full bg-indigo-500 items-center justify-center">
-                                  <View className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                                </View>
-                              ) : (
-                                <View className="w-4 h-4 rounded-full border border-zinc-200" />
-                              )}
-                              <Text className={`text-xs font-semibold ${isDone ? 'text-zinc-500 font-normal line-through' : isActive ? 'text-indigo-600 font-extrabold' : 'text-zinc-400'}`}>
-                                {label}
-                              </Text>
-                            </View>
-                          );
-                        })}
+                      {/* Trainer Preference Row */}
+                      <View className="border-t border-dashed border-[#E5E7EB] py-3.5 flex-row justify-between items-center">
+                        <View className="flex-row items-center gap-2">
+                          <Feather name="user" size={13} color="#6B7280" />
+                          <Text className="text-[#6B7280] text-xs font-semibold">Trainer Preference</Text>
+                        </View>
+                        <Text className="text-[#101828] text-xs font-extrabold">
+                          {trainerPref === 'any' ? 'No Preference' : trainerPref === 'female' ? 'Female Trainer' : trainerPref === 'male' ? 'Male Trainer' : 'Favorite Trainer'}
+                        </Text>
+                      </View>
+
+                      {/* Location Row */}
+                      <View className="border-t border-dashed border-[#E5E7EB] py-3.5 flex-row justify-between items-start">
+                        <View className="flex-row items-center gap-2 mt-0.5">
+                          <Feather name="map-pin" size={13} color="#6B7280" />
+                          <Text className="text-[#6B7280] text-xs font-semibold">Location</Text>
+                        </View>
+                        <Text className="text-[#101828] text-xs font-extrabold max-w-[60%] text-right leading-relaxed">
+                          {addresses.find(a => a.id === selectedAddressId)?.addressLine || 'Selected Location'}
+                        </Text>
+                      </View>
+
+                      {/* Credits Row */}
+                      <View className="border-t border-dashed border-[#E5E7EB] pt-3.5 flex-row justify-between items-center">
+                        <View className="flex-row items-center gap-2">
+                          <Feather name="credit-card" size={13} color="#6B7280" />
+                          <Text className="text-[#6B7280] text-xs font-semibold">Credits</Text>
+                        </View>
+                        <Text className="text-[#101828] text-xs font-extrabold">1 Credit will be used</Text>
                       </View>
                     </View>
-                  ) : (
-                    /* REVEAL TRAINER BEAUTIFULLY & SESSION SUMMARY */
-                    <View className="gap-6 animate-fade-in">
-                      <View>
-                        <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Wellness Match</Text>
-                        <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1">Professional Coach Match</Text>
+                  </View>
+
+                  {/* Section 2 — Note to Your Trainer (Optional) */}
+                  <View className="gap-3 mt-1">
+                    {/* Header: Clipboard Icon, Title, Subtitle */}
+                    <View className="flex-row gap-3 items-center">
+                      <View className="w-9 h-9 rounded-full bg-rose-50 items-center justify-center">
+                        <Feather name="edit-3" size={15} color="#E11D48" />
                       </View>
-
-                      {/* Coach Detail Card (Obscured pre-booking) */}
-                      <View 
-                        className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4"
-                        style={{
-                          shadowColor: '#101828',
-                          shadowOffset: { width: 0, height: 2 },
-                          shadowOpacity: 0.04,
-                          shadowRadius: 6,
-                          elevation: 2,
-                        }}
-                      >
-                        <View className="flex-row gap-4 items-center">
-                          {/* Generic Avatar Placeholder */}
-                          <View className="w-16 h-16 rounded-full bg-zinc-100 border border-zinc-200 items-center justify-center">
-                            <Feather name="user" size={24} color="#9CA3AF" />
-                          </View>
-                          <View className="flex-1 gap-1">
-                            <View className="flex-row items-center gap-2 flex-wrap">
-                              <Text className="text-[#101828] text-base font-black tracking-tight">Wellness Coach (To be assigned)</Text>
-                            </View>
-                            <Text className="text-[#6B7280] text-xs font-semibold leading-none">ACE/ISSA Certified Specialist</Text>
-                            <Text className="text-zinc-400 text-[10px] font-bold leading-none mt-1">⭐️ 4.9+ Rated Expert (150+ sessions completed)</Text>
-                          </View>
+                      <View className="flex-1">
+                        <View className="flex-row items-center gap-1">
+                          <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Note to Your Trainer</Text>
+                          <Text className="text-[#6B7280] text-[10px] font-semibold">(Optional)</Text>
                         </View>
-
-                        <View className="h-[1px] bg-zinc-100" />
-
-                        <View className="flex-row justify-between items-center px-1">
-                          <View className="gap-0.5">
-                            <Text className="text-[#6B7280] text-[8px] font-bold uppercase">Details Release</Text>
-                            <Text className="text-zinc-800 text-[10px] font-extrabold">Sent 5 hours prior to session</Text>
-                          </View>
-                          <View className="gap-0.5 items-end">
-                            <Text className="text-[#6B7280] text-[8px] font-bold uppercase">Security check</Text>
-                            <Text className="text-zinc-800 text-[10px] font-extrabold">100% Vetted & Background Checked</Text>
-                          </View>
-                        </View>
+                        <Text className="text-[#6B7280] text-[9px] font-medium leading-none mt-1">Share anything that will help your trainer prepare better.</Text>
                       </View>
-
-                      {/* Workout Session Details */}
-                      <View 
-                        className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4"
-                        style={{
-                          shadowColor: '#101828',
-                          shadowOffset: { width: 0, height: 2 },
-                          shadowOpacity: 0.04,
-                          shadowRadius: 6,
-                          elevation: 2,
-                        }}
-                      >
-                        <Text className="text-[#101828] text-xs font-black uppercase tracking-wider border-b border-zinc-100 pb-3">Session Summary</Text>
-                        
-                        <View className="gap-3">
-                          <View className="flex-row justify-between items-center">
-                            <Text className="text-[#6B7280] text-xs font-semibold">Workout Experience</Text>
-                            <Text className="text-[#101828] text-xs font-extrabold">{selectedExperience.title}</Text>
-                          </View>
-                          <View className="flex-row justify-between items-center">
-                            <Text className="text-[#6B7280] text-xs font-semibold">Scheduled Date</Text>
-                            <Text className="text-[#101828] text-xs font-extrabold">{selectedDate}</Text>
-                          </View>
-                          <View className="flex-row justify-between items-center">
-                            <Text className="text-[#6B7280] text-xs font-semibold">Time Slot</Text>
-                            <Text className="text-[#101828] text-xs font-extrabold">{selectedTime}</Text>
-                          </View>
-                          <View className="flex-row justify-between items-center">
-                            <Text className="text-[#6B7280] text-xs font-semibold">Duration</Text>
-                            <Text className="text-[#101828] text-xs font-extrabold">{selectedExperience.duration} Mins</Text>
-                          </View>
-                          <View className="flex-row justify-between items-start">
-                            <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">Location</Text>
-                            <Text className="text-[#101828] text-xs font-extrabold max-w-[60%] text-right leading-relaxed">
-                              {addresses.find(a => a.id === selectedAddressId)?.addressLine || 'Selected address'}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-
-                      {/* Apple Pay confirmation Card */}
-                      <ApplePayConfirmation onConfirm={handleConfirmBooking} priceText={`₹${matchedCoach.price || 1200}`} />
                     </View>
-                  )}
+
+                    {/* Chips horizontal scroll */}
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-2 mt-1 py-1" contentContainerStyle={{ gap: 8 }}>
+                      {[
+                        { label: 'I have yoga mat', icon: 'award' },
+                        { label: 'I have injury', icon: 'activity' },
+                        { label: 'Security gate access', icon: 'shield' },
+                        { label: 'Bring resistance bands', icon: 'gift' },
+                        { label: 'Other', icon: 'chevron-down' }
+                      ].map((chip) => {
+                        const isSelected = trainerNote.includes(chip.label);
+                        return (
+                          <TouchableOpacity
+                            key={chip.label}
+                            activeOpacity={0.8}
+                            onPress={() => handleChipPress(chip.label)}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            className={`px-3 py-1.5 rounded-full border flex-row items-center gap-1.5 ${
+                              isSelected ? 'bg-rose-100/70 border-rose-300' : 'bg-rose-50/50 border-rose-100/60'
+                            }`}
+                          >
+                            <Feather name={chip.icon as any} size={10} color="#E11D48" />
+                            <Text className="text-[#E11D48] text-[9px] font-extrabold">{chip.label}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+
+                    {/* Multiline text box */}
+                    <View className="relative bg-white border border-[#E5E7EB] rounded-2xl p-4 mt-0.5">
+                      <TextInput
+                        ref={noteInputRef}
+                        multiline
+                        numberOfLines={4}
+                        value={trainerNote}
+                        onChangeText={(text) => {
+                          if (text.length <= 250) {
+                            setTrainerNote(text);
+                          }
+                        }}
+                        placeholder="Anything else your trainer should know..."
+                        placeholderTextColor="#9CA3AF"
+                        className="text-[#101828] text-xs font-semibold h-20 text-start"
+                        style={{ minHeight: 80, padding: 0, textAlignVertical: 'top' }}
+                        maxLength={250}
+                      />
+                      <Text className="text-right text-[#9CA3AF] text-[9px] font-bold mt-1">
+                        {trainerNote.length}/250
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Section 3 — Session Policies */}
+                  <View 
+                    className="bg-amber-50/20 border border-amber-100/50 p-4.5 rounded-[28px] flex-row items-center justify-between mt-2"
+                  >
+                    <View className="flex-row items-center gap-3.5 flex-1 pr-3">
+                      <View className="w-9 h-9 rounded-full bg-amber-100/40 items-center justify-center">
+                        <Feather name="shield" size={15} color="#D97706" />
+                      </View>
+                      <View className="flex-1 gap-0.5">
+                        <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Session Policies</Text>
+                        <Text className="text-[#6B7280] text-[9px] font-medium leading-normal">
+                          Important information about timing, cancellation, privacy, safety & more.
+                        </Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => router.push('/legal-center')}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      className="border border-rose-200 px-3.5 py-1.5 rounded-full flex-row items-center gap-0.5 bg-white shadow-sm"
+                    >
+                      <Text className="text-[#E11D48] text-[9px] font-black uppercase tracking-wide">View Details</Text>
+                      <Feather name="chevron-right" size={10} color="#E11D48" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Policy reminders grid icons */}
+                  <View className="flex-row justify-between py-4 border-t border-b border-zinc-200/50 mt-2 bg-white rounded-2xl px-2">
+                    <View className="flex-1 items-center px-1">
+                      <Feather name="clock" size={14} color="#4F46E5" />
+                      <Text className="text-zinc-950 text-[9px] font-black mt-1.5 text-center leading-none">15 Min Grace</Text>
+                      <Text className="text-zinc-400 text-[7px] font-bold text-center mt-1 leading-relaxed">Grace period for preparation</Text>
+                    </View>
+                    
+                    <View className="w-[1px] bg-zinc-100" />
+
+                    <View className="flex-1 items-center px-1">
+                      <Feather name="activity" size={14} color="#4B5563" />
+                      <Text className="text-zinc-950 text-[9px] font-black mt-1.5 text-center leading-none">60 Min Workout</Text>
+                      <Text className="text-zinc-400 text-[7px] font-bold text-center mt-1 leading-relaxed">Workout starts after OTP</Text>
+                    </View>
+
+                    <View className="w-[1px] bg-zinc-100" />
+
+                    <View className="flex-1 items-center px-1">
+                      <Feather name="shield" size={14} color="#E11D48" />
+                      <Text className="text-zinc-950 text-[9px] font-black mt-1.5 text-center leading-none">Fair & Transparent</Text>
+                      <Text className="text-zinc-400 text-[7px] font-bold text-center mt-1 leading-relaxed">Same rules for everyone</Text>
+                    </View>
+
+                    <View className="w-[1px] bg-zinc-100" />
+
+                    <View className="flex-1 items-center px-1">
+                      <Feather name="lock" size={14} color="#8B5CF6" />
+                      <Text className="text-zinc-950 text-[9px] font-black mt-1.5 text-center leading-none">Secure & Private</Text>
+                      <Text className="text-zinc-400 text-[7px] font-bold text-center mt-1 leading-relaxed">Your safety and privacy ensured</Text>
+                    </View>
+                  </View>
+
+                  {/* Policy Reminder Banner */}
+                  <View className="bg-indigo-50/50 border border-indigo-100/40 p-3.5 rounded-2xl flex-row items-center gap-2.5 mt-2">
+                    <Feather name="info" size={13} color="#4F46E5" />
+                    <Text className="text-zinc-600 text-[10px] font-medium flex-1">
+                      By confirming this booking, you agree to the{' '}
+                      <Text 
+                        onPress={() => router.push('/legal-center')} 
+                        className="text-indigo-600 font-extrabold underline"
+                      >
+                        VIRLA Session Policies
+                      </Text>
+                      .
+                    </Text>
+                  </View>
+
+                  {/* Confirm Booking Primary Action */}
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={handleConfirmBooking}
+                    disabled={isConfirming}
+                    className="w-full py-4.5 bg-[#E11D48] rounded-[20px] items-center justify-center flex-row gap-2 mt-4"
+                    style={{
+                      shadowColor: '#E11D48',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.15,
+                      shadowRadius: 8,
+                      elevation: 3,
+                    }}
+                  >
+                    {isConfirming ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <>
+                        <Text className="text-white text-base font-extrabold">Confirm Booking</Text>
+                        <Feather name="chevron-right" size={16} color="white" />
+                      </>
+                    )}
+                  </TouchableOpacity>
+
+                  {/* Secure booking guarantee lock label */}
+                  <View className="flex-row items-center justify-center gap-1.5 mt-1">
+                    <Feather name="lock" size={11} color="#9CA3AF" />
+                    <Text className="text-[#9CA3AF] text-[9px] font-bold">Your booking is 100% secure</Text>
+                  </View>
                 </View>
               )}
 
@@ -1900,6 +2151,7 @@ export default function BookingScreen() {
           </ScrollView>
         ) : null}
       </View>
+    </KeyboardAvoidingView>
 
       {/* Footer wizard navigation buttons (Steps 1 to 5) */}
       {step <= 5 && (

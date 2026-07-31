@@ -1,0 +1,188 @@
+import { Database } from '../database/Database';
+import { Coach, Booking } from '../types';
+import { AssignmentConfig } from '../config/AssignmentConfig';
+
+export interface RatedTrainer {
+  coach: Coach;
+  score: number;
+  distance: number;
+  breakdown: {
+    availability: number;
+    distance: number;
+    reliability: number;
+    rating: number;
+    workload: number;
+    acceptanceRate: number;
+  };
+}
+
+export class AssignmentEngine {
+  /**
+   * Evaluates eligibility and ranks all eligible trainers for a given booking.
+   * Highest scoring trainer is first.
+   */
+  static rankTrainers(booking: Booking): RatedTrainer[] {
+    const coaches = Database.schema.coaches;
+    const bookings = Database.schema.bookings;
+    const weights = AssignmentConfig.weights;
+
+    const rated: RatedTrainer[] = [];
+
+    for (const coach of coaches) {
+      // 1. Eligibility Checks
+      
+      // Eligibility Rule 1: Correct workout specialization
+      const hasSpecialty = coach.workoutSpecialties?.some(spec => 
+        booking.workoutTitle.toLowerCase().includes(spec.toLowerCase()) || 
+        spec.toLowerCase().includes(booking.workoutTitle.toLowerCase())
+      );
+      if (!hasSpecialty) continue;
+
+      // Eligibility Rule 2: Online status
+      // Look up online status (default to true for simulation unless toggled offline)
+      const isOnline = coach.isOnline !== false;
+      if (!isOnline) continue;
+
+      // Eligibility Rule 3: Approved Partner Coach / Active account
+      // Seeded coaches are approved partner coaches. verifiedBadge can represent approval.
+      const isApproved = coach.verifiedBadge !== false;
+      if (!isApproved) continue;
+
+      // Eligibility Rule 4: No overlapping bookings or active sessions
+      const hasOverlap = bookings.some(b => {
+        if (b.trainerName !== coach.name) return false;
+        if (b.status === 'cancelled') return false;
+        
+        // Check date overlap
+        if (b.date !== booking.date) return false;
+        
+        // Check time overlap
+        return b.time === booking.time;
+      });
+      if (hasOverlap) continue;
+
+      // Eligibility Rule 5: Travel / Active session conflict detection
+      // Check if trainer currently has a session in progress
+      const hasActiveSession = bookings.some(b => {
+        if (b.trainerName !== coach.name) return false;
+        if (b.status !== 'upcoming') return false;
+        
+        // Active timeline statuses representing workout in progress
+        const activeStatuses = ['trainer_travelling', 'trainer_arrived', 'otp_verified', 'workout_started'];
+        return activeStatuses.includes(b.timelineStatus || '');
+      });
+      if (hasActiveSession) continue;
+
+      // Eligibility Rule 6: Cooldown rule conflict
+      // Give trainer a mandatory cooldown period after completing a session
+      const hasCooldownConflict = bookings.some(b => {
+        if (b.trainerName !== coach.name) return false;
+        if (b.status !== 'completed' && b.timelineStatus !== 'workout_completed') return false;
+        
+        // Parse dates
+        if (b.date !== booking.date) return false;
+        
+        const bMinutes = this.parseTimeToMinutes(b.time);
+        const bookingMinutes = this.parseTimeToMinutes(booking.time);
+        const diff = Math.abs(bookingMinutes - bMinutes);
+        
+        // If elapsed time is less than duration + cooldown
+        const sessionDuration = b.durationMinutes || 60;
+        return diff < (sessionDuration + AssignmentConfig.cooldownDurationMin);
+      });
+      if (hasCooldownConflict) continue;
+
+      // Eligibility Rule 7: Inside service radius
+      // Generate a deterministic distance in km based on trainer and booking IDs
+      const distance = this.getSimulatedDistance(coach.id, booking.id);
+      if (distance > AssignmentConfig.serviceRadiusKm) continue;
+
+      // 2. Score Calculations (All metric scores normalized out of 100)
+
+      // Availability Score (30%)
+      // Check if this slot is in the trainer's calendar availability list
+      const hasSlot = coach.availability?.some(slot => slot.includes(booking.time));
+      const availabilityScore = hasSlot ? 100 : 50; // 100 if preferred slot, 50 if generally online
+
+      // Distance Score (25%)
+      // Prefer nearest trainers. Max points at <= 2km, decays to 0 at 10km.
+      const distanceScore = Math.max(0, 100 - ((distance - 1.5) * (100 / (AssignmentConfig.serviceRadiusKm - 1.5))));
+
+      // Reliability Score (20%)
+      // Derived from completed sessions and star rating
+      const completedIndex = Math.min(100, (coach.completedSessions || 150) / 4);
+      const reliabilityScore = Math.round((completedIndex * 0.4) + (coach.rating * 20 * 0.6));
+
+      // Customer Rating (10%)
+      const ratingScore = coach.rating * 20;
+
+      // Current Workload (10%)
+      // Count bookings for this coach today
+      const todayBookingsCount = bookings.filter(b => 
+        b.trainerName === coach.name && 
+        b.status === 'upcoming' && 
+        b.date === booking.date
+      ).length;
+      const workloadScore = Math.max(0, 100 - (todayBookingsCount * 25)); // Decays 25% per active booking
+
+      // Recent Acceptance Rate (5%)
+      // Seed a stable rating per coach
+      const acceptanceRateScore = coach.id === 'c-1' ? 95 : coach.id === 'c-2' ? 90 : coach.id === 'c-3' ? 85 : 80;
+
+      // 3. Weighted Total
+      const score = (
+        weights.availability * availabilityScore +
+        weights.distance * distanceScore +
+        weights.reliability * reliabilityScore +
+        weights.rating * ratingScore +
+        weights.workload * workloadScore +
+        weights.acceptanceRate * acceptanceRateScore
+      );
+
+      rated.push({
+        coach,
+        score,
+        distance,
+        breakdown: {
+          availability: availabilityScore,
+          distance: distanceScore,
+          reliability: reliabilityScore,
+          rating: ratingScore,
+          workload: workloadScore,
+          acceptanceRate: acceptanceRateScore
+        }
+      });
+    }
+
+    // Sort descending by score
+    return rated.sort((a, b) => b.score - a.score);
+  }
+
+  /**
+   * Generates a stable, reproducible simulated distance between a coach and a booking.
+   */
+  private static getSimulatedDistance(coachId: string, bookingId: string): number {
+    let hash = 0;
+    const combined = coachId + bookingId;
+    for (let i = 0; i < combined.length; i++) {
+      hash = combined.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const finalHash = Math.abs(hash);
+    // Returns distance between 1.5km and 9.5km
+    return 1.5 + (finalHash % 80) / 10;
+  }
+
+  /**
+   * Helper to parse time string like "09:00 AM" into minutes of day.
+   */
+  private static parseTimeToMinutes(timeStr: string): number {
+    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!match) return 0;
+    let hours = parseInt(match[1]);
+    const minutes = parseInt(match[2]);
+    const ampm = match[3].toUpperCase();
+    if (ampm === 'PM' && hours < 12) hours += 12;
+    if (ampm === 'AM' && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+  }
+}
