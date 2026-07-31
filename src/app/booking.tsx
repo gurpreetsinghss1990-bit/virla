@@ -9,7 +9,7 @@ import { useCoachStore } from '../store/coachStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { EmptyState, ApplePayConfirmation, BookingSuccessAnimation } from '../components';
 import { Ionicons, Feather } from '@expo/vector-icons';
-import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Line } from 'react-native-svg';
 import { AssignmentEngine } from '../services/AssignmentEngine';
 
 // 5 Premium experiences specified
@@ -1123,11 +1123,12 @@ export default function BookingScreen() {
                             <Line x1="0%" y1="60%" x2="100%" y2="60%" stroke="#BAE6FD" strokeWidth={2} />
                             <Line x1="0%" y1="85%" x2="100%" y2="85%" stroke="#BAE6FD" strokeWidth={1} strokeDasharray="6 6" />
 
-                            <SvgText x="30" y="50" fill="#93C5FD" fontSize="10" fontWeight="bold">JUHU BEACH</SvgText>
-                            <SvgText x="30" y="240" fill="#93C5FD" fontSize="10" fontWeight="bold">BANDRA ROAD</SvgText>
-                            <SvgText x="280" y="180" fill="#93C5FD" fontSize="10" fontWeight="bold">WORLI NAKA</SvgText>
-                            <Circle cx="180" cy="200" r="140" stroke="#3B82F6" strokeWidth="1" fill="#93C5FD" fillOpacity="0.05" strokeDasharray="4 4" />
+                            <Circle cx="180" cy="200" r="140" stroke="#3B82F6" strokeWidth={1} fill="#93C5FD" fillOpacity="0.05" strokeDasharray="4 4" />
                           </Svg>
+
+                          <Text style={{ position: 'absolute', left: 30, top: 40, color: '#93C5FD', fontSize: 10, fontWeight: 'bold' }}>JUHU BEACH</Text>
+                          <Text style={{ position: 'absolute', left: 30, top: 230, color: '#93C5FD', fontSize: 10, fontWeight: 'bold' }}>BANDRA ROAD</Text>
+                          <Text style={{ position: 'absolute', left: 280, top: 170, color: '#93C5FD', fontSize: 10, fontWeight: 'bold' }}>WORLI NAKA</Text>
 
                           <View 
                             className={`w-12 h-12 rounded-full ${
