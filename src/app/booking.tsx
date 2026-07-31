@@ -921,9 +921,737 @@ export default function BookingScreen() {
               )}
 
               {/* STEP 3: LOCATION & MAP */}
-              {step === 3 && (console.log('[DEBUG-BOOKING] Rendering step 3 block'), true) && (
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
-                  <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#101828' }}>Step 3 Blank Screen</Text>
+              {step === 3 && (
+                <View className="gap-5">
+                  <View>
+                    <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Training Venue</Text>
+                    <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1">Select Training Location</Text>
+                    <Text className="text-zinc-500 text-xs font-semibold mt-1">
+                      Choose where your VIRLA Wellness Coach should visit.
+                    </Text>
+                  </View>
+
+                  {/* Saved Locations List */}
+                  <View className="gap-3.5">
+                    {addresses.map((addr) => {
+                      const isSelected = selectedAddressId === addr.id;
+                      // Display dynamic mock ETA/distance for address cards context
+                      let cardEta = '12–15 mins';
+                      if (((addr.building || '') || '').toLowerCase().includes('worli')) cardEta = '18–22 mins';
+                      if (((addr.building || '') || '').toLowerCase().includes('juhu')) cardEta = '15–18 mins';
+                      if (((addr.building || '') || '').toLowerCase().includes('bandra')) cardEta = '10–12 mins';
+
+                      return (
+                        <TouchableOpacity
+                          key={addr.id}
+                          activeOpacity={0.9}
+                          onPress={() => {
+                            setSelectedAddressId(addr.id);
+                            // Auto transition to step 4 on card tap after small delay
+                            setTimeout(() => triggerTransition(4), 300);
+                          }}
+                          className={`p-5 rounded-[24px] border flex-row items-center justify-between  ${
+                            isSelected 
+                              ? 'bg-white border-[#E11D48]' 
+                              : 'bg-white border-[#E5E7EB]'
+                          }`}
+                          style={{
+                            shadowColor: isSelected ? '#E11D48' : '#101828',
+                            shadowOffset: { width: 0, height: isSelected ? 6 : 2 },
+                            shadowOpacity: isSelected ? 0.08 : 0.03,
+                            shadowRadius: isSelected ? 12 : 6,
+                            elevation: isSelected ? 4 : 2,
+                          }}
+                        >
+                          <View className="flex-row items-center gap-4 flex-1">
+                            <View className={`w-11 h-11 rounded-2xl items-center justify-center ${isSelected ? 'bg-rose-50' : 'bg-zinc-50'}`}>
+                              <Text className="text-xl">
+                                {addr.label === 'Home' ? '🏠' : addr.label === 'Office' ? '🏢' : addr.label === 'Gym' ? '🏋️' : '📍'}
+                              </Text>
+                            </View>
+                            <View className="flex-1 gap-1">
+                              <View className="flex-row items-center gap-2">
+                                <Text className="text-[#101828] text-sm font-black">{addr.label}</Text>
+                                {addr.isDefault && (
+                                  <View className="bg-zinc-100 border border-zinc-200 px-2 py-0.5 rounded-full">
+                                    <Text className="text-[#6B7280] text-[8px] font-black uppercase tracking-wider">Default</Text>
+                                  </View>
+                                )}
+                                {isSelected && (
+                                  <View className="bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full">
+                                    <Text className="text-[#E11D48] text-[8px] font-black uppercase tracking-wider">Selected</Text>
+                                  </View>
+                                )}
+                              </View>
+                              <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed">
+                                {addr.addressLine}
+                              </Text>
+                              <View className="flex-row items-center gap-4 mt-1">
+                                <Text className="text-green-600 text-[10px] font-bold">✓ Covered</Text>
+                                <Text className="text-zinc-400 text-[10px] font-medium">• Est. arrival: {cardEta}</Text>
+                              </View>
+                            </View>
+                          </View>
+
+                          <View className="ml-2">
+                            {isSelected ? (
+                              <View className="w-6 h-6 rounded-full bg-[#E11D48] items-center justify-center">
+                                <Feather name="check" size={14} color="white" />
+                              </View>
+                            ) : (
+                              <View className="w-6 h-6 rounded-full border border-zinc-200 bg-zinc-50" />
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+
+                    {addresses.length === 0 && (
+                      <View className="p-8 rounded-[24px] border border-dashed border-[#CBD5E1] bg-white items-center justify-center gap-2">
+                        <Text className="text-3xl">📍</Text>
+                        <Text className="text-[#101828] text-sm font-bold">No Saved Addresses</Text>
+                        <Text className="text-zinc-500 text-xs text-center">Add a training location to begin booking.</Text>
+                      </View>
+                    )}
+
+                    {/* Add New Address Trigger */}
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        setAddAddressStep(1);
+                        setNewHouseNo('');
+                        setNewBuildingName('');
+                        setNewFloor('');
+                        setNewLandmark('');
+                        setNewAddressLabelType('Home');
+                        setNewCustomLabel('');
+                        setSearchQuery('');
+                        setIsAddAddressModalVisible(true);
+                      }}
+                      className="p-5 rounded-[24px] border border-dashed border-[#CBD5E1] bg-[#F8FAFC] flex-row items-center justify-center gap-2"
+                    >
+                      <Feather name="plus" size={16} color="#475569" />
+                      <Text className="text-[#475569] text-xs font-black uppercase tracking-wider">Add New Address</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Compact Service Availability card */}
+                  {selectedAddressId ? (
+                    !isLocationOutsideCoverage ? (
+                      <View className="bg-emerald-50 border border-emerald-100 p-5 rounded-[24px] flex-row items-center gap-4">
+                        <View className="w-10 h-10 rounded-full bg-emerald-100 items-center justify-center">
+                          <Feather name="check-circle" size={20} color="#059669" />
+                        </View>
+                        <View className="flex-1 gap-0.5">
+                          <Text className="text-emerald-800 text-xs font-black uppercase tracking-wider">🟢 Service Available</Text>
+                          <Text className="text-emerald-700 text-xs font-semibold">Your location is within the VIRLA service area.</Text>
+                          
+                          <View className="flex-row gap-6 mt-2">
+                            <View>
+                              <Text className="text-zinc-500 text-[8px] font-bold uppercase">Estimated Trainer Arrival</Text>
+                              <Text className="text-zinc-900 text-xs font-extrabold">{etaText}</Text>
+                            </View>
+                            <View>
+                              <Text className="text-zinc-500 text-[8px] font-bold uppercase">Coverage Status</Text>
+                              <Text className="text-zinc-900 text-xs font-extrabold">Available</Text>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+                    ) : (
+                      <View className="bg-red-50 border border-red-150 p-5 rounded-[24px] gap-3">
+                        <View className="flex-row items-center gap-3">
+                          <View className="w-10 h-10 rounded-full bg-red-100 items-center justify-center">
+                            <Feather name="alert-triangle" size={20} color="#DC2626" />
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-red-800 text-xs font-black uppercase tracking-wider">⚠️ Outside Service Area</Text>
+                            <Text className="text-red-700 text-xs font-semibold">Sorry, VIRLA is not yet available in this area.</Text>
+                          </View>
+                        </View>
+                        <Text className="text-zinc-500 text-xs leading-relaxed pl-1">
+                          Join our waitlist and we&apos;ll notify you when we launch here.
+                        </Text>
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          onPress={() => Alert.alert('Waitlist Joined', 'Thank you! We will notify you as soon as VIRLA launches in your area.')}
+                          className="bg-red-600 h-11 rounded-xl items-center justify-center self-start px-6"
+                        >
+                          <Text className="text-white text-xs font-black uppercase tracking-wider">Notify Me</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )
+                  ) : null}
+
+                  {/* Optional View on Map link */}
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => setIsMapModalVisible(true)}
+                    className="flex-row items-center justify-center gap-1.5 py-1.5"
+                  >
+                    <Feather name="map-pin" size={14} color="#E11D48" />
+                    <Text className="text-[#E11D48] text-xs font-black uppercase tracking-wider">View on Map</Text>
+                  </TouchableOpacity>
+
+                  {/* FULL-SCREEN VIEW ON MAP MODAL */}
+                  <Modal
+                    visible={isMapModalVisible}
+                    animationType="slide"
+                    onRequestClose={() => setIsMapModalVisible(false)}
+                  >
+                    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
+                      {/* Header */}
+                      <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
+                        <TouchableOpacity onPress={() => setIsMapModalVisible(false)} className="w-8 h-8 items-center justify-center">
+                          <Ionicons name="arrow-back" size={20} color="#101828" />
+                        </TouchableOpacity>
+                        <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
+                          Confirm Location
+                        </Text>
+                      </View>
+
+                      <View className="flex-1 relative">
+                        {/* Simulated Map View */}
+                        <View className="flex-1 bg-sky-100/50 relative overflow-hidden items-center justify-center">
+                          <Svg width="100%" height="100%" className="absolute">
+                            <Line x1="15%" y1="0%" x2="15%" y2="100%" stroke="#BAE6FD" strokeWidth={1} strokeDasharray="6 6" />
+                            <Line x1="50%" y1="0%" x2="50%" y2="100%" stroke="#BAE6FD" strokeWidth={2} />
+                            <Line x1="85%" y1="0%" x2="85%" y2="100%" stroke="#BAE6FD" strokeWidth={1} strokeDasharray="6 6" />
+                            <Line x1="0%" y1="25%" x2="100%" y2="25%" stroke="#BAE6FD" strokeWidth={1} strokeDasharray="6 6" />
+                            <Line x1="0%" y1="60%" x2="100%" y2="60%" stroke="#BAE6FD" strokeWidth={2} />
+                            <Line x1="0%" y1="85%" x2="100%" y2="85%" stroke="#BAE6FD" strokeWidth={1} strokeDasharray="6 6" />
+
+                            <Circle cx="180" cy="200" r="140" stroke="#3B82F6" strokeWidth={1} fill="#93C5FD" fillOpacity="0.05" strokeDasharray="4 4" />
+                          </Svg>
+
+                          <Text style={{ position: 'absolute', left: 30, top: 40, color: '#93C5FD', fontSize: 10, fontWeight: 'bold' }}>JUHU BEACH</Text>
+                          <Text style={{ position: 'absolute', left: 30, top: 230, color: '#93C5FD', fontSize: 10, fontWeight: 'bold' }}>BANDRA ROAD</Text>
+                          <Text style={{ position: 'absolute', left: 280, top: 170, color: '#93C5FD', fontSize: 10, fontWeight: 'bold' }}>WORLI NAKA</Text>
+
+                          <View 
+                            className={`w-12 h-12 rounded-full ${
+                              isLocationOutsideCoverage ? 'bg-red-500' : 'bg-indigo-600'
+                            } border-4 border-white items-center justify-center relative z-20`}
+                            style={{
+                              shadowColor: '#000',
+                              shadowOffset: { width: 0, height: 6 },
+                              shadowOpacity: 0.35,
+                              shadowRadius: 10,
+                              elevation: 6,
+                            }}
+                          >
+                            <Feather name={isLocationOutsideCoverage ? 'alert-triangle' : 'map-pin'} size={18} color="white" />
+                          </View>
+                          <Text className="text-[10px] font-bold text-zinc-500 bg-white/90 border border-zinc-200 px-3 py-1 rounded-full absolute bottom-24 z-20">
+                            {isLocationOutsideCoverage ? '⛔ Outside Coverage Area' : '📍 Target Pin Position'}
+                          </Text>
+                        </View>
+
+                        {/* Search overlay */}
+                        <View className="absolute top-4 left-6 right-6 z-35">
+                          <View 
+                            className="flex-row items-center bg-white border border-[#E5E7EB] px-4 py-2 rounded-2xl"
+                            style={{
+                              shadowColor: '#101828',
+                              shadowOffset: { width: 0, height: 4 },
+                              shadowOpacity: 0.08,
+                              shadowRadius: 12,
+                              elevation: 4,
+                            }}
+                          >
+                            <Feather name="search" size={16} color="#6B7280" />
+                            <TextInput
+                              placeholder="Search custom address..."
+                              placeholderTextColor="#9CA3AF"
+                              value={searchQuery}
+                              onChangeText={(t) => {
+                                setSearchQuery(t);
+                                setShowSearchDropdown(true);
+                              }}
+                              className="flex-1 text-xs font-semibold text-zinc-900 ml-2.5 py-1.5"
+                            />
+                            {searchQuery.length > 0 && (
+                              <TouchableOpacity onPress={() => { setSearchQuery(''); setShowSearchDropdown(false); }}>
+                                <Feather name="x" size={14} color="#6B7280" />
+                              </TouchableOpacity>
+                            )}
+                          </View>
+
+                          {showSearchDropdown && searchQuery.length > 0 && (
+                            <View 
+                              className="absolute top-14 left-0 right-0 bg-white border border-zinc-200 rounded-xl z-50 max-h-48 overflow-hidden"
+                              style={{
+                                shadowColor: '#101828',
+                                shadowOffset: { width: 0, height: 6 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 12,
+                                elevation: 6,
+                              }}
+                            >
+                              {[
+                                { name: 'Bandra West, Mumbai', desc: 'Active VIRLA service zone', out: false, coords: { lat: 19.0596, lng: 72.8295 }, eta: '~12 mins', dist: '3.2 km' },
+                                { name: 'Juhu Scheme, Mumbai', desc: 'Active VIRLA service zone', out: false, coords: { lat: 19.1076, lng: 72.8264 }, eta: '~18 mins', dist: '6.5 km' },
+                                { name: 'Worli Naka, Mumbai', desc: 'Active VIRLA service zone', out: false, coords: { lat: 18.9986, lng: 72.8174 }, eta: '~20 mins', dist: '8.4 km' },
+                                { name: 'Pune Central Station', desc: 'Outside active service zone', out: true, coords: { lat: 18.5204, lng: 73.8567 }, eta: 'N/A', dist: '150 km' },
+                                { name: 'Connaught Place, Delhi', desc: 'Outside active service zone', out: true, coords: { lat: 28.6304, lng: 77.2177 }, eta: 'N/A', dist: '1400 km' }
+                              ]
+                                .filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                                .map((item, idx) => (
+                                  <TouchableOpacity
+                                    key={idx}
+                                    onPress={() => {
+                                      if (networkFailure) {
+                                        Alert.alert('Network Error', 'Network Connection Timeout. Please check your internet connection.');
+                                        return;
+                                      }
+                                      setSearchQuery(item.name);
+                                      setShowSearchDropdown(false);
+                                      setIsLocationOutsideCoverage(item.out);
+                                      setEtaText(item.eta);
+                                      setDistanceText(item.dist);
+                                      setActiveCoords(item.coords);
+
+                                      if (item.out) {
+                                        Alert.alert('Outside Coverage Area', 'This address lies outside the active VIRLA service zone.');
+                                      } else {
+                                        addAddress({
+                                          label: 'Custom' as any,
+                                          building: item.name,
+                                          street: '',
+                                          landmark: '',
+                                          city: 'Mumbai',
+                                          pinCode: '',
+                                          isDefault: false,
+                                          lat: item.coords.lat,
+                                          lng: item.coords.lng,
+                                          apartment: '',
+                                          floor: '',
+                                          notes: ''
+                                        });
+                                      }
+                                    }}
+                                    className="p-3.5 border-b border-zinc-100 flex-row justify-between items-center bg-white"
+                                  >
+                                    <View className="flex-1 pr-2">
+                                      <Text className="text-zinc-900 text-xs font-bold">{item.name}</Text>
+                                      <Text className="text-zinc-400 text-[8px] font-semibold">{item.desc}</Text>
+                                    </View>
+                                    <Feather name="arrow-up-left" size={14} color="#9CA3AF" />
+                                  </TouchableOpacity>
+                                ))
+                              }
+                            </View>
+                          )}
+                        </View>
+
+                        {/* GPS Action button */}
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          onPress={() => {
+                            if (gpsSignalFailure) {
+                              Alert.alert('GPS Signal Failure', 'Weak GPS Signal: Satellites not reachable. Try moving outside or confirm address.');
+                              return;
+                            }
+                            setGpsPermission('granted');
+                            setIsLocationOutsideCoverage(false);
+                            setEtaText('~18 mins travel');
+                            setDistanceText('6.5 km');
+                            setActiveCoords({ lat: 19.1076, lng: 72.8264 });
+                            addAddress({
+                              label: 'Custom' as any,
+                              building: 'Juhu Beach, Mumbai, Maharashtra 400049',
+                              street: '',
+                              landmark: '',
+                              city: 'Mumbai',
+                              pinCode: '400049',
+                              isDefault: false,
+                              lat: 19.1076,
+                              lng: 72.8264,
+                              apartment: '',
+                              floor: '',
+                              notes: ''
+                            });
+                            Alert.alert('GPS Located', 'Positioned at Juhu Scheme. Set as active selection.');
+                          }}
+                          className="absolute bottom-28 right-6 w-11 h-11 bg-white border border-[#E5E7EB] rounded-full items-center justify-center"
+                          style={{
+                            shadowColor: '#101828',
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.08,
+                            shadowRadius: 10,
+                            elevation: 4,
+                          }}
+                        >
+                          <Feather name="navigation" size={18} color="#3B82F6" />
+                        </TouchableOpacity>
+
+                        {/* Footer Confirmation */}
+                        <View className="p-6 bg-white border-t border-[#E5E7EB] gap-3">
+                          <View className="flex-row justify-between items-center px-1">
+                            <Text className="text-zinc-500 text-[10px] font-black uppercase">Active Coordinates</Text>
+                            <Text className="text-zinc-900 text-xs font-extrabold">{activeCoords.lat.toFixed(4)}° N, {activeCoords.lng.toFixed(4)}° E</Text>
+                          </View>
+                          <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={() => setIsMapModalVisible(false)}
+                            className="w-full h-14 bg-zinc-950 rounded-2xl items-center justify-center shadow-md"
+                          >
+                            <Text className="text-white text-xs font-black uppercase tracking-wider">Confirm location</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </SafeAreaView>
+                  </Modal>
+
+                  {/* FULL-SCREEN ADD NEW ADDRESS FLOW */}
+                  <Modal
+                    visible={isAddAddressModalVisible}
+                    animationType="slide"
+                    onRequestClose={() => setIsAddAddressModalVisible(false)}
+                  >
+                    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
+                      {/* Header */}
+                      <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
+                        <TouchableOpacity 
+                          onPress={() => {
+                            if (addAddressStep > 1) {
+                              setAddAddressStep((prev) => (prev - 1) as any);
+                            } else {
+                              setIsAddAddressModalVisible(false);
+                            }
+                          }} 
+                          className="w-8 h-8 items-center justify-center"
+                        >
+                          <Ionicons name="arrow-back" size={20} color="#101828" />
+                        </TouchableOpacity>
+                        <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
+                          Add New Address
+                        </Text>
+                      </View>
+
+                      {/* Wizard Progress Line */}
+                      <View className="bg-white border-b border-zinc-150 py-3 flex-row justify-around px-6">
+                        {[
+                          { num: 1, label: 'Search' },
+                          { num: 2, label: 'Confirm' },
+                          { num: 3, label: 'Details' }
+                        ].map((s) => {
+                          const isActive = addAddressStep === s.num;
+                          const isPast = addAddressStep > s.num;
+                          return (
+                            <View key={s.num} className="flex-row items-center gap-1.5">
+                              <View className={`w-5 h-5 rounded-full items-center justify-center ${
+                                isActive ? 'bg-[#E11D48]' : isPast ? 'bg-zinc-800' : 'bg-zinc-200'
+                              }`}>
+                                {isPast ? (
+                                  <Feather name="check" size={10} color="white" />
+                                ) : (
+                                  <Text className="text-white text-[10px] font-black">{s.num}</Text>
+                                )}
+                              </View>
+                              <Text className={`text-[10px] font-black uppercase tracking-wider ${
+                                isActive ? 'text-[#E11D48]' : 'text-zinc-500'
+                              }`}>{s.label}</Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+
+                      <View className="flex-1 bg-[#F7F8FC]">
+                        {/* STEP 1: SEARCH OR GPS */}
+                        {addAddressStep === 1 && (
+                          <View className="p-6 gap-6 flex-1">
+                            <View>
+                              <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Step 1 of 3</Text>
+                              <Text className="text-[#101828] text-xl font-black tracking-tight mt-1">Locate Your Address</Text>
+                            </View>
+
+                            {/* GPS current location button */}
+                            <TouchableOpacity
+                              activeOpacity={0.8}
+                              onPress={() => {
+                                if (gpsSignalFailure) {
+                                  Alert.alert('GPS Jammed', 'Simulated Weak GPS Signal. Try manual address search.');
+                                  return;
+                                }
+                                setGpsPermission('granted');
+                                setIsLocationOutsideCoverage(false);
+                                setEtaText('~18 mins travel');
+                                setDistanceText('6.5 km');
+                                setActiveCoords({ lat: 19.1076, lng: 72.8264 });
+                                setSearchQuery('Juhu Beach Road, Mumbai, Maharashtra 400049');
+                                setNewBuildingName('Juhu Beach Road');
+                                setAddAddressStep(2);
+                              }}
+                              className="w-full h-14 bg-indigo-50 border border-indigo-150 rounded-2xl items-center justify-center flex-row gap-2.5"
+                            >
+                              <Feather name="navigation" size={16} color="#4F46E5" />
+                              <Text className="text-[#4F46E5] text-xs font-bold uppercase tracking-wider">🛰️ Use Current GPS Location</Text>
+                            </TouchableOpacity>
+
+                            <View className="flex-row items-center gap-3">
+                              <View className="flex-1 h-[1px] bg-zinc-200" />
+                              <Text className="text-zinc-400 text-[9px] font-black uppercase">OR SEARCH</Text>
+                              <View className="flex-1 h-[1px] bg-zinc-200" />
+                            </View>
+
+                            {/* Search query bar */}
+                            <View className="gap-2 relative z-30">
+                              <View className="flex-row items-center bg-white border border-[#E5E7EB] px-4 py-1.5 rounded-2xl">
+                                <Feather name="search" size={16} color="#6B7280" />
+                                <TextInput
+                                  placeholder="Type locality (e.g. Bandra, Worli, Pune...)"
+                                  placeholderTextColor="#9CA3AF"
+                                  value={searchQuery}
+                                  onChangeText={(t) => {
+                                    setSearchQuery(t);
+                                    setShowSearchDropdown(true);
+                                  }}
+                                  className="flex-1 text-xs font-semibold text-zinc-900 ml-2.5 py-1.5"
+                                />
+                              </View>
+
+                              {/* Dropdown list of presets */}
+                              {showSearchDropdown && searchQuery.length > 0 && (
+                                <View 
+                                  className="absolute top-14 left-0 right-0 bg-white border border-zinc-200 rounded-xl z-50 max-h-56 overflow-hidden"
+                                  style={{
+                                    shadowColor: '#101828',
+                                    shadowOffset: { width: 0, height: 6 },
+                                    shadowOpacity: 0.1,
+                                    shadowRadius: 12,
+                                    elevation: 6,
+                                  }}
+                                >
+                                  {[
+                                    { name: 'Bandra West, Mumbai', desc: 'Active VIRLA service zone', out: false, coords: { lat: 19.0596, lng: 72.8295 }, eta: '~12 mins', dist: '3.2 km' },
+                                    { name: 'Juhu Scheme, Mumbai', desc: 'Active VIRLA service zone', out: false, coords: { lat: 19.1076, lng: 72.8264 }, eta: '~18 mins', dist: '6.5 km' },
+                                    { name: 'Worli Naka, Mumbai', desc: 'Active VIRLA service zone', out: false, coords: { lat: 18.9986, lng: 72.8174 }, eta: '~20 mins', dist: '8.4 km' },
+                                    { name: 'Pune Central Station', desc: 'Outside active service zone', out: true, coords: { lat: 18.5204, lng: 73.8567 }, eta: 'N/A', dist: '150 km' },
+                                    { name: 'Connaught Place, Delhi', desc: 'Outside active service zone', out: true, coords: { lat: 28.6304, lng: 77.2177 }, eta: 'N/A', dist: '1400 km' }
+                                  ]
+                                    .filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                                    .map((item, idx) => (
+                                      <TouchableOpacity
+                                        key={idx}
+                                        onPress={() => {
+                                          setSearchQuery(item.name);
+                                          setNewBuildingName(item.name.split(',')[0]);
+                                          setShowSearchDropdown(false);
+                                          setIsLocationOutsideCoverage(item.out);
+                                          setEtaText(item.eta);
+                                          setDistanceText(item.dist);
+                                          setActiveCoords(item.coords);
+                                          setAddAddressStep(2);
+                                        }}
+                                        className="p-4 border-b border-zinc-100 flex-row justify-between items-center bg-white"
+                                      >
+                                        <View className="flex-1 pr-2">
+                                          <Text className="text-zinc-900 text-xs font-bold">{item.name}</Text>
+                                          <Text className="text-zinc-400 text-[8px] font-semibold">{item.desc}</Text>
+                                        </View>
+                                        <Feather name="arrow-up-left" size={14} color="#9CA3AF" />
+                                      </TouchableOpacity>
+                                    ))
+                                  }
+                                </View>
+                              )}
+                            </View>
+                          </View>
+                        )}
+
+                        {/* STEP 2: PIN CONFIRMATION */}
+                        {addAddressStep === 2 && (
+                          <View className="flex-1 relative">
+                            {/* SVG simulated map */}
+                            <View className="flex-1 bg-sky-100/50 relative overflow-hidden items-center justify-center">
+                              <Svg width="100%" height="100%" className="absolute">
+                                <Line x1="15%" y1="0%" x2="15%" y2="100%" stroke="#BAE6FD" strokeWidth={1} strokeDasharray="6 6" />
+                                <Line x1="50%" y1="0%" x2="50%" y2="100%" stroke="#BAE6FD" strokeWidth={2} />
+                                <Line x1="0%" y1="30%" x2="100%" y2="30%" stroke="#BAE6FD" strokeWidth={2} />
+                                <Line x1="0%" y1="75%" x2="100%" y2="75%" stroke="#BAE6FD" strokeWidth={1} strokeDasharray="6 6" />
+                              </Svg>
+
+                              <View 
+                                className={`w-14 h-14 rounded-full ${
+                                  isLocationOutsideCoverage ? 'bg-red-500' : 'bg-[#E11D48]'
+                                } border-4 border-white items-center justify-center`}
+                                style={{
+                                  shadowColor: '#000',
+                                  shadowOffset: { width: 0, height: 6 },
+                                  shadowOpacity: 0.35,
+                                  shadowRadius: 10,
+                                  elevation: 6,
+                                }}
+                              >
+                                <Feather name={isLocationOutsideCoverage ? 'alert-triangle' : 'map-pin'} size={20} color="white" />
+                              </View>
+
+                              <View className="absolute bottom-28 bg-white border border-zinc-200 px-4 py-2.5 rounded-2xl items-center justify-center max-w-[85%]">
+                                <Text className="text-zinc-900 text-xs font-black uppercase">Confirm Pin Location</Text>
+                                <Text className="text-[#6B7280] text-[10px] font-semibold text-center mt-1 leading-relaxed">{searchQuery}</Text>
+                              </View>
+                            </View>
+
+                            <View className="p-6 bg-white border-t border-[#E5E7EB]">
+                              <TouchableOpacity
+                                activeOpacity={0.8}
+                                onPress={() => setAddAddressStep(3)}
+                                className="w-full h-14 bg-zinc-950 rounded-2xl items-center justify-center shadow-md"
+                              >
+                                <Text className="text-white text-xs font-black uppercase tracking-wider">Confirm Location Pin</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        )}
+
+                        {/* STEP 3: DETAILS FORM */}
+                        {addAddressStep === 3 && (
+                          <ScrollView 
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
+                            className="flex-1"
+                          >
+                            <View className="gap-6">
+                              <View>
+                                <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Step 3 of 3</Text>
+                                <Text className="text-[#101828] text-xl font-black tracking-tight mt-1">Enter Address Details</Text>
+                              </View>
+
+                              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[24px] gap-4">
+                                <View className="flex-row items-center gap-2">
+                                  <Feather name="map-pin" size={14} color="#6B7280" />
+                                  <Text className="text-zinc-900 text-xs font-bold uppercase">{newBuildingName || 'Selected Locality'}</Text>
+                                </View>
+
+                                <View className="gap-3.5">
+                                  <TextInput
+                                    value={newHouseNo}
+                                    onChangeText={setNewHouseNo}
+                                    placeholder="Flat / House No (e.g. Flat 501)"
+                                    placeholderTextColor="#9CA3AF"
+                                    className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
+                                  />
+                                  <TextInput
+                                    value={newBuildingName}
+                                    onChangeText={setNewBuildingName}
+                                    placeholder="Building / Society Name (e.g. Oberoi Springs)"
+                                    placeholderTextColor="#9CA3AF"
+                                    className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
+                                  />
+                                  <TextInput
+                                    value={newFloor}
+                                    onChangeText={setNewFloor}
+                                    placeholder="Floor / Wing (e.g. 5th Floor, A Wing)"
+                                    placeholderTextColor="#9CA3AF"
+                                    className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
+                                  />
+                                  <TextInput
+                                    value={newLandmark}
+                                    onChangeText={setNewLandmark}
+                                    placeholder="Landmark (e.g. Next to Citi Mall)"
+                                    placeholderTextColor="#9CA3AF"
+                                    className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
+                                  />
+                                </View>
+                              </View>
+
+                              {/* Label selection */}
+                              <View className="gap-2.5">
+                                <Text className="text-[#101828] text-xs font-black uppercase tracking-wider pl-1">Save As</Text>
+                                <View className="flex-row justify-between">
+                                  {[
+                                    { id: 'Home', emoji: '🏠' },
+                                    { id: 'Office', emoji: '🏢' },
+                                    { id: 'Gym', emoji: '🏋️' },
+                                    { id: 'Custom', emoji: '📍' }
+                                  ].map((item) => {
+                                    const isSel = newAddressLabelType === item.id;
+                                    return (
+                                      <TouchableOpacity
+                                        key={item.id}
+                                        activeOpacity={0.8}
+                                        onPress={() => setNewAddressLabelType(item.id as any)}
+                                        className={`w-[22%] py-3.5 rounded-xl border items-center justify-center flex-row gap-1 ${
+                                          isSel ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-[#E5E7EB]'
+                                        }`}
+                                      >
+                                        <Text className="text-xs">{item.emoji}</Text>
+                                        <Text className={`text-[9px] font-black uppercase ${isSel ? 'text-white' : 'text-zinc-800'}`}>{item.id}</Text>
+                                      </TouchableOpacity>
+                                    );
+                                  })}
+                                </View>
+
+                                {newAddressLabelType === 'Custom' && (
+                                  <TextInput
+                                    value={newCustomLabel}
+                                    onChangeText={setNewCustomLabel}
+                                    placeholder="Custom label (e.g. Parents, Guest)"
+                                    placeholderTextColor="#9CA3AF"
+                                    className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50 mt-2"
+                                  />
+                                )}
+                              </View>
+
+                              {/* Save Address Button */}
+                              <TouchableOpacity
+                                activeOpacity={0.8}
+                                onPress={() => {
+                                  if (!newHouseNo.trim() || !newBuildingName.trim()) {
+                                    Alert.alert('Missing Info', 'Please enter Flat/House No and Building Name.');
+                                    return;
+                                  }
+
+                                  if (isLocationOutsideCoverage) {
+                                    Alert.alert('Outside Area', 'Sorry, VIRLA currently only serves Mumbai. Address cannot be verified for coverage.');
+                                    return;
+                                  }
+
+                                  const finalLabel = newAddressLabelType === 'Custom'
+                                    ? (newCustomLabel.trim() || 'Custom') as any
+                                    : newAddressLabelType;
+
+                                  const fullBuilding = `${newHouseNo.trim()}, ${newBuildingName.trim()}`;
+                                  const fullStreet = [newFloor.trim() ? `${newFloor.trim()}` : '', newLandmark.trim()].filter(Boolean).join(', ');
+
+                                  addAddress({
+                                    label: finalLabel,
+                                    building: fullBuilding,
+                                    street: fullStreet,
+                                    landmark: newLandmark.trim(),
+                                    city: 'Mumbai',
+                                    pinCode: '',
+                                    isDefault: false,
+                                    lat: activeCoords.lat,
+                                    lng: activeCoords.lng,
+                                    apartment: '',
+                                    floor: newFloor.trim(),
+                                    notes: ''
+                                  });
+
+                                  // Retrieve newly created ID to select it
+                                  setTimeout(() => {
+                                    const updatedList = useAddressStore.getState().addresses;
+                                    const matched = updatedList.find(a => a.building === fullBuilding);
+                                    if (matched) {
+                                      setSelectedAddressId(matched.id);
+                                    }
+                                  }, 150);
+
+                                  setIsAddAddressModalVisible(false);
+                                  Alert.alert('Address Saved', 'New training venue has been saved and selected.');
+                                }}
+                                className="w-full h-14 bg-[#E11D48] rounded-2xl items-center justify-center mt-2"
+                              >
+                                <Text className="text-white text-xs font-black uppercase tracking-wider">Save Training Location</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </ScrollView>
+                        )}
+                      </View>
+                    </SafeAreaView>
+                  </Modal>
                 </View>
               )}
 
@@ -1020,7 +1748,7 @@ export default function BookingScreen() {
                   )}
 
                   {/* Summary date selected bar */}
-                  <View className="bg-white border border-[#E5E7EB] px-5 py-4.5 rounded-[24px] flex-row justify-between items-center">
+                  <View className="bg-white border border-[#E5E7EB] px-5 py-5 rounded-[24px] flex-row justify-between items-center">
                     <View className="flex-row items-center gap-2.5">
                       <Feather name="calendar" size={16} color="#4F46E5" />
                       <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Selected Date</Text>
@@ -1393,8 +2121,10 @@ export default function BookingScreen() {
                     activeOpacity={0.85}
                     onPress={handleConfirmBooking}
                     disabled={isConfirming}
-                    className="w-full py-4.5 bg-[#E11D48] rounded-[20px] items-center justify-center flex-row gap-2 mt-4"
+                    className="w-full bg-[#E11D48] items-center justify-center flex-row gap-2 mt-4"
                     style={{
+                      height: 58,
+                      borderRadius: 16,
                       shadowColor: '#E11D48',
                       shadowOffset: { width: 0, height: 4 },
                       shadowOpacity: 0.15,
