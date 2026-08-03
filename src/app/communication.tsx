@@ -7,11 +7,15 @@ import { useNotificationStore } from '../store/notificationStore';
 import { useWalletStore } from '../store/walletStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 
+import { Database } from '../database/Database';
+import { useUserStore } from '../store/userStore';
+import { supabase } from '../database/supabaseClient';
+
 interface ChatMessage {
   id: string;
   sender: 'customer' | 'trainer';
   text: string;
-  time: string;
+  timestamp: string;
   pending?: boolean;
 }
 
@@ -58,24 +62,58 @@ export default function CommunicationScreen() {
     return (sessionDate.getTime() - now.getTime()) / (1000 * 60);
   };
 
+  const { user, role } = useUserStore();
   const [messageText, setMessageText] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'm-1',
-      sender: 'trainer',
-      text: `Hello Viral! I'm preparing for our ${booking?.workoutTitle || ''} session.`,
-      time: '10:05 AM'
-    },
-    {
-      id: 'm-2',
-      sender: 'trainer',
-      text: 'Do you have any specific areas of muscle soreness we should prioritize today?',
-      time: '10:06 AM'
-    }
-  ]);
-
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (!booking) return;
+    
+    const loadAndFilterMessages = () => {
+      const dbMsgs = Database.getChatMessages(booking.id);
+      const isMoreThan60Mins = getMinutesToSession() > 60;
+      const now = Date.now();
+      
+      const filtered = dbMsgs.map((msg) => {
+        let localSender: 'customer' | 'trainer' = 'customer';
+        if (msg.sender === 'trainer' || msg.sender === 'coach') {
+          localSender = 'trainer';
+        }
+        
+        return {
+          id: msg.id,
+          sender: localSender,
+          text: msg.text,
+          timestamp: msg.timestamp,
+        };
+      }).filter((msg) => {
+        const isMyMsg = (role === 'trainer' && msg.sender === 'trainer') ||
+                        (role === 'customer' && msg.sender === 'customer');
+        if (isMyMsg) return true;
+        
+        let msgTime = now;
+        try {
+          const d = new Date(msg.timestamp);
+          if (!isNaN(d.getTime())) {
+            msgTime = d.getTime();
+          }
+        } catch (e) {}
+        
+        if (isMoreThan60Mins) {
+          return now - msgTime >= 120000;
+        }
+        return true;
+      });
+      
+      setMessages(filtered);
+    };
+
+    loadAndFilterMessages();
+    const interval = setInterval(loadAndFilterMessages, 1000);
+    return () => clearInterval(interval);
+  }, [booking, role]);
 
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -93,78 +131,12 @@ export default function CommunicationScreen() {
   }
 
   const handleSendMessage = () => {
-    if (!messageText.trim()) return;
+    if (!messageText.trim() || !booking) return;
 
-    const userMsg: ChatMessage = {
-      id: `msg-${Date.now()}`,
-      sender: 'customer',
-      text: messageText.trim(),
-      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-    };
+    const sender = role === 'trainer' ? 'trainer' : 'customer';
+    Database.sendChatMessage(booking.id, messageText.trim(), sender);
 
-    const isDelayed = getMinutesToSession() > 60;
-
-    if (isDelayed) {
-      // 2 minute delay
-      const pendingMsg = { ...userMsg, pending: true };
-      setMessages(prev => [...prev, pendingMsg]);
-      setMessageText('');
-
-      setTimeout(() => {
-        // Mark user message as delivered
-        setMessages(prev => prev.map(m => m.id === userMsg.id ? { ...m, pending: false } : m));
-        
-        // Push notification for delivery
-        addNotification({
-          title: 'Message Delivered ⚡',
-          body: `Your message to Coach ${booking.trainerName} was delivered.`,
-          icon: 'message-square'
-        });
-
-        // Trigger typing indicator for trainer's response
-        setIsTyping(true);
-        
-        setTimeout(() => {
-          setIsTyping(false);
-          const replyMsg: ChatMessage = {
-            id: `msg-${Date.now() + 1}`,
-            sender: 'trainer',
-            text: 'Got it! I am loading the gear and will target exactly that. See you shortly.',
-            time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-          };
-          setMessages(prev => [...prev, replyMsg]);
-          
-          // Push notification for trainer's reply
-          addNotification({
-            title: `Message from ${booking.trainerName} 💬`,
-            body: 'Got it! I am loading the gear and will target exactly that.',
-            icon: 'user-check'
-          });
-        }, 3000); // Trainer typing simulation
-      }, 120000); // 2 minutes (120,000 ms) delay
-    } else {
-      // Instant message
-      setMessages(prev => [...prev, userMsg]);
-      setMessageText('');
-
-      setIsTyping(true);
-      setTimeout(() => {
-        setIsTyping(false);
-        const replyMsg: ChatMessage = {
-          id: `msg-${Date.now() + 1}`,
-          sender: 'trainer',
-          text: 'Got it! I am loading the gear and will target exactly that. See you shortly.',
-          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-        };
-        setMessages(prev => [...prev, replyMsg]);
-        
-        addNotification({
-          title: `Message from ${booking.trainerName} 💬`,
-          body: 'Got it! I am loading the gear and will target exactly that.',
-          icon: 'user-check'
-        });
-      }, 1200);
-    }
+    setMessageText('');
   };
 
   const handleCall = () => {
@@ -226,8 +198,12 @@ export default function CommunicationScreen() {
         </TouchableOpacity>
         
         <View className="items-center">
-          <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Coach {booking.trainerName}</Text>
-          <Text className="text-zinc-400 text-[8px] font-bold uppercase">{booking.trainerSpeciality} • {booking.trainerLevel}</Text>
+          <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">
+            {role === 'trainer' ? `Client (${booking ? 'VIRLA-C' + booking.id.slice(-6).toUpperCase() : ''})` : `Coach ${booking.trainerName}`}
+          </Text>
+          <Text className="text-zinc-400 text-[8px] font-bold uppercase">
+            {role === 'trainer' ? `Solo Session` : `${booking.trainerSpeciality} • ${booking.trainerLevel}`}
+          </Text>
         </View>
 
         <TouchableOpacity onPress={handleSOS} className="bg-red-50 px-3 py-1.5 rounded-full border border-red-150">
@@ -237,9 +213,17 @@ export default function CommunicationScreen() {
 
       {/* Communications Top Tool Bar */}
       <View className="bg-white border-b border-zinc-150 p-4 flex-row justify-around gap-2.5">
-        <TouchableOpacity onPress={handleCall} className="flex-1 bg-zinc-50 border border-zinc-100 py-3 rounded-2xl items-center flex-row justify-center gap-2">
-          <Feather name="phone" size={12} color="#101828" />
-          <Text className="text-zinc-950 text-[8px] font-black uppercase">Call Trainer</Text>
+        <TouchableOpacity
+          onPress={getMinutesToSession() <= 60 ? handleCall : () => Alert.alert('Secure Line Locked', 'Voice calling is masked and locked until 60 minutes before the session starts.')}
+          activeOpacity={getMinutesToSession() <= 60 ? 0.8 : 0.5}
+          className={`flex-1 py-3 rounded-2xl items-center flex-row justify-center gap-2 ${
+            getMinutesToSession() <= 60 ? 'bg-zinc-50 border border-zinc-100' : 'bg-zinc-100 border border-zinc-200 opacity-60'
+          }`}
+        >
+          <Feather name="phone" size={12} color={getMinutesToSession() <= 60 ? '#101828' : '#9CA3AF'} />
+          <Text className={`text-[8px] font-black uppercase ${getMinutesToSession() <= 60 ? 'text-zinc-950' : 'text-[#9CA3AF]'}`}>
+            {role === 'trainer' ? 'Call Client' : 'Call Coach'}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={handleShareLocation} className="flex-1 bg-zinc-50 border border-zinc-100 py-3 rounded-2xl items-center flex-row justify-center gap-2">
@@ -265,7 +249,21 @@ export default function CommunicationScreen() {
           <Text className="text-zinc-400 text-[8px] font-bold uppercase text-center my-2">Security check-in line enabled</Text>
 
           {messages.map((msg) => {
-            const isMe = msg.sender === 'customer';
+            const isMe = (role === 'customer' && msg.sender === 'customer') ||
+                         (role === 'trainer' && msg.sender === 'trainer');
+            
+            let timeDisplay = msg.timestamp || '';
+            try {
+              const d = new Date(msg.timestamp);
+              if (!isNaN(d.getTime())) {
+                timeDisplay = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              }
+            } catch (e) {}
+
+            const isPending = (msg.sender === 'customer' && role === 'customer' || msg.sender === 'trainer' && role === 'trainer') &&
+                              (getMinutesToSession() > 60) &&
+                              (Date.now() - new Date(msg.timestamp).getTime() < 120000);
+
             return (
               <View
                 key={msg.id}
@@ -279,10 +277,10 @@ export default function CommunicationScreen() {
                   {msg.text}
                 </Text>
                 <View className="flex-row items-center gap-1 mt-1 justify-end flex-wrap">
-                  <Text className={`text-[7px] font-bold uppercase ${isMe ? 'text-zinc-400' : 'text-zinc-400'}`}>
-                    {msg.time}
+                  <Text className={`text-[7px] font-bold uppercase text-zinc-400`}>
+                    {timeDisplay}
                   </Text>
-                  {msg.pending && (
+                  {isPending && (
                     <View className="flex-row items-center gap-0.5 ml-1 bg-zinc-800 px-1 py-0.5 rounded">
                       <Feather name="clock" size={7} color="#9CA3AF" />
                       <Text className="text-[6px] text-zinc-400 font-black uppercase">Pending (2m delay)</Text>
@@ -311,65 +309,9 @@ export default function CommunicationScreen() {
             <TouchableOpacity
               key={idx}
               onPress={() => {
-                const userMsg: ChatMessage = {
-                  id: `msg-${Date.now()}-${idx}`,
-                  sender: 'customer',
-                  text: msgText,
-                  time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-                };
-
-                const isDelayed = getMinutesToSession() > 60;
-                if (isDelayed) {
-                  const pendingMsg = { ...userMsg, pending: true };
-                  setMessages(prev => [...prev, pendingMsg]);
-                  
-                  setTimeout(() => {
-                    setMessages(prev => prev.map(m => m.id === userMsg.id ? { ...m, pending: false } : m));
-                    
-                    addNotification({
-                      title: 'Message Delivered ⚡',
-                      body: `Your message to Coach ${booking.trainerName} was delivered.`,
-                      icon: 'message-square'
-                    });
-
-                    setIsTyping(true);
-                    setTimeout(() => {
-                      setIsTyping(false);
-                      const replyMsg: ChatMessage = {
-                        id: `msg-${Date.now() + 1}`,
-                        sender: 'trainer',
-                        text: 'Got it! I will see you shortly.',
-                        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-                      };
-                      setMessages(prev => [...prev, replyMsg]);
-                      
-                      addNotification({
-                        title: `Message from ${booking.trainerName} 💬`,
-                        body: 'Got it! I will see you shortly.',
-                        icon: 'user-check'
-                      });
-                    }, 3000);
-                  }, 120000);
-                } else {
-                  setMessages(prev => [...prev, userMsg]);
-                  setIsTyping(true);
-                  setTimeout(() => {
-                    setIsTyping(false);
-                    const replyMsg: ChatMessage = {
-                      id: `msg-${Date.now() + 1}`,
-                      sender: 'trainer',
-                      text: 'Got it! I will see you shortly.',
-                      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-                    };
-                    setMessages(prev => [...prev, replyMsg]);
-                    
-                    addNotification({
-                      title: `Message from ${booking.trainerName} 💬`,
-                      body: 'Got it! I will see you shortly.',
-                      icon: 'user-check'
-                    });
-                  }, 1200);
-                }
+                if (!booking) return;
+                const sender = role === 'trainer' ? 'trainer' : 'customer';
+                Database.sendChatMessage(booking.id, msgText, sender);
               }}
               className="bg-white border border-zinc-200 px-3.5 py-1.5 rounded-full mr-2"
             >

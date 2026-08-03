@@ -3,18 +3,97 @@ import { View, Text, TouchableOpacity, ScrollView, Alert, Platform } from 'react
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useCoachStore } from '../store/coachStore';
+import { useUserStore } from '../store/userStore';
+import { Database } from '../database/Database';
 import { ProgressRing } from '../components/ProgressRing';
 import { Ionicons, Feather } from '@expo/vector-icons';
 
 export default function TrainerAvailabilityScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useUserStore();
   const { 
     weeklySchedule, 
     remainingSlotChanges, 
     toggleSlotAvailability, 
     editScheduleSlot,
+    coaches,
+    syncFromDB
   } = useCoachStore();
+
+  const coach = coaches.find(c => c.name === user.name) || coaches[0];
+  const prefs = coach?.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] };
+
+  const toggleOnline = () => {
+    if (!coach) return;
+    const nextVal = !prefs.online;
+    Database.updateTrainerOnlineStatus(coach.id, nextVal);
+    syncFromDB();
+    Alert.alert('Status Updated', `You are now ${nextVal ? 'ONLINE' : 'OFFLINE'}.`);
+  };
+
+  const handleUpdateRadius = () => {
+    if (!coach) return;
+    Alert.alert(
+      'Service Coverage Radius',
+      'Select your maximum travel radius for home training visits:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        ...[5, 10, 15, 20, 25].map(radius => ({
+          text: `${radius} km`,
+          onPress: () => {
+            Database.updateTrainerPreferences(coach.id, { radiusKm: radius });
+            syncFromDB();
+            Alert.alert('Radius Updated', `Travel coverage updated to ${radius} km.`);
+          }
+        }))
+      ]
+    );
+  };
+
+  const handleUpdateMaxSessions = () => {
+    if (!coach) return;
+    Alert.alert(
+      'Maximum Daily Workload',
+      'Select your preferred maximum daily training sessions limit:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        ...[2, 3, 4, 5, 6, 7, 8].map(max => ({
+          text: `${max} sessions / day`,
+          onPress: () => {
+            Database.updateTrainerPreferences(coach.id, { maxDailySessions: max });
+            syncFromDB();
+            Alert.alert('Workload Updated', `Maximum daily sessions set to ${max}.`);
+          }
+        }))
+      ]
+    );
+  };
+
+  const handleUpdateCategories = () => {
+    if (!coach) return;
+    const availableCategories = ['Strength', 'Mind & Body', 'Cardio', 'Conditioning', 'Boxing'];
+    Alert.alert(
+      'Workout Specializations',
+      'Toggle restricted category requirements:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        ...availableCategories.map(cat => {
+          const isSelected = prefs.categories?.includes(cat);
+          return {
+            text: `${isSelected ? '✓' : '➕'} ${cat}`,
+            onPress: () => {
+              const updated = isSelected
+                ? prefs.categories.filter((c: string) => c !== cat)
+                : [...(prefs.categories || []), cat];
+              Database.updateTrainerPreferences(coach.id, { categories: updated });
+              syncFromDB();
+            }
+          };
+        })
+      ]
+    );
+  };
 
   const [activeDay, setActiveDay] = useState('Mon');
   const daysList = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -233,6 +312,76 @@ export default function TrainerAvailabilityScreen() {
                   Missed Prime Slot minimum compliance in Week 2.
                 </Text>
               </View>
+            </View>
+          </View>
+
+          {/* Section: Trainer Preferences */}
+          <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+            <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
+              <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Operational Settings</Text>
+              <View className="bg-indigo-50 border border-indigo-150 px-2 py-0.5 rounded-full">
+                <Text className="text-[#4F46E5] text-[8px] font-black uppercase tracking-widest">Real-time sync</Text>
+              </View>
+            </View>
+
+            <View className="gap-3">
+              {/* Online/Offline Toggle */}
+              <TouchableOpacity
+                onPress={toggleOnline}
+                activeOpacity={0.8}
+                className="flex-row justify-between items-center py-2 border-b border-zinc-50"
+              >
+                <View className="flex-1 pr-3">
+                  <Text className="text-zinc-900 text-xs font-black">Availability Mode</Text>
+                  <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Allow customer bookings dispatch</Text>
+                </View>
+                <View className={`px-3 py-1.5 rounded-full ${prefs.online ? 'bg-emerald-50 border border-emerald-150' : 'bg-zinc-50 border border-zinc-200'}`}>
+                  <Text className={`text-[8px] font-black uppercase ${prefs.online ? 'text-emerald-600' : 'text-zinc-500'}`}>
+                    {prefs.online ? 'Online' : 'Offline'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Service Radius */}
+              <TouchableOpacity
+                onPress={handleUpdateRadius}
+                activeOpacity={0.8}
+                className="flex-row justify-between items-center py-2 border-b border-zinc-50"
+              >
+                <View className="flex-1 pr-3">
+                  <Text className="text-zinc-900 text-xs font-black">Service Radius Limit</Text>
+                  <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Maximum travel distance in Mumbai</Text>
+                </View>
+                <Text className="text-[#4F46E5] text-xs font-black">{prefs.radiusKm || 15} km</Text>
+              </TouchableOpacity>
+
+              {/* Max Daily Sessions */}
+              <TouchableOpacity
+                onPress={handleUpdateMaxSessions}
+                activeOpacity={0.8}
+                className="flex-row justify-between items-center py-2 border-b border-zinc-50"
+              >
+                <View className="flex-1 pr-3">
+                  <Text className="text-zinc-900 text-xs font-black">Maximum Daily Sessions</Text>
+                  <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Prevents fatigue capping bookings</Text>
+                </View>
+                <Text className="text-[#4F46E5] text-xs font-black">{prefs.maxDailySessions || 5} sessions</Text>
+              </TouchableOpacity>
+
+              {/* Workout Categories */}
+              <TouchableOpacity
+                onPress={handleUpdateCategories}
+                activeOpacity={0.8}
+                className="flex-row justify-between items-center py-2"
+              >
+                <View className="flex-1 pr-3">
+                  <Text className="text-zinc-900 text-xs font-black">workout categories</Text>
+                  <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Restrict incoming session categories</Text>
+                </View>
+                <Text className="text-[#4F46E5] text-[10px] font-black uppercase">
+                  {prefs.categories && prefs.categories.length > 0 ? prefs.categories.join(', ') : 'All Workouts'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 

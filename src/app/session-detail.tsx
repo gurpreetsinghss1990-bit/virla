@@ -60,9 +60,8 @@ export default function SessionDetailScreen() {
 
   // Fallback status alignment for 12-stage timeline
   const currentStatus = booking?.timelineStatus || 'booked';
-  
-  const isPendingDetails = (role === 'customer' || role === 'admin') && 
-    currentStatus === 'booked';
+  const isAccepted = currentStatus !== 'booked' && currentStatus !== 'trainer_assigned';
+  const isPendingDetails = (role === 'customer' || role === 'admin') && !isAccepted;
 
   // Input & Questionnaire state variables
   const [isEditingNote, setIsEditingNote] = useState(false);
@@ -165,6 +164,9 @@ export default function SessionDetailScreen() {
   };
 
   const getStatusText = (status: string) => {
+    if (status === 'booked' && booking?.trainerName === 'No Trainer Available') {
+      return "We're still looking for a trainer";
+    }
     switch (status) {
       case 'booked':
         return 'Searching for Trainer';
@@ -615,12 +617,32 @@ export default function SessionDetailScreen() {
             </View>
 
             {/* Privacy Warning Banner */}
-            <View className="bg-zinc-50 border border-zinc-200 p-4 rounded-2xl flex-row items-start gap-2.5">
-              <Feather name="lock" size={13} color="#9CA3AF" style={{ marginTop: 2 }} />
-              <Text className="text-zinc-500 text-[9px] font-semibold leading-relaxed flex-1">
-                Before you accept this booking, communication options are locked and customer contact information (Name, exact Address, Phone Number) remains private under {"VIRLA's"} privacy policies.
-              </Text>
-            </View>
+            {role === 'trainer' && currentStatus === 'booked' && (
+              <View className="bg-zinc-50 border border-zinc-200 p-4 rounded-2xl flex-row items-start gap-2.5">
+                <Feather name="lock" size={13} color="#9CA3AF" style={{ marginTop: 2 }} />
+                <Text className="text-zinc-500 text-[9px] font-semibold leading-relaxed flex-1">
+                  Before you accept this booking, communication options are locked and customer contact information (Name, exact Address, Phone Number) remains private under {"VIRLA's"} privacy policies.
+                </Text>
+              </View>
+            )}
+
+            {(role as string) === 'customer' && !isAccepted && (
+              <View className="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl flex-row items-start gap-2.5">
+                <Feather name="search" size={13} color="#4F46E5" style={{ marginTop: 2 }} />
+                <Text className="text-indigo-700 text-[9px] font-semibold leading-relaxed flex-1">
+                  Looking for the best trainer... Secure communication options and profile details will unlock after trainer acceptance.
+                </Text>
+              </View>
+            )}
+
+            {(role as string) === 'customer' && isAccepted && (
+              <View className="bg-[#ECFDF5] border border-[#A7F3D0] p-4 rounded-2xl flex-row items-start gap-2.5">
+                <Feather name="check-circle" size={13} color="#059669" style={{ marginTop: 2 }} />
+                <Text className="text-emerald-800 text-[9px] font-semibold leading-relaxed flex-1">
+                  Trainer confirmed. Trainer details will unlock according to VIRLA privacy rules (Calling & Messaging opens 60 minutes before training).
+                </Text>
+              </View>
+            )}
           </View>
         </ScrollView>
 
@@ -959,7 +981,7 @@ export default function SessionDetailScreen() {
                 <View className="flex-row gap-3">
                   {/* Secure Message */}
                   <TouchableOpacity 
-                    onPress={handleMessage} 
+                    onPress={!isAccepted ? () => Alert.alert('Security Lock', 'Waiting for Trainer Acceptance. Secure communications will unlock after a coach confirms.') : handleMessage} 
                     className="flex-1 bg-zinc-950 py-3.5 rounded-2xl items-center justify-center flex-row gap-2"
                   >
                     <Feather name="message-square" size={14} color="white" />
@@ -969,22 +991,27 @@ export default function SessionDetailScreen() {
                   {/* Secure Call */}
                   <View className="flex-1">
                     <TouchableOpacity 
-                      onPress={getMinutesToSession() <= 60 ? handleCall : undefined} 
-                      activeOpacity={getMinutesToSession() <= 60 ? 0.8 : 1}
+                      onPress={!isAccepted ? () => Alert.alert('Security Lock', 'Waiting for Trainer Acceptance. Secure communications will unlock after a coach confirms.') : (getMinutesToSession() <= 60 ? handleCall : undefined)} 
+                      activeOpacity={!isAccepted ? 0.8 : (getMinutesToSession() <= 60 ? 0.8 : 1)}
                       className={`py-3.5 rounded-2xl items-center justify-center flex-row gap-2 ${
-                        getMinutesToSession() <= 60 ? 'bg-zinc-950' : 'bg-zinc-100 border border-zinc-200 opacity-60'
+                        (isAccepted && getMinutesToSession() <= 60) ? 'bg-zinc-950' : 'bg-zinc-100 border border-zinc-200 opacity-60'
                       }`}
                     >
-                      <Feather name="phone" size={14} color={getMinutesToSession() <= 60 ? 'white' : '#9CA3AF'} />
-                      <Text className={`text-xs font-bold ${getMinutesToSession() <= 60 ? 'text-white' : 'text-[#9CA3AF]'}`}>Secure Call</Text>
+                      <Feather name="phone" size={14} color={(isAccepted && getMinutesToSession() <= 60) ? 'white' : '#9CA3AF'} />
+                      <Text className={`text-xs font-bold ${(isAccepted && getMinutesToSession() <= 60) ? 'text-white' : 'text-[#9CA3AF]'}`}>Secure Call</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
 
                 {/* Helper text if Call is disabled */}
-                {getMinutesToSession() > 60 && (
+                {isAccepted && getMinutesToSession() > 60 && (
                   <Text className="text-zinc-500 text-[8px] font-semibold text-center mt-0.5 leading-none">
                     Calling will be available 60 minutes before your session.
+                  </Text>
+                )}
+                {!isAccepted && (
+                  <Text className="text-zinc-500 text-[8px] font-semibold text-center mt-0.5 leading-none">
+                    Waiting for trainer to accept request.
                   </Text>
                 )}
               </View>

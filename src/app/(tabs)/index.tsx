@@ -130,7 +130,7 @@ export default function HomeScreen() {
   const { membership } = useMembershipStore();
   const { unreadCount } = useNotificationStore();
   const { user, role } = useUserStore();
-  const { totalEarnings, earningsList } = useCoachStore();
+  const { totalEarnings, earningsList, coaches } = useCoachStore();
   const { savedPlan } = useAIWellnessStore();
 
   const handleHiddenAdminAccess = async () => {
@@ -152,6 +152,18 @@ export default function HomeScreen() {
   };
 
   const [trainerOnlineStatus, setTrainerOnlineStatus] = useState<'online' | 'offline'>('online');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await useBookingStore.getState().refreshBookings();
+    } catch (e) {
+      console.error('Manual sync failed:', e);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handleAcceptRequest = (id: string) => {
     Alert.alert(
@@ -179,20 +191,27 @@ export default function HomeScreen() {
     reassignTrainer(id, 'timeout');
   };
 
+  const currentCoach = coaches.find(c => c.name === user.name);
+
+  React.useEffect(() => {
+    if (currentCoach) {
+      setTrainerOnlineStatus(currentCoach.preferences?.online ? 'online' : 'offline');
+    }
+  }, [currentCoach]);
+
   const toggleOnlineStatus = () => {
-    const nextStatus = trainerOnlineStatus === 'online' ? 'offline' : 'online';
+    if (!currentCoach) return;
+    const nextOnline = !(currentCoach.preferences?.online);
+    const nextStatus = nextOnline ? 'online' : 'offline';
     setTrainerOnlineStatus(nextStatus);
 
-    // Update isOnline inside the local database coaches list
-    const karan = Database.schema.coaches.find(c => c.name === 'Karan Sharma');
-    if (karan) {
-      Database.updateTrainerOnlineStatus(karan.id, nextStatus === 'online');
-    }
+    Database.updateTrainerOnlineStatus(currentCoach.id, nextOnline);
+    useCoachStore.getState().syncFromDB();
 
-    // Immediately revoke pending requests assigned to Karan Sharma when going offline
-    if (nextStatus === 'offline') {
+    // Immediately revoke pending requests assigned to this coach when going offline
+    if (!nextOnline) {
       const pendingRequests = bookings.filter(b => 
-        b.trainerName === 'Karan Sharma' && 
+        b.trainerName === currentCoach.name && 
         b.timelineStatus === 'booked'
       );
       for (const req of pendingRequests) {
@@ -304,7 +323,7 @@ export default function HomeScreen() {
 
   const upcomingBookings = bookings.filter((b) => b.status === 'upcoming');
   const pastBookings = bookings.filter((b) => b.status === 'completed');
-  const activeBooking = bookings.find(b => b.status === 'upcoming' && b.timelineStatus && b.timelineStatus !== 'session_closed' && b.timelineStatus !== 'booked');
+  const activeBooking = bookings.find(b => b.status === 'upcoming' && b.timelineStatus && b.timelineStatus !== 'session_closed');
 
   // Hydration state
   const [waterMl, setWaterMl] = useState(0);
@@ -1083,6 +1102,7 @@ export default function HomeScreen() {
                 {upcomingBookings.length > 0 ? (() => {
                   const bookingData = upcomingBookings[0];
                   const isTravelling = bookingData.timelineStatus === 'trainer_travelling';
+                  const isAccepted = bookingData.timelineStatus !== 'booked' && bookingData.timelineStatus !== 'trainer_assigned';
 
                   return (
                     <View 
@@ -1098,19 +1118,29 @@ export default function HomeScreen() {
                       {/* Top: Coach avatar, title, and badge */}
                       <View className="flex-row justify-between items-start">
                         <View className="flex-row items-center gap-3">
-                          <Image 
-                            source={{ uri: bookingData.trainerPhoto }} 
-                            className="w-14 h-14 rounded-full border border-zinc-150" 
-                          />
+                          {!isAccepted ? (
+                            <View className="w-14 h-14 rounded-full bg-indigo-50 border border-indigo-100 items-center justify-center">
+                              <Feather name="search" size={20} color="#4F46E5" />
+                            </View>
+                          ) : (
+                            <Image 
+                              source={{ uri: bookingData.trainerPhoto }} 
+                              className="w-14 h-14 rounded-full border border-zinc-150" 
+                            />
+                          )}
                           <View>
                             <Text className="text-zinc-950 text-[15px] font-semibold">{bookingData.workoutTitle}</Text>
-                            <Text className="text-zinc-500 text-[13px] font-normal mt-0.5">with {bookingData.trainerName}</Text>
+                            <Text className="text-zinc-500 text-[13px] font-normal mt-0.5">
+                              {!isAccepted ? 'Looking for the best trainer...' : `with ${bookingData.trainerName}`}
+                            </Text>
                           </View>
                         </View>
                         {/* Elite coach badge */}
-                        <View className="bg-amber-50 border border-amber-100 px-3.5 py-1 rounded-full">
-                          <Text className="text-amber-600 text-[9px] font-bold uppercase tracking-wider">★ ELITE COACH</Text>
-                        </View>
+                        {isAccepted && (
+                          <View className="bg-amber-50 border border-amber-100 px-3.5 py-1 rounded-full">
+                            <Text className="text-amber-600 text-[9px] font-bold uppercase tracking-wider">★ ELITE COACH</Text>
+                          </View>
+                        )}
                       </View>
 
                       <View className="h-[1px] bg-zinc-150" />
@@ -1280,9 +1310,24 @@ export default function HomeScreen() {
 
                 {/* Upcoming Requests Section */}
                 <View className="gap-3 mt-1">
-                  <Text className="text-[#101828] text-xs font-semibold uppercase tracking-widest pl-1">Upcoming Requests</Text>
+                  <View className="flex-row justify-between items-center pr-1">
+                    <Text className="text-[#101828] text-xs font-semibold uppercase tracking-widest pl-1">Upcoming Requests</Text>
+                    <TouchableOpacity 
+                      onPress={handleManualRefresh}
+                      disabled={isRefreshing}
+                      className="bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-150 flex-row items-center gap-1.5"
+                    >
+                      <Feather name="refresh-cw" size={10} color="#4F46E5" />
+                      <Text className="text-[#4F46E5] text-[9px] font-black uppercase">
+                        {isRefreshing ? 'Syncing...' : 'Refresh Requests'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                   {trainerOnlineStatus === 'online' ? (() => {
-                    const requests = bookings.filter(b => b.timelineStatus === 'booked');
+                    const requests = bookings.filter(b => 
+                      b.timelineStatus === 'booked' && 
+                      (b.trainerName === user.name || (currentCoach && b.trainerId === currentCoach.id))
+                    );
                     if (requests.length > 0) {
                       return requests.map(req => (
                         <RequestCard

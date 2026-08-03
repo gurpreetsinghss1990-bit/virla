@@ -69,6 +69,7 @@ export function BookingCard({ booking }: BookingCardProps) {
 
   const isUpcoming = booking.status === 'upcoming';
   const isTrainer = role === 'trainer';
+  const isAccepted = booking.timelineStatus !== 'booked' && booking.timelineStatus !== 'trainer_assigned';
 
   return (
     <LuxuryCard className="p-5 mb-4" interactive={false}>
@@ -79,7 +80,7 @@ export function BookingCard({ booking }: BookingCardProps) {
             <View className="w-12 h-12 rounded-full bg-indigo-50 border border-indigo-150 items-center justify-center">
               <Text className="text-lg">👤</Text>
             </View>
-          ) : isUpcoming ? (
+          ) : (isUpcoming && !isAccepted) ? (
             <View className="w-12 h-12 rounded-full bg-zinc-100 border border-zinc-200 items-center justify-center">
               <Text className="text-lg">🧘</Text>
             </View>
@@ -91,10 +92,18 @@ export function BookingCard({ booking }: BookingCardProps) {
           )}
           <View className="flex-1">
             <Text className="text-[#101828] text-base font-extrabold tracking-tight">
-              {isTrainer ? 'Client: Viral' : (isUpcoming ? 'Professional Wellness Coach' : `Coach ${booking.trainerName}`)}
+              {isTrainer ? 'Client: Viral' : ((isUpcoming && !isAccepted) ? 'Searching for Trainer...' : `Coach ${booking.trainerName}`)}
             </Text>
             <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider mt-0.5">
-              {isTrainer ? `${booking.workoutTitle} • 60 mins` : (isUpcoming ? `${booking.workoutTitle} • Details sent 5h prior` : `${booking.workoutTitle} • ₹${booking.price || 1200}`)}
+              {isTrainer 
+                ? `${booking.workoutTitle} • 60 mins` 
+                : ((isUpcoming && !isAccepted) 
+                    ? `${booking.workoutTitle} • Waiting for Trainer Acceptance` 
+                    : (isUpcoming 
+                        ? `${booking.workoutTitle} • Trainer confirmed. Privacy rules apply.` 
+                        : `${booking.workoutTitle} • ₹${booking.price || 1200}`
+                      )
+                  )}
             </Text>
           </View>
         </View>

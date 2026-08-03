@@ -1,6 +1,7 @@
 import { Database } from '../database/Database';
 import { Coach, Booking } from '../types';
 import { AssignmentConfig } from '../config/AssignmentConfig';
+import { getCategoryFromTitle } from '../config/WorkoutMapping';
 
 export interface RatedTrainer {
   coach: Coach;
@@ -31,20 +32,16 @@ export class AssignmentEngine {
     for (const coach of coaches) {
       // 1. Eligibility Checks
       
-      // Eligibility Rule 1: Correct workout specialization
-      const hasSpecialty = coach.workoutSpecialties?.some(spec => 
-        booking.workoutTitle.toLowerCase().includes(spec.toLowerCase()) || 
-        spec.toLowerCase().includes(booking.workoutTitle.toLowerCase())
-      );
-      if (!hasSpecialty) continue;
+      // Eligibility Rule 1: Centralized category mapping check
+      const targetCategory = getCategoryFromTitle(booking.workoutTitle);
+      const restrictedCategories = coach.preferences?.categories || [];
+      if (!restrictedCategories.includes(targetCategory)) continue;
 
       // Eligibility Rule 2: Online status
-      // Look up online status (default to true for simulation unless toggled offline)
-      const isOnline = coach.isOnline !== false;
+      const isOnline = coach.preferences?.online !== false;
       if (!isOnline) continue;
 
       // Eligibility Rule 3: Approved Partner Coach / Active account
-      // Seeded coaches are approved partner coaches. verifiedBadge can represent approval.
       const isApproved = coach.verifiedBadge !== false;
       if (!isApproved) continue;
 
@@ -62,40 +59,46 @@ export class AssignmentEngine {
       if (hasOverlap) continue;
 
       // Eligibility Rule 5: Travel / Active session conflict detection
-      // Check if trainer currently has a session in progress
       const hasActiveSession = bookings.some(b => {
         if (b.trainerName !== coach.name) return false;
         if (b.status !== 'upcoming') return false;
         
-        // Active timeline statuses representing workout in progress
         const activeStatuses = ['trainer_travelling', 'trainer_arrived', 'otp_verified', 'workout_started'];
         return activeStatuses.includes(b.timelineStatus || '');
       });
       if (hasActiveSession) continue;
 
       // Eligibility Rule 6: Cooldown rule conflict
-      // Give trainer a mandatory cooldown period after completing a session
       const hasCooldownConflict = bookings.some(b => {
         if (b.trainerName !== coach.name) return false;
         if (b.status !== 'completed' && b.timelineStatus !== 'workout_completed') return false;
         
-        // Parse dates
         if (b.date !== booking.date) return false;
         
         const bMinutes = this.parseTimeToMinutes(b.time);
         const bookingMinutes = this.parseTimeToMinutes(booking.time);
         const diff = Math.abs(bookingMinutes - bMinutes);
         
-        // If elapsed time is less than duration + cooldown
         const sessionDuration = b.durationMinutes || 60;
         return diff < (sessionDuration + AssignmentConfig.cooldownDurationMin);
       });
       if (hasCooldownConflict) continue;
 
       // Eligibility Rule 7: Inside service radius
-      // Generate a deterministic distance in km based on trainer and booking IDs
       const distance = this.getSimulatedDistance(coach.id, booking.id);
-      if (distance > AssignmentConfig.serviceRadiusKm) continue;
+      const radiusLimit = coach.preferences?.radiusKm || AssignmentConfig.serviceRadiusKm;
+      if (distance > radiusLimit) continue;
+
+      // Eligibility Rule 8: Max daily sessions limit
+      const maxSessions = coach.preferences?.maxDailySessions || 5;
+      const todaySessionsCount = bookings.filter(b => 
+        b.trainerName === coach.name && 
+        b.status !== 'cancelled' && 
+        b.date === booking.date
+      ).length;
+      if (todaySessionsCount >= maxSessions) continue;
+
+      // Eligibility Rule 9 is now handled at Rule 1 (Centralized Mapping)
 
       // 2. Score Calculations (All metric scores normalized out of 100)
 
@@ -161,7 +164,7 @@ export class AssignmentEngine {
   /**
    * Generates a stable, reproducible simulated distance between a coach and a booking.
    */
-  private static getSimulatedDistance(coachId: string, bookingId: string): number {
+  public static getSimulatedDistance(coachId: string, bookingId: string): number {
     let hash = 0;
     const combined = coachId + bookingId;
     for (let i = 0; i < combined.length; i++) {

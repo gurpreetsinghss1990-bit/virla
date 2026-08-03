@@ -31,6 +31,7 @@ interface BookingState {
   submitQuestionnaire: (id: string, questionnaire: NonNullable<Booking['questionnaire']>) => void;
   reassignTrainer: (bookingId: string, action?: 'declined' | 'timeout') => void;
   syncFromDB: () => void;
+  refreshBookings: () => Promise<void>;
 }
 
 export const useBookingStore = create<BookingState>((set, get) => ({
@@ -242,6 +243,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
         });
 
         Database.updateBookingTrainer(bookingId, {
+          trainerId: nextCoach.id,
           trainerName: nextCoach.name,
           trainerPhoto: nextCoach.photo,
           trainerLevel: nextCoach.level || 'Certified',
@@ -265,20 +267,21 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       }
     }
 
-    // Fallback: If no more trainers are in the pool, cancel the request
+    // Fallback: If no more trainers are in the pool, keep searching
     Database.updateBookingTrainer(bookingId, {
-      status: 'cancelled',
-      timelineStatus: 'session_closed',
+      status: 'upcoming',
+      timelineStatus: 'booked',
       trainerName: 'No Trainer Available',
+      trainerId: 'searching',
       createdAt: Date.now(),
     });
 
     get().syncFromDB();
 
     useNotificationStore.getState().addNotification({
-      title: 'No Coaches Available ⚠️',
-      body: `We could not find an available trainer for your session. Your credits have been returned.`,
-      icon: 'alert-circle',
+      title: 'Still Looking for Trainer 📅',
+      body: `We are still searching for an available trainer for your ${booking.workoutTitle} session.`,
+      icon: 'search',
     });
   },
   triggerClientNoShow: (id) => {
@@ -400,5 +403,10 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     } else {
       set({ bookings: [] });
     }
+  },
+  refreshBookings: async () => {
+    await Database.refreshBookings();
+    get().syncFromDB();
   }
-}));
+}
+));

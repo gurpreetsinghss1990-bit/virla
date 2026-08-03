@@ -9,6 +9,7 @@ import { useMembershipStore } from '../store/membershipStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useAIStore } from '../store/aiStore';
 import { useAddressStore } from '../store/addressStore';
+import { setupRealtimeSubscriptions } from './realtime';
 
 /**
  * Perform all application initializations in parallel.
@@ -16,10 +17,17 @@ import { useAddressStore } from '../store/addressStore';
  */
 export async function bootstrapApp(): Promise<void> {
   const initPromise = (async () => {
-    // 1. Load local database from storage
+    // 1. Restore session credentials first to ensure currentUserId is set in database instance
+    const storedUser = useUserStore.getState().user;
+    const isLoggedIn = useUserStore.getState().isLoggedIn;
+    if (isLoggedIn && storedUser && storedUser.id) {
+      Database.setCurrentUserId(storedUser.id);
+    }
+
+    // 2. Load database collections from Supabase under the restored session context
     await Database.load();
     
-    // 2. Restore session
+    // 3. Sync all store caches from the loaded database and setup subscription listeners
     await restoreAuthentication();
     
     // 3. Init other assets in parallel
@@ -68,6 +76,12 @@ async function restoreAuthentication(): Promise<void> {
   useNotificationStore.getState().syncFromDB();
   useAIStore.getState().syncFromDB();
   useAddressStore.getState().syncFromDB();
+  
+  try {
+    setupRealtimeSubscriptions();
+  } catch (e) {
+    console.warn('Realtime subscription initialization failed:', e);
+  }
   
   console.log(`Authentication restored. Logged In: ${isLoggedIn} User: ${storedUser?.name || 'None'}`);
 }

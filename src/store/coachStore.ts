@@ -92,24 +92,35 @@ export const useCoachStore = create<CoachState>((set, get) => ({
       return;
     }
 
+    let updatedSchedule = weeklySchedule;
     if (isScheduleSubmitted) {
       if (remainingSlotChanges <= 0) {
         Alert.alert('Change Blocked', 'Remaining Changes: 0/2. You have used all allowed changes for this week.');
         return;
       }
 
-      set((state) => ({
-        weeklySchedule: state.weeklySchedule.map(s => 
-          s.id === slotId ? { ...s, isAvailable: !s.isAvailable } : s
-        ),
-        remainingSlotChanges: state.remainingSlotChanges - 1
-      }));
+      updatedSchedule = weeklySchedule.map(s => 
+        s.id === slotId ? { ...s, isAvailable: !s.isAvailable } : s
+      );
+      set({
+        weeklySchedule: updatedSchedule,
+        remainingSlotChanges: remainingSlotChanges - 1
+      });
     } else {
-      set((state) => ({
-        weeklySchedule: state.weeklySchedule.map(s => 
-          s.id === slotId ? { ...s, isAvailable: !s.isAvailable } : s
-        )
-      }));
+      updatedSchedule = weeklySchedule.map(s => 
+        s.id === slotId ? { ...s, isAvailable: !s.isAvailable } : s
+      );
+      set({
+        weeklySchedule: updatedSchedule
+      });
+    }
+
+    // Save to Database
+    const userObj = Database.schema.users.find(u => u.id === Database.getCurrentUserId());
+    const coachesList = Database.getCoaches();
+    const coach = userObj ? coachesList.find(c => c.name === userObj.name) : undefined;
+    if (coach) {
+      Database.updateTrainerPreferences(coach.id, { weeklySchedule: updatedSchedule });
     }
   },
 
@@ -129,12 +140,21 @@ export const useCoachStore = create<CoachState>((set, get) => ({
       return false;
     }
 
-    set((state) => ({
-      weeklySchedule: state.weeklySchedule.map(s => 
-        s.id === slotId ? { ...s, time: newTime } : s
-      ),
-      remainingSlotChanges: isScheduleSubmitted ? state.remainingSlotChanges - 1 : state.remainingSlotChanges
-    }));
+    const updatedSchedule = weeklySchedule.map(s => 
+      s.id === slotId ? { ...s, time: newTime } : s
+    );
+    set({
+      weeklySchedule: updatedSchedule,
+      remainingSlotChanges: isScheduleSubmitted ? remainingSlotChanges - 1 : remainingSlotChanges
+    });
+
+    // Save to Database
+    const userObj = Database.schema.users.find(u => u.id === Database.getCurrentUserId());
+    const coachesList = Database.getCoaches();
+    const coach = userObj ? coachesList.find(c => c.name === userObj.name) : undefined;
+    if (coach) {
+      Database.updateTrainerPreferences(coach.id, { weeklySchedule: updatedSchedule });
+    }
     
     return true;
   },
@@ -145,13 +165,27 @@ export const useCoachStore = create<CoachState>((set, get) => ({
     const userId = Database.getCurrentUserId();
     const coachesList = Database.getCoaches();
     let earningsList: TrainerEarning[] = [];
+    let schedule = get().weeklySchedule;
+
     if (userId) {
       earningsList = Database.getEarnings(userId);
+      const userObj = Database.schema.users.find(u => u.id === userId);
+      const coachObj = userObj ? coachesList.find(c => c.name === userObj.name) : undefined;
+      if (coachObj) {
+        if ((coachObj.preferences as any)?.weeklySchedule) {
+          schedule = (coachObj.preferences as any).weeklySchedule;
+        } else {
+          // If not initialized in DB preferences, generate default and upsert
+          schedule = generateInitialSchedule();
+          Database.updateTrainerPreferences(coachObj.id, { weeklySchedule: schedule });
+        }
+      }
     }
     set({
       coaches: coachesList,
       earningsList,
-      totalEarnings: earningsList.reduce((acc, curr) => acc + curr.amount, 0)
+      totalEarnings: earningsList.reduce((acc, curr) => acc + curr.amount, 0),
+      weeklySchedule: schedule
     });
   }
 }));

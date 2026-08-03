@@ -57,7 +57,7 @@ export interface CalorieLog {
 export interface ChatMessage {
   id: string;
   chatId: string;
-  sender: 'user' | 'coach' | 'virla';
+  sender: 'user' | 'coach' | 'virla' | 'customer' | 'trainer';
   text: string;
   timestamp: string;
   isPinned?: boolean;
@@ -273,7 +273,8 @@ export function mapCoach(row: any): Coach {
     bankDetails: row.bank_details ? JSON.stringify(row.bank_details) : '',
     emergencyContact: row.emergency_contact ? JSON.stringify(row.emergency_contact) : '',
     aboutText: row.about_text || '',
-    workingRadius: row.working_radius || ''
+    workingRadius: row.working_radius || '',
+    preferences: row.preferences ? (typeof row.preferences === 'string' ? JSON.parse(row.preferences) : row.preferences) : { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] }
   };
 }
 
@@ -301,7 +302,8 @@ export function mapCoachToPostgres(coach: Coach): any {
     emergency_contact: coach.emergencyContact ? JSON.parse(coach.emergencyContact) : null,
     about_text: coach.aboutText,
     availability: coach.availability,
-    working_radius: coach.workingRadius
+    working_radius: coach.workingRadius,
+    preferences: coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] }
   };
 }
 
@@ -770,6 +772,7 @@ class DatabaseClient {
     schedules: ScheduleSlot[];
     trainer_applications: any[];
     assignment_logs: AssignmentLog[];
+    slot_reservations: any[];
   } = {
     users: [],
     profiles: [],
@@ -786,7 +789,8 @@ class DatabaseClient {
     earnings: [],
     schedules: [],
     trainer_applications: [],
-    assignment_logs: []
+    assignment_logs: [],
+    slot_reservations: []
   };
 
   private currentUserId: string | null = null;
@@ -802,6 +806,36 @@ class DatabaseClient {
 
   private log(action: string, details: string) {
     console.log(`[DB LOG] [${new Date().toISOString()}] Action: ${action} | Details: ${details}`);
+  }
+
+  async reload(): Promise<void> {
+    console.log('[DEBUG-DB] Database.reload() invoked. Resetting isLoaded and fetching fresh collections...');
+    this.isLoaded = false;
+    await this.load();
+  }
+
+  async resetAndClearLocalOnly(): Promise<void> {
+    console.log('[DEBUG-DB] Database.resetAndClearLocalOnly() called. Clearing session and local memory caches...');
+    this.currentUserId = null;
+    this.isLoaded = false;
+    
+    // Clear only local cached collections
+    this.schema.bookings = [];
+    this.schema.notifications = [];
+    this.schema.messages = [];
+    this.schema.addresses = [];
+    this.schema.credit_transactions = [];
+    this.schema.hydration = [];
+    this.schema.calories = [];
+    this.schema.earnings = [];
+    
+    if (typeof AsyncStorage !== 'undefined') {
+      try {
+        await AsyncStorage.removeItem(STORAGE_KEY);
+      } catch (err) {
+        console.error('[DB ERROR] Failed to clear offline database AsyncStorage cache:', err);
+      }
+    }
   }
 
   async load(): Promise<void> {
@@ -863,6 +897,16 @@ class DatabaseClient {
 
       // Seed workouts and trainers in Supabase if database is empty
       await this.seedData();
+
+      // Safely query slot_reservations (in case SQL migrations haven't run yet)
+      try {
+        const { data: resReservations, error: resResError } = await supabase.from('slot_reservations').select('*');
+        if (resReservations && !resResError) {
+          this.schema.slot_reservations = resReservations;
+        }
+      } catch (resErr) {
+        console.log('[DEBUG-DB] slot_reservations table not yet configured:', resErr);
+      }
 
       console.log('[DEBUG-DB] Database.load() completed successfully from Supabase.');
       this.isLoaded = true;
@@ -1004,6 +1048,42 @@ class DatabaseClient {
       this.schema.coaches = initialCoaches;
       await supabase.from('trainers').insert(initialCoaches.map(mapCoachToPostgres));
       mutated = true;
+    }
+
+    // Seed trainer users in database if missing
+    for (const coach of this.schema.coaches) {
+      const exists = this.schema.users.find(u => u.name === coach.name);
+      if (!exists) {
+        const phoneMap: any = {
+          'Karan Sharma': '9999988888',
+          'Priya Patel': '9999977777',
+          'Rohan Mehta': '9999966666',
+          'Anjali Rao': '9999955555'
+        };
+        const phone = phoneMap[coach.name] || `99999${coach.id.replace('c-', '')}`;
+        const trainerUser: DBUser = {
+          id: coach.id.replace('c-', 'u-'),
+          name: coach.name,
+          phone,
+          email: `${coach.name.toLowerCase().replace(/ /g, '.')}@virla.in`,
+          passwordHash: hashPassword('123456'),
+          avatar: coach.photo,
+          role: 'trainer',
+          status: 'active',
+          createdDate: new Date().toLocaleDateString(),
+          lastLogin: new Date().toISOString(),
+          deviceInfo: 'Seeded Trainer Account',
+          notificationPrefs: JSON.stringify({
+            bookingUpdates: true,
+            trainerMessages: true,
+            offers: false,
+            membershipAlerts: true
+          })
+        };
+        this.schema.users.push(trainerUser);
+        await supabase.from('users').insert(mapDBUserToPostgres(trainerUser));
+        mutated = true;
+      }
     }
 
     // Seed workouts if empty
@@ -1434,6 +1514,197 @@ class DatabaseClient {
     return this.schema.bookings.filter(b => b.clientId === userId || b.id.includes(userId) || b.id.startsWith('b-'));
   }
 
+  async refreshBookings(): Promise<void> {
+    try {
+      const { data, error } = await supabase.from('bookings').select('*');
+      if (data && !error) {
+        this.schema.bookings = data.map(mapBooking);
+        this.save();
+      }
+    } catch (e) {
+      console.error('refreshBookings error:', e);
+    }
+  }
+
+  cleanExpiredReservations(): void {
+    const now = Date.now();
+    this.schema.slot_reservations = this.schema.slot_reservations.filter(r => {
+      const isExpired = Number(r.expires_at) <= now;
+      if (isExpired) {
+        supabase.from('slot_reservations').delete().eq('id', r.id).then();
+      }
+      return !isExpired;
+    });
+  }
+
+  async reserveSlot(clientId: string, trainerId: string, date: string, time: string): Promise<string | null> {
+    this.cleanExpiredReservations();
+    // Check if already reserved by another client
+    const isReserved = this.schema.slot_reservations.some(r => 
+      r.trainer_id === trainerId && r.slot_date === date && r.slot_time === time && r.client_id !== clientId
+    );
+    if (isReserved) return null;
+
+    const id = `res-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 mins
+    const reservation = {
+      id,
+      slot_time: time,
+      slot_date: date,
+      trainer_id: trainerId,
+      client_id: clientId,
+      expires_at: expiresAt
+    };
+
+    this.schema.slot_reservations.push(reservation);
+    try {
+      await supabase.from('slot_reservations').insert(reservation);
+    } catch (e) {
+      console.error('reserveSlot insert error:', e);
+    }
+    return id;
+  }
+
+  async releaseSlot(reservationId: string): Promise<void> {
+    this.schema.slot_reservations = this.schema.slot_reservations.filter(r => r.id !== reservationId);
+    try {
+      await supabase.from('slot_reservations').delete().eq('id', reservationId);
+    } catch (e) {
+      console.error('releaseSlot delete error:', e);
+    }
+  }
+
+  async addBookingWithValidation(userId: string, bookingData: Omit<Booking, 'id' | 'status' | 'timelineStatus'>): Promise<Booking> {
+    this.cleanExpiredReservations();
+    
+    const assignedTrainerId = bookingData.trainerId;
+    if (!assignedTrainerId) throw new Error('Trainer ID is required.');
+    const date = bookingData.date;
+    const time = bookingData.time;
+
+    // 1. Verify Trainer Availability (exists and is online/supports category)
+    const coach = this.schema.coaches.find(c => c.id === assignedTrainerId);
+    if (!coach) throw new Error('Trainer not found.');
+    if (coach.preferences?.online === false) throw new Error('Trainer is currently offline.');
+
+    // 2. Verify slot exists in Trainer's schedule and is Available & Unbooked
+    const schedule = (coach.preferences as any)?.weeklySchedule || [];
+    const dateObj = new Date(date);
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dayOfWeek = days[dateObj.getDay()];
+    const slot = schedule.find((s: any) => s.day === dayOfWeek && s.time === time);
+    if (!slot || !slot.isAvailable || slot.isBooked) {
+      throw new Error('That slot has just become unavailable. Please choose another time.');
+    }
+
+    // 3. Verify no conflicting bookings (Double Booking Check)
+    const isDoubleBooked = this.schema.bookings.some(b => 
+      b.trainerId === assignedTrainerId && b.status === 'upcoming' && b.date === date && b.time === time
+    );
+    if (isDoubleBooked) {
+      throw new Error('That slot has just become unavailable. Please choose another time.');
+    }
+
+    // 4. Slot Buffer Check (30 minutes travel buffer)
+    const targetMinutes = this.parseTimeToMinutesHelper(time);
+    const hasBufferConflict = this.schema.bookings.some(b => {
+      if (b.trainerId !== assignedTrainerId || b.status !== 'upcoming' || b.date !== date) return false;
+      const bMinutes = this.parseTimeToMinutesHelper(b.time);
+      const diff = Math.abs(bMinutes - targetMinutes);
+      const duration = b.durationMinutes || 60;
+      return diff < (duration + 30); // 30 minutes buffer
+    });
+    if (hasBufferConflict) {
+      throw new Error('Trainer has a back-to-back session buffer conflict.');
+    }
+
+    // 5. Dynamic Workload limit calculation
+    const activeBookingsCount = this.schema.bookings.filter(b => 
+      b.trainerId === assignedTrainerId && 
+      b.date === date &&
+      b.status === 'upcoming' &&
+      (b.timelineStatus === 'booked' || b.timelineStatus === 'trainer_assigned' || b.timelineStatus === 'trainer_accepted' || b.timelineStatus === 'trainer_preparing' || b.timelineStatus === 'trainer_travelling' || b.timelineStatus === 'trainer_arrived' || b.timelineStatus === 'otp_verified' || b.timelineStatus === 'workout_started')
+    ).length;
+    const maxSessions = coach.preferences?.maxDailySessions || 5;
+    if (activeBookingsCount >= maxSessions) {
+      throw new Error('Trainer has reached maximum daily workload limit.');
+    }
+
+    // All checks pass! Perform transaction operations atomically
+    const bookingId = generateUUID('booking');
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const newBooking: Booking = {
+      ...bookingData,
+      id: bookingId,
+      status: 'upcoming',
+      timelineStatus: 'booked',
+      otp,
+      clientId: userId
+    };
+
+    // Decrement credits
+    const profile = this.getProfile(userId);
+    if (profile) {
+      profile.creditsBalance = Math.max(0, profile.creditsBalance - 1);
+    }
+
+    const tx: Invoice = {
+      id: generateUUID('tx'),
+      type: 'paid',
+      amount: '₹0',
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+      status: 'paid',
+      credits: -1
+    };
+
+    // Save locally
+    this.schema.bookings.unshift(newBooking);
+    this.schema.credit_transactions.unshift(tx);
+    this.save();
+
+    // Log the assignment audit log
+    this.logAssignmentEvent({
+      bookingId,
+      trainerId: assignedTrainerId,
+      score: 100,
+      reason: 'Dynamically booked real trainer slot',
+      action: 'assigned'
+    });
+
+    // Write to Supabase (Atomically trigger)
+    try {
+      await Promise.all([
+        supabase.from('bookings').insert(mapBookingToPostgres(newBooking)),
+        profile ? supabase.from('user_profiles').update({ credits_balance: profile.creditsBalance }).eq('user_id', userId) : Promise.resolve(),
+        supabase.from('credit_transactions').insert(mapInvoiceToPostgres(tx, userId))
+      ]);
+    } catch (dbErr) {
+      // Rollback local state in case of database insert failure
+      this.schema.bookings = this.schema.bookings.filter(b => b.id !== bookingId);
+      this.schema.credit_transactions = this.schema.credit_transactions.filter(t => t.id !== tx.id);
+      if (profile) {
+        profile.creditsBalance = profile.creditsBalance + 1;
+      }
+      this.save();
+      throw new Error('Database write operation failed. Rolled back booking transaction.');
+    }
+
+    this.log('AddBooking', `User ${userId} booked ${bookingData.workoutTitle} with OTP ${otp}`);
+    return newBooking;
+  }
+
+  // Helper utility function for time parsing
+  parseTimeToMinutesHelper(timeStr: string): number {
+    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!match) return 0;
+    let hours = parseInt(match[1]);
+    const minutes = parseInt(match[2]);
+    const ampm = match[3].toUpperCase();
+    if (ampm === 'PM' && hours < 12) hours += 12;
+    if (ampm === 'AM' && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+  }
+
   addBooking(userId: string, bookingData: Omit<Booking, 'id' | 'status' | 'timelineStatus'>): Booking {
     const bookingId = generateUUID('booking');
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
@@ -1559,6 +1830,7 @@ class DatabaseClient {
   }
 
   updateBookingTrainer(bookingId: string, trainer: {
+    trainerId?: string;
     trainerName?: string;
     trainerPhoto?: string;
     trainerLevel?: string;
@@ -1574,6 +1846,7 @@ class DatabaseClient {
   }): void {
     const booking = this.schema.bookings.find(b => b.id === bookingId);
     if (booking) {
+      if (trainer.trainerId !== undefined) booking.trainerId = trainer.trainerId;
       if (trainer.trainerName !== undefined) booking.trainerName = trainer.trainerName;
       if (trainer.trainerPhoto !== undefined) booking.trainerPhoto = trainer.trainerPhoto;
       if (trainer.trainerLevel !== undefined) booking.trainerLevel = trainer.trainerLevel as any;
@@ -1588,6 +1861,7 @@ class DatabaseClient {
       if (trainer.timelineStatus !== undefined) booking.timelineStatus = trainer.timelineStatus;
       
       supabase.from('bookings').update({
+        trainer_id: trainer.trainerId || booking.trainerId || null,
         trainer_name: trainer.trainerName || booking.trainerName,
         trainer_photo: trainer.trainerPhoto || booking.trainerPhoto,
         trainer_level: trainer.trainerLevel || booking.trainerLevel,
@@ -1895,8 +2169,8 @@ class DatabaseClient {
     return list;
   }
 
-  sendChatMessage(chatId: string, text: string, sender: 'user' | 'coach' | 'virla'): ChatMessage {
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  sendChatMessage(chatId: string, text: string, sender: ChatMessage['sender']): ChatMessage {
+    const timeStr = new Date().toISOString();
     const msg: ChatMessage = {
       id: generateUUID('msg'),
       chatId,
@@ -2277,7 +2551,23 @@ class DatabaseClient {
     const coach = this.schema.coaches.find(c => c.id === coachId);
     if (coach) {
       coach.isOnline = isOnline;
-      this.save();
+      if (!coach.preferences) {
+        coach.preferences = { online: isOnline, radiusKm: 15, maxDailySessions: 5, categories: [] };
+      } else {
+        coach.preferences.online = isOnline;
+      }
+      this.updateCoach(coachId, { preferences: coach.preferences });
+    }
+  }
+
+  updateTrainerPreferences(coachId: string, preferences: any): void {
+    const coach = this.schema.coaches.find(c => c.id === coachId);
+    if (coach) {
+      coach.preferences = {
+        ...(coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] }),
+        ...preferences
+      };
+      this.updateCoach(coachId, { preferences: coach.preferences });
     }
   }
 }

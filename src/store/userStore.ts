@@ -29,7 +29,7 @@ interface UserState {
   // Startup & Authentication states
   isLoggedIn: boolean;
   hasCompletedOnboarding: boolean;
-  setLoggedIn: (loggedIn: boolean) => void;
+  setLoggedIn: (loggedIn: boolean) => void | Promise<void>;
   setCompletedOnboarding: (completed: boolean) => void;
   // Sprint 6 additions
   role: 'customer' | 'trainer' | 'admin';
@@ -65,9 +65,14 @@ export const useUserStore = create<UserState>()(
         }),
       isLoggedIn: false,
       hasCompletedOnboarding: false,
-      setLoggedIn: (loggedIn) => {
+      setLoggedIn: async (loggedIn) => {
         set({ isLoggedIn: loggedIn });
         if (loggedIn) {
+          try {
+            await Database.reload();
+          } catch (e) {
+            console.error('Failed to reload database collections on login:', e);
+          }
           get().syncFromDB();
           useUserProfileStore.getState().syncFromDB();
           useBookingStore.getState().syncFromDB();
@@ -80,7 +85,11 @@ export const useUserStore = create<UserState>()(
           useAddressStore.getState().syncFromDB();
         } else {
           set({ user: emptyUser, familyMembers: [], invoices: [] });
-          Database.setCurrentUserId(null);
+          try {
+            await Database.resetAndClearLocalOnly();
+          } catch (e) {
+            console.error('Failed to clear local caches on logout:', e);
+          }
           useUserProfileStore.getState().syncFromDB();
           useBookingStore.getState().syncFromDB();
           useCoachStore.getState().syncFromDB();

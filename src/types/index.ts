@@ -136,6 +136,13 @@ export interface Coach {
   aboutText?: string;
   workingRadius?: string;
   isOnline?: boolean;
+  preferences?: {
+    online: boolean;
+    radiusKm: number;
+    maxDailySessions: number;
+    categories: string[];
+    weeklySchedule?: ScheduleSlot[];
+  };
 }
 
 export interface NotificationItem {

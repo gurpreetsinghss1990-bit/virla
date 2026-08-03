@@ -7,11 +7,13 @@ import { useMembershipStore } from '../store/membershipStore';
 import { useAddressStore } from '../store/addressStore';
 import { useCoachStore } from '../store/coachStore';
 import { useNotificationStore } from '../store/notificationStore';
+import { useUserStore } from '../store/userStore';
 import { EmptyState, ApplePayConfirmation, BookingSuccessAnimation } from '../components';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import Svg, { Circle, Line } from 'react-native-svg';
 import { AssignmentEngine } from '../services/AssignmentEngine';
 import { Database } from '../database/Database';
+import { WORKOUT_CATEGORY_MAPPING, getCategoryFromTitle } from '../config/WorkoutMapping';
 
 // 5 Premium experiences specified
 interface Experience {
@@ -80,11 +82,12 @@ export default function BookingScreen() {
   const initialWorkoutType = params.workoutType as string;
   const initialWorkoutName = params.workoutName as string;
 
-  const { addBooking } = useBookingStore();
+  const { addBooking, bookings } = useBookingStore();
   const { consumeCredit } = useMembershipStore();
   const { addresses, addAddress, selectedAddressId, setSelectedAddressId } = useAddressStore();
   const { coaches } = useCoachStore();
   const { addNotification } = useNotificationStore();
+  const { user } = useUserStore();
 
   // Booking Wizard Steps (1 to 6)
   const [step, setStep] = useState(1);
@@ -188,6 +191,9 @@ export default function BookingScreen() {
   const [matchedCoach, setMatchedCoach] = useState<any>(null);
   const [trainerNote, setTrainerNote] = useState('');
   const [isConfirming, setIsConfirming] = useState(false);
+  // Reservation states (Phase 3.1)
+  const [reservationId, setReservationId] = useState<string>('');
+  const [reservationTimeLeft, setReservationTimeLeft] = useState<number>(0);
 
   // Layout Animation
   const [slideAnim] = useState(() => new Animated.Value(0));
@@ -202,6 +208,155 @@ export default function BookingScreen() {
       console.warn('Direct store sync failed on mount:', err);
     }
   }, []);
+
+  const parseTimeToMinutesHelper = (timeStr: string): number => {
+    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!match) return 0;
+    let hours = parseInt(match[1]);
+    const minutes = parseInt(match[2]);
+    const ampm = match[3].toUpperCase();
+    if (ampm === 'PM' && hours < 12) hours += 12;
+    if (ampm === 'AM' && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+  };
+
+  const getDynamicAvailableSlots = (): any[] => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dateObj = new Date(selectedDate);
+    const selectedDayOfWeek = days[dateObj.getDay()];
+
+    const targetCategory = WORKOUT_CATEGORY_MAPPING[selectedExperience.id] || '';
+    if (!targetCategory) return [];
+
+    const eligibleCoaches = coaches.filter(coach => {
+      if (coach.preferences?.online === false) return false;
+      if (coach.verifiedBadge === false) return false;
+
+      const categories = coach.preferences?.categories || [];
+      if (!categories.includes(targetCategory)) return false;
+
+      const distance = AssignmentEngine.getSimulatedDistance(coach.id, 'temp-booking');
+      const radiusLimit = coach.preferences?.radiusKm || 15;
+      if (distance > radiusLimit) return false;
+
+      const activeCount = bookings.filter(b => 
+        b.trainerId === coach.id && 
+        b.date === selectedDate &&
+        b.status === 'upcoming' &&
+        (b.timelineStatus === 'booked' || b.timelineStatus === 'trainer_assigned' || b.timelineStatus === 'trainer_accepted' || b.timelineStatus === 'trainer_preparing' || b.timelineStatus === 'trainer_travelling' || b.timelineStatus === 'trainer_arrived' || b.timelineStatus === 'otp_verified' || b.timelineStatus === 'workout_started')
+      ).length;
+      const maxSessions = coach.preferences?.maxDailySessions || 5;
+      if (activeCount >= maxSessions) return false;
+
+      return true;
+    });
+
+    if (eligibleCoaches.length === 0) return [];
+
+    const aggregatedSlotsMap: Record<string, { slot: any; trainers: typeof eligibleCoaches }> = {};
+
+    for (const coach of eligibleCoaches) {
+      const schedule = (coach.preferences as any)?.weeklySchedule || [];
+      const dailySlots = schedule.filter((s: any) => s.day === selectedDayOfWeek && s.isAvailable && !s.isBooked);
+
+      for (const slot of dailySlots) {
+        const hasBooking = bookings.some(b => 
+          b.trainerId === coach.id && 
+          b.status === 'upcoming' && 
+          b.date === selectedDate && 
+          b.time === slot.time
+        );
+        if (hasBooking) continue;
+
+        const targetMinutes = parseTimeToMinutesHelper(slot.time);
+        const hasBufferConflict = bookings.some(b => {
+          if (b.trainerId !== coach.id || b.status !== 'upcoming' || b.date !== selectedDate) return false;
+          const bMinutes = parseTimeToMinutesHelper(b.time);
+          const diff = Math.abs(bMinutes - targetMinutes);
+          const duration = b.durationMinutes || 60;
+          return diff < (duration + 30);
+        });
+        if (hasBufferConflict) continue;
+
+        const isReserved = Database.schema.slot_reservations?.some(r => 
+          r.trainer_id === coach.id && r.slot_date === selectedDate && r.slot_time === slot.time && r.client_id !== user.id
+        );
+        if (isReserved) continue;
+
+        if (!aggregatedSlotsMap[slot.time]) {
+          aggregatedSlotsMap[slot.time] = { slot, trainers: [] };
+        }
+        aggregatedSlotsMap[slot.time].trainers.push(coach);
+      }
+    }
+
+    return Object.keys(aggregatedSlotsMap).map(time => {
+      const { slot, trainers } = aggregatedSlotsMap[time];
+      return {
+        time,
+        tag: slot.isPrime ? 'Prime Time' : '',
+        isPrime: slot.isPrime,
+        trainers: trainers.map(t => t.id)
+      };
+    });
+  };
+
+  const handleSelectSlot = (slotTime: string, eligibleTrainerIds: string[]) => {
+    setSelectedTime(slotTime);
+    const tempBooking = {
+      id: 'temp-id',
+      workoutTitle: selectedExperience.title,
+      date: selectedDate,
+      time: slotTime,
+      address: addresses.find(a => a.id === selectedAddressId)?.addressLine || 'Selected Location',
+      timelineStatus: 'booked' as const,
+      status: 'upcoming' as const,
+      createdAt: Date.now()
+    };
+    const rated = AssignmentEngine.rankTrainers(tempBooking as any);
+    const matched = rated.find(rt => eligibleTrainerIds.includes(rt.coach.id));
+    if (matched) {
+      setMatchedCoach(matched.coach);
+    } else {
+      const coach = coaches.find(c => eligibleTrainerIds.includes(c.id));
+      if (coach) setMatchedCoach(coach);
+    }
+  };
+
+  const handleReleaseReservation = async () => {
+    if (reservationId) {
+      await Database.releaseSlot(reservationId);
+      setReservationId('');
+      setReservationTimeLeft(0);
+    }
+  };
+
+  useEffect(() => {
+    let timer: any;
+    if (reservationTimeLeft > 0) {
+      timer = setInterval(() => {
+        setReservationTimeLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            handleReleaseReservation();
+            Alert.alert('Reservation Expired ⚠️', 'Your temporary slot holding time has expired. Please re-select the slot.');
+            setStep(5);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [reservationTimeLeft, reservationId]);
+
+  useEffect(() => {
+    return () => {
+      if (reservationId) {
+        Database.releaseSlot(reservationId);
+      }
+    };
+  }, [reservationId]);
 
   // Initial workout matching logic for Sprint 3 compatibility
   useEffect(() => {
@@ -326,7 +481,6 @@ export default function BookingScreen() {
 
   // Step transitions
   const triggerTransition = (nextStep: number) => {
-
     Animated.sequence([
       Animated.timing(slideAnim, {
         toValue: -10,
@@ -345,6 +499,24 @@ export default function BookingScreen() {
       })
     ]).start();
     
+    if (nextStep === 6) {
+      const activeCoach = matchedCoach || coaches[0];
+      if (activeCoach) {
+        Database.reserveSlot(user.id, activeCoach.id, selectedDate, selectedTime).then(resId => {
+          if (resId) {
+            setReservationId(resId);
+            setReservationTimeLeft(300); // 5 mins countdown
+            setStep(6);
+          } else {
+            Alert.alert('Slot Unavailable ⚠️', 'That slot has just been reserved by another user. Please choose another time.');
+            setStep(5);
+          }
+        }).catch(() => {
+          setStep(5);
+        });
+        return;
+      }
+    }
 
     setStep(nextStep);
   };
@@ -390,6 +562,9 @@ export default function BookingScreen() {
   };
 
   const handleBack = () => {
+    if (step === 6) {
+      handleReleaseReservation();
+    }
     if (step > 1) {
       triggerTransition(step - 1);
     } else {
@@ -455,101 +630,63 @@ export default function BookingScreen() {
     if (isConfirming) return;
     setIsConfirming(true);
 
-    const success = consumeCredit();
-    if (!success) {
-      Alert.alert('Credits Low', 'You do not have enough credits. Please renew your membership.');
+    const targetAddress = addresses.find(a => a.id === selectedAddressId)?.addressLine || 'Selected Location';
+    const activeCoach = matchedCoach || coaches[0];
+
+    if (!activeCoach) {
+      Alert.alert('Selection Error', 'No matching trainer selected.');
       setIsConfirming(false);
       return;
     }
 
-    const bookingId = `b-${Date.now()}`;
-    const targetAddress = addresses.find(a => a.id === selectedAddressId)?.addressLine || 'Selected Location';
-
-    const fallbackCoach = {
-      id: 'c-1',
-      name: 'Karan Sharma',
-      photo: 'https://images.unsplash.com/photo-1548690312-e3b507d8c110?auto=format&fit=crop&w=400&q=80',
-      level: 'Certified Elite',
-      rating: 4.9,
-      completedSessions: 320,
-      specialty: 'Strength & HIIT',
-      languages: 'English, Hindi',
-      price: 1200
+    const tempBooking = {
+      trainerId: activeCoach.id,
+      trainerName: activeCoach.name,
+      trainerPhoto: activeCoach.photo,
+      workoutTitle: selectedExperience.title,
+      date: selectedDate,
+      time: selectedTime,
+      price: activeCoach.price || 1200,
+      address: targetAddress,
+      goal: selectedExperience.title,
+      trainerLevel: activeCoach.level || 'Certified',
+      trainerRating: activeCoach.rating,
+      trainerCompletedSessions: activeCoach.completedSessions || 150,
+      trainerSpeciality: activeCoach.specialty,
+      trainerLanguages: activeCoach.languages,
+      trainerDistance: `${(1.5 + Math.random() * 2).toFixed(1)} km`,
+      trainerArrivalTime: `${Math.round(10 + Math.random() * 10)} mins`,
+      assignedTrainersPool: [activeCoach.id],
+      currentTrainerIndex: 0,
+      trainerNote: trainerNote.trim() || undefined,
+      createdAt: Date.now(),
     };
-    const activeCoach = matchedCoach || coaches[0] || fallbackCoach;
 
-    // Simulate network delay to prevent duplicate submissions and test loading states
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
-        const tempBooking = {
-          id: bookingId,
-          trainerName: activeCoach.name,
-          trainerPhoto: activeCoach.photo,
-          workoutTitle: selectedExperience.title,
-          date: selectedDate,
-          time: selectedTime,
-          price: activeCoach.price || 1200,
-          address: targetAddress,
-          goal: selectedExperience.title,
-          timelineStatus: 'booked' as const,
-          status: 'upcoming' as const,
-          trainerLevel: activeCoach.level || 'Certified',
-          trainerRating: activeCoach.rating,
-          trainerCompletedSessions: activeCoach.completedSessions || 150,
-          trainerSpeciality: activeCoach.specialty,
-          trainerLanguages: activeCoach.languages,
-          trainerDistance: '2.5 km',
-          trainerArrivalTime: '15 mins',
-          trainerNote: trainerNote.trim() || undefined,
-          createdAt: Date.now(),
-        };
-
-        const ratedTrainers = AssignmentEngine.rankTrainers(tempBooking);
-        let assignedCoach = activeCoach;
-        let poolIds: string[] = [];
-        let score = 0;
-        let reason = 'Matched Fav / Specialty Fallback';
-
-        if (ratedTrainers.length > 0) {
-          const topRating = ratedTrainers[0];
-          assignedCoach = topRating.coach;
-          poolIds = ratedTrainers.map(rt => rt.coach.id);
-          score = topRating.score;
-          reason = `Highest scorer in pool (Rank 1 of ${ratedTrainers.length})`;
-        } else {
-          poolIds = [activeCoach.id];
-          score = 80;
+        // Enforce mid-flow slot availability check before confirmation
+        const freshCoaches = Database.getCoaches();
+        const freshCoach = freshCoaches.find(c => c.id === activeCoach.id);
+        const dayOfWeek = new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'short' }); // e.g. "Mon"
+        const freshSlot = (freshCoach?.preferences as any)?.weeklySchedule?.find((s: any) => s.day.startsWith(dayOfWeek) && s.time === selectedTime);
+        
+        if (!freshSlot || !freshSlot.isAvailable || freshSlot.isBooked) {
+          throw new Error('That slot has just become unavailable. Please choose another time.');
         }
 
-        addBooking({
-          ...tempBooking,
-          trainerName: assignedCoach.name,
-          trainerPhoto: assignedCoach.photo,
-          price: assignedCoach.price || 1200,
-          trainerLevel: assignedCoach.level || 'Certified',
-          trainerRating: assignedCoach.rating,
-          trainerCompletedSessions: assignedCoach.completedSessions || 150,
-          trainerSpeciality: assignedCoach.specialty,
-          trainerLanguages: assignedCoach.languages,
-          trainerDistance: `${(1.5 + Math.random() * 2).toFixed(1)} km`,
-          trainerArrivalTime: `${Math.round(10 + Math.random() * 10)} mins`,
-          assignedTrainersPool: poolIds,
-          currentTrainerIndex: 0,
-        });
+        // Call transactional add with validations
+        const finalBooking = await Database.addBookingWithValidation(user.id, tempBooking);
+        
+        // Sync stores
+        useBookingStore.getState().syncFromDB();
 
-        // Log the assignment event
-        Database.logAssignmentEvent({
-          bookingId: bookingId,
-          trainerId: assignedCoach.id,
-          score: score,
-          reason: reason,
-          action: 'assigned'
-        });
+        // Release temporary reservation
+        handleReleaseReservation();
 
-        // S5 notification triggering
+        // Trigger notifications
         addNotification({
           title: 'Trainer Assigned ⚡',
-          body: `Coach ${assignedCoach.name} (${assignedCoach.level} Trainer) is assigned to your ${selectedExperience.title} session on ${selectedDate} at ${selectedTime}.`,
+          body: `Coach ${activeCoach.name} (${activeCoach.level} Trainer) is assigned to your ${selectedExperience.title} session on ${selectedDate} at ${selectedTime}.`,
         });
 
         addNotification({
@@ -557,53 +694,23 @@ export default function BookingScreen() {
           body: `Get ready! Your VIRLA ${selectedExperience.title} session is scheduled for tomorrow at ${selectedTime}.`,
         });
 
-        setSuccessBookingId(bookingId);
+        setSuccessBookingId(finalBooking.id);
         setStep(7);
-      } catch (err) {
-        Alert.alert('Error', 'Unable to complete your booking. Please try again.');
+      } catch (err: any) {
+        Alert.alert('Booking Failed ⚠️', err.message || 'Unable to complete your booking. Please try again.');
       } finally {
         setIsConfirming(false);
       }
     }, 1800);
   };
 
-  // Helper arrays for Step 5 Slots
   interface SlotItem {
     time: string;
     tag: string;
     isPrime: boolean;
     isBooked?: boolean;
+    trainers?: string[];
   }
-
-  const morningSlots: SlotItem[] = [
-    { time: '06:00 AM - 07:00 AM', tag: 'High Demand', isPrime: false },
-    { time: '07:00 AM - 08:00 AM', tag: 'Almost Full', isPrime: true },
-    { time: '08:00 AM - 09:00 AM', tag: 'Only 2 left', isPrime: true },
-    { time: '10:00 AM - 11:00 AM', tag: '', isPrime: false },
-  ];
-  const afternoonSlots: SlotItem[] = [
-    { time: '12:00 PM - 01:00 PM', tag: '', isPrime: false },
-    { time: '01:00 PM - 02:00 PM', tag: 'Fully Booked', isPrime: false, isBooked: true },
-    { time: '02:00 PM - 03:00 PM', tag: 'High Demand', isPrime: false },
-    { time: '04:00 PM - 05:00 PM', tag: 'Almost Full', isPrime: false },
-  ];
-  const eveningSlots: SlotItem[] = [
-    { time: '05:00 PM - 06:00 PM', tag: 'Only 2 left', isPrime: true },
-    { time: '06:00 PM - 07:00 PM', tag: 'High Demand', isPrime: true },
-    { time: '07:00 PM - 08:00 PM', tag: 'Almost Full', isPrime: false },
-    { time: '08:00 PM - 09:00 PM', tag: 'Fully Booked', isPrime: false, isBooked: true },
-  ];
-  const nightSlots: SlotItem[] = [
-    { time: '09:00 PM - 10:00 PM', tag: 'Only 1 left', isPrime: false },
-    { time: '10:00 PM - 11:00 PM', tag: '', isPrime: false },
-  ];
-
-  const getSlotsForPeriod = () => {
-    if (timePeriod === 'morning') return morningSlots;
-    if (timePeriod === 'afternoon') return afternoonSlots;
-    if (timePeriod === 'evening') return eveningSlots;
-    return nightSlots;
-  };
 
   const isTimeSlotPassed = (timeSlotStr: string, dateStr: string) => {
     const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -629,13 +736,21 @@ export default function BookingScreen() {
     return slotDateTime.getTime() <= now.getTime();
   };
 
-  const getFilteredSlotsForPeriod = () => {
-    const rawSlots = getSlotsForPeriod();
+  const getFilteredSlotsForPeriod = (): SlotItem[] => {
+    const allAvailable = getDynamicAvailableSlots();
+    const filtered = allAvailable.filter(slot => {
+      const hour = parseTimeToMinutesHelper(slot.time) / 60;
+      if (timePeriod === 'morning') return hour >= 6 && hour < 12;
+      if (timePeriod === 'afternoon') return hour >= 12 && hour < 17;
+      if (timePeriod === 'evening') return hour >= 17 && hour < 21;
+      return hour >= 21 || hour < 6;
+    });
+
     const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     if (selectedDate === todayStr) {
-      return rawSlots.filter(slot => !isTimeSlotPassed(slot.time, selectedDate));
+      return filtered.filter(slot => !isTimeSlotPassed(slot.time, selectedDate));
     }
-    return rawSlots;
+    return filtered;
   };
 
   const renderBadge = (slotObj: any) => {
@@ -1850,113 +1965,181 @@ export default function BookingScreen() {
                     <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1">Select Time Slot</Text>
                   </View>
 
-                  {/* Day periods capsules */}
-                  <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1 rounded-2xl">
-                    {[
-                      { id: 'morning', label: 'Morning' },
-                      { id: 'afternoon', label: 'Afternoon' },
-                      { id: 'evening', label: 'Evening' },
-                      { id: 'night', label: 'Night' }
-                    ].map((period) => {
-                      const isActive = timePeriod === period.id;
-                      return (
+                  {getDynamicAvailableSlots().length === 0 ? (
+                    <View 
+                      className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center gap-6 mt-2 shadow-sm"
+                      style={{
+                        shadowColor: '#101828',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.02,
+                        shadowRadius: 6,
+                        elevation: 1
+                      }}
+                    >
+                      <View className="w-16 h-16 rounded-full bg-rose-50 items-center justify-center">
+                        <Feather name="frown" size={32} color="#E11D48" />
+                      </View>
+                      <View className="items-center gap-2">
+                        <Text className="text-[#101828] text-base font-black tracking-tight text-center">
+                          No {WORKOUT_CATEGORY_MAPPING[selectedExperience.id] || 'Workout'} Trainers Available
+                        </Text>
+                        <Text className="text-[#6B7280] text-[10px] font-medium leading-relaxed text-center max-w-[80%]">
+                          All {selectedExperience.title} coaches are fully booked or offline today. Choose another workout, change date, or set an alert.
+                        </Text>
+                      </View>
+                      <View className="w-full gap-3">
                         <TouchableOpacity
-                          key={period.id}
                           activeOpacity={0.8}
-                          onPress={() => setTimePeriod(period.id as any)}
-                          className={`flex-1 py-3 rounded-xl items-center justify-center ${
-                            isActive ? 'bg-[#101828]' : ''
-                          }`}
-                          style={isActive ? {
-                            shadowColor: '#101828',
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: 0.08,
-                            shadowRadius: 4,
-                            elevation: 2,
-                          } : undefined}
-                        >
-                          <Text className={`text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-white' : 'text-[#6B7280]'}`}>
-                            {period.label}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-
-                  {/* Slots listing for period */}
-                  <View className="gap-3.5">
-                    {getFilteredSlotsForPeriod().map((slotObj, idx) => {
-                      const isPicked = selectedTime === slotObj.time;
-                      const isDisabled = !!slotObj.isBooked;
-
-                      return (
-                        <TouchableOpacity
-                          key={idx}
-                          disabled={isDisabled}
-                          activeOpacity={isDisabled ? 1 : 0.8}
                           onPress={() => {
-                            setSelectedTime(slotObj.time);
-                            setTimeout(() => handleNext(), 250);
+                            Alert.alert('Notification Set 🔔', `We will alert you as soon as a coach for ${selectedExperience.title} becomes available on this date.`);
                           }}
-                          style={{
-                            height: 76,
-                            shadowColor: '#101828',
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: isPicked ? 0.15 : 0.04,
-                            shadowRadius: 6,
-                            elevation: 2,
-                          }}
-                          className={`px-5 rounded-[20px] border flex-row justify-between items-center ${
-                            isDisabled
-                              ? 'bg-zinc-100 border-zinc-200 opacity-60'
-                              : isPicked
-                              ? 'bg-[#E11D48] border-[#E11D48]'
-                              : 'bg-white border-[#E5E7EB]'
-                          }`}
+                          className="bg-[#101828] py-4 rounded-xl items-center justify-center"
                         >
-                          <View className="flex-row items-center gap-3.5">
-                            <Feather 
-                              name="clock" 
-                              size={15} 
-                              color={isDisabled ? '#9CA3AF' : isPicked ? 'white' : '#101828'} 
-                            />
-                            <View className="gap-0.5">
-                              <Text 
-                                className={`text-xs font-black tracking-tight ${
-                                  isDisabled ? 'text-zinc-400 line-through' : isPicked ? 'text-white' : 'text-zinc-900'
-                                }`}
-                              >
-                                {slotObj.time}
-                              </Text>
-                              <Text className={`text-[8px] font-bold ${isPicked ? 'text-rose-200' : 'text-[#6B7280]'}`}>
-                                {isDisabled ? 'UNAVAILABLE' : 'AVAILABLE SLOT'}
-                              </Text>
-                            </View>
-                          </View>
-                          
-                          {/* Right badge or checkmark indicator */}
-                          <View className="flex-row items-center gap-2">
-                            {renderBadge(slotObj)}
-                            {isPicked ? (
-                              <View className="w-5 h-5 rounded-full bg-white items-center justify-center">
-                                <Feather name="check" size={12} color="#E11D48" />
-                              </View>
-                            ) : isDisabled ? (
-                              <Text className="text-zinc-400 text-[9px] font-black uppercase tracking-wider">FULL</Text>
-                            ) : (
-                              <View className="w-5 h-5 rounded-full border border-zinc-200 bg-zinc-50" />
-                            )}
-                          </View>
+                          <Text className="text-white text-xs font-black uppercase tracking-wider">Notify Me</Text>
                         </TouchableOpacity>
-                      );
-                    })}
-                  </View>
+                        
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          onPress={() => triggerTransition(1)}
+                          className="bg-zinc-50 border border-zinc-200 py-4 rounded-xl items-center justify-center"
+                        >
+                          <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Try Another Workout</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          onPress={() => triggerTransition(4)}
+                          className="bg-zinc-50 border border-zinc-200 py-4 rounded-xl items-center justify-center"
+                        >
+                          <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Change Date</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    <>
+                      {/* Day periods capsules */}
+                      <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1 rounded-2xl">
+                        {[
+                          { id: 'morning', label: 'Morning' },
+                          { id: 'afternoon', label: 'Afternoon' },
+                          { id: 'evening', label: 'Evening' },
+                          { id: 'night', label: 'Night' }
+                        ].map((period) => {
+                          const isActive = timePeriod === period.id;
+                          return (
+                            <TouchableOpacity
+                              key={period.id}
+                              activeOpacity={0.8}
+                              onPress={() => setTimePeriod(period.id as any)}
+                              className={`flex-1 py-3 rounded-xl items-center justify-center ${
+                                isActive ? 'bg-[#101828]' : ''
+                              }`}
+                              style={isActive ? {
+                                shadowColor: '#101828',
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.08,
+                                shadowRadius: 4,
+                                elevation: 2,
+                              } : undefined}
+                            >
+                              <Text className={`text-[9px] font-black uppercase tracking-wider ${isActive ? 'text-white' : 'text-[#6B7280]'}`}>
+                                {period.label}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+
+                      {/* Slots listing for period */}
+                      <View className="gap-3.5">
+                        {getFilteredSlotsForPeriod().map((slotObj, idx) => {
+                          const isPicked = selectedTime === slotObj.time;
+                          const isDisabled = !!slotObj.isBooked;
+
+                          return (
+                            <TouchableOpacity
+                              key={idx}
+                              disabled={isDisabled}
+                              activeOpacity={isDisabled ? 1 : 0.8}
+                              onPress={() => {
+                                handleSelectSlot(slotObj.time, slotObj.trainers || []);
+                                setTimeout(() => handleNext(), 250);
+                              }}
+                              style={{
+                                height: 76,
+                                shadowColor: '#101828',
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: isPicked ? 0.15 : 0.04,
+                                shadowRadius: 6,
+                                elevation: 2,
+                              }}
+                              className={`px-5 rounded-[20px] border flex-row justify-between items-center ${
+                                isDisabled
+                                  ? 'bg-zinc-100 border-zinc-200 opacity-60'
+                                  : isPicked
+                                  ? 'bg-[#E11D48] border-[#E11D48]'
+                                  : 'bg-white border-[#E5E7EB]'
+                              }`}
+                            >
+                              <View className="flex-row items-center gap-3.5">
+                                <Feather 
+                                  name="clock" 
+                                  size={15} 
+                                  color={isDisabled ? '#9CA3AF' : isPicked ? 'white' : '#101828'} 
+                                />
+                                <View className="gap-0.5">
+                                  <Text 
+                                    className={`text-xs font-black tracking-tight ${
+                                      isDisabled ? 'text-zinc-400 line-through' : isPicked ? 'text-white' : 'text-zinc-900'
+                                    }`}
+                                  >
+                                    {slotObj.time}
+                                  </Text>
+                                  <Text className={`text-[8px] font-bold ${isPicked ? 'text-rose-200' : 'text-[#6B7280]'}`}>
+                                    {isDisabled ? 'UNAVAILABLE' : 'AVAILABLE SLOT'}
+                                  </Text>
+                                </View>
+                              </View>
+                              
+                              {/* Right badge or checkmark indicator */}
+                              <View className="flex-row items-center gap-2">
+                                {renderBadge(slotObj)}
+                                {isPicked ? (
+                                  <View className="w-5 h-5 rounded-full bg-white items-center justify-center">
+                                    <Feather name="check" size={12} color="#E11D48" />
+                                  </View>
+                                ) : isDisabled ? (
+                                  <Text className="text-zinc-400 text-[9px] font-black uppercase tracking-wider">FULL</Text>
+                                ) : (
+                                  <View className="w-5 h-5 rounded-full border border-zinc-200 bg-zinc-50" />
+                                )}
+                              </View>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </>
+                  )}
                 </View>
               )}
 
-              {/* STEP 6: REVIEW & CONFIRM BOOKING SCREEN (NEW) */}
               {step === 6 && (
                 <View className="gap-6 pb-6">
+                  {/* Reservation countdown warning alert */}
+                  {reservationTimeLeft > 0 && (
+                    <View className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex-row items-center justify-between shadow-sm">
+                      <View className="flex-row items-center gap-2">
+                        <Feather name="clock" size={14} color="#D97706" />
+                        <Text className="text-amber-800 text-[10px] font-bold">
+                          Slot reserved. Complete checkout in:
+                        </Text>
+                      </View>
+                      <Text className="text-amber-900 text-xs font-black">
+                        {Math.floor(reservationTimeLeft / 60)}:{(reservationTimeLeft % 60).toString().padStart(2, '0')}
+                      </Text>
+                    </View>
+                  )}
+
                   {/* Section 1 — Booking Summary Card */}
                   <View 
                     className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4"
@@ -2271,20 +2454,22 @@ export default function BookingScreen() {
           >
             <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">Back</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleNext}
-            className="flex-1 py-4 bg-zinc-950 rounded-2xl items-center justify-center"
-            style={{
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.05,
-              shadowRadius: 4,
-              elevation: 2,
-            }}
-          >
-            <Text className="text-white text-xs font-black uppercase tracking-wider">Continue</Text>
-          </TouchableOpacity>
+          {(step < 5 || getDynamicAvailableSlots().length > 0) && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleNext}
+              className="flex-1 py-4 bg-zinc-950 rounded-2xl items-center justify-center"
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 4,
+                elevation: 2,
+              }}
+            >
+              <Text className="text-white text-xs font-black uppercase tracking-wider">Continue</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </SafeAreaView>

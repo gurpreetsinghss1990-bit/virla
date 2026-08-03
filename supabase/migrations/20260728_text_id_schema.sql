@@ -91,7 +91,8 @@ CREATE TABLE IF NOT EXISTS public.trainers (
     achievements TEXT[] DEFAULT '{}'::text[],
     reviews JSONB DEFAULT '[]'::jsonb,
     workout_specialties TEXT[] DEFAULT '{}'::text[],
-    is_favourite BOOLEAN DEFAULT FALSE
+    is_favourite BOOLEAN DEFAULT FALSE,
+    preferences JSONB DEFAULT '{"online": false, "radiusKm": 15, "maxDailySessions": 5, "categories": []}'::jsonb
 );
 
 -- 5. CREATE WORKOUTS CATALOG TABLE
@@ -370,4 +371,36 @@ BEGIN
   RETURN user_row->>'id';
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ALTER TABLES FOR PRE-EXISTING DATABASES
+ALTER TABLE public.trainers ADD COLUMN IF NOT EXISTS preferences JSONB DEFAULT '{"online": false, "radiusKm": 15, "maxDailySessions": 5, "categories": []}'::jsonb;
+
+-- ENSURE REALTIME IS ENABLED FOR TABLES
+do $$
+begin
+  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    create publication supabase_realtime;
+  end if;
+exception
+  when others then null;
+end $$;
+
+-- Enable realtime for tables (adding to publication)
+alter publication supabase_realtime add table public.bookings;
+alter publication supabase_realtime add table public.trainers;
+alter publication supabase_realtime add table public.chat_messages;
+alter publication supabase_realtime add table public.notifications;
+
+-- 12. CREATE SLOT RESERVATIONS TABLE
+CREATE TABLE IF NOT EXISTS public.slot_reservations (
+    id TEXT PRIMARY KEY,
+    slot_time TEXT NOT NULL,
+    slot_date TEXT NOT NULL,
+    trainer_id TEXT NOT NULL,
+    client_id TEXT NOT NULL,
+    expires_at BIGINT NOT NULL
+);
+
+-- Enable realtime for slot_reservations
+alter publication supabase_realtime add table public.slot_reservations;
 
