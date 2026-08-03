@@ -524,43 +524,43 @@ export default function SessionDetailScreen() {
               </View>
 
               <View className="gap-3">
-                <View className="flex-row justify-between border-b border-zinc-55 pb-2">
-                  <Text className="text-zinc-405 text-[10px] font-bold uppercase">Workout Type</Text>
+                <View className="flex-row justify-between border-b border-zinc-100 pb-2">
+                  <Text className="text-zinc-400 text-[10px] font-bold uppercase">Workout Type</Text>
                   <Text className="text-zinc-900 text-xs font-black">{booking.workoutTitle}</Text>
                 </View>
 
-                <View className="flex-row justify-between border-b border-zinc-55 pb-2">
-                  <Text className="text-zinc-405 text-[10px] font-bold uppercase">Date & Time</Text>
+                <View className="flex-row justify-between border-b border-zinc-100 pb-2">
+                  <Text className="text-zinc-400 text-[10px] font-bold uppercase">Date & Time</Text>
                   <Text className="text-zinc-900 text-xs font-black">{booking.date} @ {booking.time}</Text>
                 </View>
 
-                <View className="flex-row justify-between border-b border-zinc-55 pb-2">
-                  <Text className="text-zinc-405 text-[10px] font-bold uppercase">Duration</Text>
+                <View className="flex-row justify-between border-b border-zinc-100 pb-2">
+                  <Text className="text-zinc-400 text-[10px] font-bold uppercase">Duration</Text>
                   <Text className="text-zinc-900 text-xs font-black">{booking.durationMinutes || 60} minutes</Text>
                 </View>
 
-                <View className="flex-row justify-between border-b border-zinc-55 pb-2">
-                  <Text className="text-zinc-405 text-[10px] font-bold uppercase">Client Reference</Text>
+                <View className="flex-row justify-between border-b border-zinc-100 pb-2">
+                  <Text className="text-zinc-400 text-[10px] font-bold uppercase">Client Reference</Text>
                   <Text className="text-zinc-900 text-xs font-black">{customerId}</Text>
                 </View>
 
-                <View className="flex-row justify-between border-b border-zinc-55 pb-2">
-                  <Text className="text-zinc-405 text-[10px] font-bold uppercase">Gender</Text>
+                <View className="flex-row justify-between border-b border-zinc-100 pb-2">
+                  <Text className="text-zinc-400 text-[10px] font-bold uppercase">Gender</Text>
                   <Text className="text-zinc-900 text-xs font-black">{customerGender}</Text>
                 </View>
 
-                <View className="flex-row justify-between border-b border-zinc-55 pb-2">
-                  <Text className="text-zinc-405 text-[10px] font-bold uppercase">Type</Text>
+                <View className="flex-row justify-between border-b border-zinc-100 pb-2">
+                  <Text className="text-zinc-400 text-[10px] font-bold uppercase">Type</Text>
                   <Text className="text-zinc-900 text-xs font-black">Solo Session</Text>
                 </View>
 
-                <View className="flex-row justify-between border-b border-zinc-55 pb-2">
-                  <Text className="text-zinc-405 text-[10px] font-bold uppercase">Approximate Location</Text>
+                <View className="flex-row justify-between border-b border-zinc-100 pb-2">
+                  <Text className="text-zinc-400 text-[10px] font-bold uppercase">Approximate Location</Text>
                   <Text className="text-zinc-900 text-xs font-black">{booking.address ? booking.address.split(',')[0] : 'Selected Locality'}</Text>
                 </View>
 
                 <View className="flex-row justify-between">
-                  <Text className="text-zinc-405 text-[10px] font-bold uppercase">Session Value</Text>
+                  <Text className="text-zinc-400 text-[10px] font-bold uppercase">Session Value</Text>
                   <Text className="text-emerald-700 text-xs font-black">₹{booking.price || 1200} (1 Credit)</Text>
                 </View>
               </View>
@@ -617,7 +617,7 @@ export default function SessionDetailScreen() {
             {/* Privacy Warning Banner */}
             <View className="bg-zinc-50 border border-zinc-200 p-4 rounded-2xl flex-row items-start gap-2.5">
               <Feather name="lock" size={13} color="#9CA3AF" style={{ marginTop: 2 }} />
-              <Text className="text-zinc-505 text-[9px] font-semibold leading-relaxed flex-1">
+              <Text className="text-zinc-500 text-[9px] font-semibold leading-relaxed flex-1">
                 Before you accept this booking, communication options are locked and customer contact information (Name, exact Address, Phone Number) remains private under {"VIRLA's"} privacy policies.
               </Text>
             </View>

@@ -1233,7 +1233,7 @@ export default function HomeScreen() {
                       }`}
                     >
                       <Text className={`text-[9px] font-black uppercase tracking-wider ${
-                        trainerOnlineStatus === 'online' ? 'text-emerald-700' : 'text-zinc-550'
+                        trainerOnlineStatus === 'online' ? 'text-emerald-700' : 'text-zinc-500'
                       }`}>
                         {trainerOnlineStatus === 'online' ? 'Online' : 'Offline'}
                       </Text>

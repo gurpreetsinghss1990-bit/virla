@@ -611,7 +611,7 @@ export default function VirlaAIScreen() {
 
                   <View className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-4">
                     <View className="gap-1.5">
-                      <Text className="text-zinc-550 text-[10px] font-bold uppercase pl-0.5">Age (years)</Text>
+                      <Text className="text-zinc-500 text-[10px] font-bold uppercase pl-0.5">Age (years)</Text>
                       <TextInput
                         value={age}
                         onChangeText={setAge}
@@ -623,7 +623,7 @@ export default function VirlaAIScreen() {
                     </View>
 
                     <View className="gap-1.5">
-                      <Text className="text-zinc-550 text-[10px] font-bold uppercase pl-0.5">Gender</Text>
+                      <Text className="text-zinc-500 text-[10px] font-bold uppercase pl-0.5">Gender</Text>
                       <View className="flex-row gap-2">
                         {['Male', 'Female', 'Other'].map(g => (
                           <TouchableOpacity
@@ -640,7 +640,7 @@ export default function VirlaAIScreen() {
                     </View>
 
                     <View className="gap-1.5">
-                      <Text className="text-zinc-550 text-[10px] font-bold uppercase pl-0.5">Height (cm)</Text>
+                      <Text className="text-zinc-500 text-[10px] font-bold uppercase pl-0.5">Height (cm)</Text>
                       <TextInput
                         value={height}
                         onChangeText={setHeight}
@@ -652,7 +652,7 @@ export default function VirlaAIScreen() {
                     </View>
 
                     <View className="gap-1.5">
-                      <Text className="text-zinc-550 text-[10px] font-bold uppercase pl-0.5">Weight (kg)</Text>
+                      <Text className="text-zinc-500 text-[10px] font-bold uppercase pl-0.5">Weight (kg)</Text>
                       <TextInput
                         value={weight}
                         onChangeText={setWeight}
@@ -755,7 +755,7 @@ export default function VirlaAIScreen() {
 
                   <View className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-5">
                     <View className="gap-2">
-                      <Text className="text-zinc-550 text-[10px] font-bold uppercase pl-0.5">How many days per week?</Text>
+                      <Text className="text-zinc-500 text-[10px] font-bold uppercase pl-0.5">How many days per week?</Text>
                       <View className="flex-row justify-between gap-1 mt-1">
                         {['1', '2', '3', '4', '5', '6', '7'].map(num => (
                           <TouchableOpacity
@@ -772,7 +772,7 @@ export default function VirlaAIScreen() {
                     </View>
 
                     <View className="gap-2 border-t border-zinc-100 pt-4">
-                      <Text className="text-zinc-550 text-[10px] font-bold uppercase pl-0.5">Preferred workout duration</Text>
+                      <Text className="text-zinc-500 text-[10px] font-bold uppercase pl-0.5">Preferred workout duration</Text>
                       <View className="flex-row flex-wrap justify-between gap-y-2 mt-1">
                         {durationList.map(dur => (
                           <TouchableOpacity
@@ -809,7 +809,7 @@ export default function VirlaAIScreen() {
                   <View className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-4">
                     <View className="flex-row justify-between gap-3">
                       <View className="flex-1 gap-1.5">
-                        <Text className="text-zinc-550 text-[10px] font-bold uppercase pl-0.5">Wake-up Time</Text>
+                        <Text className="text-zinc-500 text-[10px] font-bold uppercase pl-0.5">Wake-up Time</Text>
                         <TextInput
                           value={wakeupTime}
                           onChangeText={setWakeupTime}
@@ -819,7 +819,7 @@ export default function VirlaAIScreen() {
                       </View>
                       
                       <View className="flex-1 gap-1.5">
-                        <Text className="text-zinc-550 text-[10px] font-bold uppercase pl-0.5">Sleep Time</Text>
+                        <Text className="text-zinc-500 text-[10px] font-bold uppercase pl-0.5">Sleep Time</Text>
                         <TextInput
                           value={sleepTime}
                           onChangeText={setSleepTime}
@@ -830,7 +830,7 @@ export default function VirlaAIScreen() {
                     </View>
 
                     <View className="gap-2 border-t border-zinc-100 pt-4">
-                      <Text className="text-zinc-550 text-[10px] font-bold uppercase pl-0.5">Lifestyle Profile Tags</Text>
+                      <Text className="text-zinc-500 text-[10px] font-bold uppercase pl-0.5">Lifestyle Profile Tags</Text>
                       <View className="flex-row flex-wrap gap-2 mt-1">
                         {lifestyleList.map(tag => {
                           const isSel = selectedLifestyle.includes(tag);
@@ -969,7 +969,7 @@ export default function VirlaAIScreen() {
                   </View>
 
                   <View className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-2">
-                    <Text className="text-zinc-550 text-[10px] font-bold uppercase pl-0.5">How much water do you drink daily?</Text>
+                    <Text className="text-zinc-500 text-[10px] font-bold uppercase pl-0.5">How much water do you drink daily?</Text>
                     <View className="flex-row flex-wrap justify-between gap-y-2.5 mt-2">
                       {waterList.map(qty => (
                         <TouchableOpacity
@@ -1003,7 +1003,7 @@ export default function VirlaAIScreen() {
                   </View>
 
                   <View className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-2">
-                    <Text className="text-zinc-550 text-[10px] font-bold uppercase pl-0.5">Check supplements you take daily</Text>
+                    <Text className="text-zinc-500 text-[10px] font-bold uppercase pl-0.5">Check supplements you take daily</Text>
                     <View className="flex-row flex-wrap gap-2.5 mt-2">
                       {supplementsList.map(tag => {
                         const isSel = selectedSupplements.includes(tag);
