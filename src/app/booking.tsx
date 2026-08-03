@@ -32,7 +32,7 @@ const EXPERIENCES: Experience[] = [
     icon: 'dumbbell',
     gradientColors: ['#FF5A5F', '#FF385C'],
     emoji: '🏋️‍♂️',
-    duration: 50,
+    duration: 60,
   },
   {
     id: 'exp-flow',
@@ -50,7 +50,7 @@ const EXPERIENCES: Experience[] = [
     icon: 'music',
     gradientColors: ['#EC4899', '#BE185D'],
     emoji: '💃',
-    duration: 45,
+    duration: 60,
   },
   {
     id: 'exp-reset',
@@ -59,7 +59,7 @@ const EXPERIENCES: Experience[] = [
     icon: 'coffee',
     gradientColors: ['#64748B', '#475569'],
     emoji: '🧘‍♂️',
-    duration: 50,
+    duration: 60,
   },
   {
     id: 'exp-combat',
@@ -68,7 +68,7 @@ const EXPERIENCES: Experience[] = [
     icon: 'activity',
     gradientColors: ['#F59E0B', '#D97706'],
     emoji: '🥊',
-    duration: 55,
+    duration: 60,
   },
 ];
 
@@ -1737,9 +1737,22 @@ export default function BookingScreen() {
                   {/* Horizontal Date Capsules (Feature 4) */}
                   <View className="flex-row justify-between gap-2.5">
                     {[
-                      { id: 'today', label: 'Today', sub: 'Jul 16' },
-                      { id: 'tomorrow', label: 'Tomorrow', sub: 'Jul 17' },
-                      { id: 'weekend', label: 'Weekend', sub: 'Jul 18-19' },
+                      { id: 'today', label: 'Today', sub: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) },
+                      { id: 'tomorrow', label: 'Tomorrow', sub: (() => {
+                        const d = new Date();
+                        d.setDate(d.getDate() + 1);
+                        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                      })() },
+                      { id: 'weekend', label: 'Weekend', sub: (() => {
+                        const sat = new Date();
+                        sat.setDate(sat.getDate() + (6 - sat.getDay() + 7) % 7);
+                        const sun = new Date(sat);
+                        sun.setDate(sun.getDate() + 1);
+                        if (sat.getMonth() === sun.getMonth()) {
+                          return `${sat.toLocaleDateString('en-US', { month: 'short' })} ${sat.getDate()}-${sun.getDate()}`;
+                        }
+                        return `${sat.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}-${sun.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+                      })() },
                       { id: 'calendar', label: 'Calendar', sub: 'Open Grid' }
                     ].map((capsule) => {
                       const isSelected = dateSelectionType === capsule.id;
