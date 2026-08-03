@@ -849,7 +849,12 @@ export default function BookingScreen() {
                           key={pref.id}
                           activeOpacity={0.8}
                           onPress={() => {
-                            console.log("Male/Female preference pressed: " + pref.id);
+                            setTrainerPref(pref.id as any);
+                            if (pref.id !== 'favourite') {
+                              setSelectedTrainerId('');
+                              // Auto transition to step 3 on tap after small delay
+                              setTimeout(() => triggerTransition(3), 300);
+                            }
                           }}
                           className={`w-[47%] p-5 rounded-[24px] border items-center justify-center gap-2.5 ${
                             isSelected ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-[#E5E7EB]'
@@ -1099,11 +1104,7 @@ export default function BookingScreen() {
                     animationType="slide"
                     onRequestClose={() => setIsMapModalVisible(false)}
                   >
-                    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
-                      <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                        className="flex-1"
-                      >
+                    <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
                       {/* Header */}
                       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
                         <TouchableOpacity onPress={() => setIsMapModalVisible(false)} className="w-8 h-8 items-center justify-center">
@@ -1114,9 +1115,9 @@ export default function BookingScreen() {
                         </Text>
                       </View>
 
-                      <View className="flex-1 relative">
+                      <View style={{ flex: 1, position: 'relative' }}>
                         {/* Simulated Map View */}
-                        <View className="flex-1 bg-sky-100/50 relative overflow-hidden items-center justify-center">
+                        <View style={{ flex: 1, backgroundColor: '#E0F2FE', position: 'relative', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
                           <Svg width="100%" height="100%" className="absolute">
                             <Line x1="15%" y1="0%" x2="15%" y2="100%" stroke="#BAE6FD" strokeWidth={1} strokeDasharray="6 6" />
                             <Line x1="50%" y1="0%" x2="50%" y2="100%" stroke="#BAE6FD" strokeWidth={2} />
@@ -1304,7 +1305,6 @@ export default function BookingScreen() {
                           </TouchableOpacity>
                         </View>
                       </View>
-                      </KeyboardAvoidingView>
                     </SafeAreaView>
                   </Modal>
 
@@ -1314,11 +1314,7 @@ export default function BookingScreen() {
                     animationType="slide"
                     onRequestClose={() => setIsAddAddressModalVisible(false)}
                   >
-                    <SafeAreaView className="flex-1 bg-[#F7F8FC]">
-                      <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                        className="flex-1"
-                      >
+                    <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
                       {/* Header */}
                       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
                         <TouchableOpacity 
@@ -1366,7 +1362,7 @@ export default function BookingScreen() {
                         })}
                       </View>
 
-                      <View className="flex-1 bg-[#F7F8FC]">
+                      <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
                         {/* STEP 1: SEARCH OR GPS */}
                         {addAddressStep === 1 && (
                           <View className="p-6 gap-6 flex-1">
@@ -1471,9 +1467,9 @@ export default function BookingScreen() {
 
                         {/* STEP 2: PIN CONFIRMATION */}
                         {addAddressStep === 2 && (
-                          <View className="flex-1 relative">
+                          <View style={{ flex: 1, position: 'relative' }}>
                             {/* SVG simulated map */}
-                            <View className="flex-1 bg-sky-100/50 relative overflow-hidden items-center justify-center">
+                            <View style={{ flex: 1, backgroundColor: '#E0F2FE', position: 'relative', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
                               <Svg width="100%" height="100%" className="absolute">
                                 <Line x1="15%" y1="0%" x2="15%" y2="100%" stroke="#BAE6FD" strokeWidth={1} strokeDasharray="6 6" />
                                 <Line x1="50%" y1="0%" x2="50%" y2="100%" stroke="#BAE6FD" strokeWidth={2} />
@@ -1516,11 +1512,15 @@ export default function BookingScreen() {
 
                         {/* STEP 3: DETAILS FORM */}
                         {addAddressStep === 3 && (
-                          <ScrollView 
-                            showsVerticalScrollIndicator={false}
-                            contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
-                            className="flex-1"
+                          <KeyboardAvoidingView
+                            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                            style={{ flex: 1 }}
                           >
+                            <ScrollView 
+                              showsVerticalScrollIndicator={false}
+                              contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
+                              className="flex-1"
+                            >
                             <View className="gap-6">
                               <View>
                                 <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Step 3 of 3</Text>
@@ -1657,9 +1657,9 @@ export default function BookingScreen() {
                               </TouchableOpacity>
                             </View>
                           </ScrollView>
+                          </KeyboardAvoidingView>
                         )}
                       </View>
-                      </KeyboardAvoidingView>
                     </SafeAreaView>
                   </Modal>
                 </View>
