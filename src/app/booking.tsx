@@ -1100,6 +1100,10 @@ export default function BookingScreen() {
                     onRequestClose={() => setIsMapModalVisible(false)}
                   >
                     <SafeAreaView className="flex-1 bg-[#F7F8FC]">
+                      <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        className="flex-1"
+                      >
                       {/* Header */}
                       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
                         <TouchableOpacity onPress={() => setIsMapModalVisible(false)} className="w-8 h-8 items-center justify-center">
@@ -1300,6 +1304,7 @@ export default function BookingScreen() {
                           </TouchableOpacity>
                         </View>
                       </View>
+                      </KeyboardAvoidingView>
                     </SafeAreaView>
                   </Modal>
 
@@ -1310,6 +1315,10 @@ export default function BookingScreen() {
                     onRequestClose={() => setIsAddAddressModalVisible(false)}
                   >
                     <SafeAreaView className="flex-1 bg-[#F7F8FC]">
+                      <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        className="flex-1"
+                      >
                       {/* Header */}
                       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
                         <TouchableOpacity 
@@ -1650,6 +1659,7 @@ export default function BookingScreen() {
                           </ScrollView>
                         )}
                       </View>
+                      </KeyboardAvoidingView>
                     </SafeAreaView>
                   </Modal>
                 </View>
