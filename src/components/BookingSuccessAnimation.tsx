@@ -55,7 +55,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
         className="w-20 h-20 rounded-full bg-emerald-500 items-center justify-center shadow-lg relative"
       >
         {/* Ring Pulse */}
-        <View className="absolute inset-0 rounded-full bg-emerald-500 opacity-20 animate-ping" />
+        <View className="absolute inset-0 rounded-full bg-emerald-500 opacity-20" />
         <Feather name="check" size={40} color="white" />
       </Animated.View>
 

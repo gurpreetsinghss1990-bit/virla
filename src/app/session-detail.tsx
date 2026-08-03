@@ -757,7 +757,7 @@ export default function SessionDetailScreen() {
 
             {/* Stage Banner Overlay */}
             <View className="bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-sm flex-row items-center gap-3">
-              <View className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
+              <View className="w-2.5 h-2.5 rounded-full bg-rose-500" />
               <View className="flex-1">
                 <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Active Concierge Status</Text>
                 <Text className="text-[#101828] text-sm font-black mt-0.5">{getStatusText(currentStatus)}</Text>
@@ -1075,7 +1075,7 @@ export default function SessionDetailScreen() {
             {currentStatus === 'trainer_arrived' && (role === 'customer' || role === 'admin') && (
               <View className="bg-zinc-950 p-6 rounded-[28px] border border-zinc-800 shadow-xl gap-4">
                 <View className="flex-row items-center gap-2">
-                  <View className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                  <View className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                   <Text className="text-emerald-400 text-[10px] font-black uppercase tracking-wider">Trainer Checked In</Text>
                 </View>
                 <Text className="text-white text-base font-bold">Your trainer has arrived. Please begin your session.</Text>
