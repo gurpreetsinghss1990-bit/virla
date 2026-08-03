@@ -1375,18 +1375,59 @@ export default function BookingScreen() {
                             <TouchableOpacity
                               activeOpacity={0.8}
                               onPress={() => {
+                                const runSimulatedGps = () => {
+                                  setGpsPermission('granted');
+                                  setIsLocationOutsideCoverage(false);
+                                  setEtaText('~18 mins travel');
+                                  setDistanceText('6.5 km');
+                                  setActiveCoords({ lat: 19.1076, lng: 72.8264 });
+                                  setSearchQuery('Juhu Beach Road, Mumbai, Maharashtra 400049');
+                                  setNewBuildingName('Juhu Beach Road');
+                                  setAddAddressStep(2);
+                                };
+
                                 if (gpsSignalFailure) {
                                   Alert.alert('GPS Jammed', 'Simulated Weak GPS Signal. Try manual address search.');
                                   return;
                                 }
-                                setGpsPermission('granted');
-                                setIsLocationOutsideCoverage(false);
-                                setEtaText('~18 mins travel');
-                                setDistanceText('6.5 km');
-                                setActiveCoords({ lat: 19.1076, lng: 72.8264 });
-                                setSearchQuery('Juhu Beach Road, Mumbai, Maharashtra 400049');
-                                setNewBuildingName('Juhu Beach Road');
-                                setAddAddressStep(2);
+
+                                if (typeof navigator !== 'undefined' && navigator.geolocation) {
+                                  navigator.geolocation.getCurrentPosition(
+                                    async (position) => {
+                                      const { latitude, longitude } = position.coords;
+                                      setActiveCoords({ lat: latitude, lng: longitude });
+                                      try {
+                                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`, {
+                                          headers: { 'User-Agent': 'VIRLA-Mobile-App' }
+                                        });
+                                        const data = await res.json();
+                                        if (data && data.display_name) {
+                                          setSearchQuery(data.display_name);
+                                          const streetName = data.address.road || data.address.suburb || data.address.neighbourhood || 'Current Location';
+                                          setNewBuildingName(streetName);
+                                        } else {
+                                          setSearchQuery(`${latitude.toFixed(4)}° N, ${longitude.toFixed(4)}° E`);
+                                          setNewBuildingName('Current Location');
+                                        }
+                                      } catch (e) {
+                                        setSearchQuery(`${latitude.toFixed(4)}° N, ${longitude.toFixed(4)}° E`);
+                                        setNewBuildingName('Current Location');
+                                      }
+                                      setGpsPermission('granted');
+                                      setIsLocationOutsideCoverage(false);
+                                      setEtaText('~12 mins travel');
+                                      setDistanceText('3.5 km');
+                                      setAddAddressStep(2);
+                                    },
+                                    (error) => {
+                                      console.log('GPS Fetch Error:', error);
+                                      runSimulatedGps();
+                                    },
+                                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+                                  );
+                                } else {
+                                  runSimulatedGps();
+                                }
                               }}
                               className="w-full h-14 bg-indigo-50 border border-indigo-150 rounded-2xl items-center justify-center flex-row gap-2.5"
                             >
@@ -1428,6 +1469,26 @@ export default function BookingScreen() {
                                     elevation: 6,
                                   }}
                                 >
+                                  <TouchableOpacity
+                                    onPress={() => {
+                                      setSearchQuery(searchQuery);
+                                      setNewBuildingName(searchQuery);
+                                      setShowSearchDropdown(false);
+                                      setIsLocationOutsideCoverage(false);
+                                      setEtaText('~15 mins');
+                                      setDistanceText('4.2 km');
+                                      setActiveCoords({ lat: 19.0596, lng: 72.8295 }); // Fallback Bandra West
+                                      setAddAddressStep(2);
+                                    }}
+                                    className="p-4 border-b border-zinc-200 flex-row justify-between items-center bg-indigo-50/20"
+                                  >
+                                    <View className="flex-1 pr-2">
+                                      <Text className="text-indigo-600 text-xs font-black">➕ USE CUSTOM ADDRESS</Text>
+                                      <Text className="text-zinc-500 text-[9px] font-bold mt-0.5" numberOfLines={1}>{searchQuery}</Text>
+                                    </View>
+                                    <Feather name="plus" size={14} color="#4F46E5" />
+                                  </TouchableOpacity>
+
                                   {[
                                     { name: 'Bandra West, Mumbai', desc: 'Active VIRLA service zone', out: false, coords: { lat: 19.0596, lng: 72.8295 }, eta: '~12 mins', dist: '3.2 km' },
                                     { name: 'Juhu Scheme, Mumbai', desc: 'Active VIRLA service zone', out: false, coords: { lat: 19.1076, lng: 72.8264 }, eta: '~18 mins', dist: '6.5 km' },
