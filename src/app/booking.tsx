@@ -11,6 +11,7 @@ import { EmptyState, ApplePayConfirmation, BookingSuccessAnimation } from '../co
 import { Ionicons, Feather } from '@expo/vector-icons';
 import Svg, { Circle, Line } from 'react-native-svg';
 import { AssignmentEngine } from '../services/AssignmentEngine';
+import { Database } from '../database/Database';
 
 // 5 Premium experiences specified
 interface Experience {
@@ -537,8 +538,7 @@ export default function BookingScreen() {
         });
 
         // Log the assignment event
-        const DatabaseModule = require('../database/Database');
-        DatabaseModule.Database.logAssignmentEvent({
+        Database.logAssignmentEvent({
           bookingId: bookingId,
           trainerId: assignedCoach.id,
           score: score,
