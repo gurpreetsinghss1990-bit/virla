@@ -1214,7 +1214,7 @@ export default function HomeScreen() {
                 >
                   <View className="flex-row justify-between items-center">
                     <View className="flex-row items-center gap-2.5">
-                      <View className={`w-3 h-3 rounded-full ${trainerOnlineStatus === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-300'}`} />
+                      <View className={`w-3 h-3 rounded-full ${trainerOnlineStatus === 'online' ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
                       <View>
                         <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Availability Status</Text>
                         <Text className="text-zinc-500 text-[10px] font-semibold mt-0.5">
@@ -1258,7 +1258,7 @@ export default function HomeScreen() {
                     <View className="w-[48%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
                       <Text className="text-zinc-400 text-[8px] font-bold uppercase">{"Today's"} Earnings</Text>
                       <Text className="text-emerald-700 text-xs font-extrabold">
-                        ₹{(bookings.filter(b => b.status === 'upcoming' && b.timelineStatus === 'trainer_accepted' && (b.date.includes('Today') || b.date.includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' })))).length * 1200).toLocaleString('en-IN')}
+                        ₹{(bookings.filter(b => b.status === 'upcoming' && b.timelineStatus === 'trainer_accepted' && ((b.date || '').includes('Today') || (b.date || '').includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' })))).length * 1200).toLocaleString('en-IN')}
                       </Text>
                     </View>
                     <View className="w-[48%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
@@ -1311,8 +1311,8 @@ export default function HomeScreen() {
                 {/* Today's Scheduled Sessions */}
                 <View className="gap-3 mt-1">
                   <Text className="text-[#101828] text-xs font-semibold uppercase tracking-widest pl-1">{"Today's"} Scheduled Sessions</Text>
-                  {bookings.filter(b => b.timelineStatus === 'trainer_accepted' && (b.date.includes('Today') || b.date.includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' })))).length > 0 ? (
-                    bookings.filter(b => b.timelineStatus === 'trainer_accepted' && (b.date.includes('Today') || b.date.includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' })))).map((booking) => (
+                  {bookings.filter(b => b.timelineStatus === 'trainer_accepted' && ((b.date || '').includes('Today') || (b.date || '').includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' })))).length > 0 ? (
+                    bookings.filter(b => b.timelineStatus === 'trainer_accepted' && ((b.date || '').includes('Today') || (b.date || '').includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' })))).map((booking) => (
                       <TouchableOpacity 
                         key={booking.id} 
                         activeOpacity={0.8}

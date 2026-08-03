@@ -356,7 +356,7 @@ export default function VirlaAIScreen() {
           /* ========================================== */
           <View className="flex-1 justify-center items-center px-8 bg-[#FAF9FC]">
             <View className="p-8 bg-white border border-[#E5E7EB] rounded-[36px] items-center gap-6 shadow-sm w-full">
-              <View className="w-16 h-16 rounded-full bg-rose-50 items-center justify-center animate-bounce">
+              <View className="w-16 h-16 rounded-full bg-rose-50 items-center justify-center">
                 <Feather name="cpu" size={28} color="#E11D48" />
               </View>
               

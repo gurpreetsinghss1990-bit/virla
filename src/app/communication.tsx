@@ -296,9 +296,9 @@ export default function CommunicationScreen() {
           {/* Typing Indicator */}
           {isTyping && (
             <View className="bg-white border border-zinc-200 p-4 rounded-[24px] rounded-tl-none self-start max-w-[50%] flex-row gap-1 items-center">
-              <View className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" />
-              <View className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce delay-100" />
-              <View className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce delay-200" />
+              <View className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
+              <View className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
+              <View className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
             </View>
           )}
         </View>
