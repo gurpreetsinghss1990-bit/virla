@@ -404,3 +404,12 @@ CREATE TABLE IF NOT EXISTS public.slot_reservations (
 -- Enable realtime for slot_reservations
 alter publication supabase_realtime add table public.slot_reservations;
 
+-- ADD UNIQUE INDEX TO PREVENT DOUBLE BOOKINGS AT DATABASE LEVEL
+CREATE UNIQUE INDEX IF NOT EXISTS unique_active_trainer_slot 
+ON public.bookings (trainer_id, date, time) 
+WHERE (status != 'cancelled');
+
+-- ADD UNIQUE INDEX TO PREVENT DOUBLE SLOT RESERVATIONS AT DATABASE LEVEL
+CREATE UNIQUE INDEX IF NOT EXISTS unique_trainer_slot_reservation 
+ON public.slot_reservations (trainer_id, slot_date, slot_time);
+

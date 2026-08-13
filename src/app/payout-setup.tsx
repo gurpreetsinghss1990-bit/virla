@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, StyleSheet, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Database } from '../database/Database';
 import { LuxuryCard } from '../components/LuxuryCard';
@@ -10,7 +10,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView } from 'react-native';
 
 export default function PayoutSetupScreen() {
-  const router = useRouter();
   const user = useUserStore(state => state.user);
   const insets = useSafeAreaInsets();
   

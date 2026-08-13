@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, Workout, Coach, Booking, NotificationItem, Invoice, TrainerEarning, ScheduleSlot, AssignmentLog } from '../types';
+import { User, Workout, Coach, Booking, NotificationItem, Invoice, TrainerEarning, ScheduleSlot, AssignmentLog, TrainerWorkoutAssignment } from '../types';
 
 // Simple UUID generator
 export function generateUUID(prefix = 'id'): string {
@@ -375,7 +375,7 @@ export function mapBooking(row: any): Booking {
     trainerArrivalTime: row.trainer_arrival_time,
     caloriesBurned: row.calories_burned,
     durationMinutes: row.duration_minutes,
-    ratingDetails: row.rating_details ? JSON.parse(row.rating_details) : undefined,
+    ratingDetails: row.rating_details ? (typeof row.rating_details === 'string' ? JSON.parse(row.rating_details) : row.rating_details) : undefined,
     trainerNote: row.trainer_note || undefined,
     createdAt: row.created_at ? Number(row.created_at) : undefined,
   };
@@ -600,6 +600,38 @@ export function mapSavedAddressToPostgres(addr: SavedAddress): any {
   };
 }
 
+export function mapWorkoutAssignment(row: any): TrainerWorkoutAssignment {
+  return {
+    id: row.id,
+    trainerId: row.trainer_id,
+    workoutCategory: row.workout_category,
+    status: row.status,
+    requestedAt: Number(row.requested_at) || Date.now(),
+    approvedAt: row.approved_at ? Number(row.approved_at) : undefined,
+    approvedBy: row.approved_by || undefined,
+    rejectedAt: row.rejected_at ? Number(row.rejected_at) : undefined,
+    rejectedBy: row.rejected_by || undefined,
+    rejectionReason: row.rejection_reason || undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+export function mapWorkoutAssignmentToPostgres(assignment: TrainerWorkoutAssignment): any {
+  return {
+    id: assignment.id,
+    trainer_id: assignment.trainerId,
+    workout_category: assignment.workoutCategory,
+    status: assignment.status,
+    requested_at: assignment.requestedAt,
+    approved_at: assignment.approvedAt,
+    approved_by: assignment.approvedBy,
+    rejected_at: assignment.rejectedAt,
+    rejected_by: assignment.rejectedBy,
+    rejection_reason: assignment.rejectionReason
+  };
+}
+
 export function mapTrainerEarning(row: any): TrainerEarning {
   return {
     id: row.id,
@@ -773,6 +805,7 @@ class DatabaseClient {
     trainer_applications: any[];
     assignment_logs: AssignmentLog[];
     slot_reservations: any[];
+    trainer_workout_assignments: TrainerWorkoutAssignment[];
   } = {
     users: [],
     profiles: [],
@@ -790,7 +823,8 @@ class DatabaseClient {
     schedules: [],
     trainer_applications: [],
     assignment_logs: [],
-    slot_reservations: []
+    slot_reservations: [],
+    trainer_workout_assignments: []
   };
 
   private currentUserId: string | null = null;
@@ -895,8 +929,10 @@ class DatabaseClient {
       this.schema.earnings = (resEarnings.data || []).map(mapTrainerEarning);
       this.schema.trainer_applications = (resApps.data || []).map(mapTrainerApplication);
 
-      // Seed workouts and trainers in Supabase if database is empty
-      await this.seedData();
+      // Seed workouts and trainers in Supabase if database is empty (Development only)
+      if (typeof __DEV__ !== 'undefined' && __DEV__) {
+        await this.seedData();
+      }
 
       // Safely query slot_reservations (in case SQL migrations haven't run yet)
       try {
@@ -906,6 +942,16 @@ class DatabaseClient {
         }
       } catch (resErr) {
         console.log('[DEBUG-DB] slot_reservations table not yet configured:', resErr);
+      }
+
+      // Safely query trainer_workout_assignments
+      try {
+        const { data: resAssignments, error: resAssError } = await supabase.from('trainer_workout_assignments').select('*');
+        if (resAssignments && !resAssError) {
+          this.schema.trainer_workout_assignments = resAssignments.map(mapWorkoutAssignment);
+        }
+      } catch (resErr) {
+        console.log('[DEBUG-DB] trainer_workout_assignments table not yet configured:', resErr);
       }
 
       console.log('[DEBUG-DB] Database.load() completed successfully from Supabase.');
@@ -1084,6 +1130,36 @@ class DatabaseClient {
         await supabase.from('users').insert(mapDBUserToPostgres(trainerUser));
         mutated = true;
       }
+    }
+
+    // Seed workout assignments if empty
+    if (!this.schema.trainer_workout_assignments || this.schema.trainer_workout_assignments.length === 0) {
+      const initialAssignments: TrainerWorkoutAssignment[] = [];
+      const coachSpecs: Record<string, string[]> = {
+        'c-1': ['Strength', 'Boxing'],
+        'c-2': ['Mind & Body', 'Conditioning'],
+        'c-3': ['Boxing', 'Strength'],
+        'c-4': ['Cardio', 'Conditioning']
+      };
+
+      for (const coachId in coachSpecs) {
+        for (const cat of coachSpecs[coachId]) {
+          initialAssignments.push({
+            id: `twa-seed-${coachId}-${cat.replace(/ /g, '-')}`,
+            trainerId: coachId,
+            workoutCategory: cat,
+            status: 'APPROVED',
+            requestedAt: Date.now() - 1000 * 60 * 60 * 24 * 7, // 7 days ago
+            approvedAt: Date.now() - 1000 * 60 * 60 * 24 * 6,
+            approvedBy: 'admin-seed',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+      }
+      this.schema.trainer_workout_assignments = initialAssignments;
+      await supabase.from('trainer_workout_assignments').insert(initialAssignments.map(mapWorkoutAssignmentToPostgres));
+      mutated = true;
     }
 
     // Seed workouts if empty
@@ -1458,7 +1534,7 @@ class DatabaseClient {
     return this.schema.coaches;
   }
 
-  updateCoach(coachId: string, fields: Partial<Coach>): void {
+  async updateCoach(coachId: string, fields: Partial<Coach>): Promise<void> {
     let coach = this.schema.coaches.find(c => c.id === coachId);
     if (!coach) {
       const user = this.schema.users.find(u => u.id === coachId);
@@ -1489,7 +1565,10 @@ class DatabaseClient {
     
     const pgCoach = mapCoachToPostgres(coach);
     
-    supabase.from('trainers').upsert(pgCoach).then();
+    const { error } = await supabase.from('trainers').upsert(pgCoach);
+    if (error) {
+      throw new Error(`Failed to update trainer in database: ${error.message}`);
+    }
 
     this.save();
     this.log('UpdateCoach', `Upserted trainer record for ID ${coachId}`);
@@ -1587,14 +1666,12 @@ class DatabaseClient {
     if (!coach) throw new Error('Trainer not found.');
     if (coach.preferences?.online === false) throw new Error('Trainer is currently offline.');
 
-    // 2. Verify slot exists in Trainer's schedule and is Available & Unbooked
-    const schedule = (coach.preferences as any)?.weeklySchedule || [];
-    const dateObj = new Date(date);
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const dayOfWeek = days[dateObj.getDay()];
-    const slot = schedule.find((s: any) => s.day === dayOfWeek && s.time === time);
-    if (!slot || !slot.isAvailable || slot.isBooked) {
-      throw new Error('That slot has just become unavailable. Please choose another time.');
+    // 2. Verify slot is not disabled by trainer overrides
+    const overrides = coach.preferences?.availabilityOverrides || [];
+    const override = overrides.find(o => o.date === date && o.time === time);
+    const isAvailable = override ? override.isAvailable : true;
+    if (!isAvailable) {
+      throw new Error('This slot is no longer available. Please select another slot.');
     }
 
     // 3. Verify no conflicting bookings (Double Booking Check)
@@ -1602,7 +1679,7 @@ class DatabaseClient {
       b.trainerId === assignedTrainerId && b.status === 'upcoming' && b.date === date && b.time === time
     );
     if (isDoubleBooked) {
-      throw new Error('That slot has just become unavailable. Please choose another time.');
+      throw new Error('This slot is no longer available. Please select another slot.');
     }
 
     // 4. Slot Buffer Check (30 minutes travel buffer)
@@ -1673,12 +1750,17 @@ class DatabaseClient {
 
     // Write to Supabase (Atomically trigger)
     try {
-      await Promise.all([
+      const [resBooking, resProfile, resTx] = await Promise.all([
         supabase.from('bookings').insert(mapBookingToPostgres(newBooking)),
-        profile ? supabase.from('user_profiles').update({ credits_balance: profile.creditsBalance }).eq('user_id', userId) : Promise.resolve(),
+        profile ? supabase.from('user_profiles').update({ credits_balance: profile.creditsBalance }).eq('user_id', userId) : Promise.resolve({ error: null }),
         supabase.from('credit_transactions').insert(mapInvoiceToPostgres(tx, userId))
       ]);
-    } catch (dbErr) {
+
+      if (resBooking.error) throw resBooking.error;
+      if (resProfile.error) throw resProfile.error;
+      if (resTx.error) throw resTx.error;
+
+    } catch (dbErr: any) {
       // Rollback local state in case of database insert failure
       this.schema.bookings = this.schema.bookings.filter(b => b.id !== bookingId);
       this.schema.credit_transactions = this.schema.credit_transactions.filter(t => t.id !== tx.id);
@@ -1686,7 +1768,14 @@ class DatabaseClient {
         profile.creditsBalance = profile.creditsBalance + 1;
       }
       this.save();
-      throw new Error('Database write operation failed. Rolled back booking transaction.');
+      
+      console.error('[DB ERROR] addBookingWithValidation error:', dbErr);
+      
+      // Translate Postgres unique constraint violation
+      if (dbErr.code === '23505' || (dbErr.message && dbErr.message.includes('unique'))) {
+        throw new Error('This slot is no longer available. Please select another slot.');
+      }
+      throw new Error(dbErr.message || 'Database write operation failed. Rolled back booking transaction.');
     }
 
     this.log('AddBooking', `User ${userId} booked ${bookingData.workoutTitle} with OTP ${otp}`);
@@ -2547,7 +2636,7 @@ class DatabaseClient {
     console.log(`[ASSIGNMENT ENGINE EVENT] Booking ID: ${log.bookingId} | Trainer ID: ${log.trainerId} | Action: ${log.action.toUpperCase()} | Score: ${log.score.toFixed(1)} | Reason: ${log.reason}`);
   }
 
-  updateTrainerOnlineStatus(coachId: string, isOnline: boolean): void {
+  async updateTrainerOnlineStatus(coachId: string, isOnline: boolean): Promise<void> {
     const coach = this.schema.coaches.find(c => c.id === coachId);
     if (coach) {
       coach.isOnline = isOnline;
@@ -2556,18 +2645,161 @@ class DatabaseClient {
       } else {
         coach.preferences.online = isOnline;
       }
-      this.updateCoach(coachId, { preferences: coach.preferences });
+      await this.updateCoach(coachId, { preferences: coach.preferences });
     }
   }
 
-  updateTrainerPreferences(coachId: string, preferences: any): void {
+  async updateTrainerPreferences(coachId: string, preferences: any): Promise<void> {
     const coach = this.schema.coaches.find(c => c.id === coachId);
     if (coach) {
       coach.preferences = {
         ...(coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] }),
         ...preferences
       };
-      this.updateCoach(coachId, { preferences: coach.preferences });
+      await this.updateCoach(coachId, { preferences: coach.preferences });
+    }
+  }
+
+  // Workout Assignment queries and mutations
+  getWorkoutAssignments(trainerId: string): TrainerWorkoutAssignment[] {
+    return (this.schema.trainer_workout_assignments || []).filter(a => a.trainerId === trainerId);
+  }
+
+  async requestWorkoutAssignment(trainerId: string, category: string): Promise<void> {
+    const id = generateUUID('twa');
+    const newAssignment: TrainerWorkoutAssignment = {
+      id,
+      trainerId,
+      workoutCategory: category,
+      status: 'PENDING',
+      requestedAt: Date.now()
+    };
+    
+    if (!this.schema.trainer_workout_assignments) {
+      this.schema.trainer_workout_assignments = [];
+    }
+    
+    // Check if there is an existing PENDING or REMOVED request to update/replace
+    const existingIdx = this.schema.trainer_workout_assignments.findIndex(
+      a => a.trainerId === trainerId && a.workoutCategory === category
+    );
+    
+    if (existingIdx >= 0) {
+      this.schema.trainer_workout_assignments[existingIdx] = {
+        ...this.schema.trainer_workout_assignments[existingIdx],
+        status: 'PENDING',
+        requestedAt: Date.now(),
+        rejectedAt: undefined,
+        rejectionReason: undefined
+      };
+      const assignment = this.schema.trainer_workout_assignments[existingIdx];
+      const { error } = await supabase.from('trainer_workout_assignments').upsert(mapWorkoutAssignmentToPostgres(assignment));
+      if (error) {
+        throw new Error(`Failed to submit request in database: ${error.message}`);
+      }
+    } else {
+      this.schema.trainer_workout_assignments.unshift(newAssignment);
+      const { error } = await supabase.from('trainer_workout_assignments').insert(mapWorkoutAssignmentToPostgres(newAssignment));
+      if (error) {
+        // Rollback local change if DB call fails
+        this.schema.trainer_workout_assignments.shift();
+        throw new Error(`Failed to insert request in database: ${error.message}`);
+      }
+    }
+    
+    await this.save();
+    this.log('RequestWorkoutAssignment', `Trainer ${trainerId} requested assignment for ${category}.`);
+  }
+
+  async requestWorkoutRemoval(trainerId: string, category: string): Promise<void> {
+    if (!this.schema.trainer_workout_assignments) return;
+    const assignment = this.schema.trainer_workout_assignments.find(
+      a => a.trainerId === trainerId && a.workoutCategory === category && a.status === 'APPROVED'
+    );
+    if (assignment) {
+      const prevStatus = assignment.status;
+      assignment.status = 'REMOVAL_REQUESTED';
+      assignment.updatedAt = new Date().toISOString();
+      const { error } = await supabase.from('trainer_workout_assignments')
+        .update({ status: 'REMOVAL_REQUESTED' })
+        .eq('id', assignment.id);
+      
+      if (error) {
+        assignment.status = prevStatus; // Rollback
+        throw new Error(`Failed to request removal in database: ${error.message}`);
+      }
+      
+      await this.save();
+      this.log('RequestWorkoutRemoval', `Trainer ${trainerId} requested removal of ${category}.`);
+    }
+  }
+
+  async adminApproveAssignment(assignmentId: string, adminId: string): Promise<void> {
+    if (!this.schema.trainer_workout_assignments) return;
+    const assignment = this.schema.trainer_workout_assignments.find(a => a.id === assignmentId);
+    if (assignment) {
+      const isRemoval = assignment.status === 'REMOVAL_REQUESTED';
+      assignment.status = isRemoval ? 'REMOVED' : 'APPROVED';
+      assignment.approvedAt = Date.now();
+      assignment.approvedBy = adminId;
+      assignment.updatedAt = new Date().toISOString();
+
+      // Update in Supabase
+      const { error } = await supabase.from('trainer_workout_assignments')
+        .update(mapWorkoutAssignmentToPostgres(assignment))
+        .eq('id', assignmentId);
+
+      if (error) {
+        throw new Error(`Failed to approve assignment in database: ${error.message}`);
+      }
+
+      // Update trainer categories in Supabase/local cache
+      const coach = this.schema.coaches.find(c => c.id === assignment.trainerId);
+      if (coach) {
+        const currentCats = coach.preferences?.categories || [];
+        let updatedCats = [...currentCats];
+        if (isRemoval) {
+          updatedCats = updatedCats.filter(cat => cat !== assignment.workoutCategory);
+        } else {
+          if (!updatedCats.includes(assignment.workoutCategory)) {
+            updatedCats.push(assignment.workoutCategory);
+          }
+        }
+        
+        const updatedPrefs = {
+          ...(coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] }),
+          categories: updatedCats
+        };
+        await this.updateCoach(coach.id, { preferences: updatedPrefs });
+      }
+
+      await this.save();
+      this.log('ApproveWorkoutAssignment', `Admin ${adminId} approved ${assignment.workoutCategory} for trainer ${assignment.trainerId} (Result: ${assignment.status}).`);
+    }
+  }
+
+  async adminRejectAssignment(assignmentId: string, adminId: string, reason: string): Promise<void> {
+    if (!this.schema.trainer_workout_assignments) return;
+    const assignment = this.schema.trainer_workout_assignments.find(a => a.id === assignmentId);
+    if (assignment) {
+      const prevStatus = assignment.status;
+      assignment.status = prevStatus === 'REMOVAL_REQUESTED' ? 'APPROVED' : 'REJECTED';
+      assignment.rejectedAt = Date.now();
+      assignment.rejectedBy = adminId;
+      assignment.rejectionReason = reason;
+      assignment.updatedAt = new Date().toISOString();
+
+      // Update in Supabase
+      const { error } = await supabase.from('trainer_workout_assignments')
+        .update(mapWorkoutAssignmentToPostgres(assignment))
+        .eq('id', assignmentId);
+
+      if (error) {
+        throw new Error(`Failed to reject assignment: ${error.message}`);
+      }
+
+      await this.save();
+      this.log('RejectWorkoutAssignment', `Admin ${adminId} rejected ${assignment.workoutCategory} request for trainer ${assignment.trainerId}. Reason: ${reason}`);
     }
   }
 }

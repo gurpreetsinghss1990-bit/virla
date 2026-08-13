@@ -34,8 +34,10 @@ export class AssignmentEngine {
       
       // Eligibility Rule 1: Centralized category mapping check
       const targetCategory = getCategoryFromTitle(booking.workoutTitle);
-      const restrictedCategories = coach.preferences?.categories || [];
-      if (!restrictedCategories.includes(targetCategory)) continue;
+      const assignments = Database.getWorkoutAssignments(coach.id);
+      const isCategoryApproved = assignments.some(a => a.workoutCategory === targetCategory && a.status === 'APPROVED');
+      const acceptsAll = assignments.some(a => a.workoutCategory === 'All Workouts' && a.status === 'APPROVED');
+      if (!acceptsAll && !isCategoryApproved) continue;
 
       // Eligibility Rule 2: Online status
       const isOnline = coach.preferences?.online !== false;

@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
 import { useMembershipStore } from '../store/membershipStore';
 import { useAddressStore } from '../store/addressStore';
-import { useCoachStore } from '../store/coachStore';
+import { useCoachStore, generateMonthlySlots } from '../store/coachStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useUserStore } from '../store/userStore';
 import { EmptyState, ApplePayConfirmation, BookingSuccessAnimation } from '../components';
@@ -229,11 +229,14 @@ export default function BookingScreen() {
     if (!targetCategory) return [];
 
     const eligibleCoaches = coaches.filter(coach => {
+      if (trainerPref === 'favourite' && selectedTrainerId && coach.id !== selectedTrainerId) return false;
       if (coach.preferences?.online === false) return false;
       if (coach.verifiedBadge === false) return false;
 
-      const categories = coach.preferences?.categories || [];
-      if (!categories.includes(targetCategory)) return false;
+      const assignments = Database.getWorkoutAssignments(coach.id);
+      const isApproved = assignments.some(a => a.workoutCategory === targetCategory && a.status === 'APPROVED');
+      const acceptsAll = assignments.some(a => a.workoutCategory === 'All Workouts' && a.status === 'APPROVED');
+      if (!acceptsAll && !isApproved) return false;
 
       const distance = AssignmentEngine.getSimulatedDistance(coach.id, 'temp-booking');
       const radiusLimit = coach.preferences?.radiusKm || 15;
@@ -251,13 +254,30 @@ export default function BookingScreen() {
       return true;
     });
 
-    if (eligibleCoaches.length === 0) return [];
+    const targetDateObj = new Date(selectedDate);
+    const targetMonth = targetDateObj.getMonth();
+    const targetYear = targetDateObj.getFullYear();
+
+    const monthlyDaySlots = generateMonthlySlots(targetMonth, targetYear);
+    const defaultDaySlots = monthlyDaySlots.find(d => d.date === selectedDate)?.slots || [];
 
     const aggregatedSlotsMap: Record<string, { slot: any; trainers: typeof eligibleCoaches }> = {};
 
     for (const coach of eligibleCoaches) {
-      const schedule = (coach.preferences as any)?.weeklySchedule || [];
-      const dailySlots = schedule.filter((s: any) => s.day === selectedDayOfWeek && s.isAvailable && !s.isBooked);
+      const overrides = coach.preferences?.availabilityOverrides || [];
+      const dailySlots = defaultDaySlots.map(slot => {
+        const override = overrides.find(o => o.date === selectedDate && o.time === slot.time);
+        const isAvailable = override ? override.isAvailable : true;
+        const slotCategory = override?.category || '';
+        return {
+          ...slot,
+          isAvailable,
+          category: slotCategory
+        };
+      }).filter((s: any) => 
+        s.isAvailable && 
+        (!s.category || s.category === targetCategory)
+      );
 
       for (const slot of dailySlots) {
         const hasBooking = bookings.some(b => 
@@ -659,6 +679,7 @@ export default function BookingScreen() {
       assignedTrainersPool: [activeCoach.id],
       currentTrainerIndex: 0,
       trainerNote: trainerNote.trim() || undefined,
+      durationMinutes: selectedExperience.duration || 60,
       createdAt: Date.now(),
     };
 
@@ -667,11 +688,21 @@ export default function BookingScreen() {
         // Enforce mid-flow slot availability check before confirmation
         const freshCoaches = Database.getCoaches();
         const freshCoach = freshCoaches.find(c => c.id === activeCoach.id);
-        const dayOfWeek = new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'short' }); // e.g. "Mon"
-        const freshSlot = (freshCoach?.preferences as any)?.weeklySchedule?.find((s: any) => s.day.startsWith(dayOfWeek) && s.time === selectedTime);
         
-        if (!freshSlot || !freshSlot.isAvailable || freshSlot.isBooked) {
-          throw new Error('That slot has just become unavailable. Please choose another time.');
+        const overrides = freshCoach?.preferences?.availabilityOverrides || [];
+        const override = overrides.find(o => o.date === selectedDate && o.time === selectedTime);
+        const isAvailable = override ? override.isAvailable : true;
+        
+        const bookings = Database.schema.bookings || [];
+        const isBooked = bookings.some((b: any) => 
+          b.trainerId === activeCoach.id && 
+          b.date === selectedDate && 
+          b.time === selectedTime && 
+          b.status === 'upcoming'
+        );
+        
+        if (!isAvailable || isBooked) {
+          throw new Error('This slot is no longer available. Please select another slot.');
         }
 
         // Call transactional add with validations

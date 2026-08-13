@@ -1,28 +1,57 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { useCoachStore } from '../store/coachStore';
-import { useUserStore } from '../store/userStore';
-import { Database } from '../database/Database';
-import { ProgressRing } from '../components/ProgressRing';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import { useUserStore } from '../store/userStore';
+import { useCoachStore, generateMonthlySlots } from '../store/coachStore';
+import { Database } from '../database/Database';
 
 export default function TrainerAvailabilityScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useUserStore();
+  
   const { 
-    weeklySchedule, 
-    remainingSlotChanges, 
-    toggleSlotAvailability, 
-    editScheduleSlot,
     coaches,
-    syncFromDB
+    syncFromDB,
+    availabilityOverrides,
+    toggleMonthlySlotAvailability,
+    updateMonthlySlotCategory,
+    disableAllSlotsForDay,
+    enableAllSlotsForDay
   } = useCoachStore();
 
-  const coach = coaches.find(c => c.name === user.name) || coaches[0];
+  const coach = coaches.find(c => c.id === user.id || c.name === user.name);
+
+  if (!coach) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#F7F8FC', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        <ActivityIndicator size="small" color="#4F46E5" />
+        <Text className="text-zinc-500 text-xs font-bold text-center mt-4">
+          Unable to load availability
+        </Text>
+        <TouchableOpacity 
+          onPress={() => syncFromDB()} 
+          className="mt-6 bg-zinc-950 py-3 px-6 rounded-xl shadow-md"
+        >
+          <Text className="text-white text-xs font-black uppercase tracking-wider">Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   const prefs = coach?.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] };
+
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedDay, setSelectedDay] = useState(new Date().getDate());
+
+  const monthsNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const dateStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
 
   const toggleOnline = () => {
     if (!coach) return;
@@ -70,117 +99,86 @@ export default function TrainerAvailabilityScreen() {
     );
   };
 
-  const handleUpdateCategories = () => {
-    if (!coach) return;
-    const availableCategories = ['Strength', 'Mind & Body', 'Cardio', 'Conditioning', 'Boxing'];
+  const handlePrevMonth = () => {
+    if (selectedMonth === 0) {
+      setSelectedMonth(11);
+      setSelectedYear(selectedYear - 1);
+    } else {
+      setSelectedMonth(selectedMonth - 1);
+    }
+    setSelectedDay(1);
+  };
+
+  const handleNextMonth = () => {
+    if (selectedMonth === 11) {
+      setSelectedMonth(0);
+      setSelectedYear(selectedYear + 1);
+    } else {
+      setSelectedMonth(selectedMonth + 1);
+    }
+    setSelectedDay(1);
+  };
+
+  const handleEditTimeSlot = (time: string, currentCategory: string) => {
+    const availableCategories = ['Strength', 'Mind & Body', 'Cardio', 'Conditioning', 'Boxing', 'Any Workout'];
     Alert.alert(
-      'Workout Specializations',
-      'Toggle restricted category requirements:',
+      'Select Category Restriction',
+      'Set the allowed workout category for this slot:',
       [
         { text: 'Cancel', style: 'cancel' },
-        ...availableCategories.map(cat => {
-          const isSelected = prefs.categories?.includes(cat);
-          return {
-            text: `${isSelected ? '✓' : '➕'} ${cat}`,
-            onPress: () => {
-              const updated = isSelected
-                ? prefs.categories.filter((c: string) => c !== cat)
-                : [...(prefs.categories || []), cat];
-              Database.updateTrainerPreferences(coach.id, { categories: updated });
-              syncFromDB();
-            }
-          };
-        })
+        ...availableCategories.map(cat => ({
+          text: cat,
+          onPress: () => {
+            updateMonthlySlotCategory(coach.id, dateStr, time, cat === 'Any Workout' ? '' : cat);
+            Alert.alert('Category Updated', `Slot category preference set to ${cat}.`);
+          }
+        }))
       ]
     );
   };
 
-  const [activeDay, setActiveDay] = useState('Mon');
-  const daysList = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  // Generate slots dynamically for the selected date
+  const allMonthlyDays = generateMonthlySlots(selectedMonth, selectedYear);
+  const daySlotsData = allMonthlyDays.find(d => d.date === dateStr)?.slots || [];
 
-  // Current statistics (Sprint 7.1 Promotion metrics)
-  const sessionsCompleted = 420;
-  const sessionsReq = 500;
-  const averageRating = 4.91;
-  const ratingReq = 4.90;
-  const attendanceRate = 98;
-  const attendanceReq = 98;
-  const punctualityRate = 99;
-  const punctualityReq = 99;
+  const bookings = Database.schema.bookings || [];
+  const reservations = Database.schema.slot_reservations || [];
 
-  // Validation rules check
-  const isSessionsValid = sessionsCompleted >= sessionsReq;
-  const isRatingValid = averageRating >= ratingReq;
-  const isAttendanceValid = attendanceRate >= attendanceReq;
-  const isPunctualityValid = punctualityRate >= punctualityReq;
-
-  // Overall status check (requires ALL parameters to be qualified)
-  const isEligibleForPromotion = isSessionsValid && isRatingValid && isAttendanceValid && isPunctualityValid;
-  const promotionStatus = isEligibleForPromotion 
-    ? 'Eligible for Promotion' 
-    : (!isSessionsValid || !isRatingValid || !isAttendanceValid || !isPunctualityValid) 
-    ? 'Promotion On Hold' 
-    : 'Keep Going';
-
-  // Calculate current active slots in the schedule
-  const activeSlots = weeklySchedule.filter(s => s.isAvailable);
-  const activePrimeCount = activeSlots.filter(s => s.isPrime).length;
-  const activeOffPeakCount = activeSlots.filter(s => !s.isPrime).length;
-  const totalActiveCount = activeSlots.length;
-
-  // Retainer Rules: Min 24 Prime, Min 12 Off-Peak, Total 36
-  const isRetainerEligible = activePrimeCount >= 24 && activeOffPeakCount >= 12 && totalActiveCount >= 36;
-
-  // Filter slots for active display day
-  const dailySlots = weeklySchedule.filter(s => s.day === activeDay);
-
-  // Time slots database to allow edits
-  const primeOptions = [
-    '07:00 AM - 08:00 AM',
-    '08:00 AM - 09:00 AM',
-    '05:00 PM - 06:00 PM',
-    '06:00 PM - 07:00 PM'
-  ];
-
-  const offPeakOptions = [
-    '09:00 AM - 10:00 AM',
-    '10:00 AM - 11:00 AM',
-    '11:00 AM - 12:00 PM',
-    '12:00 PM - 01:00 PM',
-    '02:00 PM - 03:00 PM',
-    '03:00 PM - 04:00 PM',
-    '04:00 PM - 05:00 PM',
-    '07:00 PM - 08:00 PM',
-    '09:00 PM - 10:00 PM'
-  ];
-
-  const handleEditTimeSlot = (slotId: string, currentIsPrime: boolean, currentTime: string) => {
-    const options = currentIsPrime ? primeOptions : offPeakOptions;
-    const filteredOptions = options.filter(t => t !== currentTime);
-
-    Alert.alert(
-      'Replace Time Slot',
-      `Select a new ${currentIsPrime ? 'Prime' : 'Off-Peak'} slot to replace this.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        ...filteredOptions.map((timeOption) => ({
-          text: timeOption,
-          onPress: () => {
-            const success = editScheduleSlot(slotId, timeOption);
-            if (success) {
-              Alert.alert('Slot Updated', `Time slot updated to: ${timeOption}. Remaining Changes: ${remainingSlotChanges - 1}/2`);
-            }
-          }
-        })),
-        {
-          text: `Replace with ${currentIsPrime ? 'Off-Peak' : 'Prime'} (Test Policy Check)`,
-          onPress: () => {
-            Alert.alert('Policy Rejection ⚠️', `Prime slots can only be replaced with another Prime slot, and Off-Peak with Off-Peak to preserve retainer compliance.`);
-          }
-        }
-      ]
+  const dailySlots = daySlotsData.map(slot => {
+    // 1. Check if booked
+    const isBooked = bookings.some((b: any) => 
+      b.trainerId === coach.id && 
+      b.date === dateStr && 
+      b.time === slot.time && 
+      b.status === 'upcoming'
     );
-  };
+
+    // 2. Check if reserved
+    const isReserved = reservations.some((r: any) =>
+      r.trainer_id === coach.id &&
+      r.slot_date === dateStr &&
+      r.slot_time === slot.time &&
+      r.expires_at > Date.now()
+    );
+
+    // 3. Find if override exists
+    const override = availabilityOverrides.find(o => o.date === dateStr && o.time === slot.time);
+    
+    // 4. Default available is true, overridden is false
+    const isAvailable = override ? override.isAvailable : true;
+    const category = override?.category || '';
+
+    return {
+      id: slot.id,
+      time: slot.time,
+      isAvailable,
+      isBooked: isBooked || isReserved,
+      category
+    };
+  });
+
+  const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+  const dayNumbers = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
@@ -190,132 +188,34 @@ export default function TrainerAvailabilityScreen() {
           <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
-          Weekly Availability
+          Monthly Availability
         </Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 100 }}>
         <View className="gap-6">
 
-          {/* Section 1: Promotion Progress Card (Feature 3) */}
+          {/* Section: Monthly Summary */}
           <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
             <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
-              <View>
-                <Text className="text-zinc-400 text-[8px] font-black uppercase">Current Rank</Text>
-                <Text className="text-zinc-900 text-sm font-black mt-0.5">Associate Trainer</Text>
-              </View>
-              <View className="bg-indigo-50 border border-indigo-150 px-2.5 py-0.5 rounded-full">
-                <Text className="text-[#4F46E5] text-[8px] font-black uppercase tracking-wider">Progress to Certified</Text>
+              <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Commission Model Summary</Text>
+              <View className="bg-emerald-50 border border-emerald-150 px-2 py-0.5 rounded-full">
+                <Text className="text-emerald-600 text-[8px] font-black uppercase tracking-widest">Active Model</Text>
               </View>
             </View>
-
-            <View className="flex-row items-center justify-center py-2 gap-6">
-              {/* Circular progress ring representing completed sessions progress (420/500 = 84%) */}
-              <ProgressRing progress={sessionsCompleted / sessionsReq} size={88} strokeWidth={8} activeColor="#4F46E5">
-                <View className="items-center justify-center">
-                  <Text className="text-[#101828] text-base font-black">84%</Text>
-                  <Text className="text-zinc-400 text-[6px] font-black uppercase mt-0.5">Complete</Text>
-                </View>
-              </ProgressRing>
-
-              {/* Promotion Requirement Checklist */}
-              <View className="flex-1 gap-2">
-                <View className="flex-row justify-between items-center border-b border-zinc-50 pb-1">
-                  <Text className="text-zinc-500 text-[9px] font-bold">Sessions: {sessionsCompleted} / {sessionsReq}</Text>
-                  <Text className={`text-[10px] font-black ${isSessionsValid ? 'text-green-600' : 'text-red-500'}`}>
-                    {isSessionsValid ? '✓' : '✗'}
-                  </Text>
-                </View>
-                <View className="flex-row justify-between items-center border-b border-zinc-50 pb-1">
-                  <Text className="text-zinc-500 text-[9px] font-bold">Rating: {averageRating} / {ratingReq}</Text>
-                  <Text className={`text-[10px] font-black ${isRatingValid ? 'text-green-600' : 'text-red-500'}`}>
-                    {isRatingValid ? '✓' : '✗'}
-                  </Text>
-                </View>
-                <View className="flex-row justify-between items-center border-b border-zinc-50 pb-1">
-                  <Text className="text-zinc-500 text-[9px] font-bold">Attendance: {attendanceRate}% / {attendanceReq}%</Text>
-                  <Text className={`text-[10px] font-black ${isAttendanceValid ? 'text-green-600' : 'text-red-500'}`}>
-                    {isAttendanceValid ? '✓' : '✗'}
-                  </Text>
-                </View>
-                <View className="flex-row justify-between items-center">
-                  <Text className="text-zinc-500 text-[9px] font-bold">Punctuality: {punctualityRate}% / {punctualityReq}%</Text>
-                  <Text className={`text-[10px] font-black ${isPunctualityValid ? 'text-green-600' : 'text-red-500'}`}>
-                    {isPunctualityValid ? '✓' : '✗'}
-                  </Text>
-                </View>
+            <View className="gap-3">
+              <View className="flex-row justify-between items-center py-2 border-b border-zinc-50">
+                <Text className="text-zinc-500 text-xs font-semibold">Base Earnings</Text>
+                <Text className="text-zinc-900 text-xs font-black">80% Commission per Session</Text>
               </View>
-            </View>
-
-            <View className="h-[1px] bg-zinc-100 my-1" />
-
-            <View className="flex-row justify-between items-center px-1">
-              <Text className="text-zinc-400 text-[8px] font-black uppercase">Overall Promotion Status</Text>
-              <View className={`px-2.5 py-0.5 rounded-full ${
-                promotionStatus === 'Eligible for Promotion' 
-                  ? 'bg-emerald-50 border border-emerald-150' 
-                  : 'bg-amber-50 border border-amber-150'
-              }`}>
-                <Text className={`text-[8px] font-black uppercase ${
-                  promotionStatus === 'Eligible for Promotion' ? 'text-emerald-600' : 'text-amber-600'
-                }`}>
-                  {promotionStatus}
-                </Text>
+              <View className="flex-row justify-between items-center py-2">
+                <Text className="text-zinc-500 text-xs font-semibold">Availability Policy</Text>
+                <Text className="text-zinc-900 text-xs font-black">Available by default</Text>
               </View>
             </View>
           </View>
 
-          {/* Section 2: Availability Retainer Monthly Status Dashboard (Feature 4) */}
-          <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
-            <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
-              <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Availability Retainer</Text>
-              <View className="bg-red-50 border border-red-150 px-2 py-0.5 rounded-full">
-                <Text className="text-red-500 text-[8px] font-black uppercase tracking-widest">Monthly Status</Text>
-              </View>
-            </View>
-
-            <View className="gap-3 px-1">
-              <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
-                <Text className="text-zinc-500 text-xs font-semibold">Week 1 Status</Text>
-                <Text className="text-green-600 text-xs font-black">Qualified ✓</Text>
-              </View>
-              
-              <View className="border-b border-zinc-50 pb-2">
-                <View className="flex-row justify-between items-center">
-                  <Text className="text-zinc-500 text-xs font-semibold">Week 2 Status</Text>
-                  <Text className="text-red-500 text-xs font-black">Missed Prime Slots ✗</Text>
-                </View>
-                <Text className="text-red-400 text-[8px] font-bold uppercase mt-0.5 pl-0.5">⚠️ Reason: Only 22 Prime Slots Submitted</Text>
-              </View>
-
-              <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
-                <Text className="text-zinc-500 text-xs font-semibold">Week 3 Status</Text>
-                <Text className="text-green-600 text-xs font-black">Qualified ✓</Text>
-              </View>
-
-              <View className="pb-1">
-                <View className="flex-row justify-between items-center">
-                  <Text className="text-zinc-500 text-xs font-semibold">Week 4 Status</Text>
-                  <Text className="text-[#4F46E5] text-xs font-black">Pending ⏰</Text>
-                </View>
-                <Text className="text-indigo-400 text-[8px] font-bold uppercase mt-0.5 pl-0.5">⚠️ Reason: Only 10 Off Peak Slots Submitted</Text>
-              </View>
-
-              <View className="h-[1px] bg-zinc-150 my-2" />
-
-              <View className="flex-row justify-between items-center bg-red-50/50 p-3.5 rounded-xl">
-                <View>
-                  <Text className="text-zinc-400 text-[7px] font-black uppercase">Current Month Payout Result</Text>
-                  <Text className="text-red-700 text-xs font-black mt-0.5">Not Eligible</Text>
-                </View>
-                <Text className="text-red-500 text-[8px] font-black uppercase text-right leading-relaxed max-w-[50%]">
-                  Missed Prime Slot minimum compliance in Week 2.
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Section: Trainer Preferences */}
+          {/* Section: Trainer Settings */}
           <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
             <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
               <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Operational Settings</Text>
@@ -370,56 +270,99 @@ export default function TrainerAvailabilityScreen() {
 
               {/* Workout Categories */}
               <TouchableOpacity
-                onPress={handleUpdateCategories}
+                onPress={() => router.push('/trainer-workouts')}
                 activeOpacity={0.8}
                 className="flex-row justify-between items-center py-2"
               >
                 <View className="flex-1 pr-3">
                   <Text className="text-zinc-900 text-xs font-black">workout categories</Text>
-                  <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Restrict incoming session categories</Text>
+                  <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Manage approved categories & requests</Text>
                 </View>
                 <Text className="text-[#4F46E5] text-[10px] font-black uppercase">
-                  {prefs.categories && prefs.categories.length > 0 ? prefs.categories.join(', ') : 'All Workouts'}
+                  Manage Workouts
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Section 3: Schedule edit policy info */}
-          <View className="bg-zinc-50 border border-zinc-150 p-4.5 rounded-[24px] flex-row justify-between items-center">
-            <View className="flex-row items-center gap-2.5">
-              <Feather name="edit-3" size={14} color="#4F46E5" />
-              <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Slot Edit Allowance</Text>
-            </View>
-            <View className="bg-zinc-950 border border-zinc-800 px-3 py-1 rounded-lg">
-              <Text className="text-amber-400 text-[9px] font-black uppercase tracking-wider">
-                Remaining Changes: {remainingSlotChanges}/2
+          {/* Month Navigation Control */}
+          <View className="bg-zinc-950 border border-zinc-800 p-4.5 rounded-[24px] flex-row justify-between items-center">
+            <TouchableOpacity onPress={handlePrevMonth} className="w-8 h-8 items-center justify-center bg-zinc-800 rounded-full">
+              <Feather name="chevron-left" size={16} color="white" />
+            </TouchableOpacity>
+            <Text className="text-white text-xs font-black uppercase tracking-wider">
+              {monthsNames[selectedMonth]} {selectedYear}
+            </Text>
+            <TouchableOpacity onPress={handleNextMonth} className="w-8 h-8 items-center justify-center bg-zinc-800 rounded-full">
+              <Feather name="chevron-right" size={16} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Calendar Strip (Days selector list) */}
+          <View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              className="flex-row py-2"
+            >
+              {dayNumbers.map(dayNum => {
+                const isSelected = selectedDay === dayNum;
+                const dateObj = new Date(selectedYear, selectedMonth, dayNum);
+                const daysOfWeekNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const dayOfWeek = daysOfWeekNames[dateObj.getDay()];
+                return (
+                  <TouchableOpacity
+                    key={dayNum}
+                    activeOpacity={0.8}
+                    onPress={() => setSelectedDay(dayNum)}
+                    className={`px-4.5 py-3.5 mx-1 rounded-[18px] items-center justify-center border ${
+                      isSelected 
+                        ? 'bg-zinc-950 border-zinc-900 shadow-sm' 
+                        : 'bg-white border-zinc-150'
+                    }`}
+                  >
+                    <Text className={`text-[9px] font-black uppercase tracking-wider ${isSelected ? 'text-indigo-400' : 'text-zinc-400'}`}>
+                      {dayOfWeek}
+                    </Text>
+                    <Text className={`text-sm font-black mt-1 ${isSelected ? 'text-white' : 'text-zinc-900'}`}>
+                      {dayNum}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          {/* Bulk Controls */}
+          <View className="flex-row gap-3">
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => {
+                disableAllSlotsForDay(coach.id, dateStr);
+                Alert.alert('Day Disabled', 'All slots for this day have been disabled.');
+              }}
+              className="flex-1 py-3 border border-zinc-200 bg-zinc-50 rounded-xl items-center justify-center"
+            >
+              <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">
+                Disable Entire Day
               </Text>
-            </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => {
+                enableAllSlotsForDay(coach.id, dateStr);
+                Alert.alert('Day Enabled', 'All slots for this day have been re-enabled.');
+              }}
+              className="flex-1 py-3 bg-indigo-600 rounded-xl items-center justify-center"
+            >
+              <Text className="text-white text-xs font-black uppercase tracking-wider">
+                Enable Entire Day
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Section 4: Day Selector Tabs */}
-          <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1 rounded-2xl">
-            {daysList.map((day) => {
-              const isAct = activeDay === day;
-              return (
-                <TouchableOpacity
-                  key={day}
-                  activeOpacity={0.8}
-                  onPress={() => setActiveDay(day)}
-                  className={`flex-1 py-2.5 rounded-xl items-center justify-center ${
-                    isAct ? 'bg-[#101828] shadow-xs' : ''
-                  }`}
-                >
-                  <Text className={`text-[9px] font-black uppercase tracking-wider ${isAct ? 'text-white' : 'text-[#6B7280]'}`}>
-                    {day}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* Section 5: Planner Grid Slots details */}
+          {/* Availability Planner Slots grid */}
           <View className="gap-3.5">
             {dailySlots.map((slot) => {
               return (
@@ -432,7 +375,7 @@ export default function TrainerAvailabilityScreen() {
                   <TouchableOpacity
                     activeOpacity={0.8}
                     disabled={slot.isBooked}
-                    onPress={() => toggleSlotAvailability(slot.id)}
+                    onPress={() => toggleMonthlySlotAvailability(coach.id, dateStr, slot.time)}
                     className="flex-row items-center gap-3.5 flex-1 pr-4"
                   >
                     {/* Checkbox box indicator */}
@@ -452,29 +395,33 @@ export default function TrainerAvailabilityScreen() {
 
                     <View className="gap-1 flex-1">
                       <Text className={`text-xs font-black ${
-                        slot.isBooked ? 'text-zinc-400' : slot.isAvailable ? 'text-zinc-950' : 'text-zinc-500'
+                        slot.isBooked ? 'text-zinc-400' : slot.isAvailable ? 'text-zinc-950' : 'text-zinc-500 font-bold line-through'
                       }`}>
                         {slot.time}
                       </Text>
                       <View className="flex-row items-center gap-1.5 mt-0.5">
-                        <Text className={`text-[8px] font-black uppercase ${slot.isPrime ? 'text-amber-500' : 'text-zinc-400'}`}>
-                          {slot.isPrime ? '★ Prime Slot' : 'Off-Peak Slot'}
+                        <Text className={`text-[8px] font-black uppercase ${slot.isAvailable ? 'text-[#4F46E5]' : 'text-zinc-400'}`}>
+                          {slot.isAvailable ? 'Available' : 'Unavailable'}
+                        </Text>
+                        <Text className="text-zinc-300 text-[8px]">•</Text>
+                        <Text className="text-zinc-500 text-[8px] font-black uppercase">
+                          {slot.category || 'Any Workout'}
                         </Text>
                         {slot.isBooked && (
                           <>
                             <Text className="text-zinc-300 text-[8px]">•</Text>
-                            <Text className="text-indigo-600 text-[8px] font-black uppercase">Booked Session</Text>
+                            <Text className="text-red-500 text-[8px] font-black uppercase">Booked Session</Text>
                           </>
                         )}
                       </View>
                     </View>
                   </TouchableOpacity>
 
-                  {/* Edit Slot Time trigger */}
+                  {/* Configure category trigger */}
                   {!slot.isBooked && slot.isAvailable && (
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      onPress={() => handleEditTimeSlot(slot.id, slot.isPrime, slot.time)}
+                      onPress={() => handleEditTimeSlot(slot.time, slot.category)}
                       className="bg-zinc-50 border border-zinc-150 w-8 h-8 rounded-full items-center justify-center shadow-xs"
                     >
                       <Feather name="edit-2" size={12} color="#6B7280" />

@@ -1,5 +1,5 @@
 import { supabase } from '../database/supabaseClient';
-import { Database, mapBooking, mapCoach, mapChatMessage, mapNotificationItem } from '../database/Database';
+import { Database, mapBooking, mapCoach, mapChatMessage, mapNotificationItem, mapWorkoutAssignment } from '../database/Database';
 import { useBookingStore } from '../store/bookingStore';
 import { useCoachStore } from '../store/coachStore';
 import { useNotificationStore } from '../store/notificationStore';
@@ -89,11 +89,41 @@ export function setupRealtimeSubscriptions() {
         if (idx === -1) {
           Database.schema.slot_reservations.push(newRow);
         }
+      } else if (eventType === 'UPDATE') {
+        const idx = Database.schema.slot_reservations.findIndex((r: any) => r.id === newRow.id);
+        if (idx >= 0) {
+          Database.schema.slot_reservations[idx] = newRow;
+        } else {
+          Database.schema.slot_reservations.push(newRow);
+        }
       } else if (eventType === 'DELETE') {
         Database.schema.slot_reservations = Database.schema.slot_reservations.filter((r: any) => r.id !== oldRow.id);
       }
       
       // Notify stores
+      useBookingStore.getState().syncFromDB();
+    })
+    // 6. Listen to Trainer Workout Assignments changes
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'trainer_workout_assignments' }, (payload: any) => {
+      console.log('[REALTIME] postgres_change Event on Trainer Workout Assignments:', payload);
+      const { eventType, new: newRow, old: oldRow } = payload;
+      if (eventType === 'INSERT' || eventType === 'UPDATE') {
+        const mapped = mapWorkoutAssignment(newRow);
+        if (!Database.schema.trainer_workout_assignments) {
+          Database.schema.trainer_workout_assignments = [];
+        }
+        const idx = Database.schema.trainer_workout_assignments.findIndex((a: any) => a.id === mapped.id);
+        if (idx >= 0) {
+          Database.schema.trainer_workout_assignments[idx] = mapped;
+        } else {
+          Database.schema.trainer_workout_assignments.unshift(mapped);
+        }
+      } else if (eventType === 'DELETE') {
+        Database.schema.trainer_workout_assignments = (Database.schema.trainer_workout_assignments || []).filter((a: any) => a.id !== oldRow.id);
+      }
+      
+      // Notify stores to re-sync
+      useCoachStore.getState().syncFromDB();
       useBookingStore.getState().syncFromDB();
     })
     let isInitialSubscription = true;

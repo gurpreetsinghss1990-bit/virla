@@ -1,7 +1,7 @@
 
 
 import { create } from 'zustand';
-import { Coach, TrainerEarning, ScheduleSlot } from '../types';
+import { Coach, TrainerEarning, ScheduleSlot, AvailabilityOverride, TrainerWorkoutAssignment } from '../types';
 import { Alert } from 'react-native';
 import { Database } from '../database/Database';
 
@@ -17,39 +17,91 @@ interface CoachState {
   addEarning: (earning: Omit<TrainerEarning, 'id' | 'date'>) => void;
   restoreAvailabilitySlot: (slot: string) => void;
 
-  // Sprint 7 availability planner
-  weeklySchedule: ScheduleSlot[];
-  remainingSlotChanges: number;
-  isScheduleSubmitted: boolean;
-  toggleSlotAvailability: (slotId: string) => void;
-  editScheduleSlot: (slotId: string, newTime: string) => boolean;
-  submitSchedule: () => void;
+  // Commission availability overrides
+  availabilityOverrides: AvailabilityOverride[];
+  workoutAssignments: TrainerWorkoutAssignment[];
+  toggleMonthlySlotAvailability: (trainerId: string, date: string, time: string) => Promise<void>;
+  updateMonthlySlotCategory: (trainerId: string, date: string, time: string, category: string) => Promise<void>;
+  disableAllSlotsForDay: (trainerId: string, date: string) => Promise<void>;
+  enableAllSlotsForDay: (trainerId: string, date: string) => Promise<void>;
   syncFromDB: () => void;
 }
 
 // Helper to generate default availability planner slots
-const generateInitialSchedule = (): ScheduleSlot[] => {
-  const list: ScheduleSlot[] = [];
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  
-  days.forEach((day) => {
-    list.push({ id: `${day}-p1`, day, time: '07:00 AM - 08:00 AM', isPrime: true, isBooked: false, isAvailable: true });
-    list.push({ id: `${day}-p2`, day, time: '08:00 AM - 09:00 AM', isPrime: true, isBooked: false, isAvailable: true });
-    list.push({ id: `${day}-p3`, day, time: '05:00 PM - 06:00 PM', isPrime: true, isBooked: false, isAvailable: true });
-    list.push({ id: `${day}-p4`, day, time: '06:00 PM - 07:00 PM', isPrime: true, isBooked: false, isAvailable: true });
-    list.push({ id: `${day}-o1`, day, time: '09:00 AM - 10:00 AM', isPrime: false, isBooked: false, isAvailable: true });
-    list.push({ id: `${day}-o2`, day, time: '10:00 AM - 11:00 AM', isPrime: false, isBooked: false, isAvailable: true });
-  });
+export interface GeneratedDaySlots {
+  date: string; // YYYY-MM-DD
+  slots: Array<{
+    id: string; // YYYY-MM-DD-time
+    time: string; // "06:00 AM - 07:30 AM"
+    isAvailable: boolean;
+    isBooked: boolean;
+    category?: string;
+  }>;
+}
 
-  list[2].isBooked = true; // Tuesday Prime Booked
-  list[8].isBooked = true; // Thursday Off Peak Booked
-  return list;
+// Reusable slot generation system helper
+export const generateMonthlySlots = (
+  month: number, // 0-indexed: 0-11
+  year: number,
+  options: {
+    startHour: number; // e.g. 6 (6 AM)
+    endHour: number; // e.g. 23 (11 PM)
+    durationMinutes: number; // e.g. 90
+    gapMinutes: number; // e.g. 60
+  } = { startHour: 6, endHour: 23, durationMinutes: 90, gapMinutes: 60 }
+): GeneratedDaySlots[] => {
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daySlotsList: GeneratedDaySlots[] = [];
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const slots = [];
+    
+    let current = new Date(year, month, day, options.startHour, 0);
+    const endLimit = new Date(year, month, day, options.endHour, 0);
+    
+    let slotIndex = 1;
+    while (true) {
+      const slotEnd = new Date(current.getTime() + options.durationMinutes * 60 * 1000);
+      if (slotEnd.getTime() > endLimit.getTime()) {
+        break;
+      }
+      
+      const formatTime = (d: Date) => {
+        let hr = d.getHours();
+        const min = String(d.getMinutes()).padStart(2, '0');
+        const ampm = hr >= 12 ? 'PM' : 'AM';
+        hr = hr % 12;
+        hr = hr ? hr : 12;
+        return `${String(hr).padStart(2, '0')}:${min} ${ampm}`;
+      };
+
+      const timeRange = `${formatTime(current)} - ${formatTime(slotEnd)}`;
+      slots.push({
+        id: `${dateStr}-s${slotIndex}`,
+        time: timeRange,
+        isAvailable: true,
+        isBooked: false,
+      });
+
+      slotIndex++;
+      current = new Date(slotEnd.getTime() + options.gapMinutes * 60 * 1000);
+    }
+
+    daySlotsList.push({
+      date: dateStr,
+      slots
+    });
+  }
+
+  return daySlotsList;
 };
 
 export const useCoachStore = create<CoachState>((set, get) => ({
   coaches: [],
   selectedCoachId: '',
   setSelectedCoachId: (id) => set({ selectedCoachId: id }),
+  workoutAssignments: [],
   toggleFavouriteCoach: (id) => {
     Database.toggleFavouriteCoach(id);
     get().syncFromDB();
@@ -76,116 +128,183 @@ export const useCoachStore = create<CoachState>((set, get) => ({
     });
   },
   
-  // Sprint 7 availability planner states
-  weeklySchedule: generateInitialSchedule(),
-  remainingSlotChanges: 2,
-  isScheduleSubmitted: true,
+  availabilityOverrides: [],
 
-  toggleSlotAvailability: (slotId) => {
-    const { isScheduleSubmitted, remainingSlotChanges, weeklySchedule } = get();
-    const slot = weeklySchedule.find(s => s.id === slotId);
-
-    if (!slot) return;
-
-    if (slot.isBooked) {
-      Alert.alert('Change Blocked', 'Booked slots are locked and cannot be edited.');
-      return;
-    }
-
-    let updatedSchedule = weeklySchedule;
-    if (isScheduleSubmitted) {
-      if (remainingSlotChanges <= 0) {
-        Alert.alert('Change Blocked', 'Remaining Changes: 0/2. You have used all allowed changes for this week.');
-        return;
-      }
-
-      updatedSchedule = weeklySchedule.map(s => 
-        s.id === slotId ? { ...s, isAvailable: !s.isAvailable } : s
-      );
-      set({
-        weeklySchedule: updatedSchedule,
-        remainingSlotChanges: remainingSlotChanges - 1
-      });
-    } else {
-      updatedSchedule = weeklySchedule.map(s => 
-        s.id === slotId ? { ...s, isAvailable: !s.isAvailable } : s
-      );
-      set({
-        weeklySchedule: updatedSchedule
-      });
-    }
-
-    // Save to Database
-    const userObj = Database.schema.users.find(u => u.id === Database.getCurrentUserId());
+  toggleMonthlySlotAvailability: async (trainerId, date, time) => {
     const coachesList = Database.getCoaches();
-    const coach = userObj ? coachesList.find(c => c.name === userObj.name) : undefined;
-    if (coach) {
-      Database.updateTrainerPreferences(coach.id, { weeklySchedule: updatedSchedule });
+    const coach = coachesList.find(c => c.id === trainerId);
+    if (!coach) return;
+
+    const currentOverrides = coach.preferences?.availabilityOverrides || [];
+    const idx = currentOverrides.findIndex(o => o.date === date && o.time === time);
+
+    let updatedOverrides = [...currentOverrides];
+    if (idx >= 0) {
+      const existing = currentOverrides[idx];
+      if (existing.isAvailable === false) {
+        if (existing.category) {
+          updatedOverrides[idx] = { ...existing, isAvailable: true };
+        } else {
+          updatedOverrides.splice(idx, 1);
+        }
+      } else {
+        updatedOverrides[idx] = { ...existing, isAvailable: false };
+      }
+    } else {
+      updatedOverrides.push({ date, time, isAvailable: false });
+    }
+
+    const prevOverrides = coach.preferences?.availabilityOverrides ? JSON.parse(JSON.stringify(coach.preferences.availabilityOverrides)) : [];
+
+    // Optimistically update local cache
+    coach.preferences = {
+      ...(coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] }),
+      availabilityOverrides: updatedOverrides
+    };
+    get().syncFromDB();
+
+    try {
+      await Database.updateTrainerPreferences(trainerId, { availabilityOverrides: updatedOverrides });
+    } catch (err: any) {
+      // Rollback
+      coach.preferences.availabilityOverrides = prevOverrides;
+      get().syncFromDB();
+      Alert.alert('Database Sync Error', 'Failed to save availability change. Rolled back state.\nError: ' + err.message);
     }
   },
 
-  editScheduleSlot: (slotId, newTime) => {
-    const { isScheduleSubmitted, remainingSlotChanges, weeklySchedule } = get();
-    const slot = weeklySchedule.find(s => s.id === slotId);
+  updateMonthlySlotCategory: async (trainerId, date, time, category) => {
+    const coachesList = Database.getCoaches();
+    const coach = coachesList.find(c => c.id === trainerId);
+    if (!coach) return;
 
-    if (!slot) return false;
+    const currentOverrides = coach.preferences?.availabilityOverrides || [];
+    const idx = currentOverrides.findIndex(o => o.date === date && o.time === time);
 
-    if (slot.isBooked) {
-      Alert.alert('Change Blocked', 'Booked slots are locked and cannot be edited.');
-      return false;
+    let updatedOverrides = [...currentOverrides];
+    if (idx >= 0) {
+      if (!category && currentOverrides[idx].isAvailable) {
+        updatedOverrides.splice(idx, 1);
+      } else {
+        updatedOverrides[idx] = { ...currentOverrides[idx], category };
+      }
+    } else {
+      if (category) {
+        updatedOverrides.push({ date, time, isAvailable: true, category });
+      }
     }
 
-    if (isScheduleSubmitted && remainingSlotChanges <= 0) {
-      Alert.alert('Change Blocked', 'Remaining Changes: 0/2. You have used all allowed changes for this week.');
-      return false;
-    }
+    const prevOverrides = coach.preferences?.availabilityOverrides ? JSON.parse(JSON.stringify(coach.preferences.availabilityOverrides)) : [];
 
-    const updatedSchedule = weeklySchedule.map(s => 
-      s.id === slotId ? { ...s, time: newTime } : s
-    );
-    set({
-      weeklySchedule: updatedSchedule,
-      remainingSlotChanges: isScheduleSubmitted ? remainingSlotChanges - 1 : remainingSlotChanges
+    // Optimistically update
+    coach.preferences = {
+      ...(coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] }),
+      availabilityOverrides: updatedOverrides
+    };
+    get().syncFromDB();
+
+    try {
+      await Database.updateTrainerPreferences(trainerId, { availabilityOverrides: updatedOverrides });
+    } catch (err: any) {
+      // Rollback
+      coach.preferences.availabilityOverrides = prevOverrides;
+      get().syncFromDB();
+      Alert.alert('Database Sync Error', 'Failed to update category restriction. Rolled back state.\nError: ' + err.message);
+    }
+  },
+
+  disableAllSlotsForDay: async (trainerId, date) => {
+    const coachesList = Database.getCoaches();
+    const coach = coachesList.find(c => c.id === trainerId);
+    if (!coach) return;
+
+    const currentOverrides = coach.preferences?.availabilityOverrides || [];
+    const parsedDate = new Date(date);
+    const daySlots = generateMonthlySlots(parsedDate.getMonth(), parsedDate.getFullYear())
+      .find(d => d.date === date)?.slots || [];
+
+    const bookings = Database.schema.bookings || [];
+    const bookedTimes = bookings
+      .filter((b: any) => b.trainerId === trainerId && b.date === date && b.status === 'upcoming')
+      .map((b: any) => b.time);
+
+    let updatedOverrides = [...currentOverrides];
+    daySlots.forEach(slot => {
+      if (bookedTimes.includes(slot.time)) return;
+      const idx = updatedOverrides.findIndex(o => o.date === date && o.time === slot.time);
+      if (idx >= 0) {
+        updatedOverrides[idx] = { ...updatedOverrides[idx], isAvailable: false };
+      } else {
+        updatedOverrides.push({ date, time: slot.time, isAvailable: false });
+      }
     });
 
-    // Save to Database
-    const userObj = Database.schema.users.find(u => u.id === Database.getCurrentUserId());
-    const coachesList = Database.getCoaches();
-    const coach = userObj ? coachesList.find(c => c.name === userObj.name) : undefined;
-    if (coach) {
-      Database.updateTrainerPreferences(coach.id, { weeklySchedule: updatedSchedule });
+    const prevOverrides = coach.preferences?.availabilityOverrides ? JSON.parse(JSON.stringify(coach.preferences.availabilityOverrides)) : [];
+
+    // Optimistically update
+    coach.preferences = {
+      ...(coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] }),
+      availabilityOverrides: updatedOverrides
+    };
+    get().syncFromDB();
+
+    try {
+      await Database.updateTrainerPreferences(trainerId, { availabilityOverrides: updatedOverrides });
+    } catch (err: any) {
+      // Rollback
+      coach.preferences.availabilityOverrides = prevOverrides;
+      get().syncFromDB();
+      Alert.alert('Database Sync Error', 'Failed to disable all slots. Rolled back state.\nError: ' + err.message);
     }
-    
-    return true;
   },
 
-  submitSchedule: () => set({ isScheduleSubmitted: true, remainingSlotChanges: 2 }),
+  enableAllSlotsForDay: async (trainerId, date) => {
+    const coachesList = Database.getCoaches();
+    const coach = coachesList.find(c => c.id === trainerId);
+    if (!coach) return;
+
+    const currentOverrides = coach.preferences?.availabilityOverrides || [];
+    const updatedOverrides = currentOverrides.filter(o => o.date !== date);
+
+    const prevOverrides = coach.preferences?.availabilityOverrides ? JSON.parse(JSON.stringify(coach.preferences.availabilityOverrides)) : [];
+
+    // Optimistically update
+    coach.preferences = {
+      ...(coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] }),
+      availabilityOverrides: updatedOverrides
+    };
+    get().syncFromDB();
+
+    try {
+      await Database.updateTrainerPreferences(trainerId, { availabilityOverrides: updatedOverrides });
+    } catch (err: any) {
+      // Rollback
+      coach.preferences.availabilityOverrides = prevOverrides;
+      get().syncFromDB();
+      Alert.alert('Database Sync Error', 'Failed to enable all slots. Rolled back state.\nError: ' + err.message);
+    }
+  },
 
   syncFromDB: () => {
     const userId = Database.getCurrentUserId();
     const coachesList = Database.getCoaches();
     let earningsList: TrainerEarning[] = [];
-    let schedule = get().weeklySchedule;
+    let overrides: AvailabilityOverride[] = [];
 
     if (userId) {
       earningsList = Database.getEarnings(userId);
       const userObj = Database.schema.users.find(u => u.id === userId);
       const coachObj = userObj ? coachesList.find(c => c.name === userObj.name) : undefined;
       if (coachObj) {
-        if ((coachObj.preferences as any)?.weeklySchedule) {
-          schedule = (coachObj.preferences as any).weeklySchedule;
-        } else {
-          // If not initialized in DB preferences, generate default and upsert
-          schedule = generateInitialSchedule();
-          Database.updateTrainerPreferences(coachObj.id, { weeklySchedule: schedule });
-        }
+        overrides = coachObj.preferences?.availabilityOverrides || [];
       }
     }
     set({
       coaches: coachesList,
       earningsList,
       totalEarnings: earningsList.reduce((acc, curr) => acc + curr.amount, 0),
-      weeklySchedule: schedule
+      availabilityOverrides: overrides,
+      workoutAssignments: Database.schema.trainer_workout_assignments || []
     });
   }
 }));

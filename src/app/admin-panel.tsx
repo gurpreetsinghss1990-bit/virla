@@ -163,18 +163,24 @@ export default function AdminPanelScreen() {
         </View>
 
         {/* Tab Selector */}
-        <View className="flex-row bg-white border-b border-zinc-150 p-2 gap-2">
+        <View className="flex-row bg-white border-b border-zinc-150 p-2 gap-1.5">
           <TouchableOpacity
             onPress={() => setActiveTab('applications')}
             className={`flex-1 py-3 rounded-xl items-center justify-center ${activeTab === 'applications' ? 'bg-zinc-950' : 'bg-transparent'}`}
           >
-            <Text className={`text-[9px] font-black uppercase tracking-wider ${activeTab === 'applications' ? 'text-white' : 'text-zinc-400'}`}>Onboarding Verification</Text>
+            <Text className={`text-[8px] font-black uppercase tracking-wider text-center ${activeTab === 'applications' ? 'text-white' : 'text-zinc-400'}`}>Onboarding</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push('/admin-workout-approvals')}
+            className="flex-1 py-3 rounded-xl items-center justify-center bg-transparent border border-zinc-150"
+          >
+            <Text className="text-[8px] font-black uppercase tracking-wider text-center text-zinc-500">Workout Approvals</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setActiveTab('live')}
             className={`flex-1 py-3 rounded-xl items-center justify-center ${activeTab === 'live' ? 'bg-zinc-950' : 'bg-transparent'}`}
           >
-            <Text className={`text-[9px] font-black uppercase tracking-wider ${activeTab === 'live' ? 'text-white' : 'text-zinc-400'}`}>Live Session Console</Text>
+            <Text className={`text-[8px] font-black uppercase tracking-wider text-center ${activeTab === 'live' ? 'text-white' : 'text-zinc-400'}`}>Live Console</Text>
           </TouchableOpacity>
         </View>
 

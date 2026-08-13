@@ -142,6 +142,7 @@ export interface Coach {
     maxDailySessions: number;
     categories: string[];
     weeklySchedule?: ScheduleSlot[];
+    availabilityOverrides?: AvailabilityOverride[];
   };
 }
 
@@ -188,6 +189,7 @@ export interface ScheduleSlot {
   isPrime: boolean;
   isBooked: boolean;
   isAvailable: boolean;
+  category?: string;
 }
 
 export interface AssignmentLog {
@@ -198,5 +200,27 @@ export interface AssignmentLog {
   score: number;
   reason: string;
   action: string;
+}
+
+export interface AvailabilityOverride {
+  date: string;
+  time: string;
+  isAvailable: boolean;
+  category?: string;
+}
+
+export interface TrainerWorkoutAssignment {
+  id: string;
+  trainerId: string;
+  workoutCategory: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'REMOVAL_REQUESTED' | 'REMOVED';
+  requestedAt: number;
+  approvedAt?: number;
+  approvedBy?: string;
+  rejectedAt?: number;
+  rejectedBy?: string;
+  rejectionReason?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 

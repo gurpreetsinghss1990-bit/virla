@@ -103,21 +103,25 @@ export default function ProfileScreen() {
   const [bankIfscStr, setBankIfscStr] = useState(parsedBankDetails.ifsc || '');
   const [bankUpiIdStr, setBankUpiIdStr] = useState(parsedBankDetails.upiId || '');
 
-  const handleSaveTrainer = () => {
+  const handleSaveTrainer = async () => {
     const trainerId = user.id || coach?.id;
     if (trainerId) {
-      Database.updateCoach(trainerId, {
-        shortBio: trainerBio,
-        bankDetails: JSON.stringify({
-          accountName: bankAccName,
-          bankName: bankNameStr,
-          accountNumber: bankAccNumber,
-          ifsc: bankIfscStr,
-          upiId: bankUpiIdStr
-        })
-      });
-      setIsEditingTrainer(false);
-      Alert.alert('Trainer Details Updated', 'Your banking credentials and bio have been successfully updated.');
+      try {
+        await Database.updateCoach(trainerId, {
+          shortBio: trainerBio,
+          bankDetails: JSON.stringify({
+            accountName: bankAccName,
+            bankName: bankNameStr,
+            accountNumber: bankAccNumber,
+            ifsc: bankIfscStr,
+            upiId: bankUpiIdStr
+          })
+        });
+        setIsEditingTrainer(false);
+        Alert.alert('Trainer Details Updated', 'Your banking credentials and bio have been successfully updated.');
+      } catch (err: any) {
+        Alert.alert('Update Failed', 'Failed to update trainer details: ' + err.message);
+      }
     }
   };
 
