@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { Database, TrainerApplication } from '../database/Database';
+import { Coach } from '../types';
 import { LuxuryCard } from '../components/LuxuryCard';
 import { supabase } from '../database/supabaseClient';
 import { useBookingStore } from '../store/bookingStore';
@@ -11,11 +12,16 @@ import { useBookingStore } from '../store/bookingStore';
 export default function AdminPanelScreen() {
   const router = useRouter();
   const [applications, setApplications] = useState<TrainerApplication[]>([]);
+  const [coaches, setCoaches] = useState<Coach[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isAdminAuthorized, setIsAdminAuthorized] = useState<boolean | null>(null);
   
   // Tab controller state
-  const [activeTab, setActiveTab] = useState<'applications' | 'live'>('applications');
+  const [activeTab, setActiveTab] = useState<'applications' | 'live' | 'locations'>('applications');
+
+  // Filters for trainer locations
+  const [radiusFilter, setRadiusFilter] = useState<'all' | '10' | '15'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'verified' | 'pending'>('all');
   
   // Connect shared bookingStore
   const { bookings, updateTimelineStatus } = useBookingStore();
@@ -44,18 +50,63 @@ export default function AdminPanelScreen() {
     });
   }, []);
 
-  const loadApplications = async () => {
-    if (isAdminAuthorized !== true) return;
-    setIsLoading(true);
-    try {
-      const data = await Database.fetchAllTrainerApplications();
-      setApplications(data);
-    } catch (err: any) {
-      Alert.alert('Error', err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    const loadApplications = async () => {
+      if (isAdminAuthorized !== true) return;
+      setIsLoading(true);
+      try {
+        const data = await Database.fetchAllTrainerApplications();
+        setApplications(data);
+        setCoaches(Database.getCoaches());
+      } catch (err: any) {
+        Alert.alert('Error', err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const handleApproveLocation = async (coachId: string) => {
+      const coach = Database.schema.coaches.find(c => c.id === coachId);
+      if (!coach || !coach.preferences?.addressChangeRequest) return;
+      
+      const request = coach.preferences.addressChangeRequest;
+      const updatedPrefs = {
+        ...coach.preferences,
+        operatingAddress: request.requestedAddress,
+        operatingLatitude: request.requestedLatitude,
+        operatingLongitude: request.requestedLongitude,
+        operatingPlaceId: request.requestedPlaceId,
+        radiusKm: request.requestedRadius,
+        operatingLocationStatus: 'verified' as const,
+        addressChangeRequest: null
+      };
+      
+      try {
+        await Database.updateTrainerPreferences(coachId, updatedPrefs);
+        Alert.alert('Location Change Approved', `Operating base coordinates for Coach ${coach.name} successfully updated and verified.`);
+        setCoaches(Database.getCoaches());
+      } catch (err: any) {
+        Alert.alert('Error', err.message);
+      }
+    };
+
+    const handleRejectLocation = async (coachId: string) => {
+      const coach = Database.schema.coaches.find(c => c.id === coachId);
+      if (!coach || !coach.preferences?.addressChangeRequest) return;
+      
+      const updatedPrefs = {
+        ...coach.preferences,
+        operatingLocationStatus: coach.preferences.operatingAddress ? 'verified' as const : 'rejected' as const,
+        addressChangeRequest: null
+      };
+      
+      try {
+        await Database.updateTrainerPreferences(coachId, updatedPrefs);
+        Alert.alert('Location Change Rejected', `Operating base change request for Coach ${coach.name} has been rejected.`);
+        setCoaches(Database.getCoaches());
+      } catch (err: any) {
+        Alert.alert('Error', err.message);
+      }
+    };
 
   useEffect(() => {
     if (isAdminAuthorized === true) {
@@ -177,6 +228,12 @@ export default function AdminPanelScreen() {
             <Text className="text-[8px] font-black uppercase tracking-wider text-center text-zinc-500">Workout Approvals</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            onPress={() => setActiveTab('locations')}
+            className={`flex-1 py-3 rounded-xl items-center justify-center ${activeTab === 'locations' ? 'bg-zinc-950' : 'bg-transparent'}`}
+          >
+            <Text className={`text-[8px] font-black uppercase tracking-wider text-center ${activeTab === 'locations' ? 'text-white' : 'text-zinc-400'}`}>Locations</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={() => setActiveTab('live')}
             className={`flex-1 py-3 rounded-xl items-center justify-center ${activeTab === 'live' ? 'bg-zinc-950' : 'bg-transparent'}`}
           >
@@ -186,7 +243,7 @@ export default function AdminPanelScreen() {
 
         <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 60 }}>
           
-          {activeTab === 'applications' ? (
+          {activeTab === 'applications' && (
             <View className="gap-6">
               <View>
                 <Text className="text-zinc-900 text-xl font-black tracking-tight uppercase">Trainer Applications</Text>
@@ -306,7 +363,160 @@ export default function AdminPanelScreen() {
                 </>
               )}
             </View>
-          ) : (
+          )}
+
+          {activeTab === 'locations' && (
+            <View className="gap-6">
+              <View>
+                <Text className="text-zinc-900 text-xl font-black tracking-tight uppercase">Trainer Locations</Text>
+                <Text className="text-[#6B7280] text-xs font-semibold mt-1 leading-relaxed">
+                  Manage permanent trainer operating coordinates and service areas.
+                </Text>
+              </View>
+
+              {/* Filters */}
+              <View className="bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-xs gap-3">
+                <Text className="text-zinc-950 text-[9px] font-black uppercase tracking-wider">Filters</Text>
+                
+                <View className="flex-row gap-2">
+                  {/* Status Filter */}
+                  <View className="flex-1 gap-1">
+                    <Text className="text-zinc-400 text-[8px] font-black uppercase">Status</Text>
+                    <View className="flex-row bg-[#F1F3F5] p-1 rounded-xl">
+                      {['all', 'verified', 'pending'].map((st) => (
+                        <TouchableOpacity
+                          key={st}
+                          onPress={() => setStatusFilter(st as any)}
+                          className={`flex-1 py-1 rounded-lg items-center ${statusFilter === st ? 'bg-white shadow-xs' : ''}`}
+                        >
+                          <Text className="text-[8px] font-black uppercase text-zinc-950">{st}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* Radius Filter */}
+                  <View className="flex-1 gap-1">
+                    <Text className="text-zinc-400 text-[8px] font-black uppercase">Radius</Text>
+                    <View className="flex-row bg-[#F1F3F5] p-1 rounded-xl">
+                      {['all', '10', '15'].map((rd) => (
+                        <TouchableOpacity
+                          key={rd}
+                          onPress={() => setRadiusFilter(rd as any)}
+                          className={`flex-1 py-1 rounded-lg items-center ${radiusFilter === rd ? 'bg-white shadow-xs' : ''}`}
+                        >
+                          <Text className="text-[8px] font-black uppercase text-zinc-950">{rd === 'all' ? 'All' : `${rd}km`}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              {/* List */}
+              <View className="gap-4">
+                {coaches
+                  .filter((c) => {
+                    const status = c.preferences?.operatingLocationStatus || 'pending';
+                    const radius = String(c.preferences?.radiusKm || 15);
+                    if (statusFilter !== 'all' && status !== statusFilter) return false;
+                    if (radiusFilter !== 'all' && radius !== radiusFilter) return false;
+                    return true;
+                  })
+                  .map((coach) => {
+                    const hasRequest = !!coach.preferences?.addressChangeRequest;
+                    return (
+                      <LuxuryCard key={coach.id} className="p-5 gap-4" interactive={false}>
+                        <View className="flex-row justify-between items-start">
+                          <View className="flex-row items-center gap-3">
+                            <Image source={{ uri: coach.photo }} className="w-10 h-10 rounded-full border border-zinc-200" />
+                            <View>
+                              <Text className="text-zinc-950 text-xs font-black">{coach.name}</Text>
+                              <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Trainer ID: {coach.id}</Text>
+                            </View>
+                          </View>
+
+                          <View className={`px-2 py-0.5 rounded-full ${
+                            coach.preferences?.operatingLocationStatus === 'verified'
+                              ? 'bg-green-50 border border-green-150'
+                              : 'bg-amber-50 border border-amber-150'
+                          }`}>
+                            <Text className={`text-[7px] font-black uppercase ${
+                              coach.preferences?.operatingLocationStatus === 'verified' ? 'text-green-600' : 'text-amber-600'
+                            }`}>
+                              {coach.preferences?.operatingLocationStatus || 'pending'}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View className="h-[1px] bg-zinc-50" />
+
+                        <View className="gap-2.5 pl-1">
+                          <View className="gap-0.5">
+                            <Text className="text-zinc-400 text-[8px] font-black uppercase">Operating Base Address</Text>
+                            <Text className="text-zinc-900 text-xs font-bold leading-normal">
+                              {coach.preferences?.operatingAddress || 'Not Set'}
+                            </Text>
+                          </View>
+
+                          <View className="flex-row justify-between">
+                            <View className="gap-0.5">
+                              <Text className="text-zinc-400 text-[8px] font-black uppercase">Coordinates</Text>
+                              <Text className="text-zinc-700 text-[10px] font-semibold">
+                                {coach.preferences?.operatingLatitude !== undefined 
+                                  ? `${coach.preferences.operatingLatitude.toFixed(5)}, ${coach.preferences.operatingLongitude?.toFixed(5)}` 
+                                  : 'Not Configured'}
+                              </Text>
+                            </View>
+
+                            <View className="gap-0.5 items-end">
+                              <Text className="text-zinc-400 text-[8px] font-black uppercase">Service Area Radius</Text>
+                              <Text className="text-zinc-700 text-[10px] font-semibold">
+                                {coach.preferences?.radiusKm ? `${coach.preferences.radiusKm} km` : '15 km (Default)'}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+
+                        {hasRequest && (
+                          <View className="bg-amber-50 border border-amber-200/50 p-4 rounded-2xl gap-3">
+                            <View className="gap-1">
+                              <Text className="text-amber-800 text-[8px] font-black uppercase tracking-wider">Requested Location Update</Text>
+                              <Text className="text-zinc-900 text-xs font-black">
+                                {coach.preferences?.addressChangeRequest?.requestedAddress}
+                              </Text>
+                              <Text className="text-zinc-500 text-[8px] font-bold uppercase">
+                                Requested Radius: {coach.preferences?.addressChangeRequest?.requestedRadius} km
+                              </Text>
+                              <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">
+                                Coordinates: {coach.preferences?.addressChangeRequest?.requestedLatitude?.toFixed(5)}, {coach.preferences?.addressChangeRequest?.requestedLongitude?.toFixed(5)}
+                              </Text>
+                            </View>
+
+                            <View className="flex-row gap-2 mt-1">
+                              <TouchableOpacity
+                                onPress={() => handleRejectLocation(coach.id)}
+                                className="flex-1 border border-rose-200 bg-white py-2 rounded-xl items-center"
+                              >
+                                <Text className="text-rose-600 text-[8px] font-black uppercase">Reject Request</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                onPress={() => handleApproveLocation(coach.id)}
+                                className="flex-1 bg-green-600 py-2 rounded-xl items-center shadow-sm"
+                              >
+                                <Text className="text-white text-[8px] font-black uppercase">Approve Request</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        )}
+                      </LuxuryCard>
+                    );
+                  })}
+              </View>
+            </View>
+          )}
+
+          {activeTab === 'live' && (
             // Module 10: Live Session Console View
             <View className="gap-6">
               <View>

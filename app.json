@@ -12,7 +12,10 @@
       "bundleIdentifier": "com.varshaniviral.Virla",
       "buildNumber": "35",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "Allow Virla to use your location to find nearby trainers and customize your experience.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow Virla to use your location to find nearby trainers and customize your experience.",
+        "NSCameraUsageDescription": "Allow Virla to use your camera to scan QR codes for linking development servers."
       }
     },
     "android": {
@@ -31,13 +34,20 @@
     "plugins": [
       "expo-router",
       [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Virla to use your location to find nearby trainers and customize your experience."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#FFFFFF",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,6 +1,8 @@
 import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Workout, Coach, Booking, NotificationItem, Invoice, TrainerEarning, ScheduleSlot, AssignmentLog, TrainerWorkoutAssignment } from '../types';
+import { normalizeDate } from '../utils/date';
+import { geocodeAddress, geocodeAddressSync } from '../utils/distance';
 
 // Simple UUID generator
 export function generateUUID(prefix = 'id'): string {
@@ -38,6 +40,10 @@ export interface UserProfile {
   city: string;
   memberSince: string;
   selectedGoals: string[];
+  homeAddress?: string;
+  homeLatitude?: number;
+  homeLongitude?: number;
+  homePlaceId?: string;
 }
 
 export interface HydrationLog {
@@ -141,6 +147,7 @@ export interface SavedAddress {
   apartment?: string;
   floor?: string;
   notes?: string;
+  placeId?: string;
 }
 
 export interface DBUser {
@@ -214,7 +221,11 @@ export function mapUserProfile(row: any): UserProfile {
     preferredLanguage: row.preferred_language || '',
     city: row.city || '',
     memberSince: row.member_since || '',
-    selectedGoals: row.selected_goals || []
+    selectedGoals: row.selected_goals || [],
+    homeAddress: row.home_address || '',
+    homeLatitude: row.home_latitude !== null && row.home_latitude !== undefined ? Number(row.home_latitude) : undefined,
+    homeLongitude: row.home_longitude !== null && row.home_longitude !== undefined ? Number(row.home_longitude) : undefined,
+    homePlaceId: row.home_place_id || ''
   };
 }
 
@@ -238,11 +249,25 @@ export function mapUserProfileToPostgres(profile: UserProfile): any {
     preferred_language: profile.preferredLanguage,
     city: profile.city,
     member_since: profile.memberSince,
-    selected_goals: profile.selectedGoals
+    selected_goals: profile.selectedGoals,
+    home_address: profile.homeAddress || null,
+    home_latitude: profile.homeLatitude !== undefined ? profile.homeLatitude : null,
+    home_longitude: profile.homeLongitude !== undefined ? profile.homeLongitude : null,
+    home_place_id: profile.homePlaceId || null
   };
 }
 
 export function mapCoach(row: any): Coach {
+  const prefs = row.preferences ? (typeof row.preferences === 'string' ? JSON.parse(row.preferences) : row.preferences) : { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] };
+  
+  if (row.operating_address !== undefined) prefs.operatingAddress = row.operating_address || '';
+  if (row.operating_latitude !== undefined && row.operating_latitude !== null) prefs.operatingLatitude = Number(row.operating_latitude);
+  if (row.operating_longitude !== undefined && row.operating_longitude !== null) prefs.operatingLongitude = Number(row.operating_longitude);
+  if (row.operating_place_id !== undefined) prefs.operatingPlaceId = row.operating_place_id || '';
+  if (row.operating_location_status !== undefined) prefs.operatingLocationStatus = row.operating_location_status || 'pending';
+  if (row.service_radius_km !== undefined && row.service_radius_km !== null) prefs.radiusKm = Number(row.service_radius_km);
+  if (row.address_change_request !== undefined) prefs.addressChangeRequest = row.address_change_request || null;
+
   return {
     id: row.id,
     name: row.name,
@@ -274,11 +299,12 @@ export function mapCoach(row: any): Coach {
     emergencyContact: row.emergency_contact ? JSON.stringify(row.emergency_contact) : '',
     aboutText: row.about_text || '',
     workingRadius: row.working_radius || '',
-    preferences: row.preferences ? (typeof row.preferences === 'string' ? JSON.parse(row.preferences) : row.preferences) : { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] }
+    preferences: prefs
   };
 }
 
 export function mapCoachToPostgres(coach: Coach): any {
+  const prefs = coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] };
   return {
     id: coach.id,
     name: coach.name,
@@ -303,7 +329,14 @@ export function mapCoachToPostgres(coach: Coach): any {
     about_text: coach.aboutText,
     availability: coach.availability,
     working_radius: coach.workingRadius,
-    preferences: coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] }
+    operating_address: prefs.operatingAddress || null,
+    operating_latitude: prefs.operatingLatitude !== undefined ? prefs.operatingLatitude : null,
+    operating_longitude: prefs.operatingLongitude !== undefined ? prefs.operatingLongitude : null,
+    operating_place_id: prefs.operatingPlaceId || null,
+    operating_location_status: prefs.operatingLocationStatus || 'pending',
+    service_radius_km: prefs.radiusKm || 15,
+    address_change_request: prefs.addressChangeRequest || null,
+    preferences: prefs
   };
 }
 
@@ -575,7 +608,8 @@ export function mapSavedAddress(row: any): SavedAddress {
     lng: row.lng || 0,
     apartment: row.apartment || '',
     floor: row.floor || '',
-    notes: row.notes || ''
+    notes: row.notes || '',
+    placeId: row.place_id || ''
   };
 }
 
@@ -596,7 +630,8 @@ export function mapSavedAddressToPostgres(addr: SavedAddress): any {
     lng: addr.lng || 0,
     apartment: addr.apartment || '',
     floor: addr.floor || '',
-    notes: addr.notes || ''
+    notes: addr.notes || '',
+    place_id: addr.placeId || null
   };
 }
 
@@ -1620,7 +1655,7 @@ class DatabaseClient {
     this.cleanExpiredReservations();
     // Check if already reserved by another client
     const isReserved = this.schema.slot_reservations.some(r => 
-      r.trainer_id === trainerId && r.slot_date === date && r.slot_time === time && r.client_id !== clientId
+      r.trainer_id === trainerId && normalizeDate(r.slot_date) === normalizeDate(date) && r.slot_time === time && r.client_id !== clientId
     );
     if (isReserved) return null;
 
@@ -1668,7 +1703,7 @@ class DatabaseClient {
 
     // 2. Verify slot is not disabled by trainer overrides
     const overrides = coach.preferences?.availabilityOverrides || [];
-    const override = overrides.find(o => o.date === date && o.time === time);
+    const override = overrides.find(o => normalizeDate(o.date) === normalizeDate(date) && o.time === time);
     const isAvailable = override ? override.isAvailable : true;
     if (!isAvailable) {
       throw new Error('This slot is no longer available. Please select another slot.');
@@ -1676,7 +1711,7 @@ class DatabaseClient {
 
     // 3. Verify no conflicting bookings (Double Booking Check)
     const isDoubleBooked = this.schema.bookings.some(b => 
-      b.trainerId === assignedTrainerId && b.status === 'upcoming' && b.date === date && b.time === time
+      b.trainerId === assignedTrainerId && b.status === 'upcoming' && normalizeDate(b.date) === normalizeDate(date) && b.time === time
     );
     if (isDoubleBooked) {
       throw new Error('This slot is no longer available. Please select another slot.');
@@ -1685,7 +1720,7 @@ class DatabaseClient {
     // 4. Slot Buffer Check (30 minutes travel buffer)
     const targetMinutes = this.parseTimeToMinutesHelper(time);
     const hasBufferConflict = this.schema.bookings.some(b => {
-      if (b.trainerId !== assignedTrainerId || b.status !== 'upcoming' || b.date !== date) return false;
+      if (b.trainerId !== assignedTrainerId || b.status !== 'upcoming' || normalizeDate(b.date) !== normalizeDate(date)) return false;
       const bMinutes = this.parseTimeToMinutesHelper(b.time);
       const diff = Math.abs(bMinutes - targetMinutes);
       const duration = b.durationMinutes || 60;
@@ -1698,7 +1733,7 @@ class DatabaseClient {
     // 5. Dynamic Workload limit calculation
     const activeBookingsCount = this.schema.bookings.filter(b => 
       b.trainerId === assignedTrainerId && 
-      b.date === date &&
+      normalizeDate(b.date) === normalizeDate(date) &&
       b.status === 'upcoming' &&
       (b.timelineStatus === 'booked' || b.timelineStatus === 'trainer_assigned' || b.timelineStatus === 'trainer_accepted' || b.timelineStatus === 'trainer_preparing' || b.timelineStatus === 'trainer_travelling' || b.timelineStatus === 'trainer_arrived' || b.timelineStatus === 'otp_verified' || b.timelineStatus === 'workout_started')
     ).length;
@@ -2490,6 +2525,17 @@ class DatabaseClient {
 
       let coachObj = this.schema.coaches.find(c => c.name === app.fullName);
       if (!coachObj) {
+        let lat = 19.0176;
+        let lng = 72.8164;
+        try {
+          const res = await geocodeAddress(app.address || '');
+          lat = res.latitude;
+          lng = res.longitude;
+        } catch (e) {
+          const coords = geocodeAddressSync(app.address || '');
+          lat = coords.lat;
+          lng = coords.lng;
+        }
         const newCoach: Coach = {
           id: generateUUID('coach'),
           name: app.fullName,
@@ -2512,7 +2558,18 @@ class DatabaseClient {
             ifsc: app.bankIfsc || '',
             upiId: app.bankUpiId || ''
           }),
-          emergencyContact: app.emergencyContact
+          emergencyContact: app.emergencyContact,
+          preferences: {
+            online: false,
+            radiusKm: app.preferredWorkingRadius || 15,
+            maxDailySessions: 5,
+            categories: [app.primaryWorkout],
+            operatingAddress: app.address,
+            operatingLatitude: lat,
+            operatingLongitude: lng,
+            operatingLocationStatus: 'verified' as const,
+            addressChangeRequest: null
+          }
         };
         this.schema.coaches.push(newCoach);
         coachObj = newCoach;

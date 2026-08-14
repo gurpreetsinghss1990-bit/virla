@@ -3,10 +3,7 @@ const path = require('path');
 
 const fixCwd = (options) => {
   if (options && typeof options.cwd === 'string') {
-    // Restore the trailing space if the path library stripped it from "Virla "
-    if (options.cwd.endsWith('Virla')) {
-      options.cwd = options.cwd + ' ';
-    }
+    options.cwd = options.cwd.replace(/Virla(?! )/g, 'Virla ');
   }
 };
 
@@ -14,17 +11,11 @@ const fixArgs = (args) => {
   if (Array.isArray(args)) {
     return args.map(arg => {
       if (typeof arg === 'string') {
-        // Fix file:// URLs that have had the trailing space stripped
-        if (arg.startsWith('file:///Users/virral/Desktop/Virla')) {
-          if (!arg.includes('Virla%20') && !arg.endsWith('Virla ')) {
-            return arg.replace('Virla', 'Virla%20');
-          }
+        if (arg.includes('file:///Users/virral/Desktop/Virla')) {
+          return arg.replace(/Virla(?!%20)/g, 'Virla%20');
         }
-        // Fix absolute paths that have had the trailing space stripped
-        if (arg.startsWith('/Users/virral/Desktop/Virla')) {
-          if (!arg.startsWith('/Users/virral/Desktop/Virla ')) {
-            return arg.replace('/Users/virral/Desktop/Virla', '/Users/virral/Desktop/Virla ');
-          }
+        if (arg.includes('/Users/virral/Desktop/Virla')) {
+          return arg.replace(/Virla(?! )/g, 'Virla ');
         }
       }
       return arg;
@@ -36,10 +27,11 @@ const fixArgs = (args) => {
 // Monkeypatch child_process.spawn
 const originalSpawn = cp.spawn;
 cp.spawn = function (command, args, options) {
+  console.log('[DEBUG WRAPPER] Spawn called with command:', command, 'args:', args, 'cwd:', options ? options.cwd : undefined);
   fixCwd(options);
   args = fixArgs(args);
   if (command === 'git') {
-    command = '/Library/Developer/CommandLineTools/usr/bin/git';
+    command = '/usr/bin/git';
   }
   return originalSpawn.call(this, command, args, options);
 };
@@ -47,10 +39,11 @@ cp.spawn = function (command, args, options) {
 // Monkeypatch child_process.spawnSync
 const originalSpawnSync = cp.spawnSync;
 cp.spawnSync = function (command, args, options) {
+  console.log('[DEBUG WRAPPER] SpawnSync called with command:', command, 'args:', args, 'cwd:', options ? options.cwd : undefined);
   fixCwd(options);
   args = fixArgs(args);
   if (command === 'git') {
-    command = '/Library/Developer/CommandLineTools/usr/bin/git';
+    command = '/usr/bin/git';
   }
   return originalSpawnSync.call(this, command, args, options);
 };
@@ -61,8 +54,8 @@ try {
   const originalGetRootPathAsync = GitClient.prototype.getRootPathAsync;
   GitClient.prototype.getRootPathAsync = async function () {
     const root = await originalGetRootPathAsync.call(this);
-    if (typeof root === 'string' && root.endsWith('Virla')) {
-      return root + ' ';
+    if (typeof root === 'string') {
+      return root.replace(/Virla(?! )/g, 'Virla ');
     }
     return root;
   };

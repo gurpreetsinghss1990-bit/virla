@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { Coach, TrainerEarning, ScheduleSlot, AvailabilityOverride, TrainerWorkoutAssignment } from '../types';
 import { Alert } from 'react-native';
 import { Database } from '../database/Database';
+import { normalizeDate } from '../utils/date';
 
 interface CoachState {
   coaches: Coach[];
@@ -225,13 +226,13 @@ export const useCoachStore = create<CoachState>((set, get) => ({
 
     const bookings = Database.schema.bookings || [];
     const bookedTimes = bookings
-      .filter((b: any) => b.trainerId === trainerId && b.date === date && b.status === 'upcoming')
+      .filter((b: any) => b.trainerId === trainerId && normalizeDate(b.date) === normalizeDate(date) && b.status === 'upcoming')
       .map((b: any) => b.time);
 
     let updatedOverrides = [...currentOverrides];
     daySlots.forEach(slot => {
       if (bookedTimes.includes(slot.time)) return;
-      const idx = updatedOverrides.findIndex(o => o.date === date && o.time === slot.time);
+      const idx = updatedOverrides.findIndex(o => normalizeDate(o.date) === normalizeDate(date) && o.time === slot.time);
       if (idx >= 0) {
         updatedOverrides[idx] = { ...updatedOverrides[idx], isAvailable: false };
       } else {
@@ -264,7 +265,7 @@ export const useCoachStore = create<CoachState>((set, get) => ({
     if (!coach) return;
 
     const currentOverrides = coach.preferences?.availabilityOverrides || [];
-    const updatedOverrides = currentOverrides.filter(o => o.date !== date);
+    const updatedOverrides = currentOverrides.filter(o => normalizeDate(o.date) !== normalizeDate(date));
 
     const prevOverrides = coach.preferences?.availabilityOverrides ? JSON.parse(JSON.stringify(coach.preferences.availabilityOverrides)) : [];
 

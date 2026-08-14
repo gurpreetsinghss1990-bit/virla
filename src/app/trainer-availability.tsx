@@ -6,6 +6,7 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import { useUserStore } from '../store/userStore';
 import { useCoachStore, generateMonthlySlots } from '../store/coachStore';
 import { Database } from '../database/Database';
+import { normalizeDate } from '../utils/date';
 
 export default function TrainerAvailabilityScreen() {
   const insets = useSafeAreaInsets();
@@ -32,7 +33,8 @@ export default function TrainerAvailabilityScreen() {
         </Text>
         <TouchableOpacity 
           onPress={() => syncFromDB()} 
-          className="mt-6 bg-zinc-950 py-3 px-6 rounded-xl shadow-md"
+          className="mt-6 bg-zinc-950 py-3 px-6 rounded-xl"
+          style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }}
         >
           <Text className="text-white text-xs font-black uppercase tracking-wider">Retry</Text>
         </TouchableOpacity>
@@ -148,7 +150,7 @@ export default function TrainerAvailabilityScreen() {
     // 1. Check if booked
     const isBooked = bookings.some((b: any) => 
       b.trainerId === coach.id && 
-      b.date === dateStr && 
+      normalizeDate(b.date) === normalizeDate(dateStr) && 
       b.time === slot.time && 
       b.status === 'upcoming'
     );
@@ -156,13 +158,13 @@ export default function TrainerAvailabilityScreen() {
     // 2. Check if reserved
     const isReserved = reservations.some((r: any) =>
       r.trainer_id === coach.id &&
-      r.slot_date === dateStr &&
+      normalizeDate(r.slot_date) === normalizeDate(dateStr) &&
       r.slot_time === slot.time &&
       r.expires_at > Date.now()
     );
 
     // 3. Find if override exists
-    const override = availabilityOverrides.find(o => o.date === dateStr && o.time === slot.time);
+    const override = availabilityOverrides.find(o => normalizeDate(o.date) === normalizeDate(dateStr) && o.time === slot.time);
     
     // 4. Default available is true, overridden is false
     const isAvailable = override ? override.isAvailable : true;
@@ -196,7 +198,7 @@ export default function TrainerAvailabilityScreen() {
         <View className="gap-6">
 
           {/* Section: Monthly Summary */}
-          <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+          <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4">
             <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
               <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Commission Model Summary</Text>
               <View className="bg-emerald-50 border border-emerald-150 px-2 py-0.5 rounded-full">
@@ -216,7 +218,7 @@ export default function TrainerAvailabilityScreen() {
           </View>
 
           {/* Section: Trainer Settings */}
-          <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+          <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4">
             <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
               <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Operational Settings</Text>
               <View className="bg-indigo-50 border border-indigo-150 px-2 py-0.5 rounded-full">
@@ -317,7 +319,7 @@ export default function TrainerAvailabilityScreen() {
                     onPress={() => setSelectedDay(dayNum)}
                     className={`px-4.5 py-3.5 mx-1 rounded-[18px] items-center justify-center border ${
                       isSelected 
-                        ? 'bg-zinc-950 border-zinc-900 shadow-sm' 
+                        ? 'bg-zinc-950 border-zinc-900' 
                         : 'bg-white border-zinc-150'
                     }`}
                   >
@@ -368,8 +370,8 @@ export default function TrainerAvailabilityScreen() {
               return (
                 <View 
                   key={slot.id}
-                  className={`p-4.5 rounded-[24px] border flex-row justify-between items-center shadow-xs ${
-                    slot.isAvailable ? 'bg-white border-zinc-200' : 'bg-zinc-100/50 border-zinc-200/50'
+                  className={`p-4.5 rounded-[24px] border flex-row justify-between items-center ${
+                    slot.isAvailable ? 'bg-white border-zinc-200' : 'bg-zinc-100 border-zinc-150'
                   }`}
                 >
                   <TouchableOpacity
@@ -422,7 +424,7 @@ export default function TrainerAvailabilityScreen() {
                     <TouchableOpacity
                       activeOpacity={0.8}
                       onPress={() => handleEditTimeSlot(slot.time, slot.category)}
-                      className="bg-zinc-50 border border-zinc-150 w-8 h-8 rounded-full items-center justify-center shadow-xs"
+                      className="bg-zinc-50 border border-zinc-150 w-8 h-8 rounded-full items-center justify-center"
                     >
                       <Feather name="edit-2" size={12} color="#6B7280" />
                     </TouchableOpacity>

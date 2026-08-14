@@ -2,6 +2,8 @@ import { Database } from '../database/Database';
 import { Coach, Booking } from '../types';
 import { AssignmentConfig } from '../config/AssignmentConfig';
 import { getCategoryFromTitle } from '../config/WorkoutMapping';
+import { normalizeDate } from '../utils/date';
+import { calculateDistanceKm, geocodeAddressSync } from '../utils/distance';
 
 export interface RatedTrainer {
   coach: Coach;
@@ -53,7 +55,7 @@ export class AssignmentEngine {
         if (b.status === 'cancelled') return false;
         
         // Check date overlap
-        if (b.date !== booking.date) return false;
+        if (normalizeDate(b.date) !== normalizeDate(booking.date)) return false;
         
         // Check time overlap
         return b.time === booking.time;
@@ -75,7 +77,7 @@ export class AssignmentEngine {
         if (b.trainerName !== coach.name) return false;
         if (b.status !== 'completed' && b.timelineStatus !== 'workout_completed') return false;
         
-        if (b.date !== booking.date) return false;
+        if (normalizeDate(b.date) !== normalizeDate(booking.date)) return false;
         
         const bMinutes = this.parseTimeToMinutes(b.time);
         const bookingMinutes = this.parseTimeToMinutes(booking.time);
@@ -87,16 +89,33 @@ export class AssignmentEngine {
       if (hasCooldownConflict) continue;
 
       // Eligibility Rule 7: Inside service radius
-      const distance = this.getSimulatedDistance(coach.id, booking.id);
-      const radiusLimit = coach.preferences?.radiusKm || AssignmentConfig.serviceRadiusKm;
-      if (distance > radiusLimit) continue;
+      const trainerLat = coach.preferences?.operatingLatitude;
+      const trainerLng = coach.preferences?.operatingLongitude;
+      const locationStatus = coach.preferences?.operatingLocationStatus;
+
+      let isLocationEligible = false;
+      let distance = 0;
+      if (locationStatus === 'verified' && trainerLat !== undefined && trainerLng !== undefined) {
+        const customerLoc = geocodeAddressSync(booking.address || '');
+        distance = calculateDistanceKm(
+          trainerLat,
+          trainerLng,
+          customerLoc.lat,
+          customerLoc.lng
+        );
+        const radiusLimit = coach.preferences?.radiusKm || AssignmentConfig.serviceRadiusKm;
+        if (distance <= radiusLimit) {
+          isLocationEligible = true;
+        }
+      }
+      if (!isLocationEligible) continue;
 
       // Eligibility Rule 8: Max daily sessions limit
       const maxSessions = coach.preferences?.maxDailySessions || 5;
       const todaySessionsCount = bookings.filter(b => 
         b.trainerName === coach.name && 
         b.status !== 'cancelled' && 
-        b.date === booking.date
+        normalizeDate(b.date) === normalizeDate(booking.date)
       ).length;
       if (todaySessionsCount >= maxSessions) continue;
 
@@ -126,7 +145,7 @@ export class AssignmentEngine {
       const todayBookingsCount = bookings.filter(b => 
         b.trainerName === coach.name && 
         b.status === 'upcoming' && 
-        b.date === booking.date
+        normalizeDate(b.date) === normalizeDate(booking.date)
       ).length;
       const workloadScore = Math.max(0, 100 - (todayBookingsCount * 25)); // Decays 25% per active booking
 

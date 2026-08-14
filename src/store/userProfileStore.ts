@@ -14,6 +14,12 @@ export interface SavedAddress {
   pinCode: string;
   gpsPlaceholder?: string;
   isDefault: boolean;
+  lat?: number;
+  lng?: number;
+  apartment?: string;
+  floor?: string;
+  notes?: string;
+  placeId?: string;
 }
 
 export interface EmergencyContact {

@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Switch, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Switch, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore, SavedAddress } from '../store/userProfileStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import * as Location from 'expo-location';
+import { fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords, AutocompleteSuggestion } from '../utils/distance';
 
 export default function AddressManagementScreen() {
   const router = useRouter();
@@ -23,6 +25,97 @@ export default function AddressManagementScreen() {
   const [pinCode, setPinCode] = useState('');
   const [isDefault, setIsDefault] = useState(false);
 
+  // New location-based states
+  const [lat, setLat] = useState<number | undefined>(undefined);
+  const [lng, setLng] = useState<number | undefined>(undefined);
+  const [placeId, setPlaceId] = useState('');
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<Array<AutocompleteSuggestion>>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [sessionToken, setSessionToken] = useState('');
+
+  // Generate session token on form open
+  useEffect(() => {
+    if (showForm) {
+      setSessionToken(Math.random().toString(36).substring(2, 15) + Date.now().toString());
+    }
+  }, [showForm]);
+
+  // Debounced search query autocomplete
+  useEffect(() => {
+    if (searchQuery.trim().length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    let active = true;
+    const delay = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const res = await fetchGooglePlacesAutocomplete(searchQuery, sessionToken);
+        if (active) {
+          setSuggestions(res);
+        }
+      } catch (err) {
+        console.warn('Autocomplete fetch failed:', err);
+      } finally {
+        if (active) {
+          setIsSearching(false);
+        }
+      }
+    }, 450);
+
+    return () => {
+      active = false;
+      clearTimeout(delay);
+    };
+  }, [searchQuery, sessionToken]);
+
+  const handleUseCurrentLocation = async () => {
+    setIsSearching(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Location permission is required to use your current location.');
+        setIsSearching(false);
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced
+      });
+      const { latitude, longitude } = loc.coords;
+      const res = await reverseGeocodeCoords(latitude, longitude);
+
+      setLat(latitude);
+      setLng(longitude);
+      setPlaceId(res.placeId || '');
+      setStreet(res.address);
+      setSearchQuery(res.address);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to get current location.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSelectSuggestion = async (suggestion: AutocompleteSuggestion) => {
+    setIsSearching(true);
+    setSuggestions([]);
+    try {
+      const details = await fetchGooglePlaceDetails(suggestion.placeId);
+      setLat(details.latitude);
+      setLng(details.longitude);
+      setPlaceId(suggestion.placeId);
+      setStreet(details.address);
+      setSearchQuery(details.address);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to load place details.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   const resetForm = () => {
     setLabel('Home');
     setName('');
@@ -32,6 +125,11 @@ export default function AddressManagementScreen() {
     setCity('');
     setPinCode('');
     setIsDefault(false);
+    setLat(undefined);
+    setLng(undefined);
+    setPlaceId('');
+    setSearchQuery('');
+    setSuggestions([]);
     setEditingId(null);
     setShowForm(false);
   };
@@ -39,6 +137,10 @@ export default function AddressManagementScreen() {
   const handleSave = () => {
     if (!name.trim() || !building.trim() || !street.trim() || !city.trim() || !pinCode.trim()) {
       Alert.alert('Incomplete Form', 'Please fill in Name, Building, Street, City, and PIN Code.');
+      return;
+    }
+    if (lat === undefined || lng === undefined || lat === 0 || lng === 0) {
+      Alert.alert('Location Required', 'Please resolve your coordinates by using Current Location or selecting an autocomplete suggestion.');
       return;
     }
 
@@ -51,7 +153,10 @@ export default function AddressManagementScreen() {
       city: city.trim(),
       pinCode: pinCode.trim(),
       isDefault,
-      gpsPlaceholder: '19.0176, 72.8164' // mock
+      lat,
+      lng,
+      placeId,
+      gpsPlaceholder: `${lat.toFixed(5)}, ${lng.toFixed(5)}`
     };
 
     if (editingId) {
@@ -75,6 +180,10 @@ export default function AddressManagementScreen() {
     setCity(addr.city);
     setPinCode(addr.pinCode);
     setIsDefault(addr.isDefault);
+    setLat(addr.lat);
+    setLng(addr.lng);
+    setPlaceId(addr.placeId || '');
+    setSearchQuery(addr.street);
     setShowForm(true);
   };
 
@@ -171,12 +280,57 @@ export default function AddressManagementScreen() {
                   />
                 </View>
 
+                {/* Search Address / Autocomplete */}
+                <View className="gap-1.5 bg-indigo-50/30 border border-indigo-150/40 p-3 rounded-2xl">
+                  <Text className="text-zinc-500 text-[8px] font-black uppercase">Resolve Workout Address</Text>
+                  
+                  <TouchableOpacity
+                    onPress={handleUseCurrentLocation}
+                    disabled={isSearching}
+                    className="bg-indigo-50 border border-indigo-200/50 py-2.5 rounded-xl flex-row justify-center items-center gap-2"
+                  >
+                    <Feather name="navigation" size={12} color="#4F46E5" />
+                    <Text className="text-indigo-600 text-[9px] font-black uppercase tracking-wider">Use Current Location</Text>
+                  </TouchableOpacity>
+
+                  <TextInput
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder="Search address..."
+                    className="border border-[#E5E7EB] bg-white p-3 rounded-xl text-xs font-semibold text-zinc-900"
+                  />
+
+                  {suggestions.length > 0 && (
+                    <View className="bg-white border border-zinc-200 rounded-xl overflow-hidden mt-1 py-1 max-h-40">
+                      {suggestions.map((item, idx) => (
+                        <TouchableOpacity
+                          key={idx}
+                          onPress={() => handleSelectSuggestion(item)}
+                          className="p-3 border-b border-zinc-100 flex-row items-center gap-2"
+                        >
+                          <Feather name="map-pin" size={10} color="#6B7280" />
+                          <Text className="text-zinc-700 text-[10px] font-bold flex-1" numberOfLines={2}>
+                            {item.description}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+
+                  {lat !== undefined && lng !== undefined && (
+                    <View className="flex-row items-center gap-1.5 mt-1">
+                      <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                      <Text className="text-[#10B981] text-[9px] font-black uppercase">Location selected</Text>
+                    </View>
+                  )}
+                </View>
+
                 <View className="gap-1">
                   <Text className="text-zinc-500 text-[8px] font-black uppercase">Street / Locality</Text>
                   <TextInput
                     value={street}
                     onChangeText={setStreet}
-                    placeholder="Worli Sea Face road"
+                    placeholder="e.g. Worli Sea Face road"
                     className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
                   />
                 </View>

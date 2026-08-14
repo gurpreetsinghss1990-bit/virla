@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, Switch, Image, Alert, TouchableOpacity, TextInput, Animated, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, ScrollView, Switch, Image, Alert, TouchableOpacity, TextInput, Animated, Platform, KeyboardAvoidingView, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUserStore } from '../../store/userStore';
 import { useMembershipStore } from '../../store/membershipStore';
@@ -11,6 +11,8 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import Svg, { Rect } from 'react-native-svg';
 import { LuxuryCard } from '../../components/LuxuryCard';
 import { Database, TrainerApplication } from '../../database/Database';
+import { fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords, AutocompleteSuggestion } from '../../utils/distance';
+import * as Location from 'expo-location';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -102,6 +104,164 @@ export default function ProfileScreen() {
   const [bankAccNumber, setBankAccNumber] = useState(parsedBankDetails.accountNumber || '');
   const [bankIfscStr, setBankIfscStr] = useState(parsedBankDetails.ifsc || '');
   const [bankUpiIdStr, setBankUpiIdStr] = useState(parsedBankDetails.upiId || '');
+
+  // Operating Base Change Request States
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [addressInput, setAddressInput] = useState('');
+  const [radiusInput, setRadiusInput] = useState<10 | 15>(15);
+
+  // Real Geocoding Search States
+  const [searchSuggestions, setSearchSuggestions] = useState<Array<AutocompleteSuggestion>>([]);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<{ address: string; lat: number; lng: number; placeId?: string } | null>(null);
+  const [isLocationConfirmed, setIsLocationConfirmed] = useState(false);
+  const [locationSessionToken, setLocationSessionToken] = useState('');
+
+  // Generate session token on form open
+  useEffect(() => {
+    if (showAddressForm) {
+      setLocationSessionToken(Math.random().toString(36).substring(2, 15) + Date.now().toString());
+    }
+  }, [showAddressForm]);
+
+  // Debounced Google Places autocomplete effect
+  useEffect(() => {
+    if (addressInput.trim().length < 3) {
+      setSearchSuggestions([]);
+      return;
+    }
+
+    let active = true;
+    const delayDebounceFn = setTimeout(async () => {
+      setIsSearchingLocation(true);
+      try {
+        const suggestions = await fetchGooglePlacesAutocomplete(addressInput, locationSessionToken);
+        if (active) {
+          setSearchSuggestions(suggestions);
+        }
+      } catch (err) {
+        console.warn('Autocomplete fetch failed:', err);
+      } finally {
+        if (active) {
+          setIsSearchingLocation(false);
+        }
+      }
+    }, 450);
+
+    return () => {
+      active = false;
+      clearTimeout(delayDebounceFn);
+    };
+  }, [addressInput, locationSessionToken]);
+
+  const handleUseCurrentLocation = async () => {
+    setIsSearchingLocation(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Location permission is required to use your current location.');
+        setIsSearchingLocation(false);
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced
+      });
+
+      const { latitude, longitude } = loc.coords;
+      const res = await reverseGeocodeCoords(latitude, longitude);
+
+      setSelectedLocation({
+        address: res.address,
+        lat: latitude,
+        lng: longitude,
+        placeId: res.placeId || ''
+      });
+      setAddressInput(res.address);
+      setIsLocationConfirmed(true);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to retrieve current location.');
+    } finally {
+      setIsSearchingLocation(false);
+    }
+  };
+
+  const handleSelectSuggestion = async (suggestion: AutocompleteSuggestion) => {
+    setIsSearchingLocation(true);
+    setSearchSuggestions([]);
+    try {
+      const details = await fetchGooglePlaceDetails(suggestion.placeId);
+      setSelectedLocation({
+        address: details.address,
+        lat: details.latitude,
+        lng: details.longitude,
+        placeId: suggestion.placeId
+      });
+      setAddressInput(details.address);
+      setIsLocationConfirmed(true);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to load place details.');
+    } finally {
+      setIsSearchingLocation(false);
+    }
+  };
+
+  const handleSubmitAddressRequest = async () => {
+    const trainerId = user.id || coach?.id;
+    if (!trainerId) return;
+    if (!selectedLocation) {
+      Alert.alert('Validation Error', 'Please search and select an address from suggestions first.');
+      return;
+    }
+    if (!isLocationConfirmed) {
+      Alert.alert('Validation Error', 'Please confirm that this is your operating base.');
+      return;
+    }
+    if (selectedLocation.lat === 0 || selectedLocation.lng === 0 || !selectedLocation.address.trim()) {
+      Alert.alert('Validation Error', 'Resolved location coordinates are invalid.');
+      return;
+    }
+    
+    try {
+      const currentPrefs = coach?.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] };
+      const isInitial = !currentPrefs.operatingAddress;
+      
+      const newRequest = {
+        requestedAddress: selectedLocation.address,
+        requestedLatitude: selectedLocation.lat,
+        requestedLongitude: selectedLocation.lng,
+        requestedRadius: radiusInput,
+        requestedPlaceId: selectedLocation.placeId || '',
+        status: 'pending' as const
+      };
+      
+      const updatedPrefs = {
+        ...currentPrefs,
+        operatingLocationStatus: 'pending' as const,
+        addressChangeRequest: newRequest,
+        ...(isInitial ? {
+          operatingAddress: selectedLocation.address,
+          operatingLatitude: selectedLocation.lat,
+          operatingLongitude: selectedLocation.lng,
+          operatingPlaceId: selectedLocation.placeId || '',
+          radiusKm: radiusInput
+        } : {})
+      };
+      
+      await Database.updateTrainerPreferences(trainerId, updatedPrefs);
+      setShowAddressForm(false);
+      setAddressInput('');
+      setSearchSuggestions([]);
+      setSelectedLocation(null);
+      setIsLocationConfirmed(false);
+      Alert.alert(
+        isInitial ? 'Operating Location Submitted' : 'Change Request Submitted', 
+        'Your operating base address has been submitted to Admin for approval. You will not appear in customer searches until approved.'
+      );
+    } catch (err: any) {
+      Alert.alert('Submission Failed', err.message);
+    }
+  };
 
   const handleSaveTrainer = async () => {
     const trainerId = user.id || coach?.id;
@@ -657,6 +817,192 @@ export default function ProfileScreen() {
                     </View>
                   </View>
                 )}
+              </LuxuryCard>
+
+              {/* OPERATING AREA CARD */}
+              <LuxuryCard className="p-5 gap-4" interactive={false}>
+                <Text className="text-[#101828] text-xs font-black uppercase tracking-widest border-b border-zinc-100 pb-3">Operating Area</Text>
+                
+                <View className="gap-3">
+                  <View className="py-1 border-b border-zinc-50 pb-2">
+                    <Text className="text-zinc-400 text-xs font-semibold">Operating Base</Text>
+                    <Text className="text-zinc-950 text-xs font-black mt-1 leading-normal">
+                      {coach?.preferences?.operatingAddress || 'Operating Location Not Set'}
+                    </Text>
+                    <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-1">
+                      📍 Permanent operating location
+                    </Text>
+                  </View>
+
+                  <View className="flex-row justify-between py-1 border-b border-zinc-50 pb-2">
+                    <Text className="text-zinc-400 text-xs font-semibold">Service Radius</Text>
+                    <Text className="text-zinc-950 text-xs font-black">
+                      {coach?.preferences?.radiusKm ? `${coach.preferences.radiusKm} km` : 'Not Set'}
+                    </Text>
+                  </View>
+
+                  <View className="flex-row justify-between py-1 border-b border-zinc-50 pb-2">
+                    <Text className="text-zinc-400 text-xs font-semibold">Verification Status</Text>
+                    <View className={`px-2 py-0.5 rounded-full ${
+                      coach?.preferences?.operatingLocationStatus === 'verified' 
+                        ? 'bg-green-50 border border-green-150' 
+                        : coach?.preferences?.operatingLocationStatus === 'rejected'
+                        ? 'bg-rose-50 border border-rose-150'
+                        : 'bg-amber-50 border border-amber-150'
+                    }`}>
+                      <Text className={`text-[8px] font-black uppercase ${
+                        coach?.preferences?.operatingLocationStatus === 'verified'
+                          ? 'text-green-600'
+                          : coach?.preferences?.operatingLocationStatus === 'rejected'
+                          ? 'text-rose-600'
+                          : 'text-amber-600'
+                      }`}>
+                        {coach?.preferences?.operatingLocationStatus === 'verified' ? 'Verified' : coach?.preferences?.operatingLocationStatus === 'rejected' ? 'Rejected' : 'Pending'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {coach?.preferences?.addressChangeRequest && (
+                    <View className="bg-amber-50 border border-amber-250 p-3.5 rounded-xl gap-1">
+                      <Text className="text-amber-800 text-[9px] font-black uppercase tracking-wider">Pending Request</Text>
+                      <Text className="text-zinc-900 text-xs font-black">
+                        Change to: {coach.preferences.addressChangeRequest.requestedAddress} ({coach.preferences.addressChangeRequest.requestedRadius} km)
+                      </Text>
+                      <Text className="text-zinc-400 text-[8px] font-semibold mt-0.5">Waiting for Admin approval.</Text>
+                    </View>
+                  )}
+
+                  {!coach?.preferences?.addressChangeRequest && !showAddressForm && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setAddressInput(coach?.preferences?.operatingAddress || '');
+                        setRadiusInput((coach?.preferences?.radiusKm as 10 | 15) || 15);
+                        setShowAddressForm(true);
+                      }}
+                      className="bg-indigo-50 border border-indigo-200/50 p-3 rounded-xl flex-row justify-center items-center mt-2"
+                    >
+                      <Feather name="edit-2" size={12} color="#4F46E5" style={{ marginRight: 6 }} />
+                      <Text className="text-indigo-600 text-[10px] font-black uppercase tracking-wider">
+                        {coach?.preferences?.operatingAddress ? 'Request Address Change' : 'Configure Operating Base'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {showAddressForm && (
+                    <View className="bg-zinc-50 border border-zinc-150 p-4 rounded-xl gap-3.5 mt-2">
+                      <Text className="text-zinc-950 text-xs font-black uppercase">
+                        {coach?.preferences?.operatingAddress ? 'New Address Change Request' : 'Setup Base Address'}
+                      </Text>
+
+                      <TouchableOpacity
+                        onPress={handleUseCurrentLocation}
+                        disabled={isSearchingLocation}
+                        className="bg-indigo-50 border border-indigo-200/50 p-3.5 rounded-xl flex-row justify-center items-center gap-2"
+                      >
+                        <Feather name="navigation" size={12} color="#4F46E5" />
+                        <Text className="text-indigo-600 text-[10px] font-black uppercase tracking-wider">Use Current Location</Text>
+                      </TouchableOpacity>
+                      
+                      <View className="gap-1">
+                        <Text className="text-zinc-500 text-[8px] font-black uppercase">Search Operating Address</Text>
+                        <TextInput
+                          value={addressInput}
+                          onChangeText={setAddressInput}
+                          placeholder="Start typing your address..."
+                          className="border border-[#E5E7EB] bg-white p-3.5 rounded-xl text-xs text-zinc-900 font-semibold"
+                        />
+                      </View>
+
+                      {/* Autocomplete suggestions dropdown list */}
+                      {searchSuggestions.length > 0 && (
+                        <View className="bg-white border border-zinc-200 rounded-xl max-h-48 overflow-hidden py-1">
+                          {searchSuggestions.map((item, idx) => (
+                            <TouchableOpacity
+                              key={idx}
+                              onPress={() => handleSelectSuggestion(item)}
+                              className="p-3 border-b border-zinc-100 flex-row items-center gap-2"
+                            >
+                              <Feather name="map-pin" size={10} color="#6B7280" />
+                              <Text className="text-zinc-700 text-[10px] font-bold flex-1" numberOfLines={2}>
+                                {item.description}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+
+                      {selectedLocation && (
+                        <View className="bg-indigo-50/40 border border-indigo-100 p-4 rounded-2xl gap-3">
+                          <View className="flex-row items-center gap-2">
+                            <Feather name="check-circle" size={12} color="#4F46E5" />
+                            <Text className="text-indigo-600 text-[8px] font-black uppercase">Location Selected</Text>
+                          </View>
+                          <Text className="text-zinc-900 text-[10px] font-bold leading-relaxed">
+                            {selectedLocation.address}
+                          </Text>
+
+                          {/* Confirm Base Checkbox */}
+                          <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={() => setIsLocationConfirmed(!isLocationConfirmed)}
+                            className="flex-row items-center gap-2.5 border-t border-indigo-100/50 pt-2.5"
+                          >
+                            <View className={`w-4 h-4 rounded border items-center justify-center ${
+                              isLocationConfirmed ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-zinc-300'
+                            }`}>
+                              {isLocationConfirmed && <Feather name="check" size={10} color="white" />}
+                            </View>
+                            <Text className="text-zinc-900 text-[9px] font-bold">This is my operating base.</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+
+                      <View className="gap-1">
+                        <Text className="text-zinc-500 text-[8px] font-black uppercase">Service Radius Limit</Text>
+                        <View className="flex-row gap-2 mt-1">
+                          {[10, 15].map((r) => (
+                            <TouchableOpacity
+                              key={r}
+                              onPress={() => setRadiusInput(r as 10 | 15)}
+                              className={`flex-1 py-2 border rounded-xl items-center ${
+                                radiusInput === r ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-zinc-200'
+                              }`}
+                            >
+                              <Text className={`text-xs font-black uppercase ${
+                                radiusInput === r ? 'text-white' : 'text-zinc-500'
+                              }`}>
+                                {r} km
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+
+                      <View className="flex-row gap-2 mt-1">
+                        <TouchableOpacity
+                          onPress={() => {
+                            setShowAddressForm(false);
+                            setSearchSuggestions([]);
+                            setSelectedLocation(null);
+                            setIsLocationConfirmed(false);
+                          }}
+                          className="flex-1 border border-zinc-250 py-2.5 rounded-xl items-center bg-white"
+                        >
+                          <Text className="text-zinc-500 text-[10px] font-black uppercase">Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={handleSubmitAddressRequest}
+                          disabled={!selectedLocation || !isLocationConfirmed}
+                          className={`flex-1 py-2.5 rounded-xl items-center ${
+                            selectedLocation && isLocationConfirmed ? 'bg-indigo-600' : 'bg-zinc-300'
+                          }`}
+                        >
+                          <Text className="text-white text-[10px] font-black uppercase">Submit Request</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
               </LuxuryCard>
 
               {/* Trainer Ledger: Earnings List */}

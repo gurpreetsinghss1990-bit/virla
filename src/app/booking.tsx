@@ -4,6 +4,8 @@ import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Aler
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
 import { useMembershipStore } from '../store/membershipStore';
+import { calculateDistanceKm, geocodeAddressSync, fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords, AutocompleteSuggestion } from '../utils/distance';
+import * as Location from 'expo-location';
 import { useAddressStore } from '../store/addressStore';
 import { useCoachStore, generateMonthlySlots } from '../store/coachStore';
 import { useNotificationStore } from '../store/notificationStore';
@@ -149,6 +151,39 @@ export default function BookingScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [activeCoords, setActiveCoords] = useState({ lat: 19.0176, lng: 72.8164 });
+  const [googleSuggestions, setGoogleSuggestions] = useState<Array<AutocompleteSuggestion>>([]);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const [sessionToken, setSessionToken] = useState(() => Math.random().toString(36).substring(2, 15) + Date.now().toString());
+
+  // Debounced search query autocomplete for workout location selector
+  useEffect(() => {
+    if (searchQuery.trim().length < 3) {
+      setGoogleSuggestions([]);
+      return;
+    }
+    let active = true;
+    const delay = setTimeout(async () => {
+      setIsSearchingLocation(true);
+      try {
+        const res = await fetchGooglePlacesAutocomplete(searchQuery, sessionToken);
+        if (active) {
+          setGoogleSuggestions(res);
+          setShowSearchDropdown(true);
+        }
+      } catch (err) {
+        console.warn('Google autocomplete failed:', err);
+      } finally {
+        if (active) {
+          setIsSearchingLocation(false);
+        }
+      }
+    }, 450);
+
+    return () => {
+      active = false;
+      clearTimeout(delay);
+    };
+  }, [searchQuery, sessionToken]);
   const [etaText, setEtaText] = useState('~12 mins travel');
   const [distanceText, setDistanceText] = useState('3.2 km');
   const [isLocationOutsideCoverage, setIsLocationOutsideCoverage] = useState(false);
@@ -321,6 +356,61 @@ export default function BookingScreen() {
     });
   };
 
+  const handleSelectGoogleSuggestion = async (suggestion: AutocompleteSuggestion) => {
+    setIsSearchingLocation(true);
+    setGoogleSuggestions([]);
+    setShowSearchDropdown(false);
+    try {
+      const details = await fetchGooglePlaceDetails(suggestion.placeId);
+      setActiveCoords({ lat: details.latitude, lng: details.longitude });
+      setSearchQuery(details.address);
+      setNewBuildingName(details.address);
+      
+      const centerMumbai = { lat: 19.0176, lng: 72.8164 };
+      const dist = calculateDistanceKm(details.latitude, details.longitude, centerMumbai.lat, centerMumbai.lng);
+      setDistanceText(`${dist.toFixed(1)} km`);
+      setEtaText(`~${Math.round(dist * 2.5 + 5)} mins`);
+      setIsLocationOutsideCoverage(dist > 30);
+      setAddAddressStep(2);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to load details.');
+    } finally {
+      setIsSearchingLocation(false);
+    }
+  };
+
+  const handleUseCurrentGps = async () => {
+    setIsSearchingLocation(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Location permission is required to resolve your current coordinates.');
+        setIsSearchingLocation(false);
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced
+      });
+      const { latitude, longitude } = loc.coords;
+      const res = await reverseGeocodeCoords(latitude, longitude);
+
+      setActiveCoords({ lat: latitude, lng: longitude });
+      setSearchQuery(res.address);
+      setNewBuildingName(res.address);
+      
+      const centerMumbai = { lat: 19.0176, lng: 72.8164 };
+      const dist = calculateDistanceKm(latitude, longitude, centerMumbai.lat, centerMumbai.lng);
+      setDistanceText(`${dist.toFixed(1)} km`);
+      setEtaText(`~${Math.round(dist * 2.5 + 5)} mins`);
+      setIsLocationOutsideCoverage(dist > 30);
+      setAddAddressStep(2);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to resolve current location.');
+    } finally {
+      setIsSearchingLocation(false);
+    }
+  };
+
   const handleSelectSlot = (slotTime: string, eligibleTrainerIds: string[]) => {
     setSelectedTime(slotTime);
     const tempBooking = {
@@ -328,7 +418,11 @@ export default function BookingScreen() {
       workoutTitle: selectedExperience.title,
       date: selectedDate,
       time: slotTime,
-      address: addresses.find(a => a.id === selectedAddressId)?.addressLine || 'Selected Location',
+      address: (() => {
+        const addr = addresses.find(a => a.id === selectedAddressId);
+        if (!addr) return 'Selected Location';
+        return addr.addressLine + (addr.lat && addr.lng ? ` (${addr.lat}, ${addr.lng})` : '');
+      })(),
       timelineStatus: 'booked' as const,
       status: 'upcoming' as const,
       createdAt: Date.now()
@@ -428,31 +522,40 @@ export default function BookingScreen() {
     if (step === 3 && selectedAddressId) {
       const addr = addresses.find(a => a.id === selectedAddressId);
       if (addr) {
-        const lower = addr.addressLine.toLowerCase();
-        if (lower.includes('pune') || lower.includes('delhi') || lower.includes('bangalore') || lower.includes('kolkata')) {
-          setIsLocationOutsideCoverage(true);
-          setEtaText('N/A (Out of bounds)');
-          setDistanceText('> 100 km');
-        } else if (lower.includes('juhu')) {
-          setIsLocationOutsideCoverage(false);
-          setEtaText('~18 mins travel');
-          setDistanceText('6.5 km');
-          setActiveCoords({ lat: 19.1076, lng: 72.8264 });
-        } else if (lower.includes('bandra')) {
-          setIsLocationOutsideCoverage(false);
-          setEtaText('~12 mins travel');
-          setDistanceText('3.2 km');
-          setActiveCoords({ lat: 19.0596, lng: 72.8295 });
-        } else if (lower.includes('worli')) {
-          setIsLocationOutsideCoverage(false);
-          setEtaText('~20 mins travel');
-          setDistanceText('8.4 km');
-          setActiveCoords({ lat: 18.9986, lng: 72.8174 });
+        if (addr.lat !== undefined && addr.lng !== undefined && addr.lat !== 0 && addr.lng !== 0) {
+          setActiveCoords({ lat: addr.lat, lng: addr.lng });
+          const centerMumbai = { lat: 19.0176, lng: 72.8164 };
+          const dist = calculateDistanceKm(addr.lat, addr.lng, centerMumbai.lat, centerMumbai.lng);
+          setDistanceText(`${dist.toFixed(1)} km`);
+          setEtaText(`~${Math.round(dist * 2.5 + 5)} mins`);
+          setIsLocationOutsideCoverage(dist > 30);
         } else {
-          setIsLocationOutsideCoverage(false);
-          setEtaText('~15 mins travel');
-          setDistanceText('5.0 km');
-          setActiveCoords({ lat: 19.0176, lng: 72.8164 });
+          const lower = addr.addressLine.toLowerCase();
+          if (lower.includes('pune') || lower.includes('delhi') || lower.includes('bangalore') || lower.includes('kolkata')) {
+            setIsLocationOutsideCoverage(true);
+            setEtaText('N/A (Out of bounds)');
+            setDistanceText('> 100 km');
+          } else if (lower.includes('juhu')) {
+            setIsLocationOutsideCoverage(false);
+            setEtaText('~18 mins travel');
+            setDistanceText('6.5 km');
+            setActiveCoords({ lat: 19.1076, lng: 72.8264 });
+          } else if (lower.includes('bandra')) {
+            setIsLocationOutsideCoverage(false);
+            setEtaText('~12 mins travel');
+            setDistanceText('3.2 km');
+            setActiveCoords({ lat: 19.0596, lng: 72.8295 });
+          } else if (lower.includes('worli')) {
+            setIsLocationOutsideCoverage(false);
+            setEtaText('~15 mins travel');
+            setDistanceText('4.1 km');
+            setActiveCoords({ lat: 18.9986, lng: 72.8174 });
+          } else {
+            setIsLocationOutsideCoverage(false);
+            setEtaText('~15 mins travel');
+            setDistanceText('4.2 km');
+            setActiveCoords({ lat: 19.0176, lng: 72.8164 });
+          }
         }
       }
     }
@@ -650,7 +753,11 @@ export default function BookingScreen() {
     if (isConfirming) return;
     setIsConfirming(true);
 
-    const targetAddress = addresses.find(a => a.id === selectedAddressId)?.addressLine || 'Selected Location';
+    const targetAddress = (() => {
+      const addr = addresses.find(a => a.id === selectedAddressId);
+      if (!addr) return 'Selected Location';
+      return addr.addressLine + (addr.lat && addr.lng ? ` (${addr.lat}, ${addr.lng})` : '');
+    })();
     const activeCoach = matchedCoach || coaches[0];
 
     if (!activeCoach) {
@@ -1520,61 +1627,7 @@ export default function BookingScreen() {
                             {/* GPS current location button */}
                             <TouchableOpacity
                               activeOpacity={0.8}
-                              onPress={() => {
-                                const runSimulatedGps = () => {
-                                  setGpsPermission('granted');
-                                  setIsLocationOutsideCoverage(false);
-                                  setEtaText('~18 mins travel');
-                                  setDistanceText('6.5 km');
-                                  setActiveCoords({ lat: 19.1076, lng: 72.8264 });
-                                  setSearchQuery('Juhu Beach Road, Mumbai, Maharashtra 400049');
-                                  setNewBuildingName('Juhu Beach Road');
-                                  setAddAddressStep(2);
-                                };
-
-                                if (gpsSignalFailure) {
-                                  Alert.alert('GPS Jammed', 'Simulated Weak GPS Signal. Try manual address search.');
-                                  return;
-                                }
-
-                                if (typeof navigator !== 'undefined' && navigator.geolocation) {
-                                  navigator.geolocation.getCurrentPosition(
-                                    async (position) => {
-                                      const { latitude, longitude } = position.coords;
-                                      setActiveCoords({ lat: latitude, lng: longitude });
-                                      try {
-                                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`, {
-                                          headers: { 'User-Agent': 'VIRLA-Mobile-App' }
-                                        });
-                                        const data = await res.json();
-                                        if (data && data.display_name) {
-                                          setSearchQuery(data.display_name);
-                                          const streetName = data.address.road || data.address.suburb || data.address.neighbourhood || 'Current Location';
-                                          setNewBuildingName(streetName);
-                                        } else {
-                                          setSearchQuery(`${latitude.toFixed(4)}° N, ${longitude.toFixed(4)}° E`);
-                                          setNewBuildingName('Current Location');
-                                        }
-                                      } catch (e) {
-                                        setSearchQuery(`${latitude.toFixed(4)}° N, ${longitude.toFixed(4)}° E`);
-                                        setNewBuildingName('Current Location');
-                                      }
-                                      setGpsPermission('granted');
-                                      setIsLocationOutsideCoverage(false);
-                                      setEtaText('~12 mins travel');
-                                      setDistanceText('3.5 km');
-                                      setAddAddressStep(2);
-                                    },
-                                    (error) => {
-                                      console.log('GPS Fetch Error:', error);
-                                      runSimulatedGps();
-                                    },
-                                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-                                  );
-                                } else {
-                                  runSimulatedGps();
-                                }
-                              }}
+                              onPress={handleUseCurrentGps}
                               className="w-full h-14 bg-indigo-50 border border-indigo-150 rounded-2xl items-center justify-center flex-row gap-2.5"
                             >
                               <Feather name="navigation" size={16} color="#4F46E5" />
@@ -1592,7 +1645,7 @@ export default function BookingScreen() {
                               <View className="flex-row items-center bg-white border border-[#E5E7EB] px-4 py-1.5 rounded-2xl">
                                 <Feather name="search" size={16} color="#6B7280" />
                                 <TextInput
-                                  placeholder="Type locality (e.g. Bandra, Worli, Pune...)"
+                                  placeholder="Type locality (e.g. Bandra, Juhu...)"
                                   placeholderTextColor="#9CA3AF"
                                   value={searchQuery}
                                   onChangeText={(t) => {
@@ -1603,8 +1656,8 @@ export default function BookingScreen() {
                                 />
                               </View>
 
-                              {/* Dropdown list of presets */}
-                              {showSearchDropdown && searchQuery.length > 0 && (
+                              {/* Dropdown list of suggestions */}
+                              {showSearchDropdown && googleSuggestions.length > 0 && (
                                 <View 
                                   className="absolute top-14 left-0 right-0 bg-white border border-zinc-200 rounded-xl z-50 max-h-56 overflow-hidden"
                                   style={{
@@ -1615,57 +1668,19 @@ export default function BookingScreen() {
                                     elevation: 6,
                                   }}
                                 >
-                                  <TouchableOpacity
-                                    onPress={() => {
-                                      setSearchQuery(searchQuery);
-                                      setNewBuildingName(searchQuery);
-                                      setShowSearchDropdown(false);
-                                      setIsLocationOutsideCoverage(false);
-                                      setEtaText('~15 mins');
-                                      setDistanceText('4.2 km');
-                                      setActiveCoords({ lat: 19.0596, lng: 72.8295 }); // Fallback Bandra West
-                                      setAddAddressStep(2);
-                                    }}
-                                    className="p-4 border-b border-zinc-200 flex-row justify-between items-center bg-indigo-50/20"
-                                  >
-                                    <View className="flex-1 pr-2">
-                                      <Text className="text-indigo-600 text-xs font-black">➕ USE CUSTOM ADDRESS</Text>
-                                      <Text className="text-zinc-500 text-[9px] font-bold mt-0.5" numberOfLines={1}>{searchQuery}</Text>
-                                    </View>
-                                    <Feather name="plus" size={14} color="#4F46E5" />
-                                  </TouchableOpacity>
-
-                                  {[
-                                    { name: 'Bandra West, Mumbai', desc: 'Active VIRLA service zone', out: false, coords: { lat: 19.0596, lng: 72.8295 }, eta: '~12 mins', dist: '3.2 km' },
-                                    { name: 'Juhu Scheme, Mumbai', desc: 'Active VIRLA service zone', out: false, coords: { lat: 19.1076, lng: 72.8264 }, eta: '~18 mins', dist: '6.5 km' },
-                                    { name: 'Worli Naka, Mumbai', desc: 'Active VIRLA service zone', out: false, coords: { lat: 18.9986, lng: 72.8174 }, eta: '~20 mins', dist: '8.4 km' },
-                                    { name: 'Pune Central Station', desc: 'Outside active service zone', out: true, coords: { lat: 18.5204, lng: 73.8567 }, eta: 'N/A', dist: '150 km' },
-                                    { name: 'Connaught Place, Delhi', desc: 'Outside active service zone', out: true, coords: { lat: 28.6304, lng: 77.2177 }, eta: 'N/A', dist: '1400 km' }
-                                  ]
-                                    .filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                                    .map((item, idx) => (
-                                      <TouchableOpacity
-                                        key={idx}
-                                        onPress={() => {
-                                          setSearchQuery(item.name);
-                                          setNewBuildingName(item.name.split(',')[0]);
-                                          setShowSearchDropdown(false);
-                                          setIsLocationOutsideCoverage(item.out);
-                                          setEtaText(item.eta);
-                                          setDistanceText(item.dist);
-                                          setActiveCoords(item.coords);
-                                          setAddAddressStep(2);
-                                        }}
-                                        className="p-4 border-b border-zinc-100 flex-row justify-between items-center bg-white"
-                                      >
-                                        <View className="flex-1 pr-2">
-                                          <Text className="text-zinc-900 text-xs font-bold">{item.name}</Text>
-                                          <Text className="text-zinc-400 text-[8px] font-semibold">{item.desc}</Text>
-                                        </View>
-                                        <Feather name="arrow-up-left" size={14} color="#9CA3AF" />
-                                      </TouchableOpacity>
-                                    ))
-                                  }
+                                  {googleSuggestions.map((item, idx) => (
+                                    <TouchableOpacity
+                                      key={idx}
+                                      onPress={() => handleSelectGoogleSuggestion(item)}
+                                      className="p-4 border-b border-zinc-100 flex-row justify-between items-center bg-white"
+                                    >
+                                      <View className="flex-1 pr-2">
+                                        <Text className="text-zinc-900 text-xs font-bold">{item.description}</Text>
+                                        <Text className="text-zinc-400 text-[8px] font-semibold">Real Google Place</Text>
+                                      </View>
+                                      <Feather name="arrow-up-left" size={14} color="#9CA3AF" />
+                                    </TouchableOpacity>
+                                  ))}
                                 </View>
                               )}
                             </View>

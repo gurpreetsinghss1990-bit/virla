@@ -143,6 +143,19 @@ export interface Coach {
     categories: string[];
     weeklySchedule?: ScheduleSlot[];
     availabilityOverrides?: AvailabilityOverride[];
+    operatingAddress?: string;
+    operatingLatitude?: number;
+    operatingLongitude?: number;
+    operatingPlaceId?: string;
+    operatingLocationStatus?: 'pending' | 'verified' | 'rejected';
+    addressChangeRequest?: {
+      requestedAddress: string;
+      requestedLatitude: number;
+      requestedLongitude: number;
+      requestedRadius: number;
+      requestedPlaceId?: string;
+      status: 'pending' | 'approved' | 'rejected';
+    } | null;
   };
 }
 
