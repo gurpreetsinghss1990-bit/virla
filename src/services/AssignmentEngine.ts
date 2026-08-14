@@ -2,7 +2,7 @@ import { Database } from '../database/Database';
 import { Coach, Booking } from '../types';
 import { AssignmentConfig } from '../config/AssignmentConfig';
 import { getCategoryFromTitle } from '../config/WorkoutMapping';
-import { normalizeDate } from '../utils/date';
+import { normalizeDate, canonicalizeTimeRange } from '../utils/date';
 import { calculateDistanceKm, geocodeAddressSync } from '../utils/distance';
 
 export interface RatedTrainer {
@@ -25,7 +25,7 @@ export class AssignmentEngine {
    * Highest scoring trainer is first.
    */
   static rankTrainers(booking: Booking): RatedTrainer[] {
-    const coaches = Database.schema.coaches;
+    const coaches = Database.getCoaches();
     const bookings = Database.schema.bookings;
     const weights = AssignmentConfig.weights;
 
@@ -49,16 +49,20 @@ export class AssignmentEngine {
       const isApproved = coach.verifiedBadge !== false;
       if (!isApproved) continue;
 
-      // Eligibility Rule 4: No overlapping bookings or active sessions
+      // Eligibility Rule 4: No overlapping bookings or active sessions (respecting 30-minute operational buffer)
       const hasOverlap = bookings.some(b => {
-        if (b.trainerName !== coach.name) return false;
+        if (b.trainerId !== coach.id) return false; // Match by trainer ID
         if (b.status === 'cancelled') return false;
         
         // Check date overlap
         if (normalizeDate(b.date) !== normalizeDate(booking.date)) return false;
         
-        // Check time overlap
-        return b.time === booking.time;
+        // Check time overlap and buffer
+        const bMinutes = this.parseTimeToMinutes(b.time);
+        const bookingMinutes = this.parseTimeToMinutes(booking.time);
+        const diff = Math.abs(bookingMinutes - bMinutes);
+        const duration = b.durationMinutes || 60;
+        return diff < (duration + 30);
       });
       if (hasOverlap) continue;
 
@@ -125,7 +129,7 @@ export class AssignmentEngine {
 
       // Availability Score (30%)
       // Check if this slot is in the trainer's calendar availability list
-      const hasSlot = coach.availability?.some(slot => slot.includes(booking.time));
+      const hasSlot = coach.availability?.some(slot => canonicalizeTimeRange(slot) === canonicalizeTimeRange(booking.time));
       const availabilityScore = hasSlot ? 100 : 50; // 100 if preferred slot, 50 if generally online
 
       // Distance Score (25%)

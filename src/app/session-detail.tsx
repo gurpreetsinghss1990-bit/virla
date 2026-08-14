@@ -89,10 +89,15 @@ export default function SessionDetailScreen() {
     const updateTimers = () => {
       if (role === 'trainer' && currentStatus === 'booked') {
         const nextTime = calculateTimeLeft();
+        const elapsed = Math.floor((Date.now() - (booking.createdAt || Date.now())) / 1000);
         if (nextTime <= 0) {
-          reassignTrainer(booking.id, 'timeout');
-          router.back();
-          return;
+          // Only trigger timeout reassign if the booking is fresh
+          const isFresh = elapsed < 65;
+          if (isFresh) {
+            reassignTrainer(booking.id, 'timeout');
+            router.back();
+            return;
+          }
         }
         setTimeLeft(nextTime);
       }

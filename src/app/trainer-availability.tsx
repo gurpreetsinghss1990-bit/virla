@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,11 +6,25 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import { useUserStore } from '../store/userStore';
 import { useCoachStore, generateMonthlySlots } from '../store/coachStore';
 import { Database } from '../database/Database';
-import { normalizeDate } from '../utils/date';
+import { normalizeDate, canonicalizeTimeRange } from '../utils/date';
 
 export default function TrainerAvailabilityScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useUserStore();
+
+  useEffect(() => {
+    const initData = async () => {
+      try {
+        console.log('[AVAILABILITY] Reloading database from Supabase on mount...');
+        await Database.reload();
+        useCoachStore.getState().syncFromDB();
+        console.log('[AVAILABILITY] Database reloaded and synced.');
+      } catch (err) {
+        console.warn('Failed to load database in availability:', err);
+      }
+    };
+    initData();
+  }, []);
   
   const { 
     coaches,
@@ -151,7 +165,7 @@ export default function TrainerAvailabilityScreen() {
     const isBooked = bookings.some((b: any) => 
       b.trainerId === coach.id && 
       normalizeDate(b.date) === normalizeDate(dateStr) && 
-      b.time === slot.time && 
+      canonicalizeTimeRange(b.time) === canonicalizeTimeRange(slot.time) && 
       b.status === 'upcoming'
     );
 
@@ -159,12 +173,12 @@ export default function TrainerAvailabilityScreen() {
     const isReserved = reservations.some((r: any) =>
       r.trainer_id === coach.id &&
       normalizeDate(r.slot_date) === normalizeDate(dateStr) &&
-      r.slot_time === slot.time &&
+      canonicalizeTimeRange(r.slot_time) === canonicalizeTimeRange(slot.time) &&
       r.expires_at > Date.now()
     );
 
     // 3. Find if override exists
-    const override = availabilityOverrides.find(o => normalizeDate(o.date) === normalizeDate(dateStr) && o.time === slot.time);
+    const override = availabilityOverrides.find(o => normalizeDate(o.date) === normalizeDate(dateStr) && canonicalizeTimeRange(o.time) === canonicalizeTimeRange(slot.time));
     
     // 4. Default available is true, overridden is false
     const isAvailable = override ? override.isAvailable : true;

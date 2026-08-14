@@ -6,15 +6,31 @@ import { BookingCard } from '../../components/BookingCard';
 import { EmptyState } from '../../components/EmptyState';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { useUserStore } from '../../store/userStore';
+import { Database } from '../../database/Database';
 
 type FilterType = 'upcoming' | 'completed' | 'cancelled' | 'today' | 'past';
 
 export default function BookingsScreen() {
   const { bookings } = useBookingStore();
-  const { role } = useUserStore();
+  const { role, user } = useUserStore();
   const [prevRole, setPrevRole] = useState(role);
   const [activeFilter, setActiveFilter] = useState<FilterType>(role === 'trainer' ? 'today' : 'upcoming');
   const [loading, setLoading] = useState(true);
+
+  const profile = Database.getProfile(user.id);
+  const coach = Database.schema.coaches.find(c => c.name === user.name || c.id === user.id);
+
+  useEffect(() => {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      console.log('=== BOOKING DEBUG LOG ===');
+      bookings.forEach(b => {
+        const matchesTrainer = b.trainerId === user.id || b.trainerName === user.name;
+        const matchesStatus = b.status === 'upcoming';
+        const isToday = b.date.includes('Today') || b.date.includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' }));
+        console.log(`Booking ID: ${b.id} | TrainerID: ${b.trainerId} | ClientID: ${b.clientId} | Date: ${b.date} | Time: ${b.time} | Status: ${b.status} | MatchesTrainer: ${matchesTrainer} | MatchesStatus: ${matchesStatus} | isToday: ${isToday}`);
+      });
+    }
+  }, [bookings, user.id, user.name]);
 
   if (role !== prevRole) {
     setPrevRole(role);
@@ -83,6 +99,22 @@ export default function BookingsScreen() {
               : 'Track and manage all your scheduled home wellness visits.'}
           </Text>
         </View>
+        
+        {typeof __DEV__ !== 'undefined' && __DEV__ && role === 'trainer' && (
+          <View className="bg-zinc-950 border border-zinc-800 p-5 rounded-[24px] mb-6 gap-3 shadow-md">
+            <Text className="text-amber-500 text-[9px] font-black uppercase tracking-widest pl-1">BOOKING DEBUG</Text>
+            <View className="gap-1.5 px-1">
+              <Text className="text-zinc-400 text-[10px] font-bold">Current Auth User: <Text className="text-white font-mono">{user.id || 'N/A'}</Text></Text>
+              <Text className="text-zinc-400 text-[10px] font-bold">Current Profile: <Text className="text-white font-mono">{profile?.id || 'N/A'}</Text></Text>
+              <Text className="text-zinc-400 text-[10px] font-bold">Current Trainer: <Text className="text-white font-mono">{coach ? `${coach.id} (${coach.name})` : 'N/A'}</Text></Text>
+              <Text className="text-zinc-400 text-[10px] font-bold">Remote bookings fetched: <Text className="text-white">{bookings.length}</Text></Text>
+              <Text className="text-zinc-400 text-[10px] font-bold">Bookings matching trainer: <Text className="text-white">{bookings.filter(b => b.trainerId === user.id || b.trainerName === user.name).length}</Text></Text>
+              <Text className="text-zinc-400 text-[10px] font-bold">Bookings matching date: <Text className="text-white">{bookings.filter(b => b.date.includes('Today') || b.date.includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' }))).length}</Text></Text>
+              <Text className="text-zinc-400 text-[10px] font-bold">Bookings matching status: <Text className="text-white">{bookings.filter(b => b.status === 'upcoming').length}</Text></Text>
+              <Text className="text-zinc-400 text-[10px] font-bold">Final upcoming sessions: <Text className="text-white">{filteredBookings.length}</Text></Text>
+            </View>
+          </View>
+        )}
 
         {/* Filter Capsule Selector Tabs */}
         <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1.5 rounded-2xl mb-6">

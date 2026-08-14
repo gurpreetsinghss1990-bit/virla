@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { Coach, TrainerEarning, ScheduleSlot, AvailabilityOverride, TrainerWorkoutAssignment } from '../types';
 import { Alert } from 'react-native';
 import { Database } from '../database/Database';
-import { normalizeDate } from '../utils/date';
+import { normalizeDate, canonicalizeTimeRange } from '../utils/date';
 
 interface CoachState {
   coaches: Coach[];
@@ -47,9 +47,9 @@ export const generateMonthlySlots = (
   options: {
     startHour: number; // e.g. 6 (6 AM)
     endHour: number; // e.g. 23 (11 PM)
-    durationMinutes: number; // e.g. 90
-    gapMinutes: number; // e.g. 60
-  } = { startHour: 6, endHour: 23, durationMinutes: 90, gapMinutes: 60 }
+    durationMinutes: number; // e.g. 60
+    gapMinutes: number; // e.g. 30
+  } = { startHour: 6, endHour: 23, durationMinutes: 60, gapMinutes: 30 }
 ): GeneratedDaySlots[] => {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const daySlotsList: GeneratedDaySlots[] = [];
@@ -137,7 +137,10 @@ export const useCoachStore = create<CoachState>((set, get) => ({
     if (!coach) return;
 
     const currentOverrides = coach.preferences?.availabilityOverrides || [];
-    const idx = currentOverrides.findIndex(o => o.date === date && o.time === time);
+    const idx = currentOverrides.findIndex(o => 
+      normalizeDate(o.date) === normalizeDate(date) && 
+      canonicalizeTimeRange(o.time) === canonicalizeTimeRange(time)
+    );
 
     let updatedOverrides = [...currentOverrides];
     if (idx >= 0) {
@@ -152,7 +155,11 @@ export const useCoachStore = create<CoachState>((set, get) => ({
         updatedOverrides[idx] = { ...existing, isAvailable: false };
       }
     } else {
-      updatedOverrides.push({ date, time, isAvailable: false });
+      updatedOverrides.push({ 
+        date: normalizeDate(date), 
+        time: canonicalizeTimeRange(time), 
+        isAvailable: false 
+      });
     }
 
     const prevOverrides = coach.preferences?.availabilityOverrides ? JSON.parse(JSON.stringify(coach.preferences.availabilityOverrides)) : [];
@@ -180,7 +187,10 @@ export const useCoachStore = create<CoachState>((set, get) => ({
     if (!coach) return;
 
     const currentOverrides = coach.preferences?.availabilityOverrides || [];
-    const idx = currentOverrides.findIndex(o => o.date === date && o.time === time);
+    const idx = currentOverrides.findIndex(o => 
+      normalizeDate(o.date) === normalizeDate(date) && 
+      canonicalizeTimeRange(o.time) === canonicalizeTimeRange(time)
+    );
 
     let updatedOverrides = [...currentOverrides];
     if (idx >= 0) {
@@ -191,7 +201,12 @@ export const useCoachStore = create<CoachState>((set, get) => ({
       }
     } else {
       if (category) {
-        updatedOverrides.push({ date, time, isAvailable: true, category });
+        updatedOverrides.push({ 
+          date: normalizeDate(date), 
+          time: canonicalizeTimeRange(time), 
+          isAvailable: true, 
+          category 
+        });
       }
     }
 

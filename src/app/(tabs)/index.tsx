@@ -40,21 +40,24 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
       return Math.max(0, 60 - elapsed);
     };
 
-    setTimeLeft(calculateTimeLeft());
+    const initialTimeLeft = calculateTimeLeft();
+    setTimeLeft(initialTimeLeft);
 
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        const nextTime = calculateTimeLeft();
-        if (nextTime <= 0) {
-          clearInterval(timer);
-          onTimeout(booking.id);
-          return 0;
-        }
-        return nextTime;
-      });
-    }, 1000);
+    if (initialTimeLeft > 0) {
+      const timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          const nextTime = calculateTimeLeft();
+          if (nextTime <= 0) {
+            clearInterval(timer);
+            onTimeout(booking.id);
+            return 0;
+          }
+          return nextTime;
+        });
+      }, 1000);
 
-    return () => clearInterval(timer);
+      return () => clearInterval(timer);
+    }
   }, [booking.id, booking.createdAt]);
 
   const customerId = `VIRLA-C${booking.id.slice(-6).toUpperCase()}`;

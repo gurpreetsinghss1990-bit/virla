@@ -42,7 +42,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       const target = get().bookings.find(b => b.id === id);
       if (target && target.status === 'upcoming') {
         // Log cancellation event for the current assigned trainer
-        const currentCoach = Database.schema.coaches.find(c => c.name === target.trainerName);
+        const currentCoach = Database.getCoaches().find(c => c.name === target.trainerName);
         const currentCoachId = currentCoach?.id || 'unknown';
         Database.logAssignmentEvent({
           bookingId: id,
@@ -83,7 +83,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     if (status === 'trainer_accepted') {
       const target = get().bookings.find(b => b.id === id);
       if (target) {
-        const currentCoach = Database.schema.coaches.find(c => c.name === target.trainerName);
+        const currentCoach = Database.getCoaches().find(c => c.name === target.trainerName);
         const currentCoachId = currentCoach?.id || 'unknown';
         const rated = AssignmentEngine.rankTrainers(target);
         const ratingMatch = rated.find(r => r.coach.id === currentCoachId);
@@ -203,7 +203,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     const booking = get().bookings.find(b => b.id === bookingId);
     if (!booking) return;
 
-    const allCoaches = Database.schema.coaches;
+    const allCoaches = Database.getCoaches();
     if (allCoaches.length === 0) return;
 
     // Retrieve current coach to log the decline/timeout event

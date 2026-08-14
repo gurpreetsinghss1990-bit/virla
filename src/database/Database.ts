@@ -864,6 +864,7 @@ class DatabaseClient {
 
   private currentUserId: string | null = null;
   private isLoaded = false;
+  public loadSource: 'supabase' | 'cache' | 'none' = 'none';
 
   constructor() {
     this.load();
@@ -907,6 +908,20 @@ class DatabaseClient {
     }
   }
 
+  private async safeQuery(promise: any, tableName: string): Promise<any> {
+    try {
+      const res = await promise;
+      if (res && res.error) {
+        console.warn(`[DEBUG-DB] safeQuery error for table "${tableName}":`, res.error);
+        return { data: [], error: null };
+      }
+      return res;
+    } catch (err: any) {
+      console.warn(`[DEBUG-DB] safeQuery exception for table "${tableName}":`, err);
+      return { data: [], error: null };
+    }
+  }
+
   async load(): Promise<void> {
     console.log('[DEBUG-DB] Database.load() called. isLoaded:', this.isLoaded);
     if (this.isLoaded) return;
@@ -914,23 +929,23 @@ class DatabaseClient {
       this.log('LoadDatabase', 'Loading database collections from Supabase...');
       
       const fetchPromise = Promise.all([
-        supabase.from('users').select('*'),
-        supabase.from('user_profiles').select('*'),
-        supabase.from('trainers').select('*'),
-        supabase.from('workouts').select('*'),
-        supabase.from('bookings').select('*'),
-        supabase.from('credit_transactions').select('*'),
-        supabase.from('hydration_logs').select('*'),
-        supabase.from('calorie_logs').select('*'),
-        supabase.from('notifications').select('*'),
-        supabase.from('chat_messages').select('*'),
-        supabase.from('addresses').select('*'),
-        supabase.from('trainer_earnings').select('*'),
-        supabase.from('trainer_applications').select('*')
+        this.safeQuery(supabase.from('users').select('*'), 'users'),
+        this.safeQuery(supabase.from('user_profiles').select('*'), 'user_profiles'),
+        this.safeQuery(supabase.from('trainers').select('*'), 'trainers'),
+        this.safeQuery(supabase.from('workouts').select('*'), 'workouts'),
+        this.safeQuery(supabase.from('bookings').select('*'), 'bookings'),
+        this.safeQuery(supabase.from('credit_transactions').select('*'), 'credit_transactions'),
+        this.safeQuery(supabase.from('hydration_logs').select('*'), 'hydration_logs'),
+        this.safeQuery(supabase.from('calorie_logs').select('*'), 'calorie_logs'),
+        this.safeQuery(supabase.from('notifications').select('*'), 'notifications'),
+        this.safeQuery(supabase.from('chat_messages').select('*'), 'chat_messages'),
+        this.safeQuery(supabase.from('addresses').select('*'), 'addresses'),
+        this.safeQuery(supabase.from('trainer_earnings').select('*'), 'trainer_earnings'),
+        this.safeQuery(supabase.from('trainer_applications').select('*'), 'trainer_applications')
       ]);
 
       const timeoutPromise = new Promise<any>((_, reject) =>
-        setTimeout(() => reject(new Error('Supabase load query timed out')), 2000)
+        setTimeout(() => reject(new Error('Supabase load query timed out')), 15000)
       );
 
       const [
@@ -965,9 +980,12 @@ class DatabaseClient {
       this.schema.trainer_applications = (resApps.data || []).map(mapTrainerApplication);
 
       // Seed workouts and trainers in Supabase if database is empty (Development only)
+      // Disabled to prevent seed/mock data contamination
+      /*
       if (typeof __DEV__ !== 'undefined' && __DEV__) {
         await this.seedData();
       }
+      */
 
       // Safely query slot_reservations (in case SQL migrations haven't run yet)
       try {
@@ -991,6 +1009,7 @@ class DatabaseClient {
 
       console.log('[DEBUG-DB] Database.load() completed successfully from Supabase.');
       this.isLoaded = true;
+      this.loadSource = 'supabase';
       this.log('LoadDatabase', 'Successfully synchronized local cache from Supabase');
       
       this.save();
@@ -1008,6 +1027,7 @@ class DatabaseClient {
         };
       }
       this.isLoaded = true;
+      this.loadSource = 'cache';
     }
   }
 
@@ -1321,7 +1341,22 @@ class DatabaseClient {
       throw new Error('An account with this mobile number already exists');
     }
 
-    const userId = generateUUID('u');
+    let userId = generateUUID('u');
+    let userRole: 'customer' | 'trainer' | 'admin' = 'customer';
+
+    // Identity-reconciliation strategy for approved trainers re-registering
+    const approvedApp = this.schema.trainer_applications.find(a => a.phone === phone && a.status === 'approved');
+    if (approvedApp) {
+      const existingCoach = this.schema.coaches.find(c => c.name === approvedApp.fullName);
+      if (existingCoach) {
+        userId = existingCoach.id;
+        userRole = 'trainer';
+        // Make sure we delete any leftover user row under that same ID
+        this.schema.users = this.schema.users.filter(u => u.id !== userId);
+        await supabase.from('users').delete().eq('id', userId);
+      }
+    }
+
     const passwordHash = hashPassword(passwordPlain);
 
     const newUser: DBUser = {
@@ -1331,7 +1366,7 @@ class DatabaseClient {
       email: '',
       passwordHash,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-      role: 'customer',
+      role: userRole,
       status: 'active',
       createdDate: new Date().toLocaleDateString(),
       lastLogin: new Date().toISOString(),
@@ -1566,7 +1601,7 @@ class DatabaseClient {
   }
 
   getCoaches(): Coach[] {
-    return this.schema.coaches;
+    return this.schema.coaches.filter(c => !c.id.startsWith('c-') && c.id !== 'c-1' && c.id !== 'c-2' && c.id !== 'c-3' && c.id !== 'c-4');
   }
 
   async updateCoach(coachId: string, fields: Partial<Coach>): Promise<void> {
@@ -1623,7 +1658,7 @@ class DatabaseClient {
   getBookings(userId: string): Booking[] {
     const userObj = this.schema.users.find(u => u.id === userId);
     if (userObj && userObj.role === 'trainer') {
-      return this.schema.bookings.filter(b => b.trainerName === userObj.name);
+      return this.schema.bookings.filter(b => b.trainerId === userObj.id || b.trainerName === userObj.name);
     }
     return this.schema.bookings.filter(b => b.clientId === userId || b.id.includes(userId) || b.id.startsWith('b-'));
   }
