@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Switch, StyleSheet, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Switch, StyleSheet, Platform, KeyboardAvoidingView, NativeModules } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -7,6 +7,44 @@ import { Database, TrainerApplication } from '../database/Database';
 import { LuxuryCard } from '../components/LuxuryCard';
 import { useUserProfileStore } from '../store/userProfileStore';
 import { supabase } from '../database/supabaseClient';
+const getNativePickerModules = () => {
+  const g = globalThis as any;
+  const expoModules = g.expo?.modules || g.ExpoModules || {};
+
+  const hasDocPicker = !!expoModules.ExpoDocumentPicker || !!NativeModules.ExpoDocumentPicker;
+  const hasImgPicker = !!expoModules.ExpoImagePicker || !!NativeModules.ExpoImagePicker;
+  const hasFS = !!expoModules.ExponentFileSystem || !!expoModules.ExpoFileSystem || !!NativeModules.ExponentFileSystem || !!NativeModules.ExpoFileSystem;
+
+  if (!hasDocPicker || !hasImgPicker || !hasFS) {
+    return {
+      DocumentPicker: null,
+      ImagePicker: null,
+      FileSystem: null,
+      isSupported: false,
+    };
+  }
+
+  try {
+    const DocPicker = require('expo-document-picker');
+    const ImgPicker = require('expo-image-picker');
+    const FS = require('expo-file-system');
+
+    return {
+      DocumentPicker: DocPicker,
+      ImagePicker: ImgPicker,
+      FileSystem: FS,
+      isSupported: true,
+    };
+  } catch (e) {
+    console.warn('[DEBUG] Native upload modules not available in this client build. Falling back to simulation mode.', e);
+    return {
+      DocumentPicker: null,
+      ImagePicker: null,
+      FileSystem: null,
+      isSupported: false,
+    };
+  }
+};
 
 export default function TrainerApplicationScreen() {
   const router = useRouter();
@@ -69,6 +107,11 @@ export default function TrainerApplicationScreen() {
   const [documentSelfie, setDocumentSelfie] = useState('');
   const [documentCertifications, setDocumentCertifications] = useState('');
 
+  const [aadhaarUploadStatus, setAadhaarUploadStatus] = useState<'NOT_UPLOADED' | 'UPLOADING' | 'UPLOADED' | 'FAILED'>('NOT_UPLOADED');
+  const [panUploadStatus, setPanUploadStatus] = useState<'NOT_UPLOADED' | 'UPLOADING' | 'UPLOADED' | 'FAILED'>('NOT_UPLOADED');
+  const [selfieUploadStatus, setSelfieUploadStatus] = useState<'NOT_UPLOADED' | 'UPLOADING' | 'UPLOADED' | 'FAILED'>('NOT_UPLOADED');
+  const [certsUploadStatus, setCertsUploadStatus] = useState<'NOT_UPLOADED' | 'UPLOADING' | 'UPLOADED' | 'FAILED'>('NOT_UPLOADED');
+
   const [aadhaarStatus, setAadhaarStatus] = useState<'pending_verification' | 'verified' | 'rejected'>('pending_verification');
   const [panStatus, setPanStatus] = useState<'pending_verification' | 'verified' | 'rejected'>('pending_verification');
   const [aadhaarVerificationNotes, setAadhaarVerificationNotes] = useState('');
@@ -112,8 +155,11 @@ export default function TrainerApplicationScreen() {
             setPreferredWorkingRadius((app.preferredWorkingRadius || 10).toString());
             setPreferredCities(app.preferredCities || []);
             setDocumentAadhaar(app.documentAadhaar || '');
+            setAadhaarUploadStatus(app.documentAadhaar ? 'UPLOADED' : 'NOT_UPLOADED');
             setDocumentPan(app.documentPan || '');
+            setPanUploadStatus(app.documentPan ? 'UPLOADED' : 'NOT_UPLOADED');
             setDocumentSelfie(app.documentSelfie || '');
+            setSelfieUploadStatus(app.documentSelfie ? 'UPLOADED' : 'NOT_UPLOADED');
             
             setAadhaarStatus(app.aadhaarStatus || 'pending_verification');
             setPanStatus(app.panStatus || 'pending_verification');
@@ -127,8 +173,10 @@ export default function TrainerApplicationScreen() {
             try {
               const parsedCerts = JSON.parse(app.documentCertifications || '[]');
               setDocumentCertifications(parsedCerts[0] || '');
+              setCertsUploadStatus(parsedCerts[0] ? 'UPLOADED' : 'NOT_UPLOADED');
             } catch (e) {
               setDocumentCertifications(app.documentCertifications || '');
+              setCertsUploadStatus(app.documentCertifications ? 'UPLOADED' : 'NOT_UPLOADED');
             }
 
             try {
@@ -188,35 +236,223 @@ export default function TrainerApplicationScreen() {
         };
         fileInput.click();
       } else {
-        Alert.alert(
-          'Upload Document',
-          'Simulate uploading a test document to Supabase Storage.',
-          [
-            {
-              text: 'Upload Test PDF',
-              onPress: async () => {
-                const testBlob = new Blob(['Simulated PDF content'], { type: 'application/pdf' });
-                await performUpload(docType, `${docType}_test.pdf`, testBlob);
-              }
-            },
-            {
-              text: 'Upload Test Image',
-              onPress: async () => {
-                const testBlob = new Blob(['Simulated JPEG content'], { type: 'image/jpeg' });
-                await performUpload(docType, `${docType}_test.jpg`, testBlob);
-              }
-            },
-            { text: 'Cancel', style: 'cancel' }
-          ]
-        );
+        const nativeMods = getNativePickerModules();
+        if (!nativeMods.isSupported) {
+          Alert.alert(
+            'Simulation Mode',
+            'Your development client does not contain the native picking modules. You can upload a simulated document to verify the upload flow and TLS health.',
+            [
+              {
+                text: 'Upload Simulated PDF',
+                onPress: async () => {
+                  const simulatedPDF = new Uint8Array([80, 68, 70, 45, 49, 46, 52]).buffer;
+                  await performUpload(docType, `${docType}_simulated.pdf`, simulatedPDF);
+                }
+              },
+              {
+                text: 'Upload Simulated Image',
+                onPress: async () => {
+                  const simulatedImage = new Uint8Array([255, 216, 255, 224, 0, 16, 74, 70, 73, 70]).buffer;
+                  await performUpload(docType, `${docType}_simulated.jpg`, simulatedImage);
+                }
+              },
+              { text: 'Cancel', style: 'cancel' }
+            ]
+          );
+          return;
+        }
+
+        const { DocumentPicker, ImagePicker } = nativeMods;
+
+        if (docType === 'selfie') {
+          // Selfie/profile image
+          Alert.alert(
+            'Upload Selfie',
+            'Take a photo or choose from photo library',
+            [
+              {
+                text: 'Take Photo',
+                onPress: async () => {
+                  try {
+                    const permission = await ImagePicker.requestCameraPermissionsAsync();
+                    if (!permission.granted) {
+                      Alert.alert('Permission Denied', 'Camera permission is required to take a photo.');
+                      return;
+                    }
+                    const result = await ImagePicker.launchCameraAsync({
+                      allowsEditing: true,
+                      aspect: [1, 1],
+                      quality: 0.8,
+                    });
+                    if (result.canceled || !result.assets?.[0]) return;
+                    await handlePickedFile(docType, result.assets[0].uri, result.assets[0].fileName || 'selfie.jpg');
+                  } catch (e: any) {
+                    console.error('[Picker Error] Camera error:', e);
+                    Alert.alert('Camera Error', e.message || 'Failed to capture photo');
+                  }
+                }
+              },
+              {
+                text: 'Choose from Photo Library',
+                onPress: async () => {
+                  try {
+                    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                    if (!permission.granted) {
+                      Alert.alert('Permission Denied', 'Photo library permission is required.');
+                      return;
+                    }
+                    const result = await ImagePicker.launchImageLibraryAsync({
+                      allowsEditing: true,
+                      aspect: [1, 1],
+                      quality: 0.8,
+                    });
+                    if (result.canceled || !result.assets?.[0]) return;
+                    await handlePickedFile(docType, result.assets[0].uri, result.assets[0].fileName || 'selfie.jpg');
+                  } catch (e: any) {
+                    console.error('[Picker Error] Library error:', e);
+                    Alert.alert('Library Error', e.message || 'Failed to pick image');
+                  }
+                }
+              },
+              { text: 'Cancel', style: 'cancel' }
+            ]
+          );
+        } else {
+          // Other documents allow PDF or Image
+          Alert.alert(
+            'Upload Document',
+            'Select document file, choose image, or take photo',
+            [
+              {
+                text: 'Pick Document (PDF/Image)',
+                onPress: async () => {
+                  try {
+                    const result = await DocumentPicker.getDocumentAsync({
+                      type: ['application/pdf', 'image/*'],
+                      copyToCacheDirectory: true,
+                    });
+                    if (result.canceled || !result.assets?.[0]) return;
+                    await handlePickedFile(docType, result.assets[0].uri, result.assets[0].name);
+                  } catch (e: any) {
+                    console.error('[Picker Error] Document picker error:', e);
+                    Alert.alert('Picker Error', e.message || 'Failed to select document');
+                  }
+                }
+              },
+              {
+                text: 'Choose from Photo Library',
+                onPress: async () => {
+                  try {
+                    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                    if (!permission.granted) {
+                      Alert.alert('Permission Denied', 'Photo library permission is required.');
+                      return;
+                    }
+                    const result = await ImagePicker.launchImageLibraryAsync({
+                      allowsEditing: true,
+                      quality: 0.8,
+                    });
+                    if (result.canceled || !result.assets?.[0]) return;
+                    await handlePickedFile(docType, result.assets[0].uri, result.assets[0].fileName || `${docType}.jpg`);
+                  } catch (e: any) {
+                    console.error('[Picker Error] Library error:', e);
+                    Alert.alert('Library Error', e.message || 'Failed to pick image');
+                  }
+                }
+              },
+              {
+                text: 'Take Photo',
+                onPress: async () => {
+                  try {
+                    const permission = await ImagePicker.requestCameraPermissionsAsync();
+                    if (!permission.granted) {
+                      Alert.alert('Permission Denied', 'Camera permission is required to take a photo.');
+                      return;
+                    }
+                    const result = await ImagePicker.launchCameraAsync({
+                      allowsEditing: true,
+                      quality: 0.8,
+                    });
+                    if (result.canceled || !result.assets?.[0]) return;
+                    await handlePickedFile(docType, result.assets[0].uri, result.assets[0].fileName || `${docType}.jpg`);
+                  } catch (e: any) {
+                    console.error('[Picker Error] Camera error:', e);
+                    Alert.alert('Camera Error', e.message || 'Failed to capture photo');
+                  }
+                }
+              },
+              { text: 'Cancel', style: 'cancel' }
+            ]
+          );
+        }
       }
     } catch (err: any) {
       Alert.alert('Selection Error', err.message || 'Failed to select file');
     }
   };
 
+  const handlePickedFile = async (docType: 'aadhaar' | 'pan' | 'selfie' | 'certs', uri: string, name: string) => {
+    try {
+      const nativeMods = getNativePickerModules();
+      if (!nativeMods.isSupported || !nativeMods.FileSystem) {
+        throw new Error('FileSystem module is not available');
+      }
+      const { FileSystem } = nativeMods;
+
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (!fileInfo.exists) {
+        Alert.alert('File Error', 'Selected file does not exist locally.');
+        return;
+      }
+      if (fileInfo.size > 10 * 1024 * 1024) {
+        Alert.alert('File Too Large', 'Maximum file size is 10 MB');
+        return;
+      }
+      
+      setUploadingDoc(docType);
+      if (docType === 'aadhaar') setAadhaarUploadStatus('UPLOADING');
+      else if (docType === 'pan') setPanUploadStatus('UPLOADING');
+      else if (docType === 'selfie') setSelfieUploadStatus('UPLOADING');
+      else if (docType === 'certs') setCertsUploadStatus('UPLOADING');
+
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const arrayBuffer = bytes.buffer;
+
+      await performUpload(docType, name, arrayBuffer);
+    } catch (err: any) {
+      console.error(`[DEBUG ERROR] File processing failed for ${docType}:`, err);
+      if (docType === 'aadhaar') setAadhaarUploadStatus('FAILED');
+      else if (docType === 'pan') setPanUploadStatus('FAILED');
+      else if (docType === 'selfie') setSelfieUploadStatus('FAILED');
+      else if (docType === 'certs') setCertsUploadStatus('FAILED');
+      setUploadingDoc(null);
+      
+      Alert.alert(
+        'Upload failed',
+        `Unable to securely upload this document. Please check your internet connection and try again.\n\nTechnical Error: ${err.message || err}`,
+        [
+          { text: 'Retry Upload', onPress: () => uploadFile(docType) },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      );
+    }
+  };
+
   const performUpload = async (docType: 'aadhaar' | 'pan' | 'selfie' | 'certs', fileName: string, fileBody: any) => {
     setUploadingDoc(docType);
+    if (docType === 'aadhaar') setAadhaarUploadStatus('UPLOADING');
+    else if (docType === 'pan') setPanUploadStatus('UPLOADING');
+    else if (docType === 'selfie') setSelfieUploadStatus('UPLOADING');
+    else if (docType === 'certs') setCertsUploadStatus('UPLOADING');
+
     try {
       const ext = fileName.split('.').pop() || 'pdf';
       const cleanFileName = `${Date.now()}_${docType}.${ext}`;
@@ -245,20 +481,36 @@ export default function TrainerApplicationScreen() {
       if (docType === 'aadhaar') {
         setDocumentAadhaar(fileUrl);
         setAadhaarStatus('pending_verification');
+        setAadhaarUploadStatus('UPLOADED');
       } else if (docType === 'pan') {
         setDocumentPan(fileUrl);
         setPanStatus('pending_verification');
+        setPanUploadStatus('UPLOADED');
       } else if (docType === 'selfie') {
         setDocumentSelfie(fileUrl);
         setAvatar(fileUrl);
+        setSelfieUploadStatus('UPLOADED');
       } else if (docType === 'certs') {
         setDocumentCertifications(fileUrl);
+        setCertsUploadStatus('UPLOADED');
       }
       
       Alert.alert('Upload Successful', `✓ ${docType.toUpperCase()} document uploaded successfully.`);
     } catch (err: any) {
-      console.error(`[DEBUG ERROR] File upload failed:`, err);
-      Alert.alert('Upload Failed', err.message || 'An error occurred during file upload.');
+      console.error(`[DEBUG ERROR] File upload failed for ${docType}:`, err);
+      if (docType === 'aadhaar') setAadhaarUploadStatus('FAILED');
+      else if (docType === 'pan') setPanUploadStatus('FAILED');
+      else if (docType === 'selfie') setSelfieUploadStatus('FAILED');
+      else if (docType === 'certs') setCertsUploadStatus('FAILED');
+      
+      Alert.alert(
+        'Upload failed',
+        `Unable to securely upload this document. Please check your internet connection and try again.\n\nTechnical Error: ${err.message || err}`,
+        [
+          { text: 'Retry Upload', onPress: () => uploadFile(docType) },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      );
     } finally {
       setUploadingDoc(null);
     }
@@ -1034,8 +1286,10 @@ export default function TrainerApplicationScreen() {
                   <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
                     <View className="flex-1 pr-3">
                       <Text className="text-zinc-900 text-xs font-semibold text-start">Aadhaar Card (PDF/Image)</Text>
-                      {documentAadhaar ? (
+                      {aadhaarUploadStatus === 'UPLOADED' ? (
                         <Text className="text-emerald-600 text-[9px] font-black uppercase mt-1 text-start">✓ Aadhaar Uploaded</Text>
+                      ) : aadhaarUploadStatus === 'FAILED' ? (
+                        <Text className="text-rose-600 text-[9px] font-black uppercase mt-1 text-start">❌ Upload Failed</Text>
                       ) : (
                         <Text className="text-rose-600 text-[9px] font-black uppercase mt-1 text-start">⚠️ Required</Text>
                       )}
@@ -1046,10 +1300,10 @@ export default function TrainerApplicationScreen() {
                     <TouchableOpacity
                       onPress={() => uploadFile('aadhaar')}
                       disabled={uploadingDoc === 'aadhaar'}
-                      className={`px-4 py-2.5 rounded-xl border ${documentAadhaar ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-zinc-200'}`}
+                      className={`px-4 py-2.5 rounded-xl border ${aadhaarUploadStatus === 'UPLOADED' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-zinc-200'}`}
                     >
-                      <Text className={`text-[8.5px] font-black uppercase ${documentAadhaar ? 'text-emerald-600' : 'text-zinc-800'}`}>
-                        {uploadingDoc === 'aadhaar' ? 'Uploading...' : documentAadhaar ? 'Replace' : 'Upload'}
+                      <Text className={`text-[8.5px] font-black uppercase ${aadhaarUploadStatus === 'UPLOADED' ? 'text-emerald-600' : 'text-zinc-800'}`}>
+                        {uploadingDoc === 'aadhaar' ? 'Uploading...' : aadhaarUploadStatus === 'FAILED' ? 'Retry Upload' : documentAadhaar ? 'Replace' : 'Upload'}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -1058,8 +1312,10 @@ export default function TrainerApplicationScreen() {
                   <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
                     <View className="flex-1 pr-3">
                       <Text className="text-zinc-900 text-xs font-semibold text-start">PAN Card (PDF/Image)</Text>
-                      {documentPan ? (
+                      {panUploadStatus === 'UPLOADED' ? (
                         <Text className="text-emerald-600 text-[9px] font-black uppercase mt-1 text-start">✓ PAN Uploaded</Text>
+                      ) : panUploadStatus === 'FAILED' ? (
+                        <Text className="text-rose-600 text-[9px] font-black uppercase mt-1 text-start">❌ Upload Failed</Text>
                       ) : (
                         <Text className="text-rose-600 text-[9px] font-black uppercase mt-1 text-start">⚠️ Required</Text>
                       )}
@@ -1070,10 +1326,10 @@ export default function TrainerApplicationScreen() {
                     <TouchableOpacity
                       onPress={() => uploadFile('pan')}
                       disabled={uploadingDoc === 'pan'}
-                      className={`px-4 py-2.5 rounded-xl border ${documentPan ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-zinc-200'}`}
+                      className={`px-4 py-2.5 rounded-xl border ${panUploadStatus === 'UPLOADED' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-zinc-200'}`}
                     >
-                      <Text className={`text-[8.5px] font-black uppercase ${documentPan ? 'text-emerald-600' : 'text-zinc-800'}`}>
-                        {uploadingDoc === 'pan' ? 'Uploading...' : documentPan ? 'Replace' : 'Upload'}
+                      <Text className={`text-[8.5px] font-black uppercase ${panUploadStatus === 'UPLOADED' ? 'text-emerald-600' : 'text-zinc-800'}`}>
+                        {uploadingDoc === 'pan' ? 'Uploading...' : panUploadStatus === 'FAILED' ? 'Retry Upload' : documentPan ? 'Replace' : 'Upload'}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -1082,8 +1338,10 @@ export default function TrainerApplicationScreen() {
                   <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
                     <View className="flex-1 pr-3">
                       <Text className="text-zinc-900 text-xs font-semibold text-start">Profile Selfie Photo</Text>
-                      {documentSelfie ? (
+                      {selfieUploadStatus === 'UPLOADED' ? (
                         <Text className="text-emerald-600 text-[9px] font-black uppercase mt-1 text-start">✓ Selfie Uploaded</Text>
+                      ) : selfieUploadStatus === 'FAILED' ? (
+                        <Text className="text-rose-600 text-[9px] font-black uppercase mt-1 text-start">❌ Upload Failed</Text>
                       ) : (
                         <Text className="text-rose-600 text-[9px] font-black uppercase mt-1 text-start">⚠️ Required</Text>
                       )}
@@ -1091,10 +1349,10 @@ export default function TrainerApplicationScreen() {
                     <TouchableOpacity
                       onPress={() => uploadFile('selfie')}
                       disabled={uploadingDoc === 'selfie'}
-                      className={`px-4 py-2.5 rounded-xl border ${documentSelfie ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-zinc-200'}`}
+                      className={`px-4 py-2.5 rounded-xl border ${selfieUploadStatus === 'UPLOADED' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-zinc-200'}`}
                     >
-                      <Text className={`text-[8.5px] font-black uppercase ${documentSelfie ? 'text-emerald-600' : 'text-zinc-800'}`}>
-                        {uploadingDoc === 'selfie' ? 'Uploading...' : documentSelfie ? 'Replace' : 'Upload'}
+                      <Text className={`text-[8.5px] font-black uppercase ${selfieUploadStatus === 'UPLOADED' ? 'text-emerald-600' : 'text-zinc-800'}`}>
+                        {uploadingDoc === 'selfie' ? 'Uploading...' : selfieUploadStatus === 'FAILED' ? 'Retry Upload' : documentSelfie ? 'Replace' : 'Upload'}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -1103,8 +1361,10 @@ export default function TrainerApplicationScreen() {
                   <View className="flex-row justify-between items-center pb-2">
                     <View className="flex-1 pr-3">
                       <Text className="text-zinc-900 text-xs font-semibold text-start">Fitness Certificates</Text>
-                      {documentCertifications ? (
+                      {certsUploadStatus === 'UPLOADED' ? (
                         <Text className="text-emerald-600 text-[9px] font-black uppercase mt-1 text-start">✓ Certificates Uploaded</Text>
+                      ) : certsUploadStatus === 'FAILED' ? (
+                        <Text className="text-rose-600 text-[9px] font-black uppercase mt-1 text-start">❌ Upload Failed</Text>
                       ) : (
                         <Text className="text-zinc-400 text-[9px] font-bold uppercase mt-1 text-start">Optional</Text>
                       )}
@@ -1112,10 +1372,10 @@ export default function TrainerApplicationScreen() {
                     <TouchableOpacity
                       onPress={() => uploadFile('certs')}
                       disabled={uploadingDoc === 'certs'}
-                      className={`px-4 py-2.5 rounded-xl border ${documentCertifications ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-zinc-200'}`}
+                      className={`px-4 py-2.5 rounded-xl border ${certsUploadStatus === 'UPLOADED' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-zinc-200'}`}
                     >
-                      <Text className={`text-[8.5px] font-black uppercase ${documentCertifications ? 'text-emerald-600' : 'text-zinc-800'}`}>
-                        {uploadingDoc === 'certs' ? 'Uploading...' : documentCertifications ? 'Replace' : 'Upload'}
+                      <Text className={`text-[8.5px] font-black uppercase ${certsUploadStatus === 'UPLOADED' ? 'text-emerald-600' : 'text-zinc-800'}`}>
+                        {uploadingDoc === 'certs' ? 'Uploading...' : certsUploadStatus === 'FAILED' ? 'Retry Upload' : documentCertifications ? 'Replace' : 'Upload'}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -1147,7 +1407,14 @@ export default function TrainerApplicationScreen() {
                   activeOpacity={0.8}
                   onPress={handleSubmit}
                   disabled={!documentAadhaar || !documentPan || !documentSelfie}
-                  className={`flex-1 py-4 rounded-xl items-center justify-center shadow-lg shadow-rose-950/20 ${(!documentAadhaar || !documentPan || !documentSelfie) ? 'bg-zinc-300' : 'bg-[#E11D48]'}`}
+                  style={{
+                    shadowColor: '#E11D48',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 8,
+                    elevation: 4
+                  }}
+                  className={`flex-1 py-4 rounded-xl items-center justify-center ${(!documentAadhaar || !documentPan || !documentSelfie) ? 'bg-zinc-300' : 'bg-[#E11D48]'}`}
                 >
                   <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Submit Application</Text>
                 </TouchableOpacity>
