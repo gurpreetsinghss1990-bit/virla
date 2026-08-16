@@ -446,7 +446,7 @@ export default function ProfileScreen() {
                 </Text>
 
                 <TouchableOpacity 
-                  activeOpacity={0.95}
+                  activeOpacity={0.85}
                   onPress={() => router.push('/wallet' as any)}
                   className="bg-[#101828] rounded-[24px] p-6 shadow-xl relative overflow-hidden border border-zinc-800"
                   style={{
@@ -462,7 +462,7 @@ export default function ProfileScreen() {
                   <View className="flex-row justify-between items-start mb-6">
                     <View>
                       <Text className="text-[#06B6D4] text-[9px] font-black uppercase tracking-widest">
-                        ★ VIRLA Pass (Tap to open wallet)
+                        ★ VIRLA Pass
                       </Text>
                       <Text className="text-white text-xl font-black mt-1 tracking-tight">
                         {membership.tier}
@@ -473,7 +473,7 @@ export default function ProfileScreen() {
 
                   <View className="h-[1px] bg-zinc-800 my-4" />
 
-                  <View className="flex-row justify-between items-center">
+                  <View className="flex-row justify-between items-center mb-4">
                     <View className="gap-0.5">
                       <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">Credits Left</Text>
                       <Text className="text-white text-base font-black">{membership.availableCredits} Credits</Text>
@@ -488,6 +488,13 @@ export default function ProfileScreen() {
                       <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">Expiry Date</Text>
                       <Text className="text-white text-xs font-black mt-0.5">{membership.renewalDate}</Text>
                     </View>
+                  </View>
+
+                  <View className="h-[1px] bg-zinc-850 mt-1 mb-3" />
+
+                  <View className="flex-row justify-end items-center gap-1.5 pr-0.5">
+                    <Text className="text-cyan-400 text-[9px] font-black uppercase tracking-wider">Open Wallet</Text>
+                    <Feather name="arrow-right" size={10} color="#22D3EE" />
                   </View>
                 </TouchableOpacity>
               </View>

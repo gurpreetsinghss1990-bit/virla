@@ -55,6 +55,33 @@ export default function WalletScreen() {
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1 px-6 pt-6" contentContainerStyle={{ paddingBottom: 120 }}>
         <View className="gap-6">
 
+          {/* Edge-case Warning Banners (Low or Zero Credits / Expired) */}
+          {isExpired() ? (
+            <View className="bg-red-50 border border-red-100 p-4.5 rounded-[24px] flex-row items-center gap-3">
+              <Feather name="alert-triangle" size={16} color="#EF4444" />
+              <View className="flex-1">
+                <Text className="text-red-800 text-[10px] font-black uppercase tracking-wider">Wallet Expired ⚠️</Text>
+                <Text className="text-red-700 text-xs font-medium mt-0.5">Please recharge to reactivate session check-ins.</Text>
+              </View>
+            </View>
+          ) : creditBalance === 0 ? (
+            <View className="bg-rose-50 border border-rose-100 p-4.5 rounded-[24px] flex-row items-center gap-3">
+              <Feather name="alert-circle" size={16} color="#E11D48" />
+              <View className="flex-1">
+                <Text className="text-[#E11D48] text-[10px] font-black uppercase tracking-wider">You&apos;re out of credits ⚠️</Text>
+                <Text className="text-rose-700 text-xs font-medium mt-0.5">Recharge your wallet to book wellness sessions.</Text>
+              </View>
+            </View>
+          ) : creditBalance <= 2 ? (
+            <View className="bg-amber-50 border border-amber-100 p-4.5 rounded-[24px] flex-row items-center gap-3">
+              <Feather name="zap" size={16} color="#D97706" />
+              <View className="flex-1">
+                <Text className="text-amber-800 text-[10px] font-black uppercase tracking-wider">Running low on credits ⚡</Text>
+                <Text className="text-amber-700 text-xs font-medium mt-0.5">Recharge your wallet to keep training.</Text>
+              </View>
+            </View>
+          ) : null}
+
           {/* Apple Wallet inspired Credit Card (Feature 3) */}
           <View className="bg-zinc-950 rounded-[32px] p-6 border border-zinc-800 shadow-xl gap-6 relative overflow-hidden">
             {/* Shimmer overlay styling */}
@@ -76,11 +103,11 @@ export default function WalletScreen() {
 
             <View className="flex-row justify-between items-center border-t border-zinc-850 pt-4">
               <View>
-                <Text className="text-zinc-600 text-[7px] font-black uppercase">Card Holder</Text>
+                <Text className="text-zinc-650 text-[7px] font-black uppercase">Card Holder</Text>
                 <Text className="text-white text-xs font-black mt-0.5">Viral</Text>
               </View>
               <View className="items-end">
-                <Text className="text-zinc-600 text-[7px] font-black uppercase">Expiry Date</Text>
+                <Text className="text-zinc-650 text-[7px] font-black uppercase">Expiry Date</Text>
                 <View className="flex-row items-center gap-1 mt-0.5">
                   <Text className="text-white text-xs font-black">{membership.renewalDate}</Text>
                   {isExpired() && (
@@ -89,6 +116,17 @@ export default function WalletScreen() {
                 </View>
               </View>
             </View>
+
+            <View className="h-[1px] bg-zinc-850 mt-2 mb-1" />
+
+            <TouchableOpacity 
+              activeOpacity={0.85}
+              onPress={() => router.push('/membership' as any)}
+              className="bg-[#E11D48] py-4 rounded-2xl items-center justify-center flex-row gap-2 shadow-md"
+            >
+              <Feather name="plus-circle" size={13} color="white" />
+              <Text className="text-white text-xs font-black uppercase tracking-wider">Recharge Wallet</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Stats metrics rows */}

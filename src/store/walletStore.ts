@@ -73,11 +73,12 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         profile.creditsBalance -= 1;
         Database.addLedgerTransaction(userId, {
           id: Database.generateUUID('tx'),
-          type: 'booking' as any,
-          title: reason,
-          change: -1,
+          type: 'spend',
+          amount: '₹0',
+          status: 'paid',
+          credits: 1,
           date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
-        } as any);
+        });
         useMembershipStore.getState().syncFromDB();
         get().syncFromDB();
         return true;
@@ -94,11 +95,12 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         profile.creditsBalance += 1;
         Database.addLedgerTransaction(userId, {
           id: Database.generateUUID('tx'),
-          type: 'refund' as any,
-          title: reason,
-          change: 1,
+          type: 'refund',
+          amount: '₹0',
+          status: 'paid',
+          credits: 1,
           date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
-        } as any);
+        });
         useMembershipStore.getState().syncFromDB();
         get().syncFromDB();
       }
@@ -113,11 +115,12 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         profile.creditsBalance = Math.max(0, profile.creditsBalance - 1);
         Database.addLedgerTransaction(userId, {
           id: Database.generateUUID('tx'),
-          type: 'penalty' as any,
-          title: reason,
-          change: -1,
+          type: 'penalty',
+          amount: '₹0',
+          status: 'paid',
+          credits: 1,
           date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
-        } as any);
+        });
         useMembershipStore.getState().syncFromDB();
         get().syncFromDB();
       }
@@ -132,11 +135,12 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         profile.creditsBalance += 1;
         Database.addLedgerTransaction(userId, {
           id: Database.generateUUID('tx'),
-          type: 'bonus' as any,
-          title: reason,
-          change: 1,
+          type: 'refund',
+          amount: '₹0',
+          status: 'paid',
+          credits: 1,
           date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
-        } as any);
+        });
         useMembershipStore.getState().syncFromDB();
         get().syncFromDB();
       }
@@ -152,22 +156,40 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         
         // Calculate credits used and purchased
         const purchased = ledgerList
-          .filter(t => t.change > 0)
-          .reduce((sum, curr) => sum + curr.credits, 0);
+          .filter(t => t.type === 'paid' || t.type === 'refund' || t.type === 'purchase')
+          .reduce((sum, curr) => sum + (curr.credits || 0), 0);
 
         const used = ledgerList
-          .filter(t => t.change < 0)
+          .filter(t => t.type === 'spend' || t.type === 'transfer' || t.type === 'penalty')
           .reduce((sum, curr) => sum + Math.abs(curr.credits || 1), 0);
 
         set({
           creditBalance: profile.creditsBalance,
-          ledger: ledgerList.map(tx => ({
-            id: tx.id,
-            title: tx.type === 'paid' ? `Purchased plan (${tx.credits} credits)` : tx.type,
-            change: tx.credits || 0,
-            date: tx.date,
-            type: tx.type === 'paid' ? 'purchase' : tx.type
-          })),
+          ledger: ledgerList.map(tx => {
+            const isAddition = tx.type === 'paid' || tx.type === 'refund' || tx.type === 'purchase';
+            const changeVal = isAddition ? tx.credits : -Math.abs(tx.credits);
+            
+            let title = tx.type;
+            if (tx.type === 'paid' || tx.type === 'purchase') {
+              title = `Purchased ${tx.credits} Credits`;
+            } else if (tx.type === 'spend') {
+              title = 'Session Booking';
+            } else if (tx.type === 'transfer') {
+              title = 'Credit Transfer';
+            } else if (tx.type === 'refund') {
+              title = 'Credit Refund';
+            } else if (tx.type === 'penalty') {
+              title = 'Cancellation Penalty';
+            }
+
+            return {
+              id: tx.id,
+              title: title,
+              change: changeVal,
+              date: tx.date,
+              type: isAddition ? 'purchase' : 'booking'
+            };
+          }),
           payments: paymentList,
           lifetimePurchased: purchased,
           creditsUsed: used
@@ -203,11 +225,12 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         
         Database.addLedgerTransaction(userId, {
           id: Database.generateUUID('tx'),
-          type: 'penalty' as any,
-          title: `Transferred ${amount} credits to ${toPhone}`,
-          change: -amount,
+          type: 'transfer',
+          amount: '₹0',
+          status: 'paid',
+          credits: amount,
           date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
-        } as any);
+        });
 
         get().syncFromDB();
         useMembershipStore.getState().syncFromDB();

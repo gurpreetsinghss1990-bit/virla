@@ -26,7 +26,7 @@ interface Plan {
 export default function MembershipScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { purchasePlan } = useWalletStore();
+  const { purchasePlan, creditBalance } = useWalletStore();
 
   const [activeCategory, setActiveCategory] = useState<'individual' | 'couple'>('individual');
 
@@ -569,25 +569,37 @@ export default function MembershipScreen() {
                 </View>
 
                 <View className="items-center gap-1.5 px-3">
-                  <Text className="text-[#10B981] text-[10px] font-black uppercase tracking-widest">Congratulations!</Text>
-                  <Text className="text-zinc-900 text-xl font-black mt-1 text-center">
-                    {selectedPlan.credits} Credits Added
+                  <Text className="text-[#10B981] text-[10px] font-black uppercase tracking-widest">Payment Successful</Text>
+                  <Text className="text-zinc-950 text-xl font-black mt-1 text-center">
+                    +{selectedPlan.credits} {selectedPlan.credits === 1 ? 'Credit' : 'Credits'} Added
                   </Text>
-                  <Text className="text-zinc-400 text-[10px] text-center leading-relaxed max-w-[80%] mt-1">
-                    Your wallet balance has updated. Ready to schedule your premium home visits!
+                  <Text className="text-zinc-500 text-xs font-semibold text-center leading-relaxed max-w-[85%] mt-1">
+                    Your wallet now contains: <Text className="font-extrabold text-[#4F46E5]">{creditBalance} Credits</Text>
                   </Text>
                 </View>
 
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    closeDetails();
-                    router.push('/booking');
-                  }}
-                  className="w-full bg-[#101828] py-4.5 rounded-2xl items-center justify-center mt-4"
-                >
-                  <Text className="text-white text-xs font-black uppercase">Book Your First Workout</Text>
-                </TouchableOpacity>
+                <View className="w-full gap-3 mt-4">
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      closeDetails();
+                      router.replace('/wallet');
+                    }}
+                    className="w-full bg-[#101828] py-4.5 rounded-2xl items-center justify-center"
+                  >
+                    <Text className="text-white text-xs font-black uppercase tracking-wider">View Wallet</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      closeDetails();
+                    }}
+                    className="w-full bg-zinc-100 border border-zinc-200 py-4.5 rounded-2xl items-center justify-center"
+                  >
+                    <Text className="text-zinc-700 text-xs font-black uppercase tracking-wider">Done</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
           </Animated.View>
