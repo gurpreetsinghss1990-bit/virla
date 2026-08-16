@@ -800,93 +800,137 @@ export default function HomeScreen() {
               <View className="gap-4">
                 <Text className="text-[#101828] text-[20px] font-semibold tracking-tight pl-1">Your Coach Today</Text>
                 
-                {activeBooking ? (
-                  <View 
-                    className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-5"
-                    style={{
-                      shadowColor: '#101828',
-                      shadowOffset: { width: 0, height: 6 },
-                      shadowOpacity: 0.04,
-                      shadowRadius: 12,
-                      elevation: 3,
-                    }}
-                  >
-                    <View className="flex-row gap-4 items-center">
-                      {/* Left: Avatar image with rating overlay */}
-                      <View className="relative">
-                        <Image 
-                          source={{ uri: activeBooking.trainerPhoto || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }} 
-                          className="w-18 h-18 rounded-full border border-zinc-150" 
-                        />
-                        {/* Rating Overlay */}
-                        <View 
-                          className="absolute -top-1.5 -left-1.5 bg-white border border-zinc-100 px-1.5 py-0.5 rounded-lg items-center justify-center flex-row"
-                          style={{
-                            shadowColor: '#101828',
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: 0.03,
-                            shadowRadius: 4,
-                            elevation: 1,
-                          }}
-                        >
-                          <Text className="text-[11px] font-bold text-zinc-800">⭐ 4.9</Text>
-                        </View>
-                      </View>
-
-                      {/* Right: Coach info */}
-                      <View className="flex-1 gap-1.5">
-                        <View className="flex-row items-center justify-between">
-                          <Text className="text-[#101828] text-[18px] font-semibold tracking-tight">
-                            {activeBooking.trainerName}
-                          </Text>
-                          <Feather name="chevron-right" size={14} color="#9CA3AF" />
-                        </View>
-                        <Text className="text-[#6B7280] text-[15px] font-normal leading-none">
-                          {activeBooking.trainerSpeciality || 'Strength & Conditioning Specialist'}
-                        </Text>
-
-                        {/* Stats row */}
-                        <View className="flex-row flex-wrap items-center gap-x-4 gap-y-1.5 mt-1">
-                          <View className="flex-row items-center gap-1">
-                            <Feather name="clock" size={12} color="#FF8A00" />
-                            <Text className="text-zinc-500 text-[11px] font-medium uppercase">
-                              Arriving {activeBooking.time.split(' - ')[0] || '10:30 AM'}
-                            </Text>
+                {activeBooking ? (() => {
+                  const isActiveAccepted = activeBooking.timelineStatus !== 'booked' && activeBooking.timelineStatus !== 'trainer_assigned';
+                  if (!isActiveAccepted) {
+                    return (
+                      // Booking pending trainer acceptance (Trainer details hidden)
+                      <View 
+                        className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-5"
+                        style={{
+                          shadowColor: '#101828',
+                          shadowOffset: { width: 0, height: 6 },
+                          shadowOpacity: 0.04,
+                          shadowRadius: 12,
+                          elevation: 3,
+                        }}
+                      >
+                        <View className="flex-row gap-4 items-center">
+                          {/* Left: Placeholder Clock/Zen icon */}
+                          <View className="w-18 h-18 rounded-full bg-indigo-50 border border-indigo-100 items-center justify-center">
+                            <Feather name="clock" size={24} color="#4F46E5" />
                           </View>
-                          <View className="flex-row items-center gap-1">
-                            <Feather name="map-pin" size={12} color="#3B82F6" />
-                            <Text className="text-zinc-500 text-[11px] font-medium uppercase">
-                              {activeBooking.trainerDistance || '2.3 km'}
+
+                          {/* Right: Booking status */}
+                          <View className="flex-1 gap-1">
+                            <Text className="text-[#101828] text-[18px] font-black uppercase tracking-tight">
+                              Session Booked
                             </Text>
-                          </View>
-                          <View className="flex-row items-center gap-1">
-                            <Feather name="shield" size={12} color="#16C784" />
-                            <Text className="text-zinc-500 text-[11px] font-medium uppercase">
-                              Elite Coach
+                            <Text className="text-[#6B7280] text-[14px] font-medium leading-relaxed mt-0.5">
+                              Your session is confirmed. Trainer details will be shared soon.
                             </Text>
+
+                            {/* Stats row */}
+                            <View className="flex-row items-center gap-1.5 mt-2">
+                              <Feather name="clock" size={12} color="#FF8A00" />
+                              <Text className="text-zinc-500 text-[11px] font-semibold uppercase">
+                                Scheduled for {activeBooking.time ? activeBooking.time.split(' - ')[0] : ''}
+                              </Text>
+                            </View>
                           </View>
                         </View>
                       </View>
-                    </View>
-
-                    <View className="h-[1px] bg-zinc-100" />
-
-                    {/* Track Coach Live CTA Button */}
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => {
-                        router.push({ pathname: '/session-detail', params: { id: activeBooking.id } });
+                    );
+                  }
+                  return (
+                    // Booking accepted by trainer (Trainer details fully revealed)
+                    <View 
+                      className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-5"
+                      style={{
+                        shadowColor: '#101828',
+                        shadowOffset: { width: 0, height: 6 },
+                        shadowOpacity: 0.04,
+                        shadowRadius: 12,
+                        elevation: 3,
                       }}
-                      className="w-full bg-rose-50 rounded-2xl items-center justify-center flex-row gap-2"
-                      style={{ minHeight: 52 }}
                     >
-                      <Feather name="map-pin" size={14} color="#E11D48" />
-                      <Text className="text-[#E11D48] text-[13px] font-bold uppercase tracking-wider">
-                        Track Coach Live
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
+                      <View className="flex-row gap-4 items-center">
+                        {/* Left: Avatar image with rating overlay */}
+                        <View className="relative">
+                          <Image 
+                            source={{ uri: activeBooking.trainerPhoto || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }} 
+                            className="w-18 h-18 rounded-full border border-zinc-150" 
+                          />
+                          {/* Rating Overlay */}
+                          <View 
+                            className="absolute -top-1.5 -left-1.5 bg-white border border-zinc-100 px-1.5 py-0.5 rounded-lg items-center justify-center flex-row"
+                            style={{
+                              shadowColor: '#101828',
+                              shadowOffset: { width: 0, height: 2 },
+                              shadowOpacity: 0.03,
+                              shadowRadius: 4,
+                              elevation: 1,
+                            }}
+                          >
+                            <Text className="text-[11px] font-bold text-zinc-800">⭐ 4.9</Text>
+                          </View>
+                        </View>
+
+                        {/* Right: Coach info */}
+                        <View className="flex-1 gap-1.5">
+                          <View className="flex-row items-center justify-between">
+                            <Text className="text-[#101828] text-[18px] font-semibold tracking-tight">
+                              {activeBooking.trainerName}
+                            </Text>
+                            <Feather name="chevron-right" size={14} color="#9CA3AF" />
+                          </View>
+                          <Text className="text-[#6B7280] text-[15px] font-normal leading-none">
+                            {activeBooking.trainerSpeciality || 'Strength & Conditioning Specialist'}
+                          </Text>
+
+                          {/* Stats row */}
+                          <View className="flex-row flex-wrap items-center gap-x-4 gap-y-1.5 mt-1">
+                            <View className="flex-row items-center gap-1">
+                              <Feather name="clock" size={12} color="#FF8A00" />
+                              <Text className="text-zinc-500 text-[11px] font-medium uppercase">
+                                Arriving {activeBooking.time ? activeBooking.time.split(' - ')[0] : '10:30 AM'}
+                              </Text>
+                            </View>
+                            <View className="flex-row items-center gap-1">
+                              <Feather name="map-pin" size={12} color="#3B82F6" />
+                              <Text className="text-zinc-500 text-[11px] font-medium uppercase">
+                                {activeBooking.trainerDistance || '2.3 km'}
+                              </Text>
+                            </View>
+                            <View className="flex-row items-center gap-1">
+                              <Feather name="shield" size={12} color="#16C784" />
+                              <Text className="text-zinc-500 text-[11px] font-medium uppercase">
+                                Elite Coach
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+
+                      <View className="h-[1px] bg-zinc-100" />
+
+                      {/* Track Coach Live CTA Button */}
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          router.push({ pathname: '/session-detail', params: { id: activeBooking.id } });
+                        }}
+                        className="w-full bg-rose-50 rounded-2xl items-center justify-center flex-row gap-2"
+                        style={{ minHeight: 52 }}
+                      >
+                        <Feather name="map-pin" size={14} color="#E11D48" />
+                        <Text className="text-[#E11D48] text-[13px] font-bold uppercase tracking-wider">
+                          Track Coach Live
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })() : (
                   <View 
                     className="bg-white border border-[#E5E7EB] p-8 rounded-[32px] items-center justify-center gap-3"
                     style={{
