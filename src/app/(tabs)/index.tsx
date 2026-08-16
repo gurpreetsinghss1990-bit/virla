@@ -127,6 +127,16 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
   );
 }
 
+const getWorkoutEmoji = (title: string) => {
+  const t = title.toLowerCase();
+  if (t.includes('forge') || t.includes('strength')) return '🏋️';
+  if (t.includes('flow') || t.includes('motion')) return '🧘‍♀️';
+  if (t.includes('rhythm') || t.includes('burn')) return '💃';
+  if (t.includes('reset') || t.includes('studio') || t.includes('stretch')) return '🧘‍♂️';
+  if (t.includes('combat') || t.includes('boxing')) return '🥊';
+  return '🧘';
+};
+
 export default function HomeScreen() {
   const router = useRouter();
   const { bookings, acceptBooking, updateTimelineStatus, reassignTrainer } = useBookingStore();
@@ -818,13 +828,13 @@ export default function HomeScreen() {
                         <View className="flex-row gap-4 items-center">
                           {/* Left: Placeholder Clock/Zen icon */}
                           <View className="w-18 h-18 rounded-full bg-indigo-50 border border-indigo-100 items-center justify-center">
-                            <Feather name="clock" size={24} color="#4F46E5" />
+                            <Text className="text-3xl">{getWorkoutEmoji(activeBooking.workoutTitle)}</Text>
                           </View>
 
                           {/* Right: Booking status */}
                           <View className="flex-1 gap-1">
-                            <Text className="text-[#101828] text-[18px] font-black uppercase tracking-tight">
-                              {activeBooking.workoutTitle} Booked
+                            <Text className="text-[#101828] text-[17px] font-black uppercase tracking-tight">
+                              {getWorkoutEmoji(activeBooking.workoutTitle)} {activeBooking.workoutTitle} Booked
                             </Text>
                             <Text className="text-[#6B7280] text-[14px] font-medium leading-relaxed mt-0.5">
                               Your session is confirmed. Trainer details will be shared soon.
