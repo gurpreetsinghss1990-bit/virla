@@ -580,11 +580,17 @@ export default function HomeScreen() {
                 <View className="flex-1">
                   <Text className="text-indigo-250 text-[8px] font-black uppercase tracking-wider">Live Concierge Update</Text>
                   <Text className="text-white text-[11px] font-extrabold mt-0.5" numberOfLines={1}>
-                    {activeBooking.timelineStatus === 'trainer_assigned' && `Coach assigned for ${activeBooking.workoutTitle}`}
-                    {activeBooking.timelineStatus === 'trainer_accepted' && `Coach Karan accepted your booking`}
-                    {activeBooking.timelineStatus === 'trainer_preparing' && `Coach Karan is preparing your session gear`}
-                    {activeBooking.timelineStatus === 'trainer_travelling' && `Coach Karan is on the way`}
-                    {activeBooking.timelineStatus === 'trainer_arrived' && `Coach Karan has arrived at your gate!`}
+                    {activeBooking.timelineStatus === 'booked' && (() => {
+                      const isSearching = !activeBooking.trainerId || activeBooking.trainerId === 'searching' || activeBooking.trainerName === 'No Trainer Available';
+                      return isSearching 
+                        ? 'Searching for the best trainer...' 
+                        : `Waiting for confirmation from Coach ${activeBooking.trainerName}`;
+                    })()}
+                    {activeBooking.timelineStatus === 'trainer_assigned' && `Coach ${activeBooking.trainerName} assigned for ${activeBooking.workoutTitle}`}
+                    {activeBooking.timelineStatus === 'trainer_accepted' && `Coach ${activeBooking.trainerName} accepted your booking`}
+                    {activeBooking.timelineStatus === 'trainer_preparing' && `Coach ${activeBooking.trainerName} is preparing your session gear`}
+                    {activeBooking.timelineStatus === 'trainer_travelling' && `Coach ${activeBooking.trainerName} is on the way`}
+                    {activeBooking.timelineStatus === 'trainer_arrived' && `Coach ${activeBooking.trainerName} has arrived at your gate!`}
                     {activeBooking.timelineStatus === 'otp_verified' && `Check-in Verified. Starting workout.`}
                     {activeBooking.timelineStatus === 'workout_started' && `Workout in progress (active session)`}
                     {activeBooking.timelineStatus === 'workout_completed' && `Workout complete! Submit rating feedback.`}
@@ -1106,6 +1112,7 @@ export default function HomeScreen() {
                   const bookingData = upcomingBookings[0];
                   const isTravelling = bookingData.timelineStatus === 'trainer_travelling';
                   const isAccepted = bookingData.timelineStatus !== 'booked' && bookingData.timelineStatus !== 'trainer_assigned';
+                  const isSearching = !bookingData.trainerId || bookingData.trainerId === 'searching' || bookingData.trainerName === 'No Trainer Available';
 
                   return (
                     <View 
@@ -1121,7 +1128,7 @@ export default function HomeScreen() {
                       {/* Top: Coach avatar, title, and badge */}
                       <View className="flex-row justify-between items-start">
                         <View className="flex-row items-center gap-3">
-                          {!isAccepted ? (
+                          {isSearching ? (
                             <View className="w-14 h-14 rounded-full bg-indigo-50 border border-indigo-100 items-center justify-center">
                               <Feather name="search" size={20} color="#4F46E5" />
                             </View>
@@ -1134,12 +1141,18 @@ export default function HomeScreen() {
                           <View>
                             <Text className="text-zinc-950 text-[15px] font-semibold">{bookingData.workoutTitle}</Text>
                             <Text className="text-zinc-500 text-[13px] font-normal mt-0.5">
-                              {!isAccepted ? 'Looking for the best trainer...' : `with ${bookingData.trainerName}`}
+                              {isSearching 
+                                ? 'Looking for the best trainer...' 
+                                : (!isAccepted 
+                                    ? 'Waiting for Trainer Acceptance...' 
+                                    : `with ${bookingData.trainerName}`
+                                  )
+                              }
                             </Text>
                           </View>
                         </View>
                         {/* Elite coach badge */}
-                        {isAccepted && (
+                        {!isSearching && isAccepted && (
                           <View className="bg-amber-50 border border-amber-100 px-3.5 py-1 rounded-full">
                             <Text className="text-amber-600 text-[9px] font-bold uppercase tracking-wider">★ ELITE COACH</Text>
                           </View>
@@ -1173,10 +1186,32 @@ export default function HomeScreen() {
                         {/* Right: Status badge & Map action */}
                         <View className="items-end gap-4">
                           {/* Status pill */}
-                          <View className="bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-xl flex-row items-center gap-1.5">
-                            <Feather name="truck" size={12} color="#16C784" />
-                            <Text className="text-emerald-600 text-[9px] font-bold uppercase tracking-wider">
-                              {isTravelling ? 'Coach on the way' : 'Assigned'}
+                          <View className={`px-3 py-1.5 rounded-xl flex-row items-center gap-1.5 border ${
+                            isSearching 
+                              ? 'bg-indigo-50 border-indigo-100' 
+                              : (!isAccepted 
+                                  ? 'bg-amber-50 border-amber-100' 
+                                  : 'bg-emerald-50 border-emerald-100'
+                                )
+                          }`}>
+                            <Feather 
+                              name={isSearching ? 'search' : (!isAccepted ? 'clock' : 'check-circle')} 
+                              size={12} 
+                              color={isSearching ? '#4F46E5' : (!isAccepted ? '#D97706' : '#16C784')} 
+                            />
+                            <Text className={`text-[9px] font-bold uppercase tracking-wider ${
+                              isSearching ? 'text-indigo-600' : (!isAccepted ? 'text-amber-700' : 'text-emerald-600')
+                            }`}>
+                              {isTravelling 
+                                ? 'Coach on the way' 
+                                : (isSearching 
+                                    ? 'Searching' 
+                                    : (!isAccepted 
+                                        ? 'Pending' 
+                                        : 'Confirmed'
+                                      )
+                                  )
+                              }
                             </Text>
                           </View>
 
@@ -1359,8 +1394,8 @@ export default function HomeScreen() {
                 {/* Today's Scheduled Sessions */}
                 <View className="gap-3 mt-1">
                   <Text className="text-[#101828] text-xs font-semibold uppercase tracking-widest pl-1">{"Today's"} Scheduled Sessions</Text>
-                  {bookings.filter(b => b.timelineStatus === 'trainer_accepted' && ((b.date || '').includes('Today') || (b.date || '').includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' })))).length > 0 ? (
-                    bookings.filter(b => b.timelineStatus === 'trainer_accepted' && ((b.date || '').includes('Today') || (b.date || '').includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' })))).map((booking) => (
+                  {bookings.filter(b => b.status === 'upcoming' && b.timelineStatus === 'trainer_accepted' && ((b.date || '').includes('Today') || (b.date || '').includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' })))).length > 0 ? (
+                    bookings.filter(b => b.status === 'upcoming' && b.timelineStatus === 'trainer_accepted' && ((b.date || '').includes('Today') || (b.date || '').includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' })))).map((booking) => (
                       <TouchableOpacity 
                         key={booking.id} 
                         activeOpacity={0.8}

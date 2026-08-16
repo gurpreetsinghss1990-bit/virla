@@ -8,6 +8,7 @@ import { LuxuryCard } from './LuxuryCard';
 import { Feather } from '@expo/vector-icons';
 
 import { useUserStore } from '../store/userStore';
+import { SessionEngine } from '../services/SessionEngine';
 
 interface BookingCardProps {
   booking: Booking;
@@ -70,6 +71,7 @@ export function BookingCard({ booking }: BookingCardProps) {
   const isUpcoming = booking.status === 'upcoming';
   const isTrainer = role === 'trainer';
   const isAccepted = booking.timelineStatus !== 'booked' && booking.timelineStatus !== 'trainer_assigned';
+  const isSearching = !booking.trainerId || booking.trainerId === 'searching' || booking.trainerName === 'No Trainer Available';
 
   return (
     <LuxuryCard className="p-5 mb-4" interactive={false}>
@@ -80,7 +82,7 @@ export function BookingCard({ booking }: BookingCardProps) {
             <View className="w-12 h-12 rounded-full bg-indigo-50 border border-indigo-150 items-center justify-center">
               <Text className="text-lg">👤</Text>
             </View>
-          ) : (isUpcoming && !isAccepted) ? (
+          ) : (isUpcoming && isSearching) ? (
             <View className="w-12 h-12 rounded-full bg-zinc-100 border border-zinc-200 items-center justify-center">
               <Text className="text-lg">🧘</Text>
             </View>
@@ -92,17 +94,28 @@ export function BookingCard({ booking }: BookingCardProps) {
           )}
           <View className="flex-1">
             <Text className="text-[#101828] text-base font-extrabold tracking-tight">
-              {isTrainer ? 'Client: Viral' : ((isUpcoming && !isAccepted) ? 'Searching for Trainer...' : `Coach ${booking.trainerName}`)}
+              {isTrainer 
+                ? 'Client: Viral' 
+                : (isUpcoming 
+                    ? (isSearching 
+                        ? 'Searching for Trainer...' 
+                        : `Coach ${booking.trainerName}`
+                      ) 
+                    : `Coach ${booking.trainerName}`
+                  )}
             </Text>
             <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider mt-0.5">
               {isTrainer 
                 ? `${booking.workoutTitle} • 60 mins` 
-                : ((isUpcoming && !isAccepted) 
-                    ? `${booking.workoutTitle} • Waiting for Trainer Acceptance` 
-                    : (isUpcoming 
-                        ? `${booking.workoutTitle} • Trainer confirmed. Privacy rules apply.` 
-                        : `${booking.workoutTitle} • ₹${booking.price || 1200}`
-                      )
+                : (isUpcoming 
+                    ? (isSearching 
+                        ? `${booking.workoutTitle} • Searching for Trainer` 
+                        : (!isAccepted 
+                            ? `${booking.workoutTitle} • Waiting for Trainer Confirmation` 
+                            : `${booking.workoutTitle} • Trainer confirmed. Privacy rules apply.`
+                          )
+                      ) 
+                    : `${booking.workoutTitle} • ₹${booking.price || 1200}`
                   )}
             </Text>
           </View>
@@ -130,6 +143,33 @@ export function BookingCard({ booking }: BookingCardProps) {
         </Text>
       </View>
 
+      {/* Start Session available banner for trainer */}
+      {(() => {
+        if (!isTrainer || !isUpcoming) return null;
+        const isBeforeWindow = SessionEngine.isBeforeStartWindow(booking);
+        if (!isBeforeWindow) return null;
+        const sessionDate = SessionEngine.getSessionStartDate(booking);
+        const startWindow = new Date(sessionDate.getTime() - 30 * 60 * 1000);
+        
+        const formatTimeOnly = (d: Date) => {
+          let hr = d.getHours();
+          const min = String(d.getMinutes()).padStart(2, '0');
+          const ampm = hr >= 12 ? 'PM' : 'AM';
+          hr = hr % 12;
+          hr = hr ? hr : 12;
+          return `${String(hr).padStart(2, '0')}:${min} ${ampm}`;
+        };
+
+        return (
+          <View className="bg-amber-50 border border-amber-150 px-4 py-2.5 rounded-xl mb-3 flex-row items-center gap-2">
+            <Feather name="clock" size={10} color="#D97706" />
+            <Text className="text-[#D97706] text-[10px] font-bold uppercase tracking-wider">
+              Start Session available from {formatTimeOnly(startWindow)}
+            </Text>
+          </View>
+        );
+      })()}
+
       {/* Action Buttons */}
       <View className="flex-row gap-3">
         {isTrainer ? (
@@ -144,13 +184,41 @@ export function BookingCard({ booking }: BookingCardProps) {
                 <Feather name="navigation" size={12} color="#101828" />
                 <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Navigate</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={handleViewDetails}
-                className="flex-1 py-3 rounded-xl items-center justify-center bg-[#E11D48] border border-[#E11D48]"
-              >
-                <Text className="text-white text-xs font-black uppercase tracking-wider">Open Console</Text>
-              </TouchableOpacity>
+              {(() => {
+                const isBeforeWindow = SessionEngine.isBeforeStartWindow(booking);
+                const sessionDate = SessionEngine.getSessionStartDate(booking);
+                const startWindow = new Date(sessionDate.getTime() - 30 * 60 * 1000);
+                const formatTimeOnly = (d: Date) => {
+                  let hr = d.getHours();
+                  const min = String(d.getMinutes()).padStart(2, '0');
+                  const ampm = hr >= 12 ? 'PM' : 'AM';
+                  hr = hr % 12;
+                  hr = hr ? hr : 12;
+                  return `${String(hr).padStart(2, '0')}:${min} ${ampm}`;
+                };
+
+                if (isBeforeWindow) {
+                  return (
+                    <TouchableOpacity
+                      activeOpacity={1}
+                      onPress={() => Alert.alert('Session Locked', `This session can only be started from ${formatTimeOnly(startWindow)}.`)}
+                      className="flex-1 py-3 rounded-xl items-center justify-center bg-zinc-200 border border-zinc-200"
+                    >
+                      <Text className="text-zinc-400 text-xs font-black uppercase tracking-wider">Start Session</Text>
+                    </TouchableOpacity>
+                  );
+                } else {
+                  return (
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={handleViewDetails}
+                      className="flex-1 py-3 rounded-xl items-center justify-center bg-[#E11D48] border border-[#E11D48]"
+                    >
+                      <Text className="text-white text-xs font-black uppercase tracking-wider">Start Session</Text>
+                    </TouchableOpacity>
+                  );
+                }
+              })()}
             </>
           ) : (
             <TouchableOpacity

@@ -54,9 +54,15 @@ export default function BookingsScreen() {
         return b.status === 'upcoming';
       }
       if (activeFilter === 'past') {
-        return b.status === 'completed' || b.status === 'cancelled';
+        return b.status === 'completed' || b.status === 'cancelled' || b.status === 'client_no_show' || b.status === 'trainer_no_show' || b.status === 'missed_session_not_started';
       }
       return false;
+    }
+    if (activeFilter === 'upcoming') {
+      return b.status === 'upcoming';
+    }
+    if (activeFilter === 'cancelled') {
+      return b.status === 'cancelled' || b.status === 'client_no_show' || b.status === 'trainer_no_show' || b.status === 'missed_session_not_started';
     }
     return b.status === activeFilter;
   });

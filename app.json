@@ -34,6 +34,18 @@
     "plugins": [
       "expo-router",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#4F46E5",
+          "sounds": [
+            "./assets/sounds/virla_notification.wav",
+            "./assets/sounds/virla_reminder.wav",
+            "./assets/sounds/virla_booking_alert.wav"
+          ]
+        }
+      ],
+      [
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Allow Virla to use your location to find nearby trainers and customize your experience."

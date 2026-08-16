@@ -1049,13 +1049,8 @@ export default function BookingScreen() {
 
         // Trigger notifications
         addNotification({
-          title: 'Trainer Assigned ⚡',
-          body: `Coach ${activeCoach.name} (${activeCoach.level} Trainer) is assigned to your ${selectedExperience.title} session on ${selectedDate} at ${selectedTime}.`,
-        });
-
-        addNotification({
-          title: 'Workout Tomorrow 📅',
-          body: `Get ready! Your VIRLA ${selectedExperience.title} session is scheduled for tomorrow at ${selectedTime}.`,
+          title: 'Booking Confirmed 📅',
+          body: `Your VIRLA ${selectedExperience.title} session is confirmed for ${selectedDate} @ ${selectedTime}. Waiting for Trainer Confirmation.`,
         });
 
         setSuccessBookingId(finalBooking.id);

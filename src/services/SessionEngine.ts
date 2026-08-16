@@ -1,5 +1,7 @@
 import { Database } from '../database/Database';
 import { Booking } from '../types';
+import { supabase } from '../database/supabaseClient';
+import { normalizeDate } from '../utils/date';
 
 export class SessionEngine {
   /**
@@ -8,18 +10,24 @@ export class SessionEngine {
   static getSessionStartDate(booking: Booking): Date {
     try {
       if (!booking) return new Date();
-      let datePart = booking.date;
-      if (datePart.startsWith('Today, ')) {
-        datePart = datePart.replace('Today, ', '');
-      } else if (datePart.startsWith('Tomorrow, ')) {
-        datePart = datePart.replace('Tomorrow, ', '');
-      }
-
+      
+      const dateStr = normalizeDate(booking.date);
+      if (!dateStr) return new Date();
+      
       const timePart = booking.time.split('-')[0].trim();
-      const combined = `${datePart} ${timePart}`;
-      const d = new Date(combined);
-      if (!isNaN(d.getTime())) {
-        return d;
+      const match = timePart.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (match) {
+        let hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+        const ampm = match[3].toUpperCase();
+        if (ampm === 'PM' && hours < 12) hours += 12;
+        if (ampm === 'AM' && hours === 12) hours = 0;
+        
+        const [year, month, day] = dateStr.split('-').map(x => parseInt(x, 10));
+        const d = new Date(year, month - 1, day, hours, minutes, 0, 0);
+        if (!isNaN(d.getTime())) {
+          return d;
+        }
       }
     } catch (e) {
       console.log('[SESSION ENGINE] Error parsing date:', e);
@@ -41,11 +49,50 @@ export class SessionEngine {
   }
 
   /**
-   * Check-in can happen MAXIMUM 30 minutes before the scheduled session.
+   * Returns the valid start window (±30 minutes) around the booked start time.
+   */
+  static getSessionWindow(booking: Booking): { start: Date; end: Date; booked: Date } {
+    const booked = this.getSessionStartDate(booking);
+    const start = new Date(booked.getTime() - 30 * 60 * 1000);
+    const end = new Date(booked.getTime() + 30 * 60 * 1000);
+    return { start, end, booked };
+  }
+
+  /**
+   * Checks if current time is within ±30 minutes of the booked start time.
+   */
+  static isWithinStartWindow(booking: Booking): boolean {
+    const { start, end } = this.getSessionWindow(booking);
+    const now = new Date();
+    return now.getTime() >= start.getTime() && now.getTime() <= end.getTime();
+  }
+
+  /**
+   * Checks if current time is before the valid session start window.
+   */
+  static isBeforeStartWindow(booking: Booking): boolean {
+    const { start } = this.getSessionWindow(booking);
+    const now = new Date();
+    return now.getTime() < start.getTime();
+  }
+
+  /**
+   * Checks if current time is past the valid session start window.
+   */
+  static isAfterStartWindow(booking: Booking): boolean {
+    const { end } = this.getSessionWindow(booking);
+    const now = new Date();
+    return now.getTime() > end.getTime();
+  }
+
+  /**
+   * Check-in can happen MAXIMUM 30 minutes before the scheduled session, up to the end of the window.
    */
   static canCheckIn(booking: Booking): boolean {
-    const minToSession = this.getMinutesToSession(booking);
-    return minToSession <= 30;
+    if (booking.status !== 'upcoming') return false;
+    const now = Date.now();
+    const { start, end } = this.getSessionWindow(booking);
+    return now >= start.getTime() && now <= end.getTime();
   }
 
   /**
@@ -92,30 +139,55 @@ export class SessionEngine {
   }
 
   /**
-   * Verifies the 6-digit OTP code.
+   * Verifies the 6-digit OTP code on database via RPC, falls back to local.
    * If correct, transitions the timelineStatus to 'workout_started'.
    */
-  static verifyOTP(bookingId: string, enteredOtp: string): boolean {
+  static async verifyOTP(bookingId: string, enteredOtp: string): Promise<boolean> {
     const booking = Database.schema.bookings.find(b => b.id === bookingId);
     if (!booking) return false;
 
-    // Strict OTP match check
-    if (booking.otp !== enteredOtp) {
-      return false;
+    // 1. Strict status check
+    if (booking.status !== 'upcoming') return false;
+
+    // 2. Strict window check
+    if (!this.isWithinStartWindow(booking)) return false;
+
+    // 3. Strict trainer check
+    const currentUserId = Database.getCurrentUserId();
+    if (currentUserId && booking.trainerId && booking.trainerId !== currentUserId) return false;
+
+    try {
+      const { data, error } = await supabase.rpc('verify_and_start_session', {
+        booking_id: bookingId,
+        entered_otp: enteredOtp
+      });
+
+      if (error) {
+        console.log('[SESSION ENGINE] Server-side OTP validation failed:', error.message);
+        throw error;
+      }
+
+      const serverStartedAt = Number(data);
+      Database.updateBookingSessionDetails(bookingId, {
+        timelineStatus: 'workout_started',
+        workoutStartedAt: serverStartedAt
+      });
+      return true;
+    } catch (e) {
+      // Local fallback for offline mode or network failure
+      console.log('[SESSION ENGINE] RPC failed, using local OTP verification fallback:', e);
+      if (booking.otp !== enteredOtp) {
+        return false;
+      }
+      if (booking.otpExpiresAt && Date.now() > booking.otpExpiresAt) {
+        return false;
+      }
+      Database.updateBookingSessionDetails(bookingId, {
+        timelineStatus: 'workout_started',
+        workoutStartedAt: Date.now()
+      });
+      return true;
     }
-
-    // Check if grace period/OTP has expired
-    if (booking.otpExpiresAt && Date.now() > booking.otpExpiresAt) {
-      return false;
-    }
-
-    // Start workout timer and record timestamp
-    Database.updateBookingSessionDetails(bookingId, {
-      timelineStatus: 'workout_started',
-      workoutStartedAt: Date.now()
-    });
-
-    return true;
   }
 
   /**

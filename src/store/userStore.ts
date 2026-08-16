@@ -12,6 +12,7 @@ import { useMembershipStore } from './membershipStore';
 import { useNotificationStore } from './notificationStore';
 import { useAIStore } from './aiStore';
 import { useAddressStore } from './addressStore';
+import { PushNotificationService } from '../services/PushNotificationService';
 
 interface FamilyMember {
   id: string;
@@ -66,14 +67,21 @@ export const useUserStore = create<UserState>()(
       isLoggedIn: false,
       hasCompletedOnboarding: false,
       setLoggedIn: async (loggedIn) => {
-        set({ isLoggedIn: loggedIn });
         if (loggedIn) {
+          set({ isLoggedIn: loggedIn });
           try {
             await Database.reload();
           } catch (e) {
             console.error('Failed to reload database collections on login:', e);
           }
           get().syncFromDB();
+          
+          // Sync push token with backend after user is populated
+          const userId = Database.getCurrentUserId();
+          if (userId) {
+            PushNotificationService.syncTokenWithBackend(userId).then();
+          }
+
           useUserProfileStore.getState().syncFromDB();
           useBookingStore.getState().syncFromDB();
           useCoachStore.getState().syncFromDB();
@@ -84,6 +92,13 @@ export const useUserStore = create<UserState>()(
           useAIStore.getState().syncFromDB();
           useAddressStore.getState().syncFromDB();
         } else {
+          // Remove push token on logout before local data wipes
+          const userId = Database.getCurrentUserId();
+          if (userId) {
+            await PushNotificationService.removeTokenFromBackend(userId).catch(console.error);
+          }
+          
+          set({ isLoggedIn: loggedIn });
           set({ user: emptyUser, familyMembers: [], invoices: [] });
           try {
             await Database.resetAndClearLocalOnly();

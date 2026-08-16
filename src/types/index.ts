@@ -43,7 +43,8 @@ export interface Booking {
   workoutTitle: string;
   date: string;
   time: string;
-  status: 'upcoming' | 'completed' | 'cancelled' | 'client_no_show' | 'trainer_no_show';
+  status: 'upcoming' | 'completed' | 'cancelled' | 'client_no_show' | 'trainer_no_show' | 'missed_session_not_started';
+  reminderSent?: boolean;
   price?: number;
   address?: string;
   goal?: string;
@@ -59,6 +60,12 @@ export interface Booking {
   
   // Sprint 5 additions
   timelineStatus?: 'booked' | 'trainer_assigned' | 'trainer_accepted' | 'trainer_preparing' | 'trainer_travelling' | 'trainer_arrived' | 'otp_verified' | 'workout_started' | 'workout_completed' | 'trainer_report_submitted' | 'customer_review_pending' | 'session_closed';
+  acceptanceNotificationCount?: number;
+  lastAcceptanceNotificationAt?: number;
+  acceptanceMethod?: 'TRAINER_MANUAL_ACCEPT' | 'SYSTEM_AUTO_ACCEPT';
+  acceptanceDeadline?: number;
+  autoAcceptedAt?: number;
+  trainerAcceptedAt?: number;
   trainerLevel?: 'Associate' | 'Certified' | 'Elite';
   trainerRating?: number;
   trainerCompletedSessions?: number;

@@ -411,6 +411,13 @@ export function mapBooking(row: any): Booking {
     ratingDetails: row.rating_details ? (typeof row.rating_details === 'string' ? JSON.parse(row.rating_details) : row.rating_details) : undefined,
     trainerNote: row.trainer_note || undefined,
     createdAt: row.created_at ? Number(row.created_at) : undefined,
+    reminderSent: row.reminder_sent ?? false,
+    acceptanceNotificationCount: row.acceptance_notification_count ? Number(row.acceptance_notification_count) : undefined,
+    lastAcceptanceNotificationAt: row.last_acceptance_notification_at ? Number(row.last_acceptance_notification_at) : undefined,
+    acceptanceMethod: row.acceptance_method || undefined,
+    acceptanceDeadline: row.acceptance_deadline ? Number(row.acceptance_deadline) : undefined,
+    autoAcceptedAt: row.auto_accepted_at ? Number(row.auto_accepted_at) : undefined,
+    trainerAcceptedAt: row.trainer_accepted_at ? Number(row.trainer_accepted_at) : undefined,
   };
 }
 
@@ -443,6 +450,13 @@ export function mapBookingToPostgres(b: Booking): any {
     rating_details: b.ratingDetails ? JSON.stringify(b.ratingDetails) : null,
     trainer_note: b.trainerNote || null,
     created_at: b.createdAt || null,
+    reminder_sent: b.reminderSent || false,
+    acceptance_notification_count: b.acceptanceNotificationCount || 1,
+    last_acceptance_notification_at: b.lastAcceptanceNotificationAt || null,
+    acceptance_method: b.acceptanceMethod || null,
+    acceptance_deadline: b.acceptanceDeadline || null,
+    auto_accepted_at: b.autoAcceptedAt || null,
+    trainer_accepted_at: b.trainerAcceptedAt || null,
   };
 }
 
@@ -970,6 +984,7 @@ class DatabaseClient {
       this.schema.coaches = (resTrainers.data || []).map(mapCoach);
       this.schema.workouts = (resWorkouts.data || []).map(mapWorkout);
       this.schema.bookings = (resBookings.data || []).map(mapBooking);
+      this.runBackgroundSyncChecks();
       this.schema.credit_transactions = (resTransactions.data || []).map(mapInvoice);
       this.schema.hydration = (resHydration.data || []).map(mapHydrationLog);
       this.schema.calories = (resCalories.data || []).map(mapCalorieLog);
@@ -1655,7 +1670,163 @@ class DatabaseClient {
   }
 
   // Bookings & Sessions
+  parseBookingDateHelper(booking: Booking): Date {
+    try {
+      const dateStr = normalizeDate(booking.date);
+      if (!dateStr) return new Date();
+      
+      const timePart = booking.time.split('-')[0].trim();
+      const match = timePart.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (match) {
+        let hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+        const ampm = match[3].toUpperCase();
+        if (ampm === 'PM' && hours < 12) hours += 12;
+        if (ampm === 'AM' && hours === 12) hours = 0;
+        
+        const [year, month, day] = dateStr.split('-').map(x => parseInt(x, 10));
+        const d = new Date(year, month - 1, day, hours, minutes, 0, 0);
+        if (!isNaN(d.getTime())) {
+          return d;
+        }
+      }
+    } catch (e) {
+      console.log('[DATABASE] Error parsing date:', e);
+    }
+    const fallback = new Date();
+    fallback.setHours(fallback.getHours() + 2);
+    return fallback;
+  }
+
+  autoExpireStaleBookingsLocal(): void {
+    const now = Date.now();
+    let changed = false;
+    this.schema.bookings.forEach(b => {
+      if (b.status === 'upcoming' && (!b.timelineStatus || ['booked', 'trainer_assigned', 'trainer_accepted', 'trainer_preparing', 'trainer_travelling', 'trainer_arrived'].includes(b.timelineStatus))) {
+        const bookedTime = this.parseBookingDateHelper(b);
+        const expireTime = bookedTime.getTime() + 30 * 60 * 1000;
+        if (now > expireTime) {
+          b.status = 'missed_session_not_started';
+          b.timelineStatus = 'session_closed';
+          changed = true;
+          supabase.from('bookings').update({
+            status: 'missed_session_not_started',
+            timeline_status: 'session_closed'
+          }).eq('id', b.id).then();
+        }
+      }
+    });
+    if (changed) {
+      this.save();
+    }
+  }
+
+  checkAndSendLocalReminders(): void {
+    const now = Date.now();
+    let changed = false;
+    this.schema.bookings.forEach(b => {
+      if (b.status === 'upcoming' && b.trainerId && b.trainerId !== 'searching' && !b.reminderSent) {
+        const bookedTime = this.parseBookingDateHelper(b);
+        const diffMs = bookedTime.getTime() - now;
+        
+        if (diffMs > 0 && diffMs <= 60 * 60 * 1000) {
+          b.reminderSent = true;
+          changed = true;
+          
+          const formattedTime = b.time.split('-')[0].trim();
+          
+          // Generate client notification
+          if (b.clientId) {
+            this.addNotification(b.clientId, {
+              title: 'Session Reminder ⏱️',
+              body: `Your VIRLA session with Coach ${b.trainerName} starts at ${formattedTime}.`,
+              icon: 'clock',
+              type: 'Bookings',
+              priority: 'medium',
+              actionLabel: 'View Details',
+              deepLink: `/session-detail?id=${b.id}`
+            });
+          }
+          
+          // Generate trainer notification
+          if (b.trainerId) {
+            this.addNotification(b.trainerId, {
+              title: 'Session Reminder ⏱️',
+              body: `Your VIRLA session starts at ${formattedTime}.`,
+              icon: 'clock',
+              type: 'Bookings',
+              priority: 'medium',
+              actionLabel: 'View Details',
+              deepLink: `/session-detail?id=${b.id}`
+            });
+          }
+          
+          supabase.from('bookings').update({
+            reminder_sent: true
+          }).eq('id', b.id).then();
+        }
+      }
+    });
+    if (changed) {
+      this.save();
+    }
+  }
+
+  autoAcceptPendingBookingsLocal(): void {
+    const now = Date.now();
+    let changed = false;
+    for (const b of this.schema.bookings) {
+      if (b.status === 'upcoming' && b.timelineStatus === 'booked' && b.acceptanceDeadline && now >= b.acceptanceDeadline) {
+        b.timelineStatus = 'trainer_accepted';
+        b.acceptanceMethod = 'SYSTEM_AUTO_ACCEPT';
+        b.autoAcceptedAt = now;
+        
+        supabase.from('bookings').update({
+          timeline_status: 'trainer_accepted',
+          acceptance_method: 'SYSTEM_AUTO_ACCEPT',
+          auto_accepted_at: now
+        }).eq('id', b.id).then();
+        
+        if (b.clientId) {
+          this.addNotification(b.clientId, {
+            title: 'Trainer Assigned ⚡',
+            body: `Your booking is confirmed. Coach ${b.trainerName} is assigned to your session on ${b.date} @ ${b.time}.`,
+            icon: 'check-circle',
+            type: 'Bookings',
+            priority: 'high',
+            actionLabel: 'View Details',
+            deepLink: `/session-detail?id=${b.id}`
+          });
+        }
+
+        if (b.trainerId) {
+          this.addNotification(b.trainerId, {
+            title: 'Booking Automatically Accepted ⚠️',
+            body: `Session automatically accepted because no response was received within 30 minutes.`,
+            icon: 'alert-circle',
+            type: 'Trainer Updates',
+            priority: 'high',
+            actionLabel: 'View Details',
+            deepLink: `/session-detail?id=${b.id}`
+          });
+        }
+
+        changed = true;
+      }
+    }
+    if (changed) {
+      this.save();
+    }
+  }
+
+  runBackgroundSyncChecks(): void {
+    this.autoAcceptPendingBookingsLocal();
+    this.autoExpireStaleBookingsLocal();
+    this.checkAndSendLocalReminders();
+  }
+
   getBookings(userId: string): Booking[] {
+    this.runBackgroundSyncChecks();
     const userObj = this.schema.users.find(u => u.id === userId);
     if (userObj && userObj.role === 'trainer') {
       return this.schema.bookings.filter(b => b.trainerId === userObj.id || b.trainerName === userObj.name);
@@ -1668,6 +1839,7 @@ class DatabaseClient {
       const { data, error } = await supabase.from('bookings').select('*');
       if (data && !error) {
         this.schema.bookings = data.map(mapBooking);
+        this.runBackgroundSyncChecks();
         this.save();
       }
     } catch (e) {
@@ -1780,13 +1952,17 @@ class DatabaseClient {
     // All checks pass! Perform transaction operations atomically
     const bookingId = generateUUID('booking');
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const nowMs = Date.now();
     const newBooking: Booking = {
       ...bookingData,
       id: bookingId,
       status: 'upcoming',
       timelineStatus: 'booked',
       otp,
-      clientId: userId
+      clientId: userId,
+      acceptanceNotificationCount: 1,
+      lastAcceptanceNotificationAt: nowMs,
+      acceptanceDeadline: nowMs + 30 * 60 * 1000
     };
 
     // Decrement credits
@@ -1808,6 +1984,17 @@ class DatabaseClient {
     this.schema.bookings.unshift(newBooking);
     this.schema.credit_transactions.unshift(tx);
     this.save();
+
+    // Dispatch the T+0 new booking alert to Trainer immediately (Section 10)
+    this.addNotification(assignedTrainerId, {
+      title: 'New Booking — Action Required 🔔',
+      body: `You have a new session request for ${bookingData.workoutTitle} on ${date} @ ${time}.`,
+      icon: 'bell',
+      type: 'Trainer Updates',
+      priority: 'high',
+      actionLabel: 'View Details',
+      deepLink: `/session-detail?id=${bookingId}`
+    });
 
     // Log the assignment audit log
     this.logAssignmentEvent({
@@ -1966,10 +2153,20 @@ class DatabaseClient {
         booking.status = 'completed';
       }
       
-      supabase.from('bookings').update({
+      const nowMs = Date.now();
+      const updatePayload: any = {
         status: booking.status,
         timeline_status: booking.timelineStatus
-      }).eq('id', bookingId).then();
+      };
+
+      if (timelineStatus === 'trainer_accepted' && !booking.acceptanceMethod) {
+        booking.acceptanceMethod = 'TRAINER_MANUAL_ACCEPT';
+        booking.trainerAcceptedAt = nowMs;
+        updatePayload.acceptance_method = booking.acceptanceMethod;
+        updatePayload.trainer_accepted_at = booking.trainerAcceptedAt;
+      }
+
+      supabase.from('bookings').update(updatePayload).eq('id', bookingId).then();
 
       this.save();
       this.log('UpdateTimelineStatus', `Updated booking ${bookingId} status to ${timelineStatus}`);

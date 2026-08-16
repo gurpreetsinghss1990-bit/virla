@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, Image } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, Image, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { Database, TrainerApplication } from '../database/Database';
+import { Booking } from '../types';
 import { Coach } from '../types';
 import { LuxuryCard } from '../components/LuxuryCard';
 import { supabase } from '../database/supabaseClient';
@@ -17,11 +18,12 @@ export default function AdminPanelScreen() {
   const [isAdminAuthorized, setIsAdminAuthorized] = useState<boolean | null>(null);
   
   // Tab controller state
-  const [activeTab, setActiveTab] = useState<'applications' | 'live' | 'locations'>('applications');
+  const [activeTab, setActiveTab] = useState<'applications' | 'live' | 'locations' | 'acceptance'>('applications');
 
   // Filters for trainer locations
   const [radiusFilter, setRadiusFilter] = useState<'all' | '10' | '15'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'verified' | 'pending'>('all');
+  const [selectedAuditSession, setSelectedAuditSession] = useState<Booking | null>(null);
   
   // Connect shared bookingStore
   const { bookings, updateTimelineStatus } = useBookingStore();
@@ -156,6 +158,7 @@ export default function AdminPanelScreen() {
   
   const completedSessionsCount = bookings.filter(b => b.status === 'completed').length;
   const cancelledSessionsCount = bookings.filter(b => b.status === 'cancelled' || b.status === 'client_no_show' || b.status === 'trainer_no_show').length;
+  const missedOrEndedSessions = bookings.filter(b => b.status !== 'upcoming');
 
   if (isAdminAuthorized === null) {
     return (
@@ -213,31 +216,37 @@ export default function AdminPanelScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Tab Selector */}
-        <View className="flex-row bg-white border-b border-zinc-150 p-2 gap-1.5">
+        {/* Navigation Tabs Header */}
+        <View className="flex-row bg-white border-b border-zinc-150 p-2 gap-1.5 flex-wrap">
           <TouchableOpacity
             onPress={() => setActiveTab('applications')}
-            className={`flex-1 py-3 rounded-xl items-center justify-center ${activeTab === 'applications' ? 'bg-zinc-950' : 'bg-transparent'}`}
+            className={`flex-1 py-3 rounded-xl items-center justify-center min-w-[70px] ${activeTab === 'applications' ? 'bg-zinc-950' : 'bg-transparent'}`}
           >
-            <Text className={`text-[8px] font-black uppercase tracking-wider text-center ${activeTab === 'applications' ? 'text-white' : 'text-zinc-400'}`}>Onboarding</Text>
+            <Text className={`text-[7px] font-black uppercase tracking-wider text-center ${activeTab === 'applications' ? 'text-white' : 'text-zinc-400'}`}>Onboarding</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => router.push('/admin-workout-approvals')}
-            className="flex-1 py-3 rounded-xl items-center justify-center bg-transparent border border-zinc-150"
+            className="flex-1 py-3 rounded-xl items-center justify-center bg-transparent border border-zinc-150 min-w-[70px]"
           >
-            <Text className="text-[8px] font-black uppercase tracking-wider text-center text-zinc-500">Workout Approvals</Text>
+            <Text className="text-[7px] font-black uppercase tracking-wider text-center text-zinc-500 font-extrabold">Workouts</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setActiveTab('locations')}
-            className={`flex-1 py-3 rounded-xl items-center justify-center ${activeTab === 'locations' ? 'bg-zinc-950' : 'bg-transparent'}`}
+            className={`flex-1 py-3 rounded-xl items-center justify-center min-w-[70px] ${activeTab === 'locations' ? 'bg-zinc-950' : 'bg-transparent'}`}
           >
-            <Text className={`text-[8px] font-black uppercase tracking-wider text-center ${activeTab === 'locations' ? 'text-white' : 'text-zinc-400'}`}>Locations</Text>
+            <Text className={`text-[7px] font-black uppercase tracking-wider text-center ${activeTab === 'locations' ? 'text-white' : 'text-zinc-400'}`}>Locations</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setActiveTab('live')}
-            className={`flex-1 py-3 rounded-xl items-center justify-center ${activeTab === 'live' ? 'bg-zinc-950' : 'bg-transparent'}`}
+            className={`flex-1 py-3 rounded-xl items-center justify-center min-w-[70px] ${activeTab === 'live' ? 'bg-zinc-950' : 'bg-transparent'}`}
           >
-            <Text className={`text-[8px] font-black uppercase tracking-wider text-center ${activeTab === 'live' ? 'text-white' : 'text-zinc-400'}`}>Live Console</Text>
+            <Text className={`text-[7px] font-black uppercase tracking-wider text-center ${activeTab === 'live' ? 'text-white' : 'text-zinc-400'}`}>Live Console</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setActiveTab('acceptance')}
+            className={`flex-1 py-3 rounded-xl items-center justify-center min-w-[70px] ${activeTab === 'acceptance' ? 'bg-zinc-950' : 'bg-transparent'}`}
+          >
+            <Text className={`text-[7px] font-black uppercase tracking-wider text-center ${activeTab === 'acceptance' ? 'text-white' : 'text-zinc-400'}`}>Acceptance</Text>
           </TouchableOpacity>
         </View>
 
@@ -625,11 +634,376 @@ export default function AdminPanelScreen() {
                 )}
               </View>
 
+              {/* Sessions History & Audit */}
+              <View className="gap-3 mt-6">
+                <Text className="text-[#101828] text-xs font-semibold uppercase tracking-widest pl-1">Past & Missed Sessions Audit</Text>
+                {missedOrEndedSessions.length === 0 ? (
+                  <View className="bg-white border border-zinc-200 p-8 rounded-[24px] items-center justify-center">
+                    <Feather name="list" size={20} color="#9CA3AF" />
+                    <Text className="text-zinc-400 text-[10px] font-black uppercase mt-2">No historical sessions to display</Text>
+                  </View>
+                ) : (
+                  missedOrEndedSessions.map((b) => (
+                    <LuxuryCard key={b.id} className="p-4 gap-3.5" interactive={false}>
+                      <View className="flex-row items-center gap-3">
+                        <Image source={{ uri: b.trainerPhoto }} className="w-10 h-10 rounded-full" />
+                        <View className="flex-1">
+                          <Text className="text-zinc-950 text-xs font-black">Coach {b.trainerName} ↔ {b.clientName || 'Viral'}</Text>
+                          <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{b.workoutTitle} • {b.date} ({b.time})</Text>
+                        </View>
+                        <View className={`border px-2 py-0.5 rounded-full ${
+                          b.status === 'completed' 
+                            ? 'bg-zinc-50 border-zinc-200' 
+                            : b.status === 'cancelled' 
+                              ? 'bg-red-50 border-red-150' 
+                              : 'bg-amber-50 border-amber-150'
+                        }`}>
+                          <Text className={`text-[7px] font-black uppercase ${
+                            b.status === 'completed' 
+                              ? 'text-zinc-500' 
+                              : b.status === 'cancelled' 
+                                ? 'text-red-500' 
+                                : 'text-amber-600'
+                          }`}>{b.status}</Text>
+                        </View>
+                      </View>
+
+                      <View className="flex-row gap-2 mt-1">
+                        <TouchableOpacity
+                          onPress={() => setSelectedAuditSession(b)}
+                          className="flex-1 bg-zinc-900 py-2 rounded-lg items-center justify-center"
+                        >
+                          <Text className="text-white text-[8px] font-black uppercase">View Audit Details</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </LuxuryCard>
+                  ))
+                )}
+              </View>
+
             </View>
           )}
 
+          {activeTab === 'acceptance' && (() => {
+            const pending = bookings.filter(b => b.status === 'upcoming' && b.timelineStatus === 'booked' && b.trainerId && b.trainerId !== 'searching');
+            const autoAccepted = bookings.filter(b => b.status === 'upcoming' && b.acceptanceMethod === 'SYSTEM_AUTO_ACCEPT');
+            const recent = bookings.filter(b => b.status === 'upcoming' && b.acceptanceMethod === 'TRAINER_MANUAL_ACCEPT');
+
+            return (
+              <View className="gap-6">
+                <View>
+                  <Text className="text-zinc-950 text-xl font-black tracking-tight uppercase">Booking Acceptance Alerts</Text>
+                  <Text className="text-[#6B7280] text-xs font-semibold mt-1 leading-relaxed">
+                    Monitor trainer manual and system automatic acceptance status.
+                  </Text>
+                </View>
+
+                {/* Section 1: Pending Acceptance */}
+                <View className="gap-4">
+                  <Text className="text-zinc-800 text-[11px] font-black uppercase tracking-wider pl-1">Pending Acceptance ({pending.length})</Text>
+                  {pending.length === 0 ? (
+                    <View className="p-6 bg-zinc-50 border border-dashed border-zinc-200 rounded-[28px] items-center justify-center">
+                      <Text className="text-zinc-400 text-xs font-bold">No bookings pending acceptance.</Text>
+                    </View>
+                  ) : (
+                    pending.map(b => (
+                      <LuxuryCard key={b.id} className="p-5" interactive={false}>
+                        <View className="flex-row justify-between items-start mb-3">
+                          <View className="gap-0.5">
+                            <Text className="text-[#101828] text-base font-extrabold">{b.workoutTitle}</Text>
+                            <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Booking ID: {b.id}</Text>
+                          </View>
+                          <View className="bg-amber-50 border border-amber-100 px-3 py-1 rounded-xl">
+                            <Text className="text-amber-600 text-[8px] font-bold uppercase tracking-wider">Pending Confirmation</Text>
+                          </View>
+                        </View>
+                        <View className="h-[1px] bg-zinc-100 my-2" />
+                        <View className="gap-1.5 mb-3.5">
+                          <Text className="text-zinc-650 text-xs font-medium">Client: <Text className="font-bold text-zinc-900">{b.clientName || 'Viral'}</Text></Text>
+                          <Text className="text-zinc-650 text-xs font-medium">Assigned Trainer: <Text className="font-bold text-zinc-900">{b.trainerName}</Text></Text>
+                          <Text className="text-zinc-650 text-xs font-medium">Booked Time: <Text className="font-bold text-zinc-900">{b.date} @ {b.time}</Text></Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => setSelectedAuditSession(b)}
+                          className="bg-indigo-600 py-3 rounded-xl items-center justify-center"
+                        >
+                          <Text className="text-white text-xs font-black uppercase tracking-wider">View Audit Timeline</Text>
+                        </TouchableOpacity>
+                      </LuxuryCard>
+                    ))
+                  )}
+                </View>
+
+                {/* Section 2: Auto-Accepted Alert Priority */}
+                <View className="gap-4">
+                  <Text className="text-zinc-800 text-[11px] font-black uppercase tracking-wider pl-1">Auto-Accepted Sessions ({autoAccepted.length})</Text>
+                  {autoAccepted.length === 0 ? (
+                    <View className="p-6 bg-zinc-50 border border-dashed border-zinc-200 rounded-[28px] items-center justify-center">
+                      <Text className="text-zinc-400 text-xs font-bold">No bookings have been auto-accepted.</Text>
+                    </View>
+                  ) : (
+                    autoAccepted.map(b => (
+                      <LuxuryCard key={b.id} className="p-5 border-rose-250 bg-rose-50/20" interactive={false}>
+                        <View className="flex-row justify-between items-start mb-3">
+                          <View className="gap-0.5">
+                            <Text className="text-rose-950 text-base font-extrabold">{b.workoutTitle}</Text>
+                            <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Booking ID: {b.id}</Text>
+                          </View>
+                          <View className="bg-rose-100 border border-rose-200 px-3 py-1 rounded-xl">
+                            <Text className="text-rose-700 text-[8px] font-bold uppercase tracking-wider">AUTO-ACCEPTED ⚠️</Text>
+                          </View>
+                        </View>
+                        <View className="h-[1px] bg-rose-100 my-2" />
+                        <View className="gap-1.5 mb-3.5">
+                          <Text className="text-rose-900/80 text-xs font-medium">Client: <Text className="font-bold text-rose-900">{b.clientName || 'Viral'}</Text></Text>
+                          <Text className="text-rose-900/80 text-xs font-medium">Assigned Trainer: <Text className="font-bold text-rose-900">{b.trainerName}</Text> (No response)</Text>
+                          <Text className="text-rose-900/80 text-xs font-medium">Booked Time: <Text className="font-bold text-rose-900">{b.date} @ {b.time}</Text></Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => setSelectedAuditSession(b)}
+                          className="bg-rose-600 py-3 rounded-xl items-center justify-center"
+                        >
+                          <Text className="text-white text-xs font-black uppercase tracking-wider">View Auto-Accept Audit</Text>
+                        </TouchableOpacity>
+                      </LuxuryCard>
+                    ))
+                  )}
+                </View>
+
+                {/* Section 3: Recent Acceptance */}
+                <View className="gap-4">
+                  <Text className="text-zinc-800 text-[11px] font-black uppercase tracking-wider pl-1">Recent Manual Acceptances ({recent.length})</Text>
+                  {recent.length === 0 ? (
+                    <View className="p-6 bg-zinc-50 border border-dashed border-zinc-200 rounded-[28px] items-center justify-center">
+                      <Text className="text-zinc-400 text-xs font-bold">No manual acceptances found.</Text>
+                    </View>
+                  ) : (
+                    recent.map(b => (
+                      <LuxuryCard key={b.id} className="p-5" interactive={false}>
+                        <View className="flex-row justify-between items-start mb-3">
+                          <View className="gap-0.5">
+                            <Text className="text-zinc-900 text-base font-extrabold">{b.workoutTitle}</Text>
+                            <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Booking ID: {b.id}</Text>
+                          </View>
+                          <View className="bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-xl">
+                            <Text className="text-emerald-600 text-[8px] font-bold uppercase tracking-wider">Manually Accepted</Text>
+                          </View>
+                        </View>
+                        <View className="h-[1px] bg-zinc-100 my-2" />
+                        <View className="gap-1.5 mb-3.5">
+                          <Text className="text-zinc-650 text-xs font-medium">Client: <Text className="font-bold text-zinc-900">{b.clientName || 'Viral'}</Text></Text>
+                          <Text className="text-zinc-650 text-xs font-medium">Assigned Trainer: <Text className="font-bold text-zinc-900">{b.trainerName}</Text> (Accepted manually)</Text>
+                          <Text className="text-zinc-650 text-xs font-medium">Booked Time: <Text className="font-bold text-zinc-900">{b.date} @ {b.time}</Text></Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => setSelectedAuditSession(b)}
+                          className="bg-zinc-800 py-3 rounded-xl items-center justify-center"
+                        >
+                          <Text className="text-white text-xs font-black uppercase tracking-wider">View Audit Timeline</Text>
+                        </TouchableOpacity>
+                      </LuxuryCard>
+                    ))
+                  )}
+                </View>
+              </View>
+            );
+          })()}
+
         </ScrollView>
       </View>
+
+      {/* Detailed Audit Modal */}
+      <Modal
+        visible={selectedAuditSession !== null}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setSelectedAuditSession(null)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(9, 9, 11, 0.7)', justifyContent: 'center', padding: 20 }}>
+          <View className="bg-white rounded-[32px] border border-zinc-200 p-6 shadow-2xl max-h-[85%]">
+            <View className="flex-row justify-between items-center border-b border-zinc-100 pb-4 mb-4">
+              <Text className="text-[#101828] text-base font-black uppercase tracking-wider">Session Audit Log</Text>
+              <TouchableOpacity 
+                onPress={() => setSelectedAuditSession(null)}
+                className="w-8 h-8 rounded-full bg-zinc-50 items-center justify-center"
+              >
+                <Feather name="x" size={16} color="#101828" />
+              </TouchableOpacity>
+            </View>
+
+            {selectedAuditSession && (() => {
+              const b = selectedAuditSession;
+              const checkInStatus = b.gracePeriodStartedAt ? 'Arrived / Checked In' : 'Not Checked In';
+              const checkInTime = b.gracePeriodStartedAt ? new Date(b.gracePeriodStartedAt).toLocaleString() : 'N/A';
+              const startTime = b.workoutStartedAt ? new Date(b.workoutStartedAt).toLocaleString() : 'N/A';
+              const otpStatus = b.workoutStartedAt || ['workout_started', 'workout_completed', 'session_closed'].includes(b.timelineStatus || '') ? 'Verified' : 'Not Verified (Pending / Expired)';
+              
+              let statusExplanation = 'Session completed or cancelled normally.';
+              if (b.status === 'missed_session_not_started') {
+                statusExplanation = 'The session was not completed because neither party completed the required session-start flow.';
+              } else if (b.status === 'client_no_show') {
+                statusExplanation = 'Client failed to arrive or verify check-in within the 15-minute grace period.';
+              } else if (b.status === 'trainer_no_show') {
+                statusExplanation = 'Trainer failed to arrive at the customer location.';
+              }
+
+              return (
+                <ScrollView showsVerticalScrollIndicator={false} className="gap-4">
+                  {/* Explanation Alert */}
+                  <View className="bg-zinc-50 border border-zinc-200 p-4 rounded-2xl mb-2">
+                    <Text className="text-[#101828] text-[10px] font-black uppercase tracking-wider">Audit Explanation</Text>
+                    <Text className="text-zinc-500 text-xs font-semibold mt-1.5 leading-relaxed">{statusExplanation}</Text>
+                  </View>
+
+                  {/* Booking Acceptance Audit Timeline */}
+                  {b.createdAt && (
+                    <View className="bg-indigo-50/50 border border-indigo-100 p-4 rounded-2xl mb-2 gap-2">
+                      <Text className="text-indigo-950 text-[10px] font-black uppercase tracking-wider">Acceptance Audit Timeline</Text>
+                      
+                      <View className="gap-2.5 mt-1.5 pl-1.5 border-l border-indigo-200">
+                        {/* 1. Created Event */}
+                        <View className="flex-row items-center gap-2">
+                          <View className="w-1.5 h-1.5 rounded-full bg-indigo-500 -ml-[9.5px]" />
+                          <Text className="text-zinc-500 text-[8px] font-bold">{new Date(b.createdAt).toLocaleTimeString()}</Text>
+                          <Text className="text-zinc-800 text-[9px] font-semibold">Booking Created</Text>
+                        </View>
+
+                        {/* 2. Notification T+0 Event */}
+                        <View className="flex-row items-center gap-2">
+                          <View className="w-1.5 h-1.5 rounded-full bg-indigo-500 -ml-[9.5px]" />
+                          <Text className="text-zinc-500 text-[8px] font-bold">{new Date(b.createdAt).toLocaleTimeString()}</Text>
+                          <Text className="text-zinc-800 text-[9px] font-semibold">Trainer Alert Notification Sent (T+0)</Text>
+                        </View>
+
+                        {/* 3. Notification T+15m Event if reminder count >= 2 */}
+                        {(b.acceptanceNotificationCount || 1) >= 2 && (
+                          <View className="flex-row items-center gap-2">
+                            <View className="w-1.5 h-1.5 rounded-full bg-amber-500 -ml-[9.5px]" />
+                            <Text className="text-zinc-500 text-[8px] font-bold">
+                              {new Date(b.lastAcceptanceNotificationAt || (b.createdAt + 15 * 60 * 1000)).toLocaleTimeString()}
+                            </Text>
+                            <Text className="text-zinc-800 text-[9px] font-semibold">Acceptance Reminder Notification Sent (T+15)</Text>
+                          </View>
+                        )}
+
+                        {/* 4. Acceptance Event */}
+                        {b.acceptanceMethod === 'SYSTEM_AUTO_ACCEPT' ? (
+                          <View className="flex-row items-center gap-2">
+                            <View className="w-1.5 h-1.5 rounded-full bg-rose-500 -ml-[9.5px]" />
+                            <Text className="text-zinc-500 text-[8px] font-bold">
+                              {new Date(b.autoAcceptedAt || b.acceptanceDeadline || (b.createdAt + 30 * 60 * 1000)).toLocaleTimeString()}
+                            </Text>
+                            <Text className="text-rose-600 text-[9px] font-black uppercase">SYSTEM AUTO-ACCEPTED (NO RESP)</Text>
+                          </View>
+                        ) : b.acceptanceMethod === 'TRAINER_MANUAL_ACCEPT' ? (
+                          <View className="flex-row items-center gap-2">
+                            <View className="w-1.5 h-1.5 rounded-full bg-emerald-500 -ml-[9.5px]" />
+                            <Text className="text-zinc-500 text-[8px] font-bold">
+                              {new Date(b.trainerAcceptedAt || (b.createdAt + 7 * 60 * 1000)).toLocaleTimeString()}
+                            </Text>
+                            <Text className="text-emerald-700 text-[9px] font-black uppercase">Trainer Manually Accepted</Text>
+                          </View>
+                        ) : (
+                          <View className="flex-row items-center gap-2">
+                            <View className="w-1.5 h-1.5 rounded-full bg-amber-500 -ml-[9.5px]" />
+                            <Text className="text-zinc-400 text-[8px] font-bold">Pending</Text>
+                            <Text className="text-amber-700 text-[9px] font-bold uppercase">Waiting for Trainer Confirmation</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Fields list */}
+                  <View className="gap-3">
+                    <View>
+                      <Text className="text-zinc-400 text-[8px] font-black uppercase">Booking ID</Text>
+                      <Text className="text-[#101828] text-xs font-semibold mt-0.5">{b.id}</Text>
+                    </View>
+                    
+                    <View className="flex-row justify-between">
+                      <View className="w-[48%]">
+                        <Text className="text-zinc-400 text-[8px] font-black uppercase">Client Name</Text>
+                        <Text className="text-[#101828] text-xs font-semibold mt-0.5">{b.clientName || 'Viral'}</Text>
+                      </View>
+                      <View className="w-[48%]">
+                        <Text className="text-zinc-400 text-[8px] font-black uppercase">Assigned Trainer</Text>
+                        <Text className="text-[#101828] text-xs font-semibold mt-0.5">{b.trainerName} ({b.trainerId || 'N/A'})</Text>
+                      </View>
+                    </View>
+
+                    <View className="flex-row justify-between">
+                      <View className="w-[48%]">
+                        <Text className="text-zinc-400 text-[8px] font-black uppercase">Workout Type</Text>
+                        <Text className="text-[#101828] text-xs font-semibold mt-0.5">{b.workoutTitle}</Text>
+                      </View>
+                      <View className="w-[48%]">
+                        <Text className="text-zinc-400 text-[8px] font-black uppercase">Booked Slot</Text>
+                        <Text className="text-[#101828] text-xs font-semibold mt-0.5">{b.date} • {b.time}</Text>
+                      </View>
+                    </View>
+
+                    <View className="h-[1px] bg-zinc-100 my-1" />
+
+                    <View className="flex-row justify-between">
+                      <View className="w-[48%]">
+                        <Text className="text-zinc-400 text-[8px] font-black uppercase">Trainer Check-In Status</Text>
+                        <Text className="text-[#101828] text-xs font-semibold mt-0.5">{checkInStatus}</Text>
+                      </View>
+                      <View className="w-[48%]">
+                        <Text className="text-zinc-400 text-[8px] font-black uppercase">Check-In Timestamp</Text>
+                        <Text className="text-[#101828] text-xs font-semibold mt-0.5">{checkInTime}</Text>
+                      </View>
+                    </View>
+
+                    <View className="flex-row justify-between">
+                      <View className="w-[48%]">
+                        <Text className="text-zinc-400 text-[8px] font-black uppercase">Session Start Time</Text>
+                        <Text className="text-[#101828] text-xs font-semibold mt-0.5">{startTime}</Text>
+                      </View>
+                      <View className="w-[48%]">
+                        <Text className="text-zinc-400 text-[8px] font-black uppercase">OTP Verification</Text>
+                        <Text className="text-[#101828] text-xs font-semibold mt-0.5">{otpStatus}</Text>
+                      </View>
+                    </View>
+
+                    <View className="h-[1px] bg-zinc-100 my-1" />
+
+                    <View className="flex-row justify-between">
+                      <View className="w-[48%]">
+                        <Text className="text-zinc-400 text-[8px] font-black uppercase">Completion Status</Text>
+                        <Text className="text-[#101828] text-xs font-semibold mt-0.5">{b.status === 'completed' ? 'Completed' : 'Not Completed'}</Text>
+                      </View>
+                      <View className="w-[48%]">
+                        <Text className="text-zinc-400 text-[8px] font-black uppercase">Cancellation Status</Text>
+                        <Text className="text-[#101828] text-xs font-semibold mt-0.5">{b.status === 'cancelled' ? 'Cancelled' : 'Not Cancelled'}</Text>
+                      </View>
+                    </View>
+
+                    <View className="flex-row justify-between">
+                      <View className="w-[48%]">
+                        <Text className="text-zinc-400 text-[8px] font-black uppercase">Final Status Code</Text>
+                        <Text className="text-rose-600 text-xs font-bold uppercase mt-0.5">{b.status}</Text>
+                      </View>
+                      <View className="w-[48%]">
+                        <Text className="text-zinc-400 text-[8px] font-black uppercase">Timeline Status</Text>
+                        <Text className="text-[#101828] text-xs font-semibold mt-0.5">{b.timelineStatus || 'N/A'}</Text>
+                      </View>
+                    </View>
+
+                    <View className="h-[1px] bg-zinc-100 my-1" />
+
+                    <View>
+                      <Text className="text-zinc-400 text-[8px] font-black uppercase">Database Created Timestamp</Text>
+                      <Text className="text-[#101828] text-xs font-semibold mt-0.5">{b.createdAt ? new Date(b.createdAt).toLocaleString() : 'N/A'}</Text>
+                    </View>
+                  </View>
+                </ScrollView>
+              );
+            })()}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaViewWrapper>
   );
 }

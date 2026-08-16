@@ -169,16 +169,18 @@ export default function SessionDetailScreen() {
   };
 
   const getStatusText = (status: string) => {
-    if (status === 'booked' && booking?.trainerName === 'No Trainer Available') {
-      return "We're still looking for a trainer";
+    const isSearching = !booking?.trainerId || booking?.trainerId === 'searching' || booking?.trainerName === 'No Trainer Available';
+    
+    if (status === 'booked' || status === 'trainer_assigned') {
+      if (isSearching) {
+        return 'Searching for Trainer';
+      } else {
+        return 'Waiting for Trainer Confirmation';
+      }
     }
     switch (status) {
-      case 'booked':
-        return 'Searching for Trainer';
-      case 'trainer_assigned':
-        return 'Trainer Assigned';
       case 'trainer_accepted':
-        return 'Trainer Accepted';
+        return 'Trainer Confirmed';
       case 'trainer_preparing':
         return 'Session Scheduled';
       case 'trainer_travelling':
@@ -328,8 +330,8 @@ export default function SessionDetailScreen() {
   };
 
   // Verification actions with double safeguards
-  const handleVerifyOtp = () => {
-    const success = SessionEngine.verifyOTP(booking.id, otpInput);
+  const handleVerifyOtp = async () => {
+    const success = await SessionEngine.verifyOTP(booking.id, otpInput);
     if (success) {
       Alert.alert(
         'Check-In Verified',
@@ -354,8 +356,8 @@ export default function SessionDetailScreen() {
     }
   };
 
-  const handleVerifyCustomerOtp = () => {
-    const success = SessionEngine.verifyOTP(booking.id, customerOtpInput);
+  const handleVerifyCustomerOtp = async () => {
+    const success = await SessionEngine.verifyOTP(booking.id, customerOtpInput);
     if (success) {
       Alert.alert(
         'Session Started 🏋️‍♂️',
@@ -631,14 +633,20 @@ export default function SessionDetailScreen() {
               </View>
             )}
 
-            {(role as string) === 'customer' && !isAccepted && (
-              <View className="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl flex-row items-start gap-2.5">
-                <Feather name="search" size={13} color="#4F46E5" style={{ marginTop: 2 }} />
-                <Text className="text-indigo-700 text-[9px] font-semibold leading-relaxed flex-1">
-                  Looking for the best trainer... Secure communication options and profile details will unlock after trainer acceptance.
-                </Text>
-              </View>
-            )}
+            {(role as string) === 'customer' && !isAccepted && (() => {
+              const isSearching = !booking?.trainerId || booking?.trainerId === 'searching' || booking?.trainerName === 'No Trainer Available';
+              return (
+                <View className="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl flex-row items-start gap-2.5">
+                  <Feather name={isSearching ? "search" : "clock"} size={13} color="#4F46E5" style={{ marginTop: 2 }} />
+                  <Text className="text-indigo-700 text-[9px] font-semibold leading-relaxed flex-1">
+                    {isSearching 
+                      ? "Looking for the best trainer... Secure communication options and profile details will unlock after trainer acceptance."
+                      : `Waiting for Coach ${booking?.trainerName} to accept your booking request. Secure communication options and profile details will unlock after trainer acceptance.`
+                    }
+                  </Text>
+                </View>
+              );
+            })()}
 
             {(role as string) === 'customer' && isAccepted && (
               <View className="bg-[#ECFDF5] border border-[#A7F3D0] p-4 rounded-2xl flex-row items-start gap-2.5">
