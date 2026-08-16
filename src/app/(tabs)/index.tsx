@@ -580,13 +580,8 @@ export default function HomeScreen() {
                 <View className="flex-1">
                   <Text className="text-indigo-250 text-[8px] font-black uppercase tracking-wider">Live Concierge Update</Text>
                   <Text className="text-white text-[11px] font-extrabold mt-0.5" numberOfLines={1}>
-                    {activeBooking.timelineStatus === 'booked' && (() => {
-                      const isSearching = !activeBooking.trainerId || activeBooking.trainerId === 'searching' || activeBooking.trainerName === 'No Trainer Available';
-                      return isSearching 
-                        ? 'Searching for the best trainer...' 
-                        : `Waiting for confirmation from Coach ${activeBooking.trainerName}`;
-                    })()}
-                    {activeBooking.timelineStatus === 'trainer_assigned' && `Coach ${activeBooking.trainerName} assigned for ${activeBooking.workoutTitle}`}
+                    {activeBooking.timelineStatus === 'booked' && 'Your session is booked & confirmed. Trainer details will be shared soon.'}
+                    {activeBooking.timelineStatus === 'trainer_assigned' && 'Your session is booked & confirmed. Trainer details will be shared soon.'}
                     {activeBooking.timelineStatus === 'trainer_accepted' && `Coach ${activeBooking.trainerName} accepted your booking`}
                     {activeBooking.timelineStatus === 'trainer_preparing' && `Coach ${activeBooking.trainerName} is preparing your session gear`}
                     {activeBooking.timelineStatus === 'trainer_travelling' && `Coach ${activeBooking.trainerName} is on the way`}
@@ -1128,9 +1123,9 @@ export default function HomeScreen() {
                       {/* Top: Coach avatar, title, and badge */}
                       <View className="flex-row justify-between items-start">
                         <View className="flex-row items-center gap-3">
-                          {isSearching ? (
+                          {!isAccepted ? (
                             <View className="w-14 h-14 rounded-full bg-indigo-50 border border-indigo-100 items-center justify-center">
-                              <Feather name="search" size={20} color="#4F46E5" />
+                              <Feather name="clock" size={20} color="#4F46E5" />
                             </View>
                           ) : (
                             <Image 
@@ -1141,18 +1136,15 @@ export default function HomeScreen() {
                           <View>
                             <Text className="text-zinc-950 text-[15px] font-semibold">{bookingData.workoutTitle}</Text>
                             <Text className="text-zinc-500 text-[13px] font-normal mt-0.5">
-                              {isSearching 
-                                ? 'Looking for the best trainer...' 
-                                : (!isAccepted 
-                                    ? 'Waiting for Trainer Acceptance...' 
-                                    : `with ${bookingData.trainerName}`
-                                  )
+                              {!isAccepted 
+                                ? 'Trainer details will be shared soon.' 
+                                : `with ${bookingData.trainerName}`
                               }
                             </Text>
                           </View>
                         </View>
                         {/* Elite coach badge */}
-                        {!isSearching && isAccepted && (
+                        {isAccepted && (
                           <View className="bg-amber-50 border border-amber-100 px-3.5 py-1 rounded-full">
                             <Text className="text-amber-600 text-[9px] font-bold uppercase tracking-wider">★ ELITE COACH</Text>
                           </View>
@@ -1186,31 +1178,16 @@ export default function HomeScreen() {
                         {/* Right: Status badge & Map action */}
                         <View className="items-end gap-4">
                           {/* Status pill */}
-                          <View className={`px-3 py-1.5 rounded-xl flex-row items-center gap-1.5 border ${
-                            isSearching 
-                              ? 'bg-indigo-50 border-indigo-100' 
-                              : (!isAccepted 
-                                  ? 'bg-amber-50 border-amber-100' 
-                                  : 'bg-emerald-50 border-emerald-100'
-                                )
-                          }`}>
+                          <View className="bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-xl flex-row items-center gap-1.5">
                             <Feather 
-                              name={isSearching ? 'search' : (!isAccepted ? 'clock' : 'check-circle')} 
+                              name={isTravelling ? 'truck' : 'check-circle'} 
                               size={12} 
-                              color={isSearching ? '#4F46E5' : (!isAccepted ? '#D97706' : '#16C784')} 
+                              color="#16C784" 
                             />
-                            <Text className={`text-[9px] font-bold uppercase tracking-wider ${
-                              isSearching ? 'text-indigo-600' : (!isAccepted ? 'text-amber-700' : 'text-emerald-600')
-                            }`}>
+                            <Text className="text-emerald-600 text-[9px] font-bold uppercase tracking-wider">
                               {isTravelling 
                                 ? 'Coach on the way' 
-                                : (isSearching 
-                                    ? 'Searching' 
-                                    : (!isAccepted 
-                                        ? 'Pending' 
-                                        : 'Confirmed'
-                                      )
-                                  )
+                                : 'Confirmed'
                               }
                             </Text>
                           </View>

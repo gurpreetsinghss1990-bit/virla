@@ -169,6 +169,12 @@ export default function SessionDetailScreen() {
   };
 
   const getStatusText = (status: string) => {
+    if (role === 'customer' || role === 'admin') {
+      if (status === 'booked' || status === 'trainer_assigned') {
+        return 'SESSION BOOKED & CONFIRMED';
+      }
+    }
+
     const isSearching = !booking?.trainerId || booking?.trainerId === 'searching' || booking?.trainerName === 'No Trainer Available';
     
     if (status === 'booked' || status === 'trainer_assigned') {
@@ -796,6 +802,11 @@ export default function SessionDetailScreen() {
               <View className="flex-1">
                 <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Active Concierge Status</Text>
                 <Text className="text-[#101828] text-sm font-black mt-0.5">{getStatusText(currentStatus)}</Text>
+                {role === 'customer' && !isAccepted && (
+                  <Text className="text-zinc-500 text-[10px] font-medium mt-1 leading-normal">
+                    Your session has been successfully booked. Trainer details will be shared soon.
+                  </Text>
+                )}
               </View>
             </View>
 

@@ -82,7 +82,7 @@ export function BookingCard({ booking }: BookingCardProps) {
             <View className="w-12 h-12 rounded-full bg-indigo-50 border border-indigo-150 items-center justify-center">
               <Text className="text-lg">👤</Text>
             </View>
-          ) : (isUpcoming && isSearching) ? (
+          ) : (isUpcoming && !isAccepted) ? (
             <View className="w-12 h-12 rounded-full bg-zinc-100 border border-zinc-200 items-center justify-center">
               <Text className="text-lg">🧘</Text>
             </View>
@@ -97,8 +97,8 @@ export function BookingCard({ booking }: BookingCardProps) {
               {isTrainer 
                 ? 'Client: Viral' 
                 : (isUpcoming 
-                    ? (isSearching 
-                        ? 'Searching for Trainer...' 
+                    ? (!isAccepted 
+                        ? 'SESSION BOOKED & CONFIRMED' 
                         : `Coach ${booking.trainerName}`
                       ) 
                     : `Coach ${booking.trainerName}`
@@ -108,12 +108,9 @@ export function BookingCard({ booking }: BookingCardProps) {
               {isTrainer 
                 ? `${booking.workoutTitle} • 60 mins` 
                 : (isUpcoming 
-                    ? (isSearching 
-                        ? `${booking.workoutTitle} • Searching for Trainer` 
-                        : (!isAccepted 
-                            ? `${booking.workoutTitle} • Waiting for Trainer Confirmation` 
-                            : `${booking.workoutTitle} • Trainer confirmed. Privacy rules apply.`
-                          )
+                    ? (!isAccepted 
+                        ? `${booking.workoutTitle} • Trainer details will be shared soon` 
+                        : `${booking.workoutTitle} • Trainer confirmed. Privacy rules apply.`
                       ) 
                     : `${booking.workoutTitle} • ₹${booking.price || 1200}`
                   )}
