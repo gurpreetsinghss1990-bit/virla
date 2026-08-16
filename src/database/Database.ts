@@ -299,7 +299,7 @@ export function mapCoach(row: any): Coach {
     emergencyContact: row.emergency_contact ? JSON.stringify(row.emergency_contact) : '',
     aboutText: row.about_text || '',
     workingRadius: row.working_radius || '',
-    gender: row.gender || '',
+    gender: row.gender || null,
     preferences: prefs
   };
 }
@@ -630,8 +630,8 @@ export function mapSavedAddress(row: any): SavedAddress {
     pinCode: row.pin_code,
     gpsPlaceholder: row.gps_placeholder || '',
     isDefault: row.is_default,
-    lat: row.lat || 0,
-    lng: row.lng || 0,
+    lat: row.lat !== null && row.lat !== undefined ? Number(row.lat) : undefined,
+    lng: row.lng !== null && row.lng !== undefined ? Number(row.lng) : undefined,
     apartment: row.apartment || '',
     floor: row.floor || '',
     notes: row.notes || '',
@@ -652,8 +652,8 @@ export function mapSavedAddressToPostgres(addr: SavedAddress): any {
     pin_code: addr.pinCode,
     gps_placeholder: addr.gpsPlaceholder,
     is_default: addr.isDefault,
-    lat: addr.lat || 0,
-    lng: addr.lng || 0,
+    lat: addr.lat !== undefined && addr.lat !== null ? addr.lat : null,
+    lng: addr.lng !== undefined && addr.lng !== null ? addr.lng : null,
     apartment: addr.apartment || '',
     floor: addr.floor || '',
     notes: addr.notes || '',
@@ -867,6 +867,8 @@ class DatabaseClient {
     assignment_logs: AssignmentLog[];
     slot_reservations: any[];
     trainer_workout_assignments: TrainerWorkoutAssignment[];
+    client_disputes: any[];
+    kit_requests: any[];
   } = {
     users: [],
     profiles: [],
@@ -885,7 +887,9 @@ class DatabaseClient {
     trainer_applications: [],
     assignment_logs: [],
     slot_reservations: [],
-    trainer_workout_assignments: []
+    trainer_workout_assignments: [],
+    client_disputes: [],
+    kit_requests: []
   };
 
   private currentUserId: string | null = null;
@@ -1034,6 +1038,7 @@ class DatabaseClient {
         console.log('[DEBUG-DB] trainer_workout_assignments table not yet configured:', resErr);
       }
 
+      this.syncCoachesWithAssignments();
       console.log('[DEBUG-DB] Database.load() completed successfully from Supabase.');
       this.isLoaded = true;
       this.loadSource = 'supabase';
@@ -1050,12 +1055,44 @@ class DatabaseClient {
         this.schema = {
           ...this.schema,
           ...parsed,
-          trainer_applications: parsed.trainer_applications || []
+          trainer_applications: parsed.trainer_applications || [],
+          client_disputes: parsed.client_disputes || [],
+          kit_requests: parsed.kit_requests || []
         };
       }
+      this.syncCoachesWithAssignments();
       this.isLoaded = true;
       this.loadSource = 'cache';
     }
+  }
+
+  syncCoachesWithAssignments(): void {
+    if (!this.schema.coaches) return;
+    const assignments = this.schema.trainer_workout_assignments || [];
+    
+    const CATEGORY_DISPLAY_MAP: Record<string, string> = {
+      'Strength': 'Strength Training',
+      'Mind & Body': 'Yoga',
+      'Cardio': 'Dance Fitness',
+      'Conditioning': 'Stretching',
+      'Boxing': 'Boxing',
+      'All Workouts': 'All Workouts'
+    };
+
+    this.schema.coaches.forEach(coach => {
+      const approvedCats = assignments
+        .filter(a => a.trainerId === coach.id && a.status === 'APPROVED')
+        .map(a => CATEGORY_DISPLAY_MAP[a.workoutCategory] || a.workoutCategory);
+      coach.workoutSpecialties = approvedCats;
+
+      // Sync missing gender from user profile if not set in trainers table
+      if (!coach.gender) {
+        const profile = this.schema.profiles?.find(p => p.userId === coach.id);
+        if (profile && profile.gender) {
+          coach.gender = profile.gender.toLowerCase();
+        }
+      }
+    });
   }
 
   private async save(): Promise<void> {
@@ -1657,6 +1694,11 @@ class DatabaseClient {
       };
       this.schema.coaches.push(coach);
     }
+    if (fields.gender !== undefined && coach && coach.gender) {
+      if (coach.gender.toLowerCase() !== fields.gender.toLowerCase()) {
+        throw new Error("Gender cannot be changed after trainer profile creation.");
+      }
+    }
     
     Object.assign(coach, fields);
     
@@ -2028,6 +2070,7 @@ class DatabaseClient {
     const bookingId = generateUUID('booking');
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
     const nowMs = Date.now();
+    const userRec = this.schema.users?.find(u => u.id === userId);
     const newBooking: Booking = {
       ...bookingData,
       id: bookingId,
@@ -2035,6 +2078,8 @@ class DatabaseClient {
       timelineStatus: 'booked',
       otp,
       clientId: userId,
+      clientName: userRec?.name || 'Viral',
+      clientPhone: userRec?.phone || '',
       acceptanceNotificationCount: 1,
       lastAcceptanceNotificationAt: nowMs,
       acceptanceDeadline: nowMs + 30 * 60 * 1000
@@ -2083,13 +2128,39 @@ class DatabaseClient {
 
     // Write to Supabase (Atomically trigger)
     try {
+      const bookingPayload = mapBookingToPostgres(newBooking);
       const [resBooking, resProfile, resTx] = await Promise.all([
-        supabase.from('bookings').insert(mapBookingToPostgres(newBooking)),
+        supabase.from('bookings').insert(bookingPayload),
         profile ? supabase.from('user_profiles').update({ credits_balance: profile.creditsBalance }).eq('user_id', userId) : Promise.resolve({ error: null }),
         supabase.from('credit_transactions').insert(mapInvoiceToPostgres(tx, userId))
       ]);
 
-      if (resBooking.error) throw resBooking.error;
+      if (resBooking.error) {
+        // Fallback for Solo sessions if the migration columns are missing from the schema cache
+        const isMissingColumnError = resBooking.error.message && (
+          resBooking.error.message.includes('original_package_type') ||
+          resBooking.error.message.includes('session_type') ||
+          resBooking.error.message.includes('participant_count') ||
+          resBooking.error.message.includes('partner_name') ||
+          resBooking.error.message.includes('partner_phone')
+        );
+
+        if (isMissingColumnError && newBooking.sessionType === 'SINGLE') {
+          console.warn('[DB WARNING] Missing partner columns in bookings table schema cache. Retrying Solo booking without them.');
+          
+          const fallbackPayload = { ...bookingPayload };
+          delete fallbackPayload.participant_count;
+          delete fallbackPayload.session_type;
+          delete fallbackPayload.original_package_type;
+          delete fallbackPayload.partner_name;
+          delete fallbackPayload.partner_phone;
+
+          const resRetry = await supabase.from('bookings').insert(fallbackPayload);
+          if (resRetry.error) throw resRetry.error;
+        } else {
+          throw resBooking.error;
+        }
+      }
       if (resProfile.error) throw resProfile.error;
       if (resTx.error) throw resTx.error;
 
@@ -2130,13 +2201,16 @@ class DatabaseClient {
   addBooking(userId: string, bookingData: Omit<Booking, 'id' | 'status' | 'timelineStatus'>): Booking {
     const bookingId = generateUUID('booking');
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    const userRec = this.schema.users?.find(u => u.id === userId);
     const newBooking: Booking = {
       ...bookingData,
       id: bookingId,
       status: 'upcoming',
       timelineStatus: 'booked',
       otp,
-      clientId: userId
+      clientId: userId,
+      clientName: userRec?.name || 'Viral',
+      clientPhone: userRec?.phone || ''
     };
 
     this.schema.bookings.unshift(newBooking);
@@ -2158,8 +2232,37 @@ class DatabaseClient {
 
     this.schema.credit_transactions.unshift(tx);
 
+    const bookingPayload = mapBookingToPostgres(newBooking);
+    const insertBookingAsync = async () => {
+      try {
+        const res = await supabase.from('bookings').insert(bookingPayload);
+        if (res.error) {
+          const isMissingColumnError = res.error.message && (
+            res.error.message.includes('original_package_type') ||
+            res.error.message.includes('session_type') ||
+            res.error.message.includes('participant_count') ||
+            res.error.message.includes('partner_name') ||
+            res.error.message.includes('partner_phone')
+          );
+          if (isMissingColumnError && newBooking.sessionType === 'SINGLE') {
+            const fallbackPayload = { ...bookingPayload };
+            delete fallbackPayload.participant_count;
+            delete fallbackPayload.session_type;
+            delete fallbackPayload.original_package_type;
+            delete fallbackPayload.partner_name;
+            delete fallbackPayload.partner_phone;
+            await supabase.from('bookings').insert(fallbackPayload);
+          } else {
+            console.error('[DB ERROR] addBooking insert failed:', res.error);
+          }
+        }
+      } catch (err) {
+        console.error('[DB ERROR] addBooking exception:', err);
+      }
+    };
+
     Promise.all([
-      supabase.from('bookings').insert(mapBookingToPostgres(newBooking)),
+      insertBookingAsync(),
       profile ? supabase.from('user_profiles').update({ credits_balance: profile.creditsBalance }).eq('user_id', userId) : Promise.resolve(),
       supabase.from('credit_transactions').insert(mapInvoiceToPostgres(tx, userId))
     ]).then();
@@ -2468,6 +2571,45 @@ class DatabaseClient {
   addLedgerTransaction(userId: string, tx: Invoice): void {
     this.schema.credit_transactions.unshift(tx);
     supabase.from('credit_transactions').insert(mapInvoiceToPostgres(tx, userId)).then();
+    this.save();
+  }
+
+  // Disputes & Kit requests
+  getClientDisputes(userId: string): any[] {
+    return (this.schema.client_disputes || []).filter(d => d.trainerId === userId);
+  }
+
+  addClientDispute(userId: string, dispute: any): void {
+    if (!this.schema.client_disputes) {
+      this.schema.client_disputes = [];
+    }
+    const newDispute = {
+      id: generateUUID('disp'),
+      trainerId: userId,
+      status: 'pending',
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+      ...dispute
+    };
+    this.schema.client_disputes.unshift(newDispute);
+    this.save();
+  }
+
+  getKitRequests(userId: string): any[] {
+    return (this.schema.kit_requests || []).filter(r => r.trainerId === userId);
+  }
+
+  addKitRequest(userId: string, request: any): void {
+    if (!this.schema.kit_requests) {
+      this.schema.kit_requests = [];
+    }
+    const newRequest = {
+      id: generateUUID('kit'),
+      trainerId: userId,
+      status: 'requested', // requested -> approved -> dispatched -> delivered
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+      ...request
+    };
+    this.schema.kit_requests.unshift(newRequest);
     this.save();
   }
 
@@ -2966,6 +3108,7 @@ class DatabaseClient {
         const newCoach: Coach = {
           id: generateUUID('coach'),
           name: app.fullName,
+          gender: app.gender || 'male',
           photo: app.avatar || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=300&q=80',
           experience: `${app.yearsOfExperience} yrs exp`,
           rating: 5.0,
@@ -3192,6 +3335,7 @@ class DatabaseClient {
     }
     
     await this.save();
+    this.syncCoachesWithAssignments();
     this.log('RequestWorkoutAssignment', `Trainer ${trainerId} requested assignment for ${category}.`);
   }
 
@@ -3214,6 +3358,7 @@ class DatabaseClient {
       }
       
       await this.save();
+      this.syncCoachesWithAssignments();
       this.log('RequestWorkoutRemoval', `Trainer ${trainerId} requested removal of ${category}.`);
     }
   }
@@ -3258,6 +3403,7 @@ class DatabaseClient {
       }
 
       await this.save();
+      this.syncCoachesWithAssignments();
       this.log('ApproveWorkoutAssignment', `Admin ${adminId} approved ${assignment.workoutCategory} for trainer ${assignment.trainerId} (Result: ${assignment.status}).`);
     }
   }
@@ -3283,6 +3429,7 @@ class DatabaseClient {
       }
 
       await this.save();
+      this.syncCoachesWithAssignments();
       this.log('RejectWorkoutAssignment', `Admin ${adminId} rejected ${assignment.workoutCategory} request for trainer ${assignment.trainerId}. Reason: ${reason}`);
     }
   }

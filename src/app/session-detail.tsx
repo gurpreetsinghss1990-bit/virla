@@ -12,6 +12,7 @@ import { SkeletonLoader } from '../components/SkeletonLoader';
 import { SessionEngine } from '../services/SessionEngine';
 import { AssignmentConfig } from '../config/AssignmentConfig';
 import { AddPartnerModal } from '../components/AddPartnerModal';
+import * as Location from 'expo-location';
 
 // Map coordinates path waypoints (scaled to fit beautiful SVG canvas)
 const waypoints = [
@@ -47,6 +48,11 @@ export default function SessionDetailScreen() {
 
   const booking = bookings.find((b) => b.id === bookingId) || bookings[0];
 
+  // Fallback status alignment for 12-stage timeline
+  const currentStatus = booking?.timelineStatus || 'booked';
+  const isAccepted = currentStatus !== 'booked' && currentStatus !== 'trainer_assigned';
+  const isPendingDetails = (role === 'customer' || role === 'admin') && !isAccepted;
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -59,11 +65,66 @@ export default function SessionDetailScreen() {
   // Tracking simulator state variables
   const [journeyProgress, setJourneyProgress] = useState(0); // 0.0 to 1.0
   const [simIntervalId, setSimIntervalId] = useState<any>(null);
+  const [deviceCoords, setDeviceCoords] = useState<{ latitude: number, longitude: number } | null>(null);
 
-  // Fallback status alignment for 12-stage timeline
-  const currentStatus = booking?.timelineStatus || 'booked';
-  const isAccepted = currentStatus !== 'booked' && currentStatus !== 'trainer_assigned';
-  const isPendingDetails = (role === 'customer' || role === 'admin') && !isAccepted;
+  useEffect(() => {
+    let subscription: Location.LocationSubscription | null = null;
+
+    const trackLocation = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return;
+
+        // Get initial position
+        const initial = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setDeviceCoords({
+          latitude: initial.coords.latitude,
+          longitude: initial.coords.longitude
+        });
+
+        // Watch position updates
+        subscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 4000,
+            distanceInterval: 5
+          },
+          (loc) => {
+            setDeviceCoords({
+              latitude: loc.coords.latitude,
+              longitude: loc.coords.longitude
+            });
+          }
+        );
+      } catch (e) {
+        console.warn('[TRACKING] Location tracking failed:', e);
+      }
+    };
+
+    if (currentStatus === 'trainer_travelling' || currentStatus === 'trainer_preparing' || currentStatus === 'trainer_arrived') {
+      trackLocation();
+    }
+
+    return () => {
+      if (subscription) {
+        subscription.remove();
+      }
+    };
+  }, [currentStatus]);
+
+  const calculateHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+
 
   // Input & Questionnaire state variables
   const [isEditingNote, setIsEditingNote] = useState(false);
@@ -478,8 +539,39 @@ export default function SessionDetailScreen() {
     });
   };
 
-  const remainingDistance = (3.2 * (1 - journeyProgress)).toFixed(1);
-  const remainingEta = Math.max(0, Math.ceil(12 * (1 - journeyProgress)));
+  const getCalculatedDistance = () => {
+    const baseDistance = 3.2 * (1 - journeyProgress);
+    if (!booking?.address || !deviceCoords) {
+      return baseDistance;
+    }
+
+    const match = booking.address.match(/\(([-\d.]+),\s*([-\d.]+)\)/);
+    if (match) {
+      const clientLat = parseFloat(match[1]);
+      const clientLng = parseFloat(match[2]);
+
+      const realDist = calculateHaversineDistance(
+        deviceCoords.latitude,
+        deviceCoords.longitude,
+        clientLat,
+        clientLng
+      );
+
+      // Scale distance if simulator is active (moving state)
+      if (journeyProgress > 0 && journeyProgress < 1.0) {
+        return realDist * (1 - journeyProgress);
+      }
+      if (journeyProgress >= 1.0 || currentStatus === 'trainer_arrived') {
+        return 0;
+      }
+      return realDist;
+    }
+    return baseDistance;
+  };
+
+  const distVal = getCalculatedDistance();
+  const remainingDistance = distVal.toFixed(1);
+  const remainingEta = distVal < 0.1 ? 0 : Math.max(1, Math.ceil(distVal * 4));
 
   if (role === 'trainer' && currentStatus === 'booked') {
     const customerId = `VIRLA-C${booking.id.slice(-6).toUpperCase()}`;
@@ -668,18 +760,7 @@ export default function SessionDetailScreen() {
         </ScrollView>
 
         {/* Action Buttons Panel */}
-        <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-zinc-100 p-6 flex-row gap-3">
-          <TouchableOpacity
-            onPress={() => {
-              reassignTrainer(booking.id, 'declined');
-              Alert.alert('Request Declined', 'You have declined this session request.');
-              router.back();
-            }}
-            className="flex-1 bg-zinc-50 border border-zinc-200 py-4.5 rounded-[20px] items-center justify-center"
-          >
-            <Text className="text-zinc-650 text-sm font-black uppercase">Decline</Text>
-          </TouchableOpacity>
-          
+        <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-zinc-100 p-6">
           <TouchableOpacity
             onPress={() => {
               Alert.alert(
@@ -697,7 +778,7 @@ export default function SessionDetailScreen() {
                 ]
               );
             }}
-            className="flex-[1.5] bg-[#E11D48] py-4.5 rounded-[20px] items-center justify-center"
+            className="w-full bg-[#E11D48] py-4.5 rounded-[20px] items-center justify-center"
             style={{
               shadowColor: '#E11D48',
               shadowOffset: { width: 0, height: 4 },

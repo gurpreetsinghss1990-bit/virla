@@ -20,7 +20,11 @@ export default function ProgressScreen() {
   const { totalSessions, totalCalories } = useUserProfileStore();
   const { user, role } = useUserStore();
 
-  const bookings = user.id ? Database.getBookings(user.id) : [];
+  const bookings = user.id 
+    ? (role === 'trainer'
+        ? (Database.schema.bookings || []).filter(b => b.trainerId === user.id || b.trainerName === user.name)
+        : Database.getBookings(user.id))
+    : [];
   const completedJobs = bookings.filter(b => b.status === 'completed');
   const upcomingJobs = bookings.filter(b => b.status === 'upcoming');
   const cancelledJobs = bookings.filter(b => b.status === 'cancelled');
@@ -34,11 +38,13 @@ export default function ProgressScreen() {
     if (simulateEmpty) return true;
     const userId = Database.getCurrentUserId();
     if (!userId) return true;
-    const bookingsCount = Database.getBookings(userId).filter(b => b.status === 'completed').length;
+    const bookingsCount = role === 'trainer'
+      ? (Database.schema.bookings || []).filter(b => (b.trainerId === userId || b.trainerName === user.name) && b.status === 'completed').length
+      : Database.getBookings(userId).filter(b => b.status === 'completed').length;
     const dateStr = new Date().toLocaleDateString('en-CA');
     const hydrationLogged = Database.getHydration(userId, dateStr);
-    return bookingsCount === 0 && hydrationLogged === 0;
-  }, [totalSessions, totalCalories, user.id, simulateEmpty]);
+    return role === 'trainer' ? bookingsCount === 0 : (bookingsCount === 0 && hydrationLogged === 0);
+  }, [totalSessions, totalCalories, user.id, simulateEmpty, role, user.name]);
 
   useEffect(() => {
     fadeAnim.setValue(0);
@@ -53,7 +59,11 @@ export default function ProgressScreen() {
     const userId = Database.getCurrentUserId();
     const dateStr = new Date().toLocaleDateString('en-CA');
     const dbRecovery = userId ? (Database.getRecoveryScore(userId, dateStr) ?? 80) : 80;
-    const completedSessions = userId ? Database.getBookings(userId).filter(b => b.status === 'completed').length : 0;
+    const completedSessions = userId 
+      ? (role === 'trainer'
+          ? (Database.schema.bookings || []).filter(b => (b.trainerId === userId || b.trainerName === user.name) && b.status === 'completed').length
+          : Database.getBookings(userId).filter(b => b.status === 'completed').length)
+      : 0;
     const caloriesBurned = userId ? Database.getCalories(userId, dateStr) : 0;
 
     switch (activeRange) {
@@ -104,6 +114,16 @@ export default function ProgressScreen() {
             { label: 'Q3', val: completedSessions > 0 ? 60 : 0, cap: 'Active' },
             { label: 'Q4', val: completedSessions > 0 ? 95 : 0, cap: 'Active' }
           ]
+        };
+      default:
+        return {
+          frequency: '0 sessions',
+          attendance: 0,
+          calories: 0,
+          consistency: 0,
+          recovery: 80,
+          sessions: 0,
+          chartData: []
         };
     }
   };

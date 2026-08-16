@@ -524,7 +524,8 @@ export default function MembershipScreen() {
                           setShowDemoPayment(false);
                           handleConfirmPay();
                         }}
-                        className="w-full bg-[#10B981] py-4.5 rounded-2xl items-center justify-center shadow-md min-h-[48px]"
+                        className="w-full bg-[#10B981] rounded-2xl items-center justify-center shadow-md"
+                        style={{ height: 56 }}
                       >
                         <Text className="text-white text-xs font-black uppercase tracking-wider">Pay {selectedPlan.price} (Sandbox Test)</Text>
                       </TouchableOpacity>
@@ -536,7 +537,8 @@ export default function MembershipScreen() {
                           currentX.current = 0;
                           swipeX.setValue(0);
                         }}
-                        className="w-full bg-zinc-50 border border-zinc-150 py-4.5 rounded-2xl items-center justify-center min-h-[48px]"
+                        className="w-full bg-zinc-50 border border-zinc-150 rounded-2xl items-center justify-center"
+                        style={{ height: 56 }}
                       >
                         <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">Cancel</Text>
                       </TouchableOpacity>
@@ -545,11 +547,14 @@ export default function MembershipScreen() {
                 ) : !checkoutActive ? (
                   // Plan details list (Feature 2)
                   <View className="gap-5">
-                    <View className="flex-row justify-between items-start border-b border-zinc-100 pb-4">
+                    <View className="flex-row justify-between items-center border-b border-zinc-100 pb-4">
                       <View className="gap-1 flex-1 pr-3">
-                        <Text className="text-zinc-400 text-[8px] font-black uppercase">Plan Selected</Text>
+                        <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">Plan Selected</Text>
                         <Text className="text-zinc-950 text-xl font-black mt-0.5">{selectedPlan.name}</Text>
-                        <Text className="text-[#4F46E5] text-[10px] font-bold mt-1">🏷️ GST Tax Note: {selectedPlan.gstText}</Text>
+                        <View className="flex-row items-center gap-1.5 mt-1.5">
+                          <Feather name="tag" size={11} color="#4F46E5" />
+                          <Text className="text-[#4F46E5] text-[10px] font-bold">GST Tax Note: {selectedPlan.gstText}</Text>
+                        </View>
                       </View>
                       <TouchableOpacity onPress={closeDetails} className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center">
                         <Feather name="x" size={14} color="#101828" />
@@ -557,14 +562,14 @@ export default function MembershipScreen() {
                     </View>
 
                     <View className="gap-2">
-                      <Text className="text-[#101828] text-xs font-black uppercase">Plan overview</Text>
-                      <Text className="text-zinc-500 text-xs font-semibold leading-relaxed pl-0.5">
+                      <Text className="text-zinc-950 text-[10px] font-black uppercase tracking-widest">Plan overview</Text>
+                      <Text className="text-zinc-500 text-xs font-medium leading-relaxed pl-0.5">
                         {selectedPlan.idealFor}
                       </Text>
                     </View>
 
                     <View className="gap-3">
-                      <Text className="text-[#101828] text-xs font-black uppercase">What&apos;s included</Text>
+                      <Text className="text-zinc-950 text-[10px] font-black uppercase tracking-widest">What&apos;s included</Text>
                       {[
                         'Book any workout category (Strength, Flow, Cardio, Reset, Combat)',
                         'Pause anytime options (up to validity limits)',
@@ -572,9 +577,11 @@ export default function MembershipScreen() {
                         'Priority matching support algorithms',
                         'Dedicated VIP Concierge customer support'
                       ].map((item, idx) => (
-                        <View key={idx} className="flex-row gap-2.5 items-center pl-1">
-                          <Feather name="check" size={12} color="#10B981" />
-                          <Text className="text-zinc-600 text-xs font-semibold leading-relaxed flex-1">{item}</Text>
+                        <View key={idx} className="flex-row gap-2.5 items-start pl-1">
+                          <View className="mt-0.5">
+                            <Feather name="check" size={12} color="#10B981" />
+                          </View>
+                          <Text className="text-zinc-600 text-xs font-medium leading-relaxed flex-1">{item}</Text>
                         </View>
                       ))}
                     </View>
@@ -582,9 +589,10 @@ export default function MembershipScreen() {
                     <TouchableOpacity
                       activeOpacity={0.8}
                       onPress={startCheckout}
-                      className="bg-zinc-950 py-4.5 rounded-2xl items-center justify-center mt-3 shadow-md"
+                      className="bg-zinc-950 rounded-2xl items-center justify-center mt-3 shadow-md"
+                      style={{ height: 56 }}
                     >
-                      <Text className="text-white text-xs font-black uppercase tracking-wider">Continue</Text>
+                      <Text className="text-white text-xs font-black uppercase tracking-wider">Continue →</Text>
                     </TouchableOpacity>
                   </View>
                 ) : (

@@ -542,6 +542,108 @@ export default function BookingScreen() {
       finalEligibleTrainerNames: finalEligibleTrainers.map(t => t.name)
     }, null, 2));
 
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      console.log('\n================ TRAINER MATCHING DIAGNOSTICS ================');
+      trainerPool.forEach(tp => {
+        const coachObj = coaches.find(c => c.id === tp.id);
+        if (!coachObj) return;
+
+        const trainerGender = (coachObj.gender || '').toLowerCase();
+        const genderValid = trainerGender === 'male' || trainerGender === 'female';
+        
+        let genderApproved = false;
+        if (genderValid) {
+          if (trainerPref === 'any') {
+            genderApproved = true;
+          } else if (trainerPref === 'male') {
+            genderApproved = trainerGender === 'male';
+          } else if (trainerPref === 'female') {
+            genderApproved = trainerGender === 'female';
+          } else if (trainerPref === 'favourite') {
+            const clientPref = (Database.getProfile(user.id || '')?.trainerPreference || 'no_preference').toLowerCase();
+            if (clientPref === 'male') {
+              genderApproved = trainerGender === 'male';
+            } else if (clientPref === 'female') {
+              genderApproved = trainerGender === 'female';
+            } else {
+              genderApproved = true;
+            }
+          }
+        }
+
+        const isOnline = coachObj.preferences?.online !== false;
+        const isPartnerApproved = coachObj.verifiedBadge !== false;
+        
+        const assignments = Database.getWorkoutAssignments(coachObj.id);
+        const isApproved = assignments.some(a => a.workoutCategory === targetCategory && a.status === 'APPROVED');
+        const acceptsAll = assignments.some(a => a.workoutCategory === 'All Workouts' && a.status === 'APPROVED');
+        const workoutApproved = acceptsAll || isApproved;
+
+        const locationStatus = coachObj.preferences?.operatingLocationStatus;
+        const locationApproved = locationStatus === 'verified';
+
+        const trainerLat = coachObj.preferences?.operatingLatitude;
+        const trainerLng = coachObj.preferences?.operatingLongitude;
+        const radiusLimit = coachObj.preferences?.radiusKm || 15;
+        let distance = 999999;
+        let radiusEligible = false;
+        if (trainerLat !== undefined && trainerLat !== null && trainerLng !== undefined && trainerLng !== null) {
+          distance = calculateDistanceKm(trainerLat, trainerLng, customerLat, customerLng);
+          radiusEligible = distance <= radiusLimit;
+        }
+
+        const activeCount = bookings.filter(b => 
+          b.trainerId === coachObj.id && 
+          normalizeDate(b.date) === normalizedDateStr &&
+          b.status === 'upcoming'
+        ).length;
+        const maxSessions = coachObj.preferences?.maxDailySessions || 5;
+        const workloadOk = activeCount < maxSessions;
+
+        // Evaluate failed steps
+        let firstFailedStep = '';
+        if (!isOnline) firstFailedStep = 'Step 2: Trainer is offline';
+        else if (!isPartnerApproved) firstFailedStep = 'Step 3: Trainer is not verified';
+        else if (!genderValid) firstFailedStep = 'Step 4: Invalid/missing trainer gender in database';
+        else if (!genderApproved) firstFailedStep = `Step 5: Trainer gender (${trainerGender}) does not match client preference (${trainerPref})`;
+        else if (!workoutApproved) firstFailedStep = `Step 6: Trainer is not approved for category "${targetCategory}"`;
+        else if (!locationApproved) firstFailedStep = `Step 12: Trainer operating location verification status is "${locationStatus}"`;
+        else if (trainerLat === undefined || trainerLng === undefined) firstFailedStep = 'Step 12: Trainer has no operating coordinates configured';
+        else if (!radiusEligible) firstFailedStep = `Step 11: Trainer is outside service radius (Distance: ${distance === 999999 ? 'N/A' : distance.toFixed(1) + ' km'}, Limit: ${radiusLimit} km)`;
+        else if (!workloadOk) firstFailedStep = `Step 10: Maximum daily session limit reached (${activeCount}/${maxSessions})`;
+        else if (!tp.slotEligible) firstFailedStep = 'Step 8: No time slots available on this date';
+
+        console.log(`TRAINER MATCHING DIAGNOSTIC\n\n` +
+          `Trainer: ${coachObj.name}\n` +
+          `Trainer ID: ${coachObj.id}\n\n` +
+          `Gender:\n` +
+          `  Database gender: ${coachObj.gender || 'null'}\n` +
+          `  Mapped gender: ${trainerGender}\n` +
+          `  Gender valid: ${genderValid ? 'PASS' : 'FAIL'}\n` +
+          `  Gender preference match: ${genderApproved ? 'PASS' : 'FAIL'}\n\n` +
+          `Status:\n` +
+          `  Trainer active: ${isOnline ? 'PASS' : 'FAIL'}\n` +
+          `  Trainer verified: ${isPartnerApproved ? 'PASS' : 'FAIL'}\n\n` +
+          `Workout:\n` +
+          `  Requested workout: ${selectedExperience.title} (Category: ${targetCategory})\n` +
+          `  Trainer workout approved: ${workoutApproved ? 'PASS' : 'FAIL'}\n\n` +
+          `Date:\n` +
+          `  Requested date: ${selectedDate} (${normalizedDateStr})\n` +
+          `  Trainer available that date: PASS (no overrides blocking the day)\n\n` +
+          `Location:\n` +
+          `  Client location coordinates: ${customerLat}, ${customerLng}\n` +
+          `  Trainer operating location coordinates: ${trainerLat || 'null'}, ${trainerLng || 'null'}\n` +
+          `  Service radius limit: ${radiusLimit} km\n` +
+          `  Distance calculated: ${distance === 999999 ? 'N/A' : distance.toFixed(2) + ' km'}\n` +
+          `  Radius eligibility: ${radiusEligible ? 'PASS' : 'FAIL'}\n\n` +
+          `Final:\n` +
+          `  ELIGIBLE: ${tp.finalEligible ? 'YES' : 'NO'}\n` +
+          (tp.finalEligible ? '' : `  REJECTION REASON: ${firstFailedStep}\n`)
+        );
+      });
+      console.log('==============================================================\n');
+    }
+
     // Construct slot mapping
     const aggregatedSlotsMap: Record<string, { slot: any; trainers: typeof coaches }> = {};
     const eligibleCoachesList = coaches.filter(c => {
@@ -2212,7 +2314,7 @@ export default function BookingScreen() {
                               setTimeout(() => triggerTransition(5), 250);
                             }
                           }}
-                          className={`flex-1 p-3.5 rounded-2xl border items-center justify-center gap-1 ${
+                          className={`flex-1 px-1 py-3.5 rounded-2xl border items-center justify-center gap-1 ${
                             isSelected ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-[#E5E7EB]'
                           }`}
                           style={{
@@ -2223,10 +2325,17 @@ export default function BookingScreen() {
                             elevation: 1,
                           }}
                         >
-                          <Text className={`text-[10px] font-black uppercase tracking-wider ${isSelected ? 'text-white' : 'text-[#101828]'}`}>
+                          <Text 
+                            numberOfLines={1}
+                            adjustsFontSizeToFit={true}
+                            className={`text-[9px] font-black uppercase tracking-wider text-center ${isSelected ? 'text-white' : 'text-[#101828]'}`}
+                          >
                             {capsule.label}
                           </Text>
-                          <Text className={`text-[8px] font-bold ${isSelected ? 'text-zinc-400' : 'text-[#6B7280]'}`}>
+                          <Text 
+                            numberOfLines={1}
+                            className={`text-[8px] font-bold text-center mt-0.5 ${isSelected ? 'text-zinc-400' : 'text-[#6B7280]'}`}
+                          >
                             {capsule.sub}
                           </Text>
                         </TouchableOpacity>
@@ -2886,7 +2995,8 @@ export default function BookingScreen() {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={handleBack}
-            className="flex-1 py-4 bg-zinc-50 border border-[#E5E7EB] rounded-2xl items-center justify-center"
+            className="flex-1 bg-zinc-50 border border-[#E5E7EB] rounded-2xl items-center justify-center"
+            style={{ height: 56 }}
           >
             <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">Back</Text>
           </TouchableOpacity>
@@ -2894,8 +3004,9 @@ export default function BookingScreen() {
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={handleNext}
-              className="flex-1 py-4 bg-zinc-950 rounded-2xl items-center justify-center"
+              className="flex-1 bg-zinc-950 rounded-2xl items-center justify-center"
               style={{
+                height: 56,
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.05,

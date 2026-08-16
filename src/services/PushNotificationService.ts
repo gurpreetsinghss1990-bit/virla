@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Platform, NativeModules } from 'react-native';
 import { supabase } from '../database/supabaseClient';
 import Constants from 'expo-constants';
 
@@ -21,11 +21,26 @@ export const NOTIFICATION_CHANNELS = {
 };
 
 export class PushNotificationService {
+  static isNotificationsSupported(): boolean {
+    if (Platform.OS === 'web') return false;
+    try {
+      const hasExpoModule = typeof globalThis !== 'undefined' && (globalThis as any).ExpoModules && (globalThis as any).ExpoModules.ExpoPushTokenManager;
+      const hasNativeModule = NativeModules && NativeModules.ExpoPushTokenManager;
+      return !!(hasExpoModule || hasNativeModule);
+    } catch (e) {
+      return false;
+    }
+  }
+
   /**
    * Request notification permissions and register for push notifications.
    * Returns the push token or null if failed.
    */
   static async registerForPushNotificationsAsync(): Promise<string | null> {
+    if (!this.isNotificationsSupported()) {
+      console.log('[PUSH SERVICE] Push notifications are not supported in this environment (likely simulator or uncompiled dev client)');
+      return null;
+    }
     try {
       const Device = require('expo-device');
       const Notifications = require('expo-notifications');
@@ -136,6 +151,9 @@ export class PushNotificationService {
    * Configure Android notification channels with specific chimes.
    */
   static async configureNotificationChannelsAsync(): Promise<void> {
+    if (!this.isNotificationsSupported()) {
+      return;
+    }
     try {
       const Notifications = require('expo-notifications');
       if (Platform.OS === 'android') {

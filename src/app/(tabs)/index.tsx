@@ -10,7 +10,7 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 import { ProgressRing } from '../../components/ProgressRing';
 import { LuxuryCard } from '../../components/LuxuryCard';
 import { useBookingStore } from '../../store/bookingStore';
-import { useCoachStore } from '../../store/coachStore';
+import { useCoachStore, generateMonthlySlots } from '../../store/coachStore';
 import { useMembershipStore } from '../../store/membershipStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useUserStore } from '../../store/userStore';
@@ -23,6 +23,7 @@ import { supabase } from '../../database/supabaseClient';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { useAIWellnessStore } from '../../store/aiWellnessStore';
 import { Booking } from '../../types';
+import { normalizeDate, canonicalizeTimeRange } from '../../utils/date';
 
 interface RequestCardProps {
   booking: Booking;
@@ -103,25 +104,15 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
 
       <View className="h-[1px] bg-zinc-100 my-1" />
 
-      <View className="flex-row gap-2">
-        <TouchableOpacity
-          onPress={(e) => {
-            e.stopPropagation();
-            onDecline(booking.id);
-          }}
-          className="flex-1 bg-zinc-50 border border-[#E5E7EB] py-3 rounded-2xl items-center justify-center"
-        >
-          <Text className="text-zinc-650 text-xs font-black uppercase">Decline</Text>
-        </TouchableOpacity>
-        
+      <View className="flex-row">
         <TouchableOpacity
           onPress={(e) => {
             e.stopPropagation();
             onAccept(booking.id);
           }}
-          className="flex-1 bg-[#E11D48] py-3 rounded-2xl items-center justify-center"
+          className="flex-1 bg-[#E11D48] py-3.5 rounded-2xl items-center justify-center"
         >
-          <Text className="text-white text-xs font-black uppercase">Accept</Text>
+          <Text className="text-white text-xs font-black uppercase">Accept Request</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -210,6 +201,263 @@ export default function HomeScreen() {
 
   const currentCoach = coaches.find(c => c.name === user.name);
 
+  // Helper date calculations for Trainer Console Redesign
+  const getGreeting = () => {
+    const hrs = new Date().getHours();
+    if (hrs < 12) return 'Good morning';
+    if (hrs < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const getFormattedToday = () => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const now = new Date();
+    return `${days[now.getDay()]} • ${now.getDate()} ${months[now.getMonth()]}`;
+  };
+
+  const getBookingDateObj = (dateStr: string) => {
+    if (!dateStr) return new Date();
+    if (dateStr.includes('Today')) return new Date();
+    if (dateStr.includes('Tomorrow')) {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      return d;
+    }
+    const normalized = normalizeDate(dateStr);
+    if (normalized) {
+      return new Date(normalized);
+    }
+    return new Date(dateStr);
+  };
+
+  const getBookingStartDateTime = (b: Booking): Date => {
+    const dateObj = getBookingDateObj(b.date);
+    const timeStr = (b.time || '').split('-')[0].trim();
+    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (match) {
+      let h = parseInt(match[1]);
+      const m = parseInt(match[2]);
+      const ampm = match[3].toUpperCase();
+      if (ampm === 'PM' && h < 12) h += 12;
+      if (ampm === 'AM' && h === 12) h = 0;
+      dateObj.setHours(h, m, 0, 0);
+    }
+    return dateObj;
+  };
+
+  const sortBookingsChronologically = (list: Booking[]) => {
+    return [...list].sort((a, b) => {
+      const dateA = getBookingDateObj(a.date);
+      const dateB = getBookingDateObj(b.date);
+      if (dateA.getTime() !== dateB.getTime()) {
+        return dateA.getTime() - dateB.getTime();
+      }
+      const parseTimeToMinutes = (t: string) => {
+        const match = (t || '').split('-')[0].trim().match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (!match) return 0;
+        let h = parseInt(match[1]);
+        const m = parseInt(match[2]);
+        const ampm = match[3].toUpperCase();
+        if (ampm === 'PM' && h < 12) h += 12;
+        if (ampm === 'AM' && h === 12) h = 0;
+        return h * 60 + m;
+      };
+      return parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time);
+    });
+  };
+
+  const trainerBookings = bookings.filter(b => 
+    (b.trainerName === user.name || (currentCoach && b.trainerId === currentCoach.id))
+  );
+
+  const confirmedBookings = trainerBookings.filter(b => 
+    b.status === 'upcoming' && 
+    [
+      'trainer_accepted', 
+      'trainer_travelling', 
+      'trainer_arrived', 
+      'session_started',
+      'completed'
+    ].includes(b.timelineStatus || '')
+  );
+
+  const sortedConfirmed = sortBookingsChronologically(confirmedBookings);
+  const nowTime = new Date();
+  
+  const activeSession = sortedConfirmed.find(b => 
+    ['trainer_travelling', 'trainer_arrived', 'otp_verified', 'workout_started'].includes(b.timelineStatus || '')
+  );
+
+  const nextSession = sortedConfirmed.find(b => {
+    if (activeSession && b.id === activeSession.id) return false;
+    if (b.timelineStatus === 'workout_completed' || b.timelineStatus === 'session_closed' || b.status === 'completed' || b.status === 'cancelled') return false;
+    const start = getBookingStartDateTime(b);
+    const end = new Date(start.getTime() + (b.durationMinutes || 60) * 60 * 1000);
+    return end > nowTime;
+  });
+
+  let countdownText = '';
+  let isNextSessionToday = false;
+  if (nextSession) {
+    const start = getBookingStartDateTime(nextSession);
+    isNextSessionToday = normalizeDate(start) === normalizeDate(nowTime);
+    
+    const diffMs = start.getTime() - nowTime.getTime();
+    if (diffMs > 0) {
+      const diffMins = Math.floor(diffMs / 60000);
+      const hours = Math.floor(diffMins / 60);
+      const mins = diffMins % 60;
+      if (hours > 0) {
+        countdownText = `Starts in ${hours}h ${mins}m`;
+      } else {
+        countdownText = `Starts in ${mins}m`;
+      }
+    } else {
+      countdownText = 'Active Session';
+    }
+  }
+
+  const nextSessionTime = nextSession ? (nextSession.time || '').split('-')[0].trim() : '';
+
+  const todayBookings = sortedConfirmed.filter(b => {
+    return normalizeDate(getBookingDateObj(b.date)) === normalizeDate(nowTime);
+  });
+  
+  const todaySessionsCount = todayBookings.length;
+  const todaySessionsHours = todayBookings.reduce((sum, b) => sum + (b.durationMinutes || 60), 0) / 60;
+  const formattedTodayHours = todaySessionsHours.toFixed(1).replace('.0', '');
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowDateStr = normalizeDate(tomorrow);
+
+  const tomorrowBookings = sortedConfirmed.filter(b => {
+    return normalizeDate(getBookingDateObj(b.date)) === tomorrowDateStr;
+  });
+
+  const getIsTomorrowScheduleEnabled = () => {
+    if (!currentCoach) return false;
+    const allTomorrowSlots = generateMonthlySlots(tomorrow.getMonth(), tomorrow.getFullYear());
+    const tomorrowSlotsData = allTomorrowSlots.find((d: any) => d.date === tomorrowDateStr)?.slots || [];
+    const availabilityOverrides = currentCoach.preferences?.availabilityOverrides || [];
+    const tomorrowActiveSlots = tomorrowSlotsData.filter((slot: any) => {
+      const override = availabilityOverrides.find((o: any) => 
+        normalizeDate(o.date) === tomorrowDateStr && 
+        canonicalizeTimeRange(o.time) === canonicalizeTimeRange(slot.time)
+      );
+      return override ? override.isAvailable : true; // Default to true if no override
+    });
+    return tomorrowActiveSlots.length > 0;
+  };
+
+  const isTomorrowScheduleEnabled = getIsTomorrowScheduleEnabled();
+
+  const getTodayAvailability = () => {
+    if (!currentCoach) return { booked: 0, available: 0 };
+    const todayDateStr = normalizeDate(new Date());
+    const allDaysSlots = generateMonthlySlots(new Date().getMonth(), new Date().getFullYear());
+    const todaySlotsData = allDaysSlots.find((d: any) => d.date === todayDateStr)?.slots || [];
+    const availabilityOverrides = currentCoach.preferences?.availabilityOverrides || [];
+    const reservations = Database.schema.slot_reservations || [];
+    
+    let bookedSlotsToday = 0;
+    let availableSlotsToday = 0;
+
+    todaySlotsData.forEach((slot: any) => {
+      const isBooked = bookings.some((b: any) => 
+        b.trainerId === currentCoach.id && 
+        normalizeDate(b.date) === normalizeDate(todayDateStr) && 
+        canonicalizeTimeRange(b.time) === canonicalizeTimeRange(slot.time) && 
+        b.status === 'upcoming'
+      );
+      const isReserved = reservations.some((r: any) =>
+        r.trainer_id === currentCoach.id &&
+        normalizeDate(r.slot_date) === normalizeDate(todayDateStr) &&
+        canonicalizeTimeRange(r.slot_time) === canonicalizeTimeRange(slot.time) &&
+        r.expires_at > Date.now()
+      );
+      const override = availabilityOverrides.find((o: any) => 
+        normalizeDate(o.date) === normalizeDate(todayDateStr) && 
+        canonicalizeTimeRange(o.time) === canonicalizeTimeRange(slot.time)
+      );
+      const isAvailable = override ? override.isAvailable : true;
+      if (isBooked || isReserved) {
+        bookedSlotsToday++;
+      } else if (isAvailable) {
+        availableSlotsToday++;
+      }
+    });
+
+    return {
+      booked: bookedSlotsToday * 1.5,
+      available: availableSlotsToday * 1.5
+    };
+  };
+
+  const todayAvail = getTodayAvailability();
+  const formattedBookedHours = todayAvail.booked.toFixed(1).replace('.0', '');
+  const formattedAvailableHours = todayAvail.available.toFixed(1).replace('.0', '');
+
+  const getUpcomingDaysData = () => {
+    const list = [];
+    const weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    const reservations = Database.schema.slot_reservations || [];
+    
+    for (let i = 1; i <= 7; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      const dateStrYMD = normalizeDate(d);
+      
+      const dayBookingsCount = confirmedBookings.filter(b => 
+        normalizeDate(getBookingDateObj(b.date)) === dateStrYMD
+      ).length;
+
+      let availableSlots = 0;
+      if (currentCoach) {
+        const allDaysSlots = generateMonthlySlots(d.getMonth(), d.getFullYear());
+        const daySlotsData = allDaysSlots.find((day: any) => day.date === dateStrYMD)?.slots || [];
+        const availabilityOverrides = currentCoach.preferences?.availabilityOverrides || [];
+        
+        daySlotsData.forEach((slot: any) => {
+          const isBooked = bookings.some((b: any) => 
+            b.trainerId === currentCoach.id && 
+            normalizeDate(b.date) === dateStrYMD && 
+            canonicalizeTimeRange(b.time) === canonicalizeTimeRange(slot.time) && 
+            b.status === 'upcoming'
+          );
+          const isReserved = reservations.some((r: any) =>
+            r.trainer_id === currentCoach.id &&
+            normalizeDate(r.slot_date) === dateStrYMD &&
+            canonicalizeTimeRange(r.slot_time) === canonicalizeTimeRange(slot.time) &&
+            r.expires_at > Date.now()
+          );
+          const override = availabilityOverrides.find((o: any) => 
+            normalizeDate(o.date) === dateStrYMD && 
+            canonicalizeTimeRange(o.time) === canonicalizeTimeRange(slot.time)
+          );
+          const isAvailable = override ? override.isAvailable : true;
+          if (!isBooked && !isReserved && isAvailable) {
+            availableSlots++;
+          }
+        });
+      }
+
+      list.push({
+        dateStr: dateStrYMD,
+        label: `${weekdays[d.getDay()]} ${d.getDate()}`,
+        sessionsCount: dayBookingsCount,
+        availableHours: availableSlots * 1.5
+      });
+    }
+    return list;
+  };
+  
+  const upcomingDays = getUpcomingDaysData();
+
   React.useEffect(() => {
     if (currentCoach) {
       setTrainerOnlineStatus(currentCoach.preferences?.online ? 'online' : 'offline');
@@ -219,21 +467,37 @@ export default function HomeScreen() {
   const toggleOnlineStatus = () => {
     if (!currentCoach) return;
     const nextOnline = !(currentCoach.preferences?.online);
-    const nextStatus = nextOnline ? 'online' : 'offline';
-    setTrainerOnlineStatus(nextStatus);
 
-    Database.updateTrainerOnlineStatus(currentCoach.id, nextOnline);
-    useCoachStore.getState().syncFromDB();
+    const performToggle = () => {
+      const nextStatus = nextOnline ? 'online' : 'offline';
+      setTrainerOnlineStatus(nextStatus);
 
-    // Immediately revoke pending requests assigned to this coach when going offline
-    if (!nextOnline) {
-      const pendingRequests = bookings.filter(b => 
-        b.trainerName === currentCoach.name && 
-        b.timelineStatus === 'booked'
-      );
-      for (const req of pendingRequests) {
-        reassignTrainer(req.id, 'timeout');
+      Database.updateTrainerOnlineStatus(currentCoach.id, nextOnline);
+      useCoachStore.getState().syncFromDB();
+
+      // Immediately revoke pending requests assigned to this coach when going offline
+      if (!nextOnline) {
+        const pendingRequests = bookings.filter(b => 
+          b.trainerName === currentCoach.name && 
+          b.timelineStatus === 'booked'
+        );
+        for (const req of pendingRequests) {
+          reassignTrainer(req.id, 'timeout');
+        }
       }
+    };
+
+    if (!nextOnline) {
+      Alert.alert(
+        'Go Offline?',
+        'Going offline may prevent you from receiving new session requests.\n\nYour already confirmed bookings will remain subject to VIRLA\'s existing booking rules.',
+        [
+          { text: 'CANCEL', style: 'cancel' },
+          { text: 'GO OFFLINE', style: 'destructive', onPress: performToggle }
+        ]
+      );
+    } else {
+      performToggle();
     }
   };
 
@@ -1320,146 +1584,286 @@ export default function HomeScreen() {
             </>
           )}
 
-          {role === 'trainer' && (
+                    {role === 'trainer' && (
             <>
-              {/* Trainer greeting & Ledger */}
-              <View className="gap-4">
-                <View>
-                  <Text className="text-[#101828] text-2xl font-bold tracking-tight leading-tight">
-                    Good Morning, {user.name === 'Guest User' || user.name === 'Viral' ? 'Rahul' : user.name.split(' ')[0]}
-                  </Text>
-                  <Text className="text-zinc-500 text-xs font-semibold leading-relaxed mt-1">
-                    VIRLA PRO Console • {"Today's"} Sessions & Requests
-                  </Text>
+              {/* Header Greeting */}
+              <View className="mb-6">
+                <View className="flex-row justify-between items-center">
+                  <View>
+                    <Text className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">
+                      {getGreeting()}
+                    </Text>
+                    <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1">
+                      {user.name.split(' ')[0]} 👋
+                    </Text>
+                  </View>
+                  
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={toggleOnlineStatus}
+                    className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-150 bg-white"
+                  >
+                    <View className={`w-2 h-2 rounded-full ${trainerOnlineStatus === 'online' ? 'bg-[#16C784]' : 'bg-red-500'}`} />
+                    <Text className={`text-[10px] font-black uppercase tracking-wider ${trainerOnlineStatus === 'online' ? 'text-[#16C784]' : 'text-red-500'}`}>
+                      {trainerOnlineStatus === 'online' ? 'ONLINE' : 'OFFLINE'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
+                <Text className="text-zinc-450 text-[10px] font-semibold mt-2">
+                  {getFormattedToday()}
+                </Text>
+              </View>
 
-                {/* Availability Status Card */}
-                <View 
-                  className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4"
-                  style={{
-                    shadowColor: '#101828',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.02,
-                    shadowRadius: 8,
-                    elevation: 1,
-                  }}
-                >
-                  <View className="flex-row justify-between items-center">
-                    <View className="flex-row items-center gap-2.5">
-                      <View className={`w-3 h-3 rounded-full ${trainerOnlineStatus === 'online' ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
-                      <View>
-                        <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Availability Status</Text>
-                        <Text className="text-zinc-500 text-[10px] font-semibold mt-0.5">
-                          {trainerOnlineStatus === 'online' ? 'Online & Available for bookings' : 'Offline • Requests are paused'}
+              {/* Priority 1: New Requests */}
+              {(() => {
+                const requests = bookings.filter(b => 
+                  b.timelineStatus === 'booked' && 
+                  (b.trainerName === user.name || (currentCoach && b.trainerId === currentCoach.id))
+                );
+                if (requests.length === 0) return null;
+                return (
+                  <View className="gap-3 mb-6">
+                    <View className="flex-row justify-between items-center pr-1">
+                      <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest pl-1">
+                        New Session Requests • {requests.length}
+                      </Text>
+                      <TouchableOpacity 
+                        onPress={handleManualRefresh}
+                        disabled={isRefreshing}
+                        className="bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-150 flex-row items-center gap-1.5"
+                      >
+                        <Feather name="refresh-cw" size={10} color="#4F46E5" />
+                        <Text className="text-[#4F46E5] text-[9px] font-black uppercase">
+                          {isRefreshing ? 'Syncing...' : 'Sync'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    {requests.map(req => (
+                      <RequestCard
+                        key={req.id}
+                        booking={req}
+                        onAccept={handleAcceptRequest}
+                        onDecline={handleDeclineRequest}
+                        onTimeout={handleTimeoutRequest}
+                        onPress={(id) => router.push({ pathname: '/session-detail', params: { id } })}
+                      />
+                    ))}
+                  </View>
+                );
+              })()}
+
+              {/* Priority 2: Current Active Session */}
+              {activeSession ? (
+                <View className="mb-6">
+                  <Text className="text-rose-500 text-[10px] font-black uppercase tracking-widest pl-1 mb-2.5">
+                    Current Session
+                  </Text>
+                  <View
+                    className="bg-white border-2 border-rose-500/30 p-5 rounded-[28px] gap-4"
+                    style={{
+                      shadowColor: '#F43F5E',
+                      shadowOffset: { width: 0, height: 6 },
+                      shadowOpacity: 0.05,
+                      shadowRadius: 12,
+                      elevation: 2,
+                    }}
+                  >
+                    <View className="flex-row justify-between items-center">
+                      <View className="bg-rose-50 border border-rose-100 px-3 py-1 rounded-full flex-row items-center gap-1.5">
+                        <View className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                        <Text className="text-rose-600 text-[9px] font-black uppercase tracking-wider">
+                          Session In Progress
                         </Text>
                       </View>
+                      <Text className="text-zinc-450 text-[10px] font-bold">
+                        {activeSession.time}
+                      </Text>
                     </View>
-                    
+
+                    <View className="gap-1.5">
+                      <Text className="text-zinc-455 text-[9px] font-bold uppercase">Workout: {activeSession.workoutTitle}</Text>
+                      <Text className="text-[#101828] text-base font-black tracking-tight mt-0.5">
+                        Client: {activeSession.clientName || 'Viral'}
+                      </Text>
+                      <Text className="text-zinc-650 text-xs font-semibold leading-relaxed mt-1">
+                        📍 {activeSession.address ? activeSession.address.split(',')[0] : 'Home Session'}
+                      </Text>
+                    </View>
+
                     <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={toggleOnlineStatus}
-                      className={`px-4 py-2.5 rounded-full border ${
-                        trainerOnlineStatus === 'online' 
-                          ? 'bg-emerald-50 border-emerald-200' 
-                          : 'bg-zinc-50 border-zinc-200'
-                      }`}
+                      onPress={() => router.push({ pathname: '/session-detail', params: { id: activeSession.id } })}
+                      className="w-full bg-rose-500 py-3.5 rounded-2xl items-center justify-center flex-row gap-2"
+                      style={{
+                        shadowColor: '#E11D48',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.15,
+                        shadowRadius: 8,
+                        elevation: 2,
+                      }}
                     >
-                      <Text className={`text-[9px] font-black uppercase tracking-wider ${
-                        trainerOnlineStatus === 'online' ? 'text-emerald-700' : 'text-zinc-500'
-                      }`}>
-                        {trainerOnlineStatus === 'online' ? 'Online' : 'Offline'}
-                      </Text>
+                      <Text className="text-white text-xs font-black uppercase tracking-wider">Open Session →</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
+              ) : null}
 
-                {/* Dashboard Analytics Card */}
-                <View 
-                  className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4"
-                  style={{
-                    shadowColor: '#101828',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.02,
-                    shadowRadius: 8,
-                    elevation: 1,
-                  }}
-                >
-                  <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">Quick Statistics</Text>
+              {/* Priority 3: Next Session */}
+              <View className="mb-6">
+                <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest pl-1 mb-2.5">
+                  Next Session
+                </Text>
+                {nextSession ? (() => {
+                  const start = getBookingStartDateTime(nextSession);
+                  const isTomorrow = normalizeDate(start) === tomorrowDateStr;
+                  const isToday = normalizeDate(start) === normalizeDate(nowTime);
 
-                  <View className="flex-row flex-wrap justify-between gap-y-3 px-1">
-                    <View className="w-[48%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
-                      <Text className="text-zinc-400 text-[8px] font-bold uppercase">{"Today's"} Earnings</Text>
-                      <Text className="text-emerald-700 text-xs font-extrabold">
-                        ₹{(bookings.filter(b => b.status === 'upcoming' && b.timelineStatus === 'trainer_accepted' && ((b.date || '').includes('Today') || (b.date || '').includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' })))).length * 1200).toLocaleString('en-IN')}
-                      </Text>
-                    </View>
-                    <View className="w-[48%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
-                      <Text className="text-zinc-400 text-[8px] font-bold uppercase">Completed Sessions</Text>
-                      <Text className="text-[#101828] text-xs font-extrabold">{totalCompleted} Sessions</Text>
-                    </View>
-                    <View className="w-[48%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
-                      <Text className="text-zinc-400 text-[8px] font-bold uppercase">Average Rating</Text>
-                      <Text className="text-amber-700 text-xs font-extrabold">⭐ 4.9 / 5.0</Text>
-                    </View>
-                    <View className="w-[48%] bg-zinc-50 border border-zinc-100 p-3 rounded-2xl gap-1">
-                      <Text className="text-zinc-400 text-[8px] font-bold uppercase">Rank Status</Text>
-                      <Text className="text-indigo-700 text-xs font-extrabold">
-                        {totalCompleted >= 20 ? 'Elite Coach' : totalCompleted >= 5 ? 'Certified Coach' : 'Associate Coach'}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Upcoming Requests Section */}
-                <View className="gap-3 mt-1">
-                  <View className="flex-row justify-between items-center pr-1">
-                    <Text className="text-[#101828] text-xs font-semibold uppercase tracking-widest pl-1">Upcoming Requests</Text>
-                    <TouchableOpacity 
-                      onPress={handleManualRefresh}
-                      disabled={isRefreshing}
-                      className="bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-150 flex-row items-center gap-1.5"
+                  return (
+                    <View
+                      className="bg-zinc-950 p-5 rounded-[28px] border border-zinc-800 gap-4"
+                      style={{
+                        shadowColor: '#000000',
+                        shadowOffset: { width: 0, height: 12 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 24,
+                        elevation: 6,
+                      }}
                     >
-                      <Feather name="refresh-cw" size={10} color="#4F46E5" />
-                      <Text className="text-[#4F46E5] text-[9px] font-black uppercase">
-                        {isRefreshing ? 'Syncing...' : 'Refresh Requests'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                  {trainerOnlineStatus === 'online' ? (() => {
-                    const requests = bookings.filter(b => 
-                      b.timelineStatus === 'booked' && 
-                      (b.trainerName === user.name || (currentCoach && b.trainerId === currentCoach.id))
-                    );
-                    if (requests.length > 0) {
-                      return requests.map(req => (
-                        <RequestCard
-                          key={req.id}
-                          booking={req}
-                          onAccept={handleAcceptRequest}
-                          onDecline={handleDeclineRequest}
-                          onTimeout={handleTimeoutRequest}
-                          onPress={(id) => router.push({ pathname: '/session-detail', params: { id } })}
-                        />
-                      ));
-                    }
-                    return (
-                      <View className="bg-white border border-[#E5E7EB] p-8 rounded-2xl items-center justify-center">
-                        <Text className="text-zinc-400 text-[10px] font-black uppercase">No pending session requests.</Text>
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-white text-sm font-black uppercase tracking-wider">
+                          {isToday ? 'Today' : isTomorrow ? 'Tomorrow' : nextSession.date.replace(/Today, |Tomorrow, /, '')} • {nextSessionTime}
+                        </Text>
+                        {isToday && countdownText ? (
+                          <View className="bg-indigo-500/10 border border-indigo-500/25 px-2.5 py-0.5 rounded-full">
+                            <Text className="text-indigo-400 text-[8px] font-black uppercase tracking-wider">
+                              {countdownText}
+                            </Text>
+                          </View>
+                        ) : null}
                       </View>
-                    );
-                  })() : (
-                    <View className="bg-white border border-[#E5E7EB] p-8 rounded-2xl items-center justify-center gap-2">
-                      <Feather name="slash" size={16} color="#9CA3AF" />
-                      <Text className="text-zinc-400 text-[10px] font-black uppercase">Offline - Requests lock enabled.</Text>
+
+                      <View className="gap-1">
+                        <Text className="text-zinc-500 text-[8px] font-black uppercase">Workout: {nextSession.workoutTitle}</Text>
+                        <Text className="text-white text-base font-semibold mt-1 leading-tight">
+                          Client: {nextSession.clientName || 'Viral'}
+                        </Text>
+                        <Text className="text-zinc-400 text-[10px] font-medium mt-1">
+                          📍 Venue: {nextSession.address ? nextSession.address.split(',')[0] : 'Home Session'}
+                        </Text>
+                        <Text className="text-zinc-500 text-[9px] font-medium mt-0.5">
+                          ⏱ {nextSession.time} ({nextSession.durationMinutes || 60} mins)
+                        </Text>
+                      </View>
+
+                      <View className="flex-row gap-2">
+                        <TouchableOpacity
+                          onPress={() => Alert.alert('GPS Routing Simulated', 'Opening navigation routing to venue...')}
+                          className="flex-1 bg-zinc-900 border border-zinc-850 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
+                        >
+                          <Feather name="navigation" size={10} color="white" />
+                          <Text className="text-white text-[8px] font-bold uppercase">Navigate</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => {
+                            if (getMinutesToSession(nextSession) <= 60) {
+                              Alert.alert('Secure Call', 'Connecting call to customer using masked calling...');
+                            } else {
+                              Alert.alert('Call Locked', 'Calling will be available 60 minutes before the session.');
+                            }
+                          }}
+                          className="flex-1 bg-zinc-900 border border-zinc-850 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
+                        >
+                          <Feather name="phone" size={10} color="white" />
+                          <Text className="text-white text-[8px] font-bold uppercase">Call Client</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => router.push({ pathname: '/communication', params: { id: nextSession.id } })}
+                          className="flex-1 bg-zinc-900 border border-zinc-850 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
+                        >
+                          <Feather name="message-square" size={10} color="white" />
+                          <Text className="text-white text-[8px] font-bold uppercase">Message</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      <View className="h-[1px] bg-zinc-855" />
+
+                      {nextSession.timelineStatus === 'trainer_accepted' ? (
+                        <TouchableOpacity
+                          onPress={() => {
+                            updateTimelineStatus(nextSession.id, 'trainer_travelling');
+                            useNotificationStore.getState().addNotification({
+                              title: 'Coach On The Way 🚗',
+                              body: 'Coach has started travelling to your venue.',
+                              icon: 'user-check'
+                            });
+                          }}
+                          className="w-full bg-indigo-600 py-3.5 rounded-xl items-center justify-center"
+                        >
+                          <Text className="text-white text-xs font-black uppercase tracking-wider">Start Travel</Text>
+                        </TouchableOpacity>
+                      ) : nextSession.timelineStatus === 'trainer_travelling' ? (
+                        <TouchableOpacity
+                          onPress={() => {
+                            updateTimelineStatus(nextSession.id, 'trainer_arrived');
+                            useNotificationStore.getState().addNotification({
+                              title: 'Coach Arrived 🔔',
+                              body: 'Coach has arrived at your location.',
+                              icon: 'lock'
+                            });
+                          }}
+                          className="w-full bg-emerald-600 py-3.5 rounded-xl items-center justify-center"
+                        >
+                          <Text className="text-white text-xs font-black uppercase tracking-wider">Reached Location</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity
+                          onPress={() => router.push({ pathname: '/session-detail', params: { id: nextSession.id } })}
+                          className="w-full bg-zinc-800 py-3.5 rounded-xl items-center justify-center"
+                        >
+                          <Text className="text-white text-xs font-black uppercase tracking-wider">
+                            {nextSession.timelineStatus === 'trainer_arrived' ? 'Waiting client OTP check-in' : 'Open active console'}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
-                  )}
+                  );
+                })() : (
+                  <View 
+                    className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-2 items-center justify-center text-center"
+                    style={{
+                      shadowColor: '#101828',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.02,
+                      shadowRadius: 8,
+                      elevation: 1,
+                    }}
+                  >
+                    <Text className="text-3xl mt-1">👌</Text>
+                    <Text className="text-zinc-900 text-sm font-black mt-2">You're all clear today</Text>
+                    <Text className="text-zinc-400 text-[10px] font-semibold text-center mt-0.5">
+                      No upcoming bookings scheduled. Manage availability to get bookings.
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Priority 4: Today's Sessions */}
+              <View className="mb-6">
+                <View className="flex-row justify-between items-center mb-2.5 pl-1 pr-1">
+                  <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">
+                    Today's Sessions
+                  </Text>
+                  {todaySessionsCount > 0 ? (
+                    <Text className="text-zinc-500 text-[9px] font-black uppercase">
+                      {todaySessionsCount} {todaySessionsCount === 1 ? 'Session' : 'Sessions'} • {formattedTodayHours} hrs
+                    </Text>
+                  ) : null}
                 </View>
 
-                {/* Today's Scheduled Sessions */}
-                <View className="gap-3 mt-1">
-                  <Text className="text-[#101828] text-xs font-semibold uppercase tracking-widest pl-1">{"Today's"} Scheduled Sessions</Text>
-                  {bookings.filter(b => b.status === 'upcoming' && b.timelineStatus === 'trainer_accepted' && ((b.date || '').includes('Today') || (b.date || '').includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' })))).length > 0 ? (
-                    bookings.filter(b => b.status === 'upcoming' && b.timelineStatus === 'trainer_accepted' && ((b.date || '').includes('Today') || (b.date || '').includes(new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit' })))).map((booking) => (
+                {todayBookings.length > 0 ? (
+                  <View className="gap-3">
+                    {todayBookings.map((booking) => (
                       <TouchableOpacity 
                         key={booking.id} 
                         activeOpacity={0.8}
@@ -1468,7 +1872,7 @@ export default function HomeScreen() {
                         style={{
                           shadowColor: '#101828',
                           shadowOffset: { width: 0, height: 3 },
-                          shadowOpacity: 0.03,
+                          shadowOpacity: 0.02,
                           shadowRadius: 6,
                           elevation: 1,
                         }}
@@ -1479,153 +1883,136 @@ export default function HomeScreen() {
                           </View>
                           <View>
                             <Text className="text-zinc-900 text-xs font-semibold">{booking.workoutTitle}</Text>
-                            <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{booking.date} • {booking.time}</Text>
+                            <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">
+                              {booking.time} • Client: {booking.clientName || 'Viral'}
+                            </Text>
                           </View>
                         </View>
-                        <View className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100">
-                          <Text className="text-[7px] font-bold uppercase text-emerald-600">Scheduled</Text>
+                        <View className={`px-2 py-0.5 rounded-full ${
+                          booking.timelineStatus === 'workout_completed' || booking.status === 'completed'
+                            ? 'bg-emerald-50 border border-emerald-150'
+                            : booking.status === 'cancelled'
+                            ? 'bg-rose-50 border border-rose-150'
+                            : 'bg-indigo-50 border border-indigo-150'
+                        }`}>
+                          <Text className={`text-[7px] font-bold uppercase ${
+                            booking.timelineStatus === 'workout_completed' || booking.status === 'completed'
+                              ? 'text-emerald-600'
+                              : booking.status === 'cancelled'
+                              ? 'text-rose-600'
+                              : 'text-indigo-600'
+                          }`}>
+                            {booking.timelineStatus === 'workout_completed' || booking.status === 'completed'
+                              ? 'Completed'
+                              : booking.status === 'cancelled'
+                              ? 'Cancelled'
+                              : 'Confirmed'}
+                          </Text>
                         </View>
                       </TouchableOpacity>
-                    ))
-                  ) : (
-                    <View className="bg-white border border-[#E5E7EB] p-6 rounded-2xl items-center justify-center">
-                      <Text className="text-zinc-400 text-[9px] font-bold uppercase">No visits scheduled for today.</Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Trainer Console Visits Hub (Current Active Visit Console) */}
-                {bookings.filter(b => b.status === 'upcoming' && b.timelineStatus !== 'booked' && b.timelineStatus !== 'trainer_assigned').length > 0 && (() => {
-                  const activeJobs = bookings.filter(b => b.status === 'upcoming' && b.timelineStatus !== 'booked' && b.timelineStatus !== 'trainer_assigned');
-                  const job = activeJobs[0];
-                  const timeline = job.timelineStatus || 'booked';
-
-                  return (
-                    <View className="gap-3 mt-1">
-                      <Text className="text-[#101828] text-xs font-semibold uppercase tracking-widest pl-1">Active Session Console</Text>
-                      <View 
-                        className="bg-zinc-950 p-5 rounded-[28px] border border-zinc-800 gap-4"
-                        style={{
-                          shadowColor: '#000000',
-                          shadowOffset: { width: 0, height: 12 },
-                          shadowOpacity: 0.3,
-                          shadowRadius: 24,
-                          elevation: 6,
-                        }}
-                      >
-                        <View className="flex-row justify-between items-start">
-                          <View className="gap-1 flex-1 pr-3">
-                            <Text className="text-zinc-500 text-[8px] font-semibold uppercase">Active Workout ID: {job.id}</Text>
-                            <Text className="text-white text-base font-semibold mt-1 leading-tight">{job.workoutTitle}</Text>
-                            <Text className="text-zinc-400 text-[10px] font-medium mt-1">👤 Client: VIRLA-C{job.id.slice(-6).toUpperCase()} • 📍 {job.address ? job.address.split(',')[0] : 'Venue'}</Text>
-                            <Text className="text-zinc-500 text-[9px] font-medium mt-0.5">⏱ {job.date} • {job.time}</Text>
-                          </View>
-                          <View className="bg-indigo-500/10 border border-indigo-500/25 px-2.5 py-0.5 rounded-full">
-                            <Text className="text-indigo-400 text-[7px] font-bold uppercase tracking-wider">{timeline.replace(/_/g, ' ')}</Text>
-                          </View>
-                        </View>
-
-                        <View className="flex-row gap-2">
-                          <TouchableOpacity
-                            onPress={() => Alert.alert('GPS Routing Simulated', 'Opening navigation routing to venue...')}
-                            className="flex-1 bg-zinc-900 border border-zinc-800 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
-                          >
-                            <Feather name="navigation" size={10} color="white" />
-                            <Text className="text-white text-[7px] font-bold uppercase">Navigate</Text>
-                          </TouchableOpacity>
-
-                          <TouchableOpacity
-                            onPress={() => {
-                              if (getMinutesToSession(job) <= 60) {
-                                Alert.alert('Secure Call', 'Connecting call to customer using masked calling...');
-                              } else {
-                                Alert.alert('Call Locked', 'Calling will be available 60 minutes before the session.');
-                              }
-                            }}
-                            className="flex-1 bg-zinc-900 border border-zinc-800 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
-                          >
-                            <Feather name="phone" size={10} color="white" />
-                            <Text className="text-white text-[7px] font-bold uppercase">Call Client</Text>
-                          </TouchableOpacity>
-
-                          <TouchableOpacity
-                            onPress={() => router.push({ pathname: '/communication', params: { id: job.id } })}
-                            className="flex-1 bg-zinc-900 border border-zinc-800 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
-                          >
-                            <Feather name="message-square" size={10} color="white" />
-                            <Text className="text-white text-[7px] font-bold uppercase">Message</Text>
-                          </TouchableOpacity>
-                        </View>
-
-                        <View className="h-[1px] bg-zinc-800" />
-
-                        {timeline === 'trainer_accepted' ? (
-                          <TouchableOpacity
-                            onPress={() => {
-                              updateTimelineStatus(job.id, 'trainer_travelling');
-                              useNotificationStore.getState().addNotification({
-                                title: 'Coach On The Way 🚗',
-                                body: `Coach has started travelling to your venue.`,
-                                icon: 'user-check'
-                              });
-                            }}
-                            className="w-full bg-indigo-600 py-3.5 rounded-xl items-center justify-center"
-                          >
-                            <Text className="text-white text-xs font-bold uppercase tracking-wider">Start Travel</Text>
-                          </TouchableOpacity>
-                        ) : timeline === 'trainer_travelling' ? (
-                          <TouchableOpacity
-                            onPress={() => {
-                              updateTimelineStatus(job.id, 'trainer_arrived');
-                              useNotificationStore.getState().addNotification({
-                                title: 'Coach Arrived 🔔',
-                                body: `Coach has arrived at your location.`,
-                                icon: 'lock'
-                              });
-                            }}
-                            className="w-full bg-emerald-600 py-3.5 rounded-xl items-center justify-center"
-                          >
-                            <Text className="text-white text-xs font-bold uppercase tracking-wider">Reached Location</Text>
-                          </TouchableOpacity>
-                        ) : (
-                          <TouchableOpacity
-                            onPress={() => router.push({ pathname: '/session-detail', params: { id: job.id } })}
-                            className="w-full bg-zinc-800 py-3.5 rounded-xl items-center justify-center"
-                          >
-                            <Text className="text-white text-xs font-bold uppercase tracking-wider">
-                              {timeline === 'trainer_arrived' ? 'Waiting client OTP check-in' : 'Open active console'}
-                            </Text>
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    </View>
-                  );
-                })()}
-
+                    ))}
+                  </View>
+                ) : (
+                  <View className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] items-center justify-center">
+                    <Text className="text-zinc-400 text-xs font-semibold text-center">
+                      No sessions today
+                    </Text>
+                  </View>
+                )}
               </View>
 
-              {/* Navigate to Availability Planner */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => router.push('/trainer-availability' as any)}
-                className="bg-indigo-50 border border-indigo-150 p-5 rounded-[28px] flex-row justify-between items-center mt-4"
-                style={{
-                  shadowColor: '#4F46E5',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.05,
-                  shadowRadius: 8,
-                  elevation: 2,
-                }}
-              >
-                <View className="flex-row items-center gap-3">
-                  <Feather name="calendar" size={16} color="#4F46E5" />
-                  <View>
-                    <Text className="text-indigo-950 text-xs font-bold uppercase tracking-wider">Weekly Schedule Planner</Text>
-                    <Text className="text-[#4F46E5] text-[9px] font-semibold mt-0.5">Submit slots & manage compliance edits</Text>
+              {/* Priority 5: Tomorrow */}
+              <View className="mb-6">
+                <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest pl-1 mb-2.5">
+                  Tomorrow's Schedule
+                </Text>
+                
+                {!isTomorrowScheduleEnabled ? (
+                  <View 
+                    className="bg-zinc-50 border border-dashed border-zinc-300 p-5 rounded-[28px] gap-3.5"
+                  >
+                    <View className="flex-row items-center gap-3">
+                      <View className="w-8 h-8 rounded-xl bg-zinc-200/50 justify-center items-center">
+                        <Feather name="slash" size={14} color="#6B7280" />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-zinc-950 text-xs font-black uppercase">Schedule is Disabled</Text>
+                        <Text className="text-zinc-500 text-[9px] font-semibold mt-0.5">
+                          You have no slots available for tomorrow.
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    <TouchableOpacity
+                      onPress={() => router.push('/bookings' as any)}
+                      className="bg-indigo-600 p-3 rounded-2xl items-center justify-center flex-row gap-1.5"
+                    >
+                      <Feather name="calendar" size={12} color="white" />
+                      <Text className="text-white text-[10px] font-black uppercase tracking-wider">Manage availability →</Text>
+                    </TouchableOpacity>
                   </View>
-                </View>
-                <Feather name="chevron-right" size={14} color="#4F46E5" />
-              </TouchableOpacity>
+                ) : (
+                  <View 
+                    className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-3.5"
+                    style={{
+                      shadowColor: '#101828',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.02,
+                      shadowRadius: 8,
+                      elevation: 1,
+                    }}
+                  >
+                    {tomorrowBookings.length > 0 ? (
+                      <View className="gap-3">
+                        <View className="flex-row justify-between items-center">
+                          <Text className="text-zinc-900 text-xs font-black uppercase">
+                            {tomorrowBookings.length} {tomorrowBookings.length === 1 ? 'Session' : 'Sessions'} Scheduled
+                          </Text>
+                          <TouchableOpacity onPress={() => router.push('/bookings' as any)}>
+                            <Text className="text-indigo-600 text-[9px] font-black uppercase tracking-wider">View All →</Text>
+                          </TouchableOpacity>
+                        </View>
+                        
+                        <View className="gap-2 mt-1">
+                          {tomorrowBookings.map((b) => (
+                            <View key={b.id} className="flex-row justify-between items-center py-2 border-b border-zinc-50 last:border-b-0">
+                              <View>
+                                <Text className="text-zinc-900 text-xs font-semibold">{b.workoutTitle}</Text>
+                                <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{b.time} • {b.clientName || 'Client'}</Text>
+                              </View>
+                              <Feather name="chevron-right" size={12} color="#9CA3AF" />
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    ) : (
+                      <View className="flex-row justify-between items-center">
+                        <View className="flex-row items-center gap-2.5 flex-1 pr-2">
+                          <View className="w-8 h-8 rounded-xl bg-emerald-50 items-center justify-center border border-emerald-100">
+                            <Feather name="calendar" size={14} color="#059669" />
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-zinc-950 text-xs font-black uppercase">No sessions booked</Text>
+                            <Text className="text-zinc-500 text-[9px] font-semibold mt-0.5">
+                              Your schedule is available for bookings.
+                            </Text>
+                          </View>
+                        </View>
+                        
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          onPress={() => router.push('/bookings' as any)}
+                          className="bg-zinc-950 py-2.5 px-4 rounded-xl"
+                        >
+                          <Text className="text-white text-[9px] font-black uppercase tracking-wider">
+                            Manage →
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
             </>
           )}
 
