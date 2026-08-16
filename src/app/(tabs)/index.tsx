@@ -824,7 +824,7 @@ export default function HomeScreen() {
                           {/* Right: Booking status */}
                           <View className="flex-1 gap-1">
                             <Text className="text-[#101828] text-[18px] font-black uppercase tracking-tight">
-                              Session Booked
+                              {activeBooking.workoutTitle} Booked
                             </Text>
                             <Text className="text-[#6B7280] text-[14px] font-medium leading-relaxed mt-0.5">
                               Your session is confirmed. Trainer details will be shared soon.
