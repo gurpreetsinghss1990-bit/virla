@@ -1660,15 +1660,61 @@ class DatabaseClient {
     
     Object.assign(coach, fields);
     
-    const pgCoach = mapCoachToPostgres(coach);
+    // Map TypeScript fields to database columns dynamically to only send modified properties
+    const updatePayload: any = {};
     
-    const { error } = await supabase.from('trainers').upsert(pgCoach);
-    if (error) {
-      throw new Error(`Failed to update trainer in database: ${error.message}`);
+    if (fields.name !== undefined) updatePayload.name = fields.name;
+    if (fields.photo !== undefined) updatePayload.photo = fields.photo;
+    if (fields.experience !== undefined) updatePayload.experience = fields.experience;
+    if (fields.rating !== undefined) updatePayload.rating = fields.rating;
+    if (fields.specialty !== undefined) updatePayload.specialty = fields.specialty;
+    if (fields.yearsExperience !== undefined) updatePayload.years_experience = fields.yearsExperience;
+    if (fields.specialization !== undefined) updatePayload.specialization = fields.specialization;
+    if (fields.languages !== undefined) updatePayload.languages = fields.languages;
+    if (fields.shortBio !== undefined) updatePayload.short_bio = fields.shortBio;
+    if (fields.completedSessions !== undefined) updatePayload.completed_sessions = fields.completedSessions;
+    if (fields.isFavourite !== undefined) updatePayload.is_favourite = fields.isFavourite;
+    if (fields.weeklySlotsSubmitted !== undefined) updatePayload.weekly_slots_submitted = fields.weeklySlotsSubmitted;
+    if (fields.remainingSlotChanges !== undefined) updatePayload.remaining_slot_changes = fields.remainingSlotChanges;
+    if (fields.retainerStatus !== undefined) updatePayload.retainer_status = fields.retainerStatus;
+    if (fields.attendanceRate !== undefined) updatePayload.attendance_rate = fields.attendanceRate;
+    if (fields.punctualityRate !== undefined) updatePayload.punctuality_rate = fields.punctualityRate;
+    if (fields.availabilityCompliance !== undefined) updatePayload.availability_compliance = fields.availabilityCompliance;
+    if (fields.bankDetails !== undefined) updatePayload.bank_details = fields.bankDetails ? JSON.parse(fields.bankDetails) : null;
+    if (fields.emergencyContact !== undefined) updatePayload.emergency_contact = fields.emergencyContact ? JSON.parse(fields.emergencyContact) : null;
+    if (fields.aboutText !== undefined) updatePayload.about_text = fields.aboutText;
+    if (fields.availability !== undefined) updatePayload.availability = fields.availability;
+    if (fields.workingRadius !== undefined) updatePayload.working_radius = fields.workingRadius;
+    if (fields.gender !== undefined) updatePayload.gender = fields.gender ? fields.gender.toLowerCase() : null;
+
+    if (fields.preferences !== undefined) {
+      const prefs = fields.preferences;
+      updatePayload.preferences = prefs;
+      updatePayload.operating_address = prefs.operatingAddress || null;
+      updatePayload.operating_latitude = prefs.operatingLatitude !== undefined ? prefs.operatingLatitude : null;
+      updatePayload.operating_longitude = prefs.operatingLongitude !== undefined ? prefs.operatingLongitude : null;
+      updatePayload.operating_place_id = prefs.operatingPlaceId || null;
+      updatePayload.operating_location_status = prefs.operatingLocationStatus || 'pending';
+      updatePayload.service_radius_km = prefs.radiusKm || 15;
+      updatePayload.address_change_request = prefs.addressChangeRequest || null;
+    }
+
+    let dbError;
+    if (Object.keys(updatePayload).length > 0) {
+      const { error } = await supabase.from('trainers').update(updatePayload).eq('id', coachId);
+      dbError = error;
+    } else {
+      const pgCoach = mapCoachToPostgres(coach);
+      const { error } = await supabase.from('trainers').upsert(pgCoach);
+      dbError = error;
+    }
+
+    if (dbError) {
+      throw new Error(`Failed to update trainer in database: ${dbError.message}`);
     }
 
     this.save();
-    this.log('UpdateCoach', `Upserted trainer record for ID ${coachId}`);
+    this.log('UpdateCoach', `Updated trainer record for ID ${coachId}`);
   }
 
   toggleFavouriteCoach(coachId: string): void {

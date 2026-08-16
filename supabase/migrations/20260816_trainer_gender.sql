@@ -2,7 +2,7 @@
 ALTER TABLE public.trainers ADD COLUMN IF NOT EXISTS gender TEXT;
 
 -- 2. UPDATE existing trainer rows to normalize gender
-UPDATE public.trainers SET gender = 'male' WHERE id = 'c-1';
+UPDATE public.trainers SET gender = 'male' WHERE name = 'Roshan' OR id = 'coach-1785270282269-9s97rb2oo';
 UPDATE public.trainers SET gender = 'female' WHERE id = 'c-2';
 UPDATE public.trainers SET gender = 'male' WHERE id = 'c-3';
 UPDATE public.trainers SET gender = 'female' WHERE id = 'c-4';
