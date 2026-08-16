@@ -18,6 +18,7 @@ import { useUserProfileStore } from '../../store/userProfileStore';
 import { useWorkoutStore } from '../../store/workoutStore';
 import { useWalletStore } from '../../store/walletStore';
 import { Database } from '../../database/Database';
+import { AddPartnerModal } from '../../components/AddPartnerModal';
 import { supabase } from '../../database/supabaseClient';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { useAIWellnessStore } from '../../store/aiWellnessStore';
@@ -145,6 +146,9 @@ export default function HomeScreen() {
   const { user, role } = useUserStore();
   const { totalEarnings, earningsList, coaches } = useCoachStore();
   const { savedPlan } = useAIWellnessStore();
+
+  const [partnerModalVisible, setPartnerModalVisible] = useState(false);
+  const [activePartnerBookingId, setActivePartnerBookingId] = useState('');
 
   const handleHiddenAdminAccess = async () => {
     const userId = Database.getCurrentUserId();
@@ -1265,6 +1269,35 @@ export default function HomeScreen() {
                           </TouchableOpacity>
                         </View>
                       </View>
+
+                      {bookingData.sessionType === 'SINGLE' && bookingData.timelineStatus !== 'otp_verified' && bookingData.timelineStatus !== 'workout_started' && bookingData.timelineStatus !== 'workout_completed' && bookingData.timelineStatus !== 'session_closed' && bookingData.status === 'upcoming' && (
+                        <>
+                          <View className="h-[1px] bg-zinc-150 mt-3 mb-1" />
+                          <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={() => {
+                              setActivePartnerBookingId(bookingData.id);
+                              setPartnerModalVisible(true);
+                            }}
+                            className="flex-row items-center justify-center gap-1.5 py-1.5"
+                          >
+                            <Feather name="plus-circle" size={14} color="#E11D48" />
+                            <Text className="text-[#E11D48] text-xs font-black uppercase tracking-wider">Add Partner</Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
+
+                      {bookingData.sessionType === 'COUPLE' && bookingData.partnerName && (
+                        <>
+                          <View className="h-[1px] bg-zinc-150 mt-3 mb-1.5" />
+                          <View className="flex-row items-center justify-center gap-1.5 py-0.5">
+                            <Feather name="users" size={12} color="#10B981" />
+                            <Text className="text-zinc-500 text-[10px] font-semibold">
+                              Training with <Text className="font-extrabold text-zinc-800">{bookingData.partnerName}</Text>
+                            </Text>
+                          </View>
+                        </>
+                      )}
                     </View>
                   );
                 })() : (
@@ -1600,6 +1633,15 @@ export default function HomeScreen() {
       </ScrollView>
       </View>
       )}
+      <AddPartnerModal
+        visible={partnerModalVisible}
+        bookingId={activePartnerBookingId}
+        onClose={() => setPartnerModalVisible(false)}
+        onSuccess={() => {
+          setPartnerModalVisible(false);
+          useBookingStore.getState().syncFromDB();
+        }}
+      />
     </SafeAreaViewWrapper>
   );
 }

@@ -148,7 +148,13 @@ export default function BookingScreen() {
   };
 
   const [selectedExperience, setSelectedExperience] = useState<Experience>(() => getInitialExperience());
-  const [trainerPref, setTrainerPref] = useState<'any' | 'female' | 'male' | 'favourite'>('any');
+  const [trainerPref, setTrainerPref] = useState<'any' | 'female' | 'male' | 'favourite'>(() => {
+    const profile = Database.getProfile(useUserStore.getState().user?.id || '');
+    const pref = (profile?.trainerPreference || 'no_preference').toLowerCase();
+    if (pref === 'male') return 'male';
+    if (pref === 'female') return 'female';
+    return 'any';
+  });
   const [selectedTrainerId, setSelectedTrainerId] = useState<string>('');
   
   // Location selection (legacy tabs unused state cleaned)
@@ -394,6 +400,30 @@ export default function BookingScreen() {
       const locationStatus = coach.preferences?.operatingLocationStatus;
       const locationApproved = locationStatus === 'verified';
 
+      // 3b. Gender approved (using canonical lowercase comparison)
+      const trainerGender = (coach.gender || '').toLowerCase();
+      const genderValid = trainerGender === 'male' || trainerGender === 'female';
+      
+      let genderApproved = false;
+      if (genderValid) {
+        if (trainerPref === 'any') {
+          genderApproved = true;
+        } else if (trainerPref === 'male') {
+          genderApproved = trainerGender === 'male';
+        } else if (trainerPref === 'female') {
+          genderApproved = trainerGender === 'female';
+        } else if (trainerPref === 'favourite') {
+          const clientPref = (Database.getProfile(user.id || '')?.trainerPreference || 'no_preference').toLowerCase();
+          if (clientPref === 'male') {
+            genderApproved = trainerGender === 'male';
+          } else if (clientPref === 'female') {
+            genderApproved = trainerGender === 'female';
+          } else {
+            genderApproved = true;
+          }
+        }
+      }
+
       // 4. Radius eligible
       const trainerLat = coach.preferences?.operatingLatitude;
       const trainerLng = coach.preferences?.operatingLongitude;
@@ -467,11 +497,13 @@ export default function BookingScreen() {
       const isFavOk = (trainerPref !== 'favourite' || !selectedTrainerId || coach.id === selectedTrainerId);
 
       // Final Eligibility
-      const coachEligible = isFavOk && accountApproved && workoutApproved && locationApproved && radiusEligible && workloadOk;
+      const coachEligible = isFavOk && accountApproved && workoutApproved && locationApproved && radiusEligible && workloadOk && genderApproved && genderValid;
       const finalEligible = coachEligible && slotEligible;
 
       // 8. Exclusion reasons list
       const exclusionReasons: string[] = [];
+      if (!genderValid) exclusionReasons.push('INVALID_GENDER');
+      if (genderValid && !genderApproved) exclusionReasons.push('GENDER_MISMATCH');
       if (trainerPref === 'favourite' && selectedTrainerId && coach.id !== selectedTrainerId) exclusionReasons.push('NOT_SELECTED_FAVOURITE_TRAINER');
       if (!isOnline) exclusionReasons.push('TRAINER_OFFLINE');
       if (!isPartnerApproved) exclusionReasons.push('TRAINER_NOT_VERIFIED');
@@ -936,14 +968,41 @@ export default function BookingScreen() {
   };
 
   const finalizeMatch = () => {
+    // Check favourite trainer mismatch conflict if applicable
+    if (trainerPref === 'favourite' && selectedTrainerId) {
+      const fav = coaches.find(c => c.id === selectedTrainerId);
+      if (fav) {
+        const favGender = (fav.gender || '').toLowerCase();
+        const clientPref = (Database.getProfile(user.id || '')?.trainerPreference || 'no_preference').toLowerCase();
+        
+        if ((clientPref === 'male' && favGender !== 'male') || (clientPref === 'female' && favGender !== 'female')) {
+          Alert.alert(
+            'Preference Mismatch ⚠️',
+            'Your selected Trainer does not match your Trainer preference. Please choose another Trainer or update your preference.',
+            [{ text: 'OK', onPress: () => setStep(2) }]
+          );
+          setMatchedCoach(undefined as any);
+          setMatchDone(false);
+          return;
+        }
+      }
+    }
+
     // Select coach based on preference and workout specialty
     let pool = coaches;
 
     // Filter by gender if requested
     if (trainerPref === 'female') {
-      pool = pool.filter(c => c.name.endsWith('Patel') || c.name.endsWith('Rao') || c.name.endsWith('Deshmukh') || c.name.endsWith('Sen') || c.name.endsWith('Hegde'));
+      pool = pool.filter(c => (c.gender || '').toLowerCase() === 'female');
     } else if (trainerPref === 'male') {
-      pool = pool.filter(c => c.name.endsWith('Sharma') || c.name.endsWith('Mehta') || c.name.endsWith('Gill') || c.name.endsWith('Nair') || c.name.endsWith('Varma'));
+      pool = pool.filter(c => (c.gender || '').toLowerCase() === 'male');
+    } else if (trainerPref === 'favourite') {
+      const clientPref = (Database.getProfile(user.id || '')?.trainerPreference || 'no_preference').toLowerCase();
+      if (clientPref === 'male') {
+        pool = pool.filter(c => (c.gender || '').toLowerCase() === 'male');
+      } else if (clientPref === 'female') {
+        pool = pool.filter(c => (c.gender || '').toLowerCase() === 'female');
+      }
     }
 
     // Filter by specialty if applicable
@@ -989,6 +1048,9 @@ export default function BookingScreen() {
       return;
     }
 
+    const clientProfile = Database.getProfile(user.id || '');
+    const isCouple = (clientProfile?.membershipStatus || '').toLowerCase().includes('couple');
+
     const tempBooking = {
       trainerId: activeCoach.id,
       trainerName: activeCoach.name,
@@ -1011,6 +1073,9 @@ export default function BookingScreen() {
       trainerNote: trainerNote.trim() || undefined,
       durationMinutes: selectedExperience.duration || 60,
       createdAt: Date.now(),
+      participantCount: isCouple ? 2 : 1,
+      sessionType: (isCouple ? 'COUPLE' : 'SINGLE') as 'SINGLE' | 'COUPLE',
+      originalPackageType: (isCouple ? 'COUPLE' : 'SINGLE') as 'SINGLE' | 'COUPLE',
     };
 
     setTimeout(async () => {
@@ -1320,6 +1385,11 @@ export default function BookingScreen() {
                             setTrainerPref(pref.id as any);
                             if (pref.id !== 'favourite') {
                               setSelectedTrainerId('');
+                              if (user.id) {
+                                const dbPref = pref.id === 'any' ? 'no_preference' : pref.id;
+                                Database.updateProfile(user.id, { trainerPreference: dbPref });
+                                useUserStore.getState().syncFromDB();
+                              }
                               // Auto transition to step 3 on tap after small delay
                               setTimeout(() => triggerTransition(3), 300);
                             }
@@ -2291,7 +2361,32 @@ export default function BookingScreen() {
                         distance = calculateDistanceKm(trainerLat, trainerLng, customerLat, customerLng);
                         insideRadius = distance <= radiusLimit;
                       }
-                      return isOnline && isPartnerApproved && workoutApproved && locationApproved && insideRadius;
+
+                      // Apply gender filters
+                      const trainerGender = (coach.gender || '').toLowerCase();
+                      const genderValid = trainerGender === 'male' || trainerGender === 'female';
+                      
+                      let genderApproved = false;
+                      if (genderValid) {
+                        if (trainerPref === 'any') {
+                          genderApproved = true;
+                        } else if (trainerPref === 'male') {
+                          genderApproved = trainerGender === 'male';
+                        } else if (trainerPref === 'female') {
+                          genderApproved = trainerGender === 'female';
+                        } else if (trainerPref === 'favourite') {
+                          const clientPref = (Database.getProfile(user.id || '')?.trainerPreference || 'no_preference').toLowerCase();
+                          if (clientPref === 'male') {
+                            genderApproved = trainerGender === 'male';
+                          } else if (clientPref === 'female') {
+                            genderApproved = trainerGender === 'female';
+                          } else {
+                            genderApproved = true;
+                          }
+                        }
+                      }
+
+                      return isOnline && isPartnerApproved && workoutApproved && locationApproved && insideRadius && genderValid && genderApproved;
                     });
 
                     console.log('CUSTOMER_EMPTY_STATE_DEBUG', JSON.stringify({
@@ -2324,10 +2419,12 @@ export default function BookingScreen() {
                           </View>
                           <View className="items-center gap-2">
                             <Text className="text-[#101828] text-base font-black tracking-tight text-center">
-                              No {WORKOUT_CATEGORY_MAPPING[selectedExperience.id] || 'Workout'} Trainers Available
+                              {trainerPref === 'favourite' ? 'Favourite Trainer Unavailable' : `No ${WORKOUT_CATEGORY_MAPPING[selectedExperience.id] || 'Workout'} Trainers Available`}
                             </Text>
                             <Text className="text-[#6B7280] text-[10px] font-medium leading-relaxed text-center max-w-[80%]">
-                              All {selectedExperience.title} coaches are fully booked or offline today. Choose another workout, change date, or set an alert.
+                              {trainerPref === 'favourite' 
+                                ? 'No available sessions with your favourite Trainer at this time.' 
+                                : `All ${selectedExperience.title} coaches are fully booked or offline today. Choose another workout, change date, or set an alert.`}
                             </Text>
                           </View>
                           <View className="w-full gap-3">
@@ -2348,6 +2445,16 @@ export default function BookingScreen() {
                             >
                               <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Try Another Workout</Text>
                             </TouchableOpacity>
+
+                            {trainerPref === 'favourite' && (
+                              <TouchableOpacity
+                                activeOpacity={0.8}
+                                onPress={() => triggerTransition(2)}
+                                className="bg-zinc-50 border border-zinc-200 py-4 rounded-xl items-center justify-center"
+                              >
+                                <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Change Trainer Preference</Text>
+                              </TouchableOpacity>
+                            )}
 
                             <TouchableOpacity
                               activeOpacity={0.8}

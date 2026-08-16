@@ -299,6 +299,7 @@ export function mapCoach(row: any): Coach {
     emergencyContact: row.emergency_contact ? JSON.stringify(row.emergency_contact) : '',
     aboutText: row.about_text || '',
     workingRadius: row.working_radius || '',
+    gender: row.gender || '',
     preferences: prefs
   };
 }
@@ -336,6 +337,7 @@ export function mapCoachToPostgres(coach: Coach): any {
     operating_location_status: prefs.operatingLocationStatus || 'pending',
     service_radius_km: prefs.radiusKm || 15,
     address_change_request: prefs.addressChangeRequest || null,
+    gender: coach.gender ? coach.gender.toLowerCase() : null,
     preferences: prefs
   };
 }
@@ -418,6 +420,11 @@ export function mapBooking(row: any): Booking {
     acceptanceDeadline: row.acceptance_deadline ? Number(row.acceptance_deadline) : undefined,
     autoAcceptedAt: row.auto_accepted_at ? Number(row.auto_accepted_at) : undefined,
     trainerAcceptedAt: row.trainer_accepted_at ? Number(row.trainer_accepted_at) : undefined,
+    participantCount: row.participant_count || 1,
+    sessionType: row.session_type || 'SINGLE',
+    originalPackageType: row.original_package_type || 'SINGLE',
+    partnerName: row.partner_name || undefined,
+    partnerPhone: row.partner_phone || undefined,
   };
 }
 
@@ -457,6 +464,11 @@ export function mapBookingToPostgres(b: Booking): any {
     acceptance_deadline: b.acceptanceDeadline || null,
     auto_accepted_at: b.autoAcceptedAt || null,
     trainer_accepted_at: b.trainerAcceptedAt || null,
+    participant_count: b.participantCount || 1,
+    session_type: b.sessionType || 'SINGLE',
+    original_package_type: b.originalPackageType || 'SINGLE',
+    partner_name: b.partnerName || null,
+    partner_phone: b.partnerPhone || null,
   };
 }
 
@@ -1908,6 +1920,23 @@ class DatabaseClient {
     if (!coach) throw new Error('Trainer not found.');
     if (coach.preferences?.online === false) throw new Error('Trainer is currently offline.');
 
+    // 1b. Verify Trainer profile verification and gender integrity
+    const trainerGender = (coach.gender || '').toLowerCase();
+    const genderValid = trainerGender === 'male' || trainerGender === 'female';
+    if (!genderValid || coach.verifiedBadge === false) {
+      throw new Error('This Trainer is currently unavailable due to profile verification requirements.');
+    }
+
+    // 1c. Verify Trainer matching gender preference
+    const clientProfile = this.getProfile(userId);
+    const clientPref = (clientProfile?.trainerPreference || 'no_preference').toLowerCase();
+    if (clientPref === 'male' && trainerGender !== 'male') {
+      throw new Error('This Trainer does not match your selected preference. Please choose another available Trainer.');
+    }
+    if (clientPref === 'female' && trainerGender !== 'female') {
+      throw new Error('This Trainer does not match your selected preference. Please choose another available Trainer.');
+    }
+
     // 2. Verify slot is not disabled by trainer overrides
     const overrides = coach.preferences?.availabilityOverrides || [];
     const override = overrides.find(o => normalizeDate(o.date) === normalizeDate(date) && o.time === time);
@@ -1973,11 +2002,12 @@ class DatabaseClient {
 
     const tx: Invoice = {
       id: generateUUID('tx'),
-      type: 'paid',
+      userId,
+      type: 'spend',
       amount: '₹0',
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
       status: 'paid',
-      credits: -1
+      credits: 1
     };
 
     // Save locally
@@ -2072,11 +2102,12 @@ class DatabaseClient {
 
     const tx: Invoice = {
       id: generateUUID('tx'),
-      type: 'paid',
+      userId,
+      type: 'spend',
       amount: '₹0',
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
       status: 'paid',
-      credits: -1
+      credits: 1
     };
 
     this.schema.credit_transactions.unshift(tx);
@@ -2099,26 +2130,28 @@ class DatabaseClient {
       booking.status = 'cancelled';
       booking.timelineStatus = 'session_closed';
 
+      const refundAmount = booking.sessionType === 'COUPLE' ? 2 : 1;
       const tx: Invoice = {
         id: generateUUID('tx'),
-        type: 'paid',
+        userId,
+        type: isLate ? 'penalty' : 'refund',
         amount: '₹0',
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
         status: 'paid',
-        credits: isLate ? -1 : 1
+        credits: refundAmount
       };
       
       this.schema.credit_transactions.unshift(tx);
 
       const profile = this.getProfile(userId);
       if (!isLate && profile) {
-        profile.creditsBalance += 1;
+        profile.creditsBalance += refundAmount;
       }
 
       Promise.all([
         supabase.from('bookings').update({ status: booking.status, timeline_status: booking.timelineStatus }).eq('id', bookingId),
         supabase.from('credit_transactions').insert(mapInvoiceToPostgres(tx, userId)),
-        (profile && !isLate) ? supabase.from('user_profiles').update({ credits_balance: profile.creditsBalance }).eq('user_id', userId) : Promise.resolve()
+        profile ? supabase.from('user_profiles').update({ credits_balance: profile.creditsBalance }).eq('user_id', userId) : Promise.resolve()
       ]).then();
 
       this.save();
@@ -2392,6 +2425,105 @@ class DatabaseClient {
     this.save();
   }
 
+  async addPartnerToBooking(bookingId: string, partnerName: string, partnerPhone: string): Promise<Booking> {
+    await this.load();
+    const booking = this.schema.bookings.find(b => b.id === bookingId);
+    if (!booking) {
+      throw new Error('Booking not found.');
+    }
+
+    const userId = booking.clientId;
+    if (!userId) {
+      throw new Error('Client ID not found on booking.');
+    }
+
+    // 1. Verify eligibility (Single PT booking type, etc.)
+    if (booking.participantCount && booking.participantCount >= 2) {
+      throw new Error('This session already has a partner added.');
+    }
+
+    // 2. Verify booking status
+    if (booking.status !== 'upcoming') {
+      throw new Error('Cannot add partner to past, cancelled, or completed bookings.');
+    }
+
+    // 3. Verify OTP has not been verified & workout has not started
+    if (booking.timelineStatus === 'otp_verified' || booking.timelineStatus === 'workout_started' || booking.timelineStatus === 'workout_completed' || booking.timelineStatus === 'session_closed') {
+      throw new Error('Cannot add a partner after the session has started.');
+    }
+
+    // 4. Verify additional credit requirement
+    const profile = this.getProfile(userId);
+    if (!profile || profile.creditsBalance < 1) {
+      throw new Error('You need 1 additional credit to add a partner to this session. Please recharge your wallet.');
+    }
+
+    // Deduct credit
+    profile.creditsBalance -= 1;
+
+    // Create ledger transaction
+    const tx: Invoice = {
+      id: generateUUID('tx'),
+      userId,
+      type: 'spend',
+      amount: '₹0',
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+      status: 'paid',
+      credits: 1 // 1 credit consumed
+    };
+
+    // Update booking fields
+    booking.participantCount = 2;
+    booking.sessionType = 'COUPLE';
+    booking.partnerName = partnerName;
+    booking.partnerPhone = partnerPhone;
+
+    this.schema.credit_transactions.unshift(tx);
+    this.save();
+
+    // Notify trainer
+    if (booking.trainerId) {
+      this.addNotification(booking.trainerId, {
+        title: 'SESSION UPDATED — 2 PARTICIPANTS 🔔',
+        body: `Your ${booking.workoutTitle} session on ${booking.date} @ ${booking.time} is now a 2-person session.`,
+        icon: 'users',
+        type: 'Trainer Updates',
+        priority: 'high',
+        actionLabel: 'View Details',
+        deepLink: `/session-detail?id=${booking.id}`
+      });
+    }
+
+    // Send partner invitation notification
+    this.addNotification(userId, {
+      title: 'Partner Added! 🤝',
+      body: `You've successfully added ${partnerName} (+91 ${partnerPhone}) to your session.`,
+      icon: 'user-plus',
+      type: 'Bookings',
+      priority: 'medium',
+      actionLabel: 'View Details',
+      deepLink: `/session-detail?id=${booking.id}`
+    });
+
+    // Write to Supabase (Atomic)
+    const [resBooking, resProfile, resTx] = await Promise.all([
+      supabase.from('bookings').update({
+        participant_count: booking.participantCount,
+        session_type: booking.sessionType,
+        partner_name: booking.partnerName,
+        partner_phone: booking.partnerPhone
+      }).eq('id', bookingId),
+      supabase.from('user_profiles').update({ credits_balance: profile.creditsBalance }).eq('user_id', userId),
+      supabase.from('credit_transactions').insert(mapInvoiceToPostgres(tx, userId))
+    ]);
+
+    if (resBooking.error) throw resBooking.error;
+    if (resProfile.error) throw resProfile.error;
+    if (resTx.error) throw resTx.error;
+
+    return booking;
+  }
+
   getPayments(userId: string): any[] {
     return this.schema.payments;
   }
@@ -2415,7 +2547,8 @@ class DatabaseClient {
 
     const newTx: Invoice = {
       id: generateUUID('tx'),
-      type: 'paid',
+      userId,
+      type: 'purchase',
       amount: totalText,
       date,
       status: 'paid',
@@ -2662,9 +2795,18 @@ class DatabaseClient {
   }
 
   async submitTrainerApplication(appData: Omit<TrainerApplication, 'id' | 'createdAt' | 'updatedAt' | 'status'>): Promise<TrainerApplication> {
+    const gender = (appData.gender || '').toLowerCase();
+    if (gender !== 'male' && gender !== 'female') {
+      throw new Error('Please select a valid gender (Male or Female) to submit your application.');
+    }
+    const normalizedApp = {
+      ...appData,
+      gender: gender
+    };
+
     const id = generateUUID('app');
     const newApp: TrainerApplication = {
-      ...appData,
+      ...normalizedApp,
       id,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -2686,6 +2828,13 @@ class DatabaseClient {
     const appIndex = this.schema.trainer_applications.findIndex(a => a.id === appId);
     if (appIndex === -1) {
       throw new Error('Application not found');
+    }
+    if (appData.gender !== undefined) {
+      const gender = (appData.gender || '').toLowerCase();
+      if (gender !== 'male' && gender !== 'female') {
+        throw new Error('Please select a valid gender (Male or Female) to submit your application.');
+      }
+      appData.gender = gender;
     }
     const updatedApp = {
       ...this.schema.trainer_applications[appIndex],

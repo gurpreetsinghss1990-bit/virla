@@ -11,6 +11,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { SessionEngine } from '../services/SessionEngine';
 import { AssignmentConfig } from '../config/AssignmentConfig';
+import { AddPartnerModal } from '../components/AddPartnerModal';
 
 // Map coordinates path waypoints (scaled to fit beautiful SVG canvas)
 const waypoints = [
@@ -42,6 +43,7 @@ export default function SessionDetailScreen() {
   const { addNotification } = useNotificationStore();
   const { role } = useUserStore();
   const { syncFromDB: syncProfile } = useUserProfileStore();
+  const [showPartnerModal, setShowPartnerModal] = useState(false);
 
   const booking = bookings.find((b) => b.id === bookingId) || bookings[0];
 
@@ -566,7 +568,7 @@ export default function SessionDetailScreen() {
 
                 <View className="flex-row justify-between border-b border-zinc-100 pb-2">
                   <Text className="text-zinc-400 text-[10px] font-bold uppercase">Type</Text>
-                  <Text className="text-zinc-900 text-xs font-black">Solo Session</Text>
+                  <Text className="text-zinc-900 text-xs font-black">{booking.sessionType === 'COUPLE' ? '2-Person Session' : 'Solo Session'}</Text>
                 </View>
 
                 <View className="flex-row justify-between border-b border-zinc-100 pb-2">
@@ -576,7 +578,7 @@ export default function SessionDetailScreen() {
 
                 <View className="flex-row justify-between">
                   <Text className="text-zinc-400 text-[10px] font-bold uppercase">Session Value</Text>
-                  <Text className="text-emerald-700 text-xs font-black">₹{booking.price || 1200} (1 Credit)</Text>
+                  <Text className="text-emerald-700 text-xs font-black">₹{booking.price || 1200} ({booking.sessionType === 'COUPLE' ? '2 Credits' : '1 Credit'})</Text>
                 </View>
               </View>
             </View>
@@ -843,7 +845,7 @@ export default function SessionDetailScreen() {
                   </View>
                   <View className="flex-row justify-between items-center">
                     <Text className="text-[#6B7280] text-xs font-semibold">Solo / Couple</Text>
-                    <Text className="text-[#101828] text-xs font-extrabold">Solo Session</Text>
+                    <Text className="text-[#101828] text-xs font-extrabold">{booking.sessionType === 'COUPLE' ? 'Couple Session' : 'Solo Session'}</Text>
                   </View>
                   <View className="flex-row justify-between items-center">
                     <Text className="text-[#6B7280] text-xs font-semibold">Trainer Preference</Text>
@@ -853,7 +855,7 @@ export default function SessionDetailScreen() {
                   </View>
                   <View className="flex-row justify-between items-center">
                     <Text className="text-[#6B7280] text-xs font-semibold">Credits Used</Text>
-                    <Text className="text-[#101828] text-xs font-extrabold">1 Credit</Text>
+                    <Text className="text-[#101828] text-xs font-extrabold">{booking.sessionType === 'COUPLE' ? '2 Credits' : '1 Credit'}</Text>
                   </View>
                   <View className="flex-row justify-between items-start">
                     <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">Location</Text>
@@ -864,6 +866,57 @@ export default function SessionDetailScreen() {
                 </View>
               </View>
             )}
+
+            {/* Add Partner Action Card */}
+            {role === 'customer' && booking.sessionType === 'SINGLE' && booking.status === 'upcoming' && currentStatus !== 'otp_verified' && currentStatus !== 'workout_started' && currentStatus !== 'workout_completed' && currentStatus !== 'session_closed' && (
+              <View className="bg-rose-50/50 border border-rose-100 p-5 rounded-[28px] shadow-sm gap-3 mt-4">
+                <View className="flex-row items-center gap-3">
+                  <View className="w-9 h-9 rounded-full bg-rose-100 items-center justify-center">
+                    <Feather name="users" size={16} color="#E11D48" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Train with a friend?</Text>
+                    <Text className="text-zinc-500 text-[10px] font-medium mt-0.5 leading-relaxed">
+                      Convert this to a 2-person session. Uses 1 additional credit.
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setShowPartnerModal(true)}
+                  className="w-full bg-[#E11D48] py-3.5 rounded-xl items-center justify-center mt-1"
+                >
+                  <Text className="text-white text-xs font-black uppercase tracking-wider">+ Add Partner</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Partner Details Card if already added */}
+            {role === 'customer' && booking.sessionType === 'COUPLE' && booking.partnerName && (
+              <View className="bg-emerald-50/50 border border-emerald-100 p-5 rounded-[28px] shadow-sm gap-3 mt-4">
+                <View className="flex-row items-center gap-3">
+                  <View className="w-9 h-9 rounded-full bg-emerald-100 items-center justify-center">
+                    <Feather name="users" size={16} color="#10B981" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">2-Person Session</Text>
+                    <Text className="text-zinc-500 text-[10px] font-medium mt-0.5 leading-relaxed">
+                      Partner: <Text className="font-extrabold text-zinc-800">{booking.partnerName}</Text> (+91 {booking.partnerPhone})
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            <AddPartnerModal
+              visible={showPartnerModal}
+              bookingId={booking.id}
+              onClose={() => setShowPartnerModal(false)}
+              onSuccess={() => {
+                setShowPartnerModal(false);
+                syncFromDB();
+              }}
+            />
 
             {/* Module 2: Premium Animated SVG Live Map */}
             {(currentStatus === 'trainer_travelling' || currentStatus === 'trainer_arrived') && (

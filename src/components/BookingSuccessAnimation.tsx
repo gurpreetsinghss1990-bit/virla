@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Animated, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { Database } from '../database/Database';
+import { AddPartnerModal } from './AddPartnerModal';
 
 interface BookingSuccessAnimationProps {
   workoutTitle: string;
@@ -25,6 +27,8 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
 }) => {
   const [successScaleAnim] = useState(() => new Animated.Value(0));
   const [successOpacityAnim] = useState(() => new Animated.Value(0));
+  const [booking, setBooking] = useState(() => Database.schema.bookings.find(b => b.id === successBookingId));
+  const [showPartnerModal, setShowPartnerModal] = useState(false);
 
   useEffect(() => {
     successScaleAnim.setValue(0);
@@ -110,11 +114,16 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
             </Text>
           </View>
 
+          <View className="flex-row justify-between items-center">
+            <Text className="text-[#6B7280] text-xs font-semibold">Solo / Couple</Text>
+            <Text className="text-[#101828] text-xs font-extrabold">{booking?.sessionType === 'COUPLE' ? 'Couple Session' : 'Solo Session'}</Text>
+          </View>
+
           <View className="h-[1px] bg-zinc-100 my-1" />
 
           <View className="flex-row justify-between items-center">
             <Text className="text-[#6B7280] text-xs font-semibold">Credits Used</Text>
-            <Text className="text-emerald-600 text-xs font-black">1 Credit</Text>
+            <Text className="text-emerald-600 text-xs font-black">{booking?.sessionType === 'COUPLE' ? '2 Credits' : '1 Credit'}</Text>
           </View>
         </View>
       </View>
@@ -177,6 +186,42 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
           </View>
         </View>
       </View>
+
+      {/* Want a friend to join? action section */}
+      {booking?.sessionType === 'SINGLE' && booking?.status === 'upcoming' && (
+        <View className="w-full bg-rose-50/50 border border-rose-100 p-5 rounded-[28px] shadow-sm gap-3 mt-2">
+          <View className="flex-row items-center gap-3">
+            <View className="w-9 h-9 rounded-full bg-rose-100 items-center justify-center">
+              <Feather name="users" size={16} color="#E11D48" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Want a friend to join?</Text>
+              <Text className="text-zinc-500 text-[10px] font-medium mt-0.5 leading-relaxed">
+                Convert this to a 2-person Couple session. Uses 1 additional credit.
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => setShowPartnerModal(true)}
+            className="w-full bg-[#E11D48] py-3.5 rounded-xl items-center justify-center mt-1"
+          >
+            <Text className="text-white text-xs font-black uppercase tracking-wider">+ Add Partner</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Reusable Add Partner Modal overlay */}
+      <AddPartnerModal
+        visible={showPartnerModal}
+        bookingId={successBookingId}
+        onClose={() => setShowPartnerModal(false)}
+        onSuccess={() => {
+          setShowPartnerModal(false);
+          const updated = Database.schema.bookings.find(b => b.id === successBookingId);
+          setBooking(updated);
+        }}
+      />
 
       {/* Primary CTA Buttons */}
       <View className="w-full gap-3 mt-4">

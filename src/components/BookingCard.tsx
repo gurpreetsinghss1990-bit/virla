@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, Alert } from 'react-native';
 import { Booking } from '../types';
 import { BookingStatusBadge } from './BookingStatusBadge';
@@ -6,9 +6,10 @@ import { useBookingStore } from '../store/bookingStore';
 import { useRouter } from 'expo-router';
 import { LuxuryCard } from './LuxuryCard';
 import { Feather } from '@expo/vector-icons';
-
 import { useUserStore } from '../store/userStore';
 import { SessionEngine } from '../services/SessionEngine';
+import { AddPartnerModal } from './AddPartnerModal';
+import { Database } from '../database/Database';
 
 interface BookingCardProps {
   booking: Booking;
@@ -18,6 +19,7 @@ export function BookingCard({ booking }: BookingCardProps) {
   const router = useRouter();
   const { cancelSession, rescheduleSession } = useBookingStore();
   const { role } = useUserStore();
+  const [showPartnerModal, setShowPartnerModal] = useState(false);
 
   const handleCancel = () => {
     Alert.alert(
@@ -106,13 +108,13 @@ export function BookingCard({ booking }: BookingCardProps) {
             </Text>
             <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider mt-0.5">
               {isTrainer 
-                ? `${booking.workoutTitle} • 60 mins` 
+                ? `${booking.workoutTitle} • ${booking.sessionType === 'COUPLE' ? '2-Person' : 'Solo'} • 60 mins` 
                 : (isUpcoming 
                     ? (!isAccepted 
-                        ? `${booking.workoutTitle} • Trainer details will be shared soon` 
-                        : `${booking.workoutTitle} • Trainer confirmed. Privacy rules apply.`
+                        ? `${booking.workoutTitle} • ${booking.sessionType === 'COUPLE' ? '2-Person' : 'Solo'} • Trainer details shared soon` 
+                        : `${booking.workoutTitle} • ${booking.sessionType === 'COUPLE' ? '2-Person' : 'Solo'} • Trainer confirmed`
                       ) 
-                    : `${booking.workoutTitle} • ₹${booking.price || 1200}`
+                    : `${booking.workoutTitle} • ${booking.sessionType === 'COUPLE' ? '2-Person' : 'Solo'} • ₹${booking.price || 1200}`
                   )}
             </Text>
           </View>
@@ -166,6 +168,36 @@ export function BookingCard({ booking }: BookingCardProps) {
           </View>
         );
       })()}
+
+      {isUpcoming && role === 'customer' && booking.sessionType === 'SINGLE' && booking.timelineStatus !== 'otp_verified' && booking.timelineStatus !== 'workout_started' && booking.timelineStatus !== 'workout_completed' && booking.timelineStatus !== 'session_closed' && (
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => setShowPartnerModal(true)}
+          className="w-full bg-[#E11D48] py-3 rounded-xl items-center justify-center flex-row gap-1.5 mb-3"
+        >
+          <Feather name="plus-circle" size={14} color="white" />
+          <Text className="text-white text-xs font-black uppercase tracking-wider">Train with a Friend</Text>
+        </TouchableOpacity>
+      )}
+
+      {booking.sessionType === 'COUPLE' && booking.partnerName && (
+        <View className="bg-emerald-50 border border-emerald-100 px-4 py-2.5 rounded-xl mb-3 flex-row items-center gap-2">
+          <Feather name="users" size={12} color="#10B981" />
+          <Text className="text-zinc-500 text-[10px] font-semibold flex-1 leading-snug">
+            Training with: <Text className="font-extrabold text-zinc-800">{booking.partnerName}</Text> (+91 {booking.partnerPhone})
+          </Text>
+        </View>
+      )}
+
+      <AddPartnerModal
+        visible={showPartnerModal}
+        bookingId={booking.id}
+        onClose={() => setShowPartnerModal(false)}
+        onSuccess={() => {
+          setShowPartnerModal(false);
+          useBookingStore.getState().syncFromDB();
+        }}
+      />
 
       {/* Action Buttons */}
       <View className="flex-row gap-3">

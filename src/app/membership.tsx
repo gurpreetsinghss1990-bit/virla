@@ -146,6 +146,8 @@ export default function MembershipScreen() {
   const [checkoutActive, setCheckoutActive] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showDemoPayment, setShowDemoPayment] = useState(false);
+  const currentX = useRef(0);
 
   // Animations using useMemo to avoid render-phase ref reads
   const slideUpAnim = useMemo(() => new Animated.Value(600), []);
@@ -160,6 +162,9 @@ export default function MembershipScreen() {
     setCheckoutActive(false);
     setIsProcessing(false);
     setIsSuccess(false);
+    setShowDemoPayment(false);
+    currentX.current = 0;
+    swipeX.setValue(0);
     
     Animated.parallel([
       Animated.timing(overlayOpacity, { toValue: 1, duration: 250, useNativeDriver: true }),
@@ -173,6 +178,9 @@ export default function MembershipScreen() {
       Animated.timing(slideUpAnim, { toValue: 600, duration: 200, useNativeDriver: true })
     ]).start(() => {
       setSelectedPlan(null);
+      setShowDemoPayment(false);
+      currentX.current = 0;
+      swipeX.setValue(0);
     });
   };
 
@@ -207,13 +215,15 @@ export default function MembershipScreen() {
     });
   };
 
-  const onSwipeRelease = (e: any) => {
-    const offset = e.nativeEvent.translationX;
-    if (offset > 180) {
-      Animated.timing(swipeX, { toValue: 220, duration: 150, useNativeDriver: true }).start(() => {
-        handleConfirmPay();
+  const onSwipeRelease = () => {
+    const limit = 220;
+    const threshold = limit * 0.85;
+    if (currentX.current >= threshold) {
+      Animated.timing(swipeX, { toValue: limit, duration: 150, useNativeDriver: true }).start(() => {
+        setShowDemoPayment(true);
       });
     } else {
+      currentX.current = 0;
       Animated.spring(swipeX, { toValue: 0, useNativeDriver: true }).start();
     }
   };
@@ -334,8 +344,9 @@ export default function MembershipScreen() {
                       )}
                       <Text className="text-zinc-950 text-xl font-black tracking-tight">{plan.price}</Text>
                     </View>
-                    <View className="bg-zinc-900 px-4 py-2 rounded-xl">
-                      <Text className="text-white text-[8px] font-black uppercase tracking-widest">Continue</Text>
+                    <View className="bg-zinc-950 px-4 py-2.5 rounded-xl border border-zinc-800 flex-row items-center gap-1.5 min-h-[44px] justify-center min-w-[90px]">
+                      <Text className="text-white text-[9px] font-black uppercase tracking-wider">Continue</Text>
+                      <Feather name="arrow-right" size={10} color="white" />
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -448,7 +459,90 @@ export default function MembershipScreen() {
 
             {!isProcessing && !isSuccess && (
               <>
-                {!checkoutActive ? (
+                {showDemoPayment ? (
+                  /* Demo Payment screen */
+                  <View className="gap-6 py-2">
+                    <View className="flex-row justify-between items-center border-b border-zinc-100 pb-4">
+                      <View className="gap-0.5">
+                        <Text className="text-zinc-400 text-[8px] font-black uppercase">Sandbox Gateway</Text>
+                        <Text className="text-zinc-950 text-base font-black uppercase tracking-wider pl-0.5">Test Payment Gateway</Text>
+                      </View>
+                      <TouchableOpacity 
+                        onPress={() => {
+                          setShowDemoPayment(false);
+                          currentX.current = 0;
+                          swipeX.setValue(0);
+                        }} 
+                        className="w-8 h-8 rounded-full bg-zinc-50 items-center justify-center border border-zinc-150"
+                      >
+                        <Feather name="arrow-left" size={14} color="#101828" />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Warning banner */}
+                    <View className="bg-amber-50 border border-amber-100 p-4.5 rounded-2xl gap-2">
+                      <View className="flex-row items-center gap-2">
+                        <Feather name="alert-triangle" size={14} color="#D97706" />
+                        <Text className="text-amber-800 text-[10px] font-black uppercase">DEMO MODE ACTIVE</Text>
+                      </View>
+                      <Text className="text-amber-700 text-[10px] font-semibold leading-relaxed">
+                        This is a sandbox test transaction simulator. No real money will be charged.
+                      </Text>
+                    </View>
+
+                    {/* Cost Summary details */}
+                    <View className="bg-zinc-50 border border-zinc-100 p-4.5 rounded-2xl gap-3">
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-zinc-500 text-xs font-semibold">Selected Pack</Text>
+                        <Text className="text-zinc-900 text-xs font-extrabold">{selectedPlan.name}</Text>
+                      </View>
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-zinc-500 text-xs font-semibold">Credits Included</Text>
+                        <Text className="text-zinc-900 text-xs font-extrabold">+{selectedPlan.credits} Credits</Text>
+                      </View>
+                      <View className="h-[1px] bg-zinc-150 my-0.5" />
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-zinc-500 text-xs font-semibold">Subtotal Price</Text>
+                        <Text className="text-zinc-900 text-xs font-extrabold">{selectedPlan.amountVal}</Text>
+                      </View>
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-zinc-500 text-xs font-semibold">GST (18% Sandbox Tax)</Text>
+                        <Text className="text-zinc-900 text-xs font-extrabold">{selectedPlan.gstVal}</Text>
+                      </View>
+                      <View className="h-[1px] bg-zinc-150 my-0.5" />
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-zinc-950 text-xs font-black">Total Paid amount</Text>
+                        <Text className="text-[#4F46E5] text-sm font-black">{selectedPlan.price}</Text>
+                      </View>
+                    </View>
+
+                    {/* Action buttons */}
+                    <View className="gap-3.5 mt-3">
+                      <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={() => {
+                          setShowDemoPayment(false);
+                          handleConfirmPay();
+                        }}
+                        className="w-full bg-[#10B981] py-4.5 rounded-2xl items-center justify-center shadow-md min-h-[48px]"
+                      >
+                        <Text className="text-white text-xs font-black uppercase tracking-wider">Pay {selectedPlan.price} (Sandbox Test)</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          setShowDemoPayment(false);
+                          currentX.current = 0;
+                          swipeX.setValue(0);
+                        }}
+                        className="w-full bg-zinc-50 border border-zinc-150 py-4.5 rounded-2xl items-center justify-center min-h-[48px]"
+                      >
+                        <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">Cancel</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : !checkoutActive ? (
                   // Plan details list (Feature 2)
                   <View className="gap-5">
                     <View className="flex-row justify-between items-start border-b border-zinc-100 pb-4">
@@ -520,8 +614,18 @@ export default function MembershipScreen() {
                     </View>
 
                     {/* Slide confirmation track slider (re-usable gestural Apple Pay check) */}
-                    <View className="h-14 bg-zinc-950 rounded-2xl justify-center px-2.5 relative overflow-hidden mt-2">
-                      <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest text-center">
+                    <View 
+                      className="h-14 bg-zinc-950 rounded-2xl justify-center px-2.5 relative overflow-hidden mt-2"
+                      onTouchMove={(e) => {
+                        const touchX = e.nativeEvent.locationX;
+                        const limit = 220;
+                        const translation = Math.max(0, Math.min(limit, touchX - 20));
+                        currentX.current = translation;
+                        swipeX.setValue(translation);
+                      }}
+                      onTouchEnd={onSwipeRelease}
+                    >
+                      <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest text-center pointer-events-none">
                         Slide To Purchase
                       </Text>
                       
@@ -529,11 +633,6 @@ export default function MembershipScreen() {
                         style={{
                           transform: [{ translateX: swipeX }],
                         }}
-                        onTouchMove={(e) => {
-                          const touchX = Math.max(0, Math.min(220, e.nativeEvent.locationX - 25));
-                          swipeX.setValue(touchX);
-                        }}
-                        onTouchEnd={onSwipeRelease}
                         className="absolute left-2.5 w-10 h-10 rounded-xl bg-white justify-center items-center shadow-md"
                       >
                         <Feather name="arrow-right" size={16} color="#101828" />

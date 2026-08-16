@@ -135,7 +135,8 @@ export default function TrainerApplicationScreen() {
             setPhone(app.phone || '');
             setEmail(app.email || '');
             setDob(app.dob || '');
-            setGender(app.gender || 'Male');
+            const normalizedGen = (app.gender || '').toLowerCase();
+            setGender(normalizedGen === 'female' ? 'Female' : 'Male');
             setAvatar(app.avatar || '');
             setAddress(app.address || '');
             setCity(app.city || 'Mumbai');
@@ -1141,10 +1142,23 @@ export default function TrainerApplicationScreen() {
                     </View>
                     <View className="flex-1">
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Gender</Text>
-                      <TextInput 
-                        value={gender} onChangeText={setGender} placeholder="Male"
-                        className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold"
-                      />
+                      <View className="flex-row border border-zinc-150 rounded-xl overflow-hidden bg-zinc-50 h-11">
+                        {['Male', 'Female'].map((g) => {
+                          const isSelected = gender === g;
+                          return (
+                            <TouchableOpacity
+                              key={g}
+                              activeOpacity={0.8}
+                              onPress={() => setGender(g)}
+                              className={`flex-1 items-center justify-center ${isSelected ? 'bg-zinc-950' : 'bg-transparent'}`}
+                            >
+                              <Text className={`text-xs font-black uppercase ${isSelected ? 'text-white' : 'text-zinc-650'}`}>
+                                {g}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
                     </View>
                   </View>
                   <View>

@@ -102,6 +102,11 @@ export interface Booking {
   gracePeriodStartedAt?: number;
   otpExpiresAt?: number;
   workoutStartedAt?: number;
+  participantCount?: number;
+  sessionType?: 'SINGLE' | 'COUPLE';
+  originalPackageType?: 'SINGLE' | 'COUPLE';
+  partnerName?: string;
+  partnerPhone?: string;
 }
 
 export interface Coach {
@@ -112,6 +117,7 @@ export interface Coach {
   rating: number;
   specialty: string;
   bio?: string;
+  gender?: string;
   
   // Sprint 3 additions
   yearsExperience?: number;
