@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, Alert, Platform, KeyboardAvoidingView, ScrollView, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, TextInput, Alert, Platform, KeyboardAvoidingView, ScrollView, TouchableWithoutFeedback, Keyboard, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Svg, { Circle, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
@@ -12,6 +12,8 @@ import { useWalletStore } from '../store/walletStore';
 import { useAddressStore } from '../store/addressStore';
 import { Database } from '../database/Database';
 import { supabase } from '../database/supabaseClient';
+import { OTPService } from '../services/OTPService';
+import Constants from 'expo-constants';
 
 export default function GetStartedScreen() {
   const insets = useSafeAreaInsets();
@@ -27,6 +29,27 @@ export default function GetStartedScreen() {
   const [useOtp, setUseOtp] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
+  const [reqId, setReqId] = useState('');
+  const [resendCountdown, setResendCountdown] = useState(0);
+  const [resendCount, setResendCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Initialize the MSG91 OTP widget SDK on mount
+  useEffect(() => {
+    const diag = OTPService.getDiagnostics();
+    console.log('[OTP Service] Safe Diagnostics on Mount:', diag);
+    const widgetId = process.env.EXPO_PUBLIC_MSG91_WIDGET_ID || '';
+    const tokenAuth = process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH || '';
+    OTPService.initialize(widgetId, tokenAuth);
+  }, []);
+
+  // Track retry countdown
+  useEffect(() => {
+    if (resendCountdown > 0) {
+      const timer = setTimeout(() => setResendCountdown(resendCountdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCountdown]);
 
   const handleMobileSubmit = async () => {
     console.log('[DEBUG] Mobile Submit Button pressed. Entering handleMobileSubmit.');
@@ -46,72 +69,206 @@ export default function GetStartedScreen() {
       return;
     }
 
+    setIsLoading(true);
+
     try {
-      let userObj;
-      console.log('[DEBUG] Mobile Submit validation passed. Starting login request. useOtp:', useOtp);
       if (useOtp) {
-        if (otpCode !== '1234') {
-          console.log('[DEBUG] Mobile Submit Error: Invalid OTP code provided');
-          Alert.alert('Invalid OTP', 'The OTP code is incorrect. Hint: Use 1234.');
-          return;
+        // Real MSG91 OTP verification
+        console.log('[DEBUG] Initiating client verifyOTP check...');
+        const verifyRes = await OTPService.verifyOTP(phone, otpCode, reqId);
+        
+        if (!verifyRes.success || !verifyRes.token) {
+          throw new Error(verifyRes.error || 'The OTP is incorrect. Please try again.');
         }
-        // Simulated OTP Verification against Database user
-        const matched = Database.schema.users.find(u => u.phone === phone);
-        if (!matched) {
-          console.log('[DEBUG] Mobile Submit Error: User not found for phone:', phone);
-          Alert.alert('User Not Found', 'No customer or trainer account matches this phone number. Please register first.');
-          return;
+
+        // Backend secure token verification
+        console.log('[DEBUG] Token verified by MSG91 client. Requesting backend database verification...');
+        
+        // Optional local Edge Function override for local simulator testing
+        const localUrl = process.env.EXPO_PUBLIC_SUPABASE_FUNCTIONS_LOCAL_URL;
+        let result: any;
+
+        if (localUrl && __DEV__) {
+          console.log('[DEBUG] Testing locally served Edge Function:', localUrl);
+          const res = await fetch(localUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accessToken: verifyRes.token })
+          });
+          result = await res.json();
+          if (!res.ok) {
+            throw new Error(result.error || 'Backend verification failed');
+          }
+        } else {
+          console.log('[DEBUG] Invoking Supabase production Edge Function: verify-otp');
+          
+          // Log client-side details before invocation
+          const tokenStr = verifyRes.token || '';
+          const tokenParts = tokenStr.split('.');
+          console.log(`[DEBUG] Forwarding token to verify-otp. Length: ${tokenStr.length}, segments: ${tokenParts.length}`);
+
+          const { data, error } = await supabase.functions.invoke('verify-otp', {
+            body: { accessToken: verifyRes.token }
+          });
+          if (error) {
+            let serverErrorMsg = '';
+            try {
+              if (error && (error as any).context) {
+                const ctxResponse = (error as any).context;
+                const cloned = ctxResponse.clone();
+                const body = await cloned.json();
+                serverErrorMsg = body.message || body.error || '';
+                
+                // Formulate descriptive diagnostic error for alert visibility
+                if (body.diagnostics) {
+                  const diag = body.diagnostics;
+                  const resKeys = diag.result ? Object.keys(diag.result).join(', ') : 'null';
+                  const jwtKeys = diag.jwtPayload ? Object.keys(diag.jwtPayload).join(', ') : 'null';
+                  
+                  // Safe type representation of potential fields
+                  const msgType = diag.result?.message || 'undefined';
+                  const statusType = diag.result?.status || 'undefined';
+                  const typeType = diag.result?.type || 'undefined';
+                  
+                  serverErrorMsg += `\n\n[Diagnostics - Result keys: [${resKeys}], JWT claims: [${jwtKeys}], msg: ${msgType}, status: ${statusType}, type: ${typeType}]`;
+                }
+              }
+            } catch (e) {
+              console.error('[DEBUG] Failed to parse backend error body:', e);
+            }
+            throw new Error(serverErrorMsg || error.message || 'Backend verification failed');
+          }
+          result = data;
         }
-        userObj = {
-          id: matched.id,
-          name: matched.name,
-          email: matched.email,
-          avatar: matched.avatar,
-          location: 'Mumbai, India',
-          role: matched.role
-        };
+
+        if (result && result.success && result.user) {
+          const userObj = result.user;
+          await finalizeUserSession(userObj);
+        } else {
+          throw new Error(result?.error || 'Invalid backend validation response');
+        }
       } else {
-        userObj = isRegisterMode
+        // Standard password login
+        const userObj = isRegisterMode
           ? await Database.register(name, phone, password)
           : await Database.login(phone, password);
+        await finalizeUserSession(userObj);
       }
-
-      console.log(`[DEBUG] Login request completed successfully. User ID: ${userObj.id}, Name: ${userObj.name}, Role: ${userObj.role}`);
-
-      // Finalize Role validation based on authenticated account capability
-      setRole(userObj.role || 'customer');
-
-      Database.setCurrentUserId(userObj.id);
-      setLoggedIn(true);
-      setCompletedOnboarding(true);
-      updateProfile(userObj);
-      console.log('[DEBUG] Session created in stores.');
-
-      // Load actual user profile and other stores from DB
-      console.log('[DEBUG] Starting database store sync for logged in user...');
-      await useUserProfileStore.getState().syncFromDB();
-      await useMembershipStore.getState().syncFromDB();
-      await useBookingStore.getState().syncFromDB();
-      await useWalletStore.getState().syncFromDB();
-      useAddressStore.getState().syncFromDB();
-      console.log('[DEBUG] Database store sync completed successfully.');
-      
-      Alert.alert('Welcome', `Successfully authenticated as ${userObj.name}!`);
-      console.log('[DEBUG] Navigation starting to Home tab /(tabs)...');
-      router.replace('/(tabs)');
     } catch (err: any) {
       console.error('[DEBUG ERROR] Mobile submit authentication failure:', err);
-      Alert.alert('Authentication Error', err.message || 'An error occurred during authentication');
+      
+      let friendlyMsg = 'Something went wrong. Please try again.';
+      if (err.message) {
+        const lowerMsg = err.message.toLowerCase();
+        if (lowerMsg.includes('authenticationfailure') || lowerMsg.includes('authkey') || lowerMsg.includes('credentials')) {
+          friendlyMsg = 'Authentication configuration error. Please try again later or contact support.';
+        } else if (lowerMsg.includes('incorrect') || lowerMsg.includes('invalid otp')) {
+          friendlyMsg = 'The OTP is incorrect. Please try again.';
+        } else if (lowerMsg.includes('expired')) {
+          friendlyMsg = 'The OTP has expired. Please request a new OTP.';
+        } else if (lowerMsg.includes('limit reached') || lowerMsg.includes('too many attempts')) {
+          friendlyMsg = 'Too many attempts. Please try again later.';
+        } else if (lowerMsg.includes('network') || lowerMsg.includes('timeout')) {
+          friendlyMsg = 'Network timeout. Please check your connection and try again.';
+        } else {
+          friendlyMsg = err.message;
+        }
+      }
+      Alert.alert('Authentication Error', friendlyMsg);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSendOtp = () => {
+  const finalizeUserSession = async (userObj: any) => {
+    // Sync store states with user details
+    setRole(userObj.role || 'customer');
+    Database.setCurrentUserId(userObj.id);
+    setLoggedIn(true);
+    setCompletedOnboarding(true);
+    updateProfile(userObj);
+    
+    console.log('[DEBUG] Session established. Syncing database caches...');
+    await useUserProfileStore.getState().syncFromDB();
+    await useMembershipStore.getState().syncFromDB();
+    await useBookingStore.getState().syncFromDB();
+    await useWalletStore.getState().syncFromDB();
+    useAddressStore.getState().syncFromDB();
+    console.log('[DEBUG] Store synchronization completed successfully.');
+
+    Alert.alert('Welcome', `Successfully authenticated as ${userObj.name}!`);
+    router.replace('/(tabs)');
+  };
+
+  const handleSendOtp = async () => {
+    if (otpSent) {
+      await handleResendOtp();
+      return;
+    }
+
     if (!phone) {
       Alert.alert('Phone Required', 'Please enter your mobile number to receive an OTP.');
       return;
     }
-    setOtpSent(true);
-    Alert.alert('OTP Sent', `A simulated verification code has been sent to ${phone}. Enter "1234" to login.`);
+
+    setIsLoading(true);
+    try {
+      console.log('[DEBUG] Calling OTPService.sendOTP...');
+      const res = await OTPService.sendOTP(phone);
+      if (res.success && res.reqId) {
+        setReqId(res.reqId);
+        setOtpSent(true);
+        setResendCountdown(10); // Start 10s resend timer
+        Alert.alert('OTP Sent', 'OTP has been sent to your mobile number.');
+      } else {
+        let friendlyMsg = 'We couldn\'t send the OTP. Please try again.';
+        if (res.error && (res.error.includes('AuthenticationFailure') || res.error.includes('authkey') || res.error.includes('credentials'))) {
+          friendlyMsg = 'Authentication configuration error. Please contact support.';
+        } else if (res.error) {
+          friendlyMsg = res.error;
+        }
+        Alert.alert('Send Failure', friendlyMsg);
+      }
+    } catch (e: any) {
+      console.error('[DEBUG ERROR] Send OTP failed:', e);
+      Alert.alert('Error', e.message || 'We couldn\'t send the OTP. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCountdown > 0) {
+      return;
+    }
+    if (resendCount >= 2) {
+      Alert.alert('Limit Reached', 'Too many attempts. Please try again later.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      console.log('[DEBUG] Calling OTPService.retryOTP...');
+      const res = await OTPService.retryOTP(phone, reqId);
+      if (res.success) {
+        setResendCountdown(10);
+        setResendCount(prev => prev + 1);
+        Alert.alert('OTP Resent', 'OTP has been resent successfully.');
+      } else {
+        let friendlyMsg = 'OTP resend failed. Please try again.';
+        if (res.error && (res.error.includes('AuthenticationFailure') || res.error.includes('authkey') || res.error.includes('credentials'))) {
+          friendlyMsg = 'Authentication configuration error. Please contact support.';
+        } else if (res.error) {
+          friendlyMsg = res.error;
+        }
+        Alert.alert('Resend Failure', friendlyMsg);
+      }
+    } catch (e: any) {
+      console.error('[DEBUG ERROR] Resend OTP failed:', e);
+      Alert.alert('Error', e.message || 'OTP resend failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const proceedOAuth = async (provider: 'google' | 'apple', providerId: string, name: string, email: string, role?: 'customer' | 'trainer' | 'admin') => {
@@ -319,26 +476,31 @@ export default function GetStartedScreen() {
                     keyboardType="phone-pad"
                     value={phone}
                     onChangeText={setPhone}
+                    editable={!isLoading}
                     className="flex-1 bg-zinc-50 border border-zinc-150 p-4 rounded-xl text-zinc-900 text-sm font-semibold"
                   />
                   {useOtp && (
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      onPress={handleSendOtp}
-                      className="bg-[#101828] px-4 rounded-xl justify-center items-center"
+                      onPress={isLoading ? () => {} : handleSendOtp}
+                      disabled={isLoading || resendCountdown > 0}
+                      className={`px-4 rounded-xl justify-center items-center ${isLoading || resendCountdown > 0 ? 'bg-zinc-400' : 'bg-[#101828]'}`}
                     >
-                      <Text className="text-white text-xs font-bold uppercase tracking-wider">{otpSent ? 'Resend' : 'Send OTP'}</Text>
+                      <Text className="text-white text-xs font-bold uppercase tracking-wider">
+                        {otpSent ? (resendCountdown > 0 ? `Resend (${resendCountdown}s)` : 'Resend') : 'Send OTP'}
+                      </Text>
                     </TouchableOpacity>
                   )}
                 </View>
 
                 {useOtp ? (
                   <TextInput
-                    placeholder="Enter 4-Digit OTP Code (Hint: 1234)"
+                    placeholder="Enter 6-Digit OTP Code"
                     placeholderTextColor="#9CA3AF"
                     keyboardType="number-pad"
                     value={otpCode}
                     onChangeText={setOtpCode}
+                    editable={!isLoading}
                     className="w-full bg-zinc-50 border border-zinc-150 p-4 rounded-xl text-zinc-900 text-sm font-semibold"
                   />
                 ) : (
@@ -348,14 +510,21 @@ export default function GetStartedScreen() {
                     secureTextEntry
                     value={password}
                     onChangeText={setPassword}
+                    editable={!isLoading}
                     className="w-full bg-zinc-50 border border-zinc-150 p-4 rounded-xl text-zinc-900 text-sm font-semibold"
                   />
                 )}
 
+                {isLoading && (
+                  <View className="items-center justify-center py-2">
+                    <ActivityIndicator size="small" color="#4F46E5" />
+                  </View>
+                )}
+
                 <View className="mt-2 gap-3.5">
                   <PrimaryButton
-                    title={isRegisterMode ? 'Create Account' : 'Log In'}
-                    onPress={handleMobileSubmit}
+                    title={isLoading ? 'Processing...' : (isRegisterMode ? 'Create Account' : 'Log In')}
+                    onPress={isLoading ? () => {} : handleMobileSubmit}
                   />
                   <TouchableOpacity
                     activeOpacity={0.7}
