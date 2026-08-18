@@ -11,9 +11,6 @@
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.varshaniviral.Virla",
       "buildNumber": "35",
-      "entitlements": {
-        "aps-environment": "production"
-      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "Allow Virla to use your location to find nearby trainers and customize your experience.",
