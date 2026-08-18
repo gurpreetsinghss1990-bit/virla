@@ -75,11 +75,16 @@ export default function SplashScreen() {
         useNativeDriver: true,
       }).start(() => {
         // Route selection based on persisted authentication state
-        const { isLoggedIn, hasCompletedOnboarding } = useUserStore.getState();
+        const { isLoggedIn, hasCompletedOnboarding, user } = useUserStore.getState();
         
         try {
           if (isLoggedIn) {
-            router.replace('/(tabs)');
+            if (user && user.registrationStatus !== 'complete') {
+              console.log('[Splash] Incomplete registration detected on startup. Redirecting to setup wizard.');
+              router.replace('/get-started');
+            } else {
+              router.replace('/(tabs)');
+            }
           } else if (hasCompletedOnboarding) {
             router.replace('/get-started');
           } else {

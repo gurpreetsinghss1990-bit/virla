@@ -39,14 +39,18 @@ export default function AddressManagementScreen() {
   // Generate session token on form open
   useEffect(() => {
     if (showForm) {
-      setSessionToken(Math.random().toString(36).substring(2, 15) + Date.now().toString());
+      setTimeout(() => {
+        setSessionToken(Math.random().toString(36).substring(2, 15) + Date.now().toString());
+      }, 0);
     }
   }, [showForm]);
 
   // Debounced search query autocomplete
   useEffect(() => {
     if (searchQuery.trim().length < 3) {
-      setSuggestions([]);
+      setTimeout(() => {
+        setSuggestions([]);
+      }, 0);
       return;
     }
     let active = true;

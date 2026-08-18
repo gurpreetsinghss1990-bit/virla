@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Alert, Image, Animated, Modal, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
@@ -768,7 +768,7 @@ export default function BookingScreen() {
     }
   };
 
-  const handleSelectSlot = (slotTime: string, eligibleTrainerIds: string[]) => {
+  const handleSelectSlot = useCallback((slotTime: string, eligibleTrainerIds: string[]) => {
     setSelectedTime(slotTime);
     const tempBooking = {
       id: 'temp-id',
@@ -792,7 +792,7 @@ export default function BookingScreen() {
       const coach = coaches.find(c => eligibleTrainerIds.includes(c.id));
       if (coach) setMatchedCoach(coach);
     }
-  };
+  }, [selectedExperience, selectedDate, addresses, selectedAddressId, coaches]);
 
   const handleReleaseReservation = async () => {
     if (reservationId) {

@@ -242,7 +242,7 @@ export default function TrainerWorkoutsScreen() {
                 {a.rejectionReason && (
                   <View className="mt-3 pt-3 border-t border-zinc-100/80 bg-white/50 p-3 rounded-xl">
                     <Text className="text-zinc-400 text-[8px] font-black uppercase">Feedback Reason</Text>
-                    <Text className="text-zinc-600 text-xs font-bold mt-1 leading-normal">"{a.rejectionReason}"</Text>
+                    <Text className="text-zinc-600 text-xs font-bold mt-1 leading-normal">&quot;{a.rejectionReason}&quot;</Text>
                   </View>
                 )}
               </View>

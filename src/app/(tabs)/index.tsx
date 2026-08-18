@@ -1840,7 +1840,7 @@ export default function HomeScreen() {
                     }}
                   >
                     <Text className="text-3xl mt-1">👌</Text>
-                    <Text className="text-zinc-900 text-sm font-black mt-2">You're all clear today</Text>
+                    <Text className="text-zinc-900 text-sm font-black mt-2">You&apos;re all clear today</Text>
                     <Text className="text-zinc-400 text-[10px] font-semibold text-center mt-0.5">
                       No upcoming bookings scheduled. Manage availability to get bookings.
                     </Text>
@@ -1852,7 +1852,7 @@ export default function HomeScreen() {
               <View className="mb-6">
                 <View className="flex-row justify-between items-center mb-2.5 pl-1 pr-1">
                   <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">
-                    Today's Sessions
+                    Today&apos;s Sessions
                   </Text>
                   {todaySessionsCount > 0 ? (
                     <Text className="text-zinc-500 text-[9px] font-black uppercase">
@@ -1924,7 +1924,7 @@ export default function HomeScreen() {
               {/* Priority 5: Tomorrow */}
               <View className="mb-6">
                 <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest pl-1 mb-2.5">
-                  Tomorrow's Schedule
+                  Tomorrow&apos;s Schedule
                 </Text>
                 
                 {!isTomorrowScheduleEnabled ? (

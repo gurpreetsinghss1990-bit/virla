@@ -90,7 +90,9 @@ export default function ProfileScreen() {
   };
 
   useEffect(() => {
-    checkApplicationStatus();
+    setTimeout(() => {
+      checkApplicationStatus();
+    }, 0);
   }, [profile.mobile]);
 
   const shimmerAnim = useMemo(() => new Animated.Value(0.3), []);
@@ -224,19 +226,25 @@ export default function ProfileScreen() {
   );
 
   useEffect(() => {
-    reloadDynamicLists();
+    setTimeout(() => {
+      reloadDynamicLists();
+    }, 0);
   }, [coach?.id]);
 
   useEffect(() => {
     if (showAddressForm) {
-      setLocationSessionToken(Math.random().toString(36).substring(2, 15) + Date.now().toString());
+      setTimeout(() => {
+        setLocationSessionToken(Math.random().toString(36).substring(2, 15) + Date.now().toString());
+      }, 0);
     }
   }, [showAddressForm]);
 
   // Places search autocomplete
   useEffect(() => {
     if (addressInput.trim().length < 3) {
-      setSearchSuggestions([]);
+      setTimeout(() => {
+        setSearchSuggestions([]);
+      }, 0);
       return;
     }
     let active = true;
@@ -440,7 +448,7 @@ export default function ProfileScreen() {
           contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 140 }}
         >
           {/* Top Account Role Selector */}
-          {user.role === 'admin' && (
+          {user.role === 'trainer' && (
             <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1.5 rounded-2xl mb-6">
               <TouchableOpacity
                 activeOpacity={0.8}
@@ -596,6 +604,93 @@ export default function ProfileScreen() {
                   )}
                 </LuxuryCard>
               </View>
+
+              {/* Become a Trainer Option */}
+              {user.role !== 'trainer' && !hasApplied && (
+                <View className="mb-6">
+                  <LuxuryCard 
+                    className="p-5 bg-rose-50 border border-rose-200/50"
+                    onPress={() => router.push('/trainer-application')}
+                  >
+                    <View className="flex-row items-center justify-between w-full">
+                      <View className="flex-1 pr-4 gap-1">
+                        <Text className="text-[#E11D48] text-[9px] font-black uppercase tracking-widest">Join our team</Text>
+                        <Text className="text-zinc-950 text-sm font-black tracking-tight">Become a VIRLA Trainer</Text>
+                        <Text className="text-[#6B7280] text-[10px] font-medium leading-relaxed mt-0.5">
+                          Earn up to ₹1,200 per session with flexible hours and dedicated client matching.
+                        </Text>
+                      </View>
+                      <View className="w-10 h-10 rounded-full bg-[#E11D48] items-center justify-center shadow-md">
+                        <Feather name="chevron-right" size={18} color="white" />
+                      </View>
+                    </View>
+                  </LuxuryCard>
+                </View>
+              )}
+
+              {user.role !== 'trainer' && hasApplied && userApplication && (
+                <View className="mb-6">
+                  <LuxuryCard 
+                    className={`p-5 border ${
+                      userApplication.status === 'approved' ? 'bg-emerald-50 border-emerald-200' :
+                      userApplication.status === 'rejected' ? 'bg-rose-50 border-rose-200' :
+                      userApplication.status === 'info_requested' ? 'bg-amber-50 border-amber-200' :
+                      'bg-[#F7F8FC] border-zinc-200'
+                    }`}
+                    onPress={() => router.push('/trainer-application')}
+                  >
+                    <View className="flex-row items-center justify-between w-full">
+                      <View className="flex-1 pr-4 gap-1">
+                        <Text className="text-zinc-500 text-[9px] font-black uppercase tracking-widest">Trainer Application</Text>
+                        
+                        <View className="flex-row items-center gap-1.5 mt-0.5">
+                          {userApplication.status === 'pending' && (
+                            <View className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full flex-row items-center gap-1">
+                              <View className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              <Text className="text-emerald-800 text-[8px] font-black uppercase tracking-wider">Under Review</Text>
+                            </View>
+                          )}
+                          {userApplication.status === 'info_requested' && (
+                            <View className="px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-full flex-row items-center gap-1">
+                              <View className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                              <Text className="text-amber-800 text-[8px] font-black uppercase tracking-wider">Info Required</Text>
+                            </View>
+                          )}
+                          {userApplication.status === 'rejected' && (
+                            <View className="px-2.5 py-1 bg-rose-50 border border-rose-200 rounded-full flex-row items-center gap-1">
+                              <View className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                              <Text className="text-rose-800 text-[8px] font-black uppercase tracking-wider">Rejected</Text>
+                            </View>
+                          )}
+                          {userApplication.status === 'approved' && (
+                            <View className="px-2.5 py-1 bg-emerald-100 border border-emerald-300 rounded-full flex-row items-center gap-1">
+                              <View className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                              <Text className="text-emerald-900 text-[8px] font-black uppercase tracking-wider">Approved</Text>
+                            </View>
+                          )}
+                        </View>
+
+                        {userApplication.status === 'info_requested' && userApplication.adminNotes && (
+                          <View className="bg-white border border-amber-200 p-2 rounded-lg mt-1 w-full">
+                            <Text className="text-amber-800 text-[8px] font-black uppercase tracking-wider mb-0.5">Admin Request:</Text>
+                            <Text className="text-amber-950 text-[10px] font-semibold leading-relaxed">{userApplication.adminNotes}</Text>
+                          </View>
+                        )}
+
+                        <Text className="text-[#6B7280] text-[10px] font-medium leading-relaxed mt-1">
+                          {userApplication.status === 'info_requested' ? 'Tap to edit requested fields and resubmit.' :
+                           userApplication.status === 'rejected' ? 'Tap to view feedback and modify application.' :
+                           userApplication.status === 'approved' ? 'Congratulations! Tap to open trainer tools.' :
+                           'Our team is reviewing your uploaded qualifications. Average response is 24-48 hours.'}
+                        </Text>
+                      </View>
+                      <View className="w-10 h-10 rounded-full bg-zinc-900 items-center justify-center shadow-md">
+                        <Feather name="chevron-right" size={18} color="white" />
+                      </View>
+                    </View>
+                  </LuxuryCard>
+                </View>
+              )}
             </>
           )}
 

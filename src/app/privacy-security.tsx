@@ -12,25 +12,10 @@ export default function PrivacySecurityScreen() {
   const { privacy, updatePrivacySettings } = useUserProfileStore();
   const { setRole } = useUserStore();
 
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-
   const [devices, setDevices] = useState([
     { id: 'd-1', name: 'iPhone 15 Pro', model: 'iOS 17.4 • Mumbai, India', current: true },
     { id: 'd-2', name: 'MacBook Pro 16', model: 'macOS Sonoma • Pune, India', current: false }
   ]);
-
-  const handleChangePassword = () => {
-    if (!oldPassword || !newPassword) {
-      Alert.alert('Incomplete Fields', 'Please fill in both old and new passwords.');
-      return;
-    }
-    Alert.alert('Password Changed', 'Your security password has been successfully updated.');
-    setOldPassword('');
-    setNewPassword('');
-    setShowPasswordModal(false);
-  };
 
   const handleDisconnectDevice = (id: string, name: string) => {
     Alert.alert(
@@ -148,43 +133,7 @@ export default function PrivacySecurityScreen() {
                 onValueChange={(val) => updatePrivacySettings({ pinLock: val })}
               />
             </View>
-
-            <TouchableOpacity
-              onPress={() => setShowPasswordModal(true)}
-              className="mt-2 bg-[#F7F8FC] border border-[#E5E7EB] py-3 rounded-2xl items-center"
-            >
-              <Text className="text-zinc-950 text-[10px] font-black uppercase">Change Account Password</Text>
-            </TouchableOpacity>
           </View>
-
-          {/* Password Modal Panel */}
-          {showPasswordModal && (
-            <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-lg gap-4">
-              <Text className="text-zinc-950 text-xs font-black uppercase">Update Password</Text>
-              <TextInput
-                value={oldPassword}
-                onChangeText={setOldPassword}
-                placeholder="Enter current password"
-                secureTextEntry
-                className="border border-[#E5E7EB] bg-[#F7F8FC] p-3 rounded-xl text-xs font-semibold text-zinc-900"
-              />
-              <TextInput
-                value={newPassword}
-                onChangeText={setNewPassword}
-                placeholder="Enter new password"
-                secureTextEntry
-                className="border border-[#E5E7EB] bg-[#F7F8FC] p-3 rounded-xl text-xs font-semibold text-zinc-900"
-              />
-              <View className="flex-row gap-3">
-                <TouchableOpacity onPress={() => setShowPasswordModal(false)} className="flex-1 bg-zinc-50 border border-zinc-150 py-3 rounded-xl items-center">
-                  <Text className="text-zinc-800 text-[9px] font-black uppercase">Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handleChangePassword} className="flex-1 bg-zinc-900 py-3 rounded-xl items-center">
-                  <Text className="text-white text-[9px] font-black uppercase">Confirm</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
 
           {/* 2. Device Management */}
           <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">

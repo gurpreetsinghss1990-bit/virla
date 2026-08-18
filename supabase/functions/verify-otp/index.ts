@@ -29,10 +29,22 @@ function normalizePhoneNumber(phone: string): string {
 }
 
 function mapPostgresToDBUser(row: any) {
+  let regStatus = 'name_pending';
+  const rawStatus = row.registration_status || '';
+  if (rawStatus === 'COMPLETE' || rawStatus === 'complete') {
+    regStatus = 'complete';
+  } else if (
+    rawStatus === 'PROFILE_DETAILS_PENDING' || 
+    rawStatus === 'PROFILE_NAME_PENDING' || 
+    rawStatus === 'incomplete'
+  ) {
+    regStatus = 'incomplete';
+  }
+
   return {
     id: row.id,
-    name: row.name,
-    phone: row.phone,
+    name: row.name || '',
+    phone: row.phone || '',
     email: row.email || '',
     passwordHash: row.password_hash || '',
     avatar: row.avatar || '',
@@ -41,6 +53,7 @@ function mapPostgresToDBUser(row: any) {
     createdDate: row.created_date || '',
     lastLogin: row.last_login || '',
     deviceInfo: row.device_info || '',
+    registrationStatus: regStatus,
     notificationPrefs: typeof row.notification_prefs === 'string'
       ? row.notification_prefs
       : JSON.stringify(row.notification_prefs || {})
@@ -50,13 +63,12 @@ function mapPostgresToDBUser(row: any) {
 /**
  * Standardized error response helper to return structured JSON errors
  */
-function errorResponse(stage: string, message: string, status = 400, extra = {}) {
-  console.error(`[Edge Function] Error at ${stage}: ${message}`);
+function errorResponse(code: string, message: string, status = 400) {
+  console.error(`[Edge Function] Error: ${code} - ${message}`);
   return new Response(JSON.stringify({
     success: false,
-    stage,
-    message,
-    ...extra
+    code,
+    message
   }), {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -139,9 +151,14 @@ Deno.serve(async (req) => {
 
   try {
     let accessToken: string;
+    let name: string;
+    let register: boolean;
+
     try {
       const body = await req.json();
       accessToken = body.accessToken;
+      name = body.name;
+      register = !!body.register;
     } catch (e) {
       return errorResponse('STAGE_A_PARSE', 'Malformed request payload', 400);
     }
@@ -228,13 +245,25 @@ Deno.serve(async (req) => {
     const normalizedPhone = normalizePhoneNumber(mobile)
     console.log('[Edge Function] Stage F: Verified phone number extracted and normalized (suffix: ...' + normalizedPhone.slice(-4) + ')');
 
-    // Create Supabase client using built-in env variables
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    // Create Supabase admin client using server-side service role key to bypass RLS policies safely
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-    // Find existing user
-    const { data: users, error: findError } = await supabase
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('[Edge Function] Missing Supabase environment keys.');
+      return errorResponse('STAGE_G_CONFIG', 'Server configuration error. Database keys missing.', 500);
+    }
+    console.log('[Edge Function] Stage G: Initializing privileged Supabase admin client');
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
+    console.log('[Edge Function] Stage G: Querying public.users table for phone match...');
+    const { data: users, error: findError } = await supabaseAdmin
       .from('users')
       .select('*')
       .eq('phone', normalizedPhone)
@@ -242,101 +271,244 @@ Deno.serve(async (req) => {
     if (findError) {
       return errorResponse('STAGE_G', 'Database search failed: ' + findError.message, 500);
     }
-    console.log('[Edge Function] Stage G: Supabase users query succeeded');
+    console.log('[Edge Function] Stage G: Supabase users query succeeded, user count: ' + (users ? users.length : 0));
 
     let user = users && users.length > 0 ? users[0] : null
 
-    if (user) {
-      console.log('[Edge Function] Stage H: Existing user found (suffix: ...' + user.id.slice(-4) + ')');
-      // Log the user in: update last_login
-      const lastLogin = new Date().toISOString()
-      const { error: updateError } = await supabase
+    // If an abandoned registration exists (name_pending), delete it to start fresh
+    if (user && user.registration_status === 'name_pending') {
+      console.log('[Edge Function] Found abandoned name_pending user. Deleting to start fresh.');
+      const { error: deleteError } = await supabaseAdmin
         .from('users')
-        .update({ last_login: lastLogin })
-        .eq('id', user.id)
+        .delete()
+        .eq('id', user.id);
 
-      if (updateError) {
-        console.error('[Edge Function] Stage H Error: Failed to update last_login: ' + updateError.message);
+      if (deleteError) {
+        console.error('[Edge Function] Failed to delete abandoned user:', deleteError.message);
       } else {
-        user.last_login = lastLogin
-        console.log('[Edge Function] Stage H: Existing user last_login updated');
+        user = null;
       }
+    }
 
-      console.log('[Edge Function] Stage J: Returning final success response for existing user');
-      return new Response(JSON.stringify({ success: true, user: mapPostgresToDBUser(user), isNewUser: false }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    } else {
-      console.log('[Edge Function] Stage H: User not found. Starting new user registration...');
-      // Create new user and profile
-      const userId = 'u-' + Math.random().toString(36).substring(2, 11)
-      const profileId = 'prof-' + Math.random().toString(36).substring(2, 11)
+    if (register) {
+      // Legacy register parameter support: if invoked, perform updates
+      if (!name || !name.trim()) {
+        return errorResponse('REGISTRATION_NAME', 'Name is required for registration', 400);
+      }
+      
+      const cleanName = name.trim();
+      const lastLogin = new Date().toISOString();
 
-      const newUser = {
-        id: userId,
-        name: 'User ' + normalizedPhone.slice(-4),
-        phone: normalizedPhone,
-        email: '',
-        password_hash: '',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-        role: 'customer',
-        status: 'active',
-        created_date: new Date().toLocaleDateString(),
-        last_login: new Date().toISOString(),
-        device_info: 'Mobile OTP',
-        notification_prefs: {
-          bookingUpdates: true,
-          trainerMessages: true,
-          offers: false,
-          membershipAlerts: true,
-          workoutReminders: true,
-          progressReports: true,
-          promotions: false,
-          emailNotifications: true,
-          smsNotifications: true,
-          pushNotifications: true
+      if (user) {
+        console.log('[Edge Function] Legacy Registration: Updating name.');
+        const { data: updatedUsers, error: updateError } = await supabaseAdmin
+          .from('users')
+          .update({ name: cleanName, registration_status: 'PROFILE_DETAILS_PENDING', last_login: lastLogin })
+          .eq('id', user.id)
+          .select('*')
+
+        if (updateError) {
+          return errorResponse('REGISTRATION_UPDATE', 'Failed to update user: ' + updateError.message, 500);
         }
+        const updatedUser = updatedUsers && updatedUsers.length > 0 ? updatedUsers[0] : user;
+        const mapped = mapPostgresToDBUser(updatedUser);
+        return new Response(JSON.stringify({
+          success: true,
+          isNewUser: false,
+          user: mapped,
+          session: {
+            accessToken: "mock-access-token-" + mapped.id,
+            refreshToken: "mock-refresh-token-" + mapped.id
+          }
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } else {
+        console.log('[Edge Function] Legacy Registration: Creating new user record.');
+        const userId = 'u-' + Math.random().toString(36).substring(2, 11);
+        const profileId = 'prof-' + Math.random().toString(36).substring(2, 11);
+
+        const newUser = {
+          id: userId,
+          name: cleanName,
+          phone: normalizedPhone,
+          email: '',
+          password_hash: '',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+          role: 'customer',
+          status: 'active',
+          created_date: new Date().toLocaleDateString(),
+          last_login: lastLogin,
+          device_info: 'Mobile OTP',
+          registration_status: 'PROFILE_DETAILS_PENDING',
+          notification_prefs: {
+            bookingUpdates: true,
+            trainerMessages: true,
+            offers: false,
+            membershipAlerts: true,
+            workoutReminders: true,
+            progressReports: true,
+            promotions: false,
+            emailNotifications: true,
+            smsNotifications: true,
+            pushNotifications: true
+          }
+        };
+
+        const newProfile = {
+          id: profileId,
+          user_id: userId,
+          age: 0,
+          gender: '',
+          height: '',
+          weight: '',
+          fitness_goal: '',
+          preferred_workout: '',
+          emergency_contact: {},
+          medical_notes: '',
+          membership_status: 'Standard',
+          credits_balance: 0,
+          trainer_preference: '',
+          dob: '',
+          fitness_level: '',
+          preferred_language: 'English',
+          city: '',
+          member_since: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          selected_goals: []
+        };
+
+        const { error: signupError } = await supabaseAdmin.rpc('create_user_with_profile', {
+          user_row: newUser,
+          profile_row: newProfile
+        });
+
+        if (signupError) {
+          return errorResponse('STAGE_I', 'Database profile creation failed: ' + signupError.message, 500);
+        }
+
+        const mapped = mapPostgresToDBUser(newUser);
+        return new Response(JSON.stringify({
+          success: true,
+          isNewUser: false,
+          user: mapped,
+          session: {
+            accessToken: "mock-access-token-" + mapped.id,
+            refreshToken: "mock-refresh-token-" + mapped.id
+          }
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
+    } else {
+      // Standard OTP verification check: always returns/establishes user record immediately
+      if (user) {
+        console.log('[Edge Function] Verification Login: Existing user found.');
+        const lastLogin = new Date().toISOString();
+        const { error: updateError } = await supabaseAdmin
+          .from('users')
+          .update({ last_login: lastLogin })
+          .eq('id', user.id);
 
-      const newProfile = {
-        id: profileId,
-        user_id: userId,
-        age: 0,
-        gender: '',
-        height: '',
-        weight: '',
-        fitness_goal: '',
-        preferred_workout: '',
-        emergency_contact: {},
-        medical_notes: '',
-        membership_status: 'Standard',
-        credits_balance: 0,
-        trainer_preference: '',
-        dob: '',
-        fitness_level: '',
-        preferred_language: 'English',
-        city: '',
-        member_since: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        selected_goals: []
+        if (updateError) {
+          console.error('[Edge Function] Failed to update last_login: ' + updateError.message);
+        } else {
+          user.last_login = lastLogin;
+        }
+
+        const mapped = mapPostgresToDBUser(user);
+        const isNew = mapped.registrationStatus !== 'complete';
+        
+        return new Response(JSON.stringify({
+          success: true,
+          isNewUser: isNew,
+          user: mapped,
+          session: {
+            accessToken: "mock-access-token-" + mapped.id,
+            refreshToken: "mock-refresh-token-" + mapped.id
+          }
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } else {
+        console.log('[Edge Function] Verification Login: New mobile number. Creating initial name_pending user record.');
+        const userId = 'u-' + Math.random().toString(36).substring(2, 11);
+        const profileId = 'prof-' + Math.random().toString(36).substring(2, 11);
+
+        const newUser = {
+          id: userId,
+          name: '',
+          phone: normalizedPhone,
+          email: '',
+          password_hash: '',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+          role: 'customer',
+          status: 'active',
+          created_date: new Date().toLocaleDateString(),
+          last_login: new Date().toISOString(),
+          device_info: 'Mobile OTP',
+          registration_status: 'name_pending',
+          notification_prefs: {
+            bookingUpdates: true,
+            trainerMessages: true,
+            offers: false,
+            membershipAlerts: true,
+            workoutReminders: true,
+            progressReports: true,
+            promotions: false,
+            emailNotifications: true,
+            smsNotifications: true,
+            pushNotifications: true
+          }
+        };
+
+        const newProfile = {
+          id: profileId,
+          user_id: userId,
+          age: 0,
+          gender: '',
+          height: '',
+          weight: '',
+          fitness_goal: '',
+          preferred_workout: '',
+          emergency_contact: {},
+          medical_notes: '',
+          membership_status: 'Standard',
+          credits_balance: 0,
+          trainer_preference: '',
+          dob: '',
+          fitness_level: '',
+          preferred_language: 'English',
+          city: '',
+          member_since: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          selected_goals: []
+        };
+
+        const { error: signupError } = await supabaseAdmin.rpc('create_user_with_profile', {
+          user_row: newUser,
+          profile_row: newProfile
+        });
+
+        if (signupError) {
+          return errorResponse('STAGE_I', 'Database profile creation failed: ' + signupError.message, 500);
+        }
+
+        const mapped = mapPostgresToDBUser(newUser);
+        return new Response(JSON.stringify({
+          success: true,
+          isNewUser: true,
+          user: mapped,
+          session: {
+            accessToken: "mock-access-token-" + mapped.id,
+            refreshToken: "mock-refresh-token-" + mapped.id
+          }
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
-
-      console.log('[Edge Function] Stage I: Calling create_user_with_profile RPC...');
-      const { error: signupError } = await supabase.rpc('create_user_with_profile', {
-        user_row: newUser,
-        profile_row: newProfile
-      })
-
-      if (signupError) {
-        return errorResponse('STAGE_I', 'Database profile creation failed: ' + signupError.message, 500);
-      }
-      console.log('[Edge Function] Stage I: RPC create_user_with_profile succeeded');
-
-      console.log('[Edge Function] Stage J: Returning final success response for new user');
-      return new Response(JSON.stringify({ success: true, user: mapPostgresToDBUser(newUser), isNewUser: true }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
     }
   } catch (err: any) {
     return errorResponse('STAGE_UNHANDLED', err.message || 'Internal server error', 500);

@@ -19,14 +19,14 @@ export default function GetStartedScreen() {
   const insets = useSafeAreaInsets();
   const { setLoggedIn, setCompletedOnboarding, setRole, updateProfile } = useUserStore();
 
-  const [showMobileForm, setShowMobileForm] = useState(false);
-  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [showMobileForm, setShowMobileForm] = useState(true);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
+  const [formattedPhone, setFormattedPhone] = useState('');
+  const [msg91AccessToken, setMsg91AccessToken] = useState('');
 
   // Trainer and OTP mode states
-  const [useOtp, setUseOtp] = useState(false);
+  const [useOtp] = useState(true);
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [reqId, setReqId] = useState('');
@@ -34,13 +34,60 @@ export default function GetStartedScreen() {
   const [resendCount, setResendCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize the MSG91 OTP widget SDK on mount
+  // New user onboarding setup states
+  const [newUserIdToRegister, setNewUserIdToRegister] = useState<string | null>(null);
+  const [tempUserObj, setTempUserObj] = useState<any | null>(null);
+  const [setupStep, setSetupStep] = useState<number>(0);
+  const [selectedGender, setSelectedGender] = useState<string>('Male');
+  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+  const [age, setAge] = useState<string>('');
+  const [height, setHeight] = useState<string>('');
+  const [weight, setWeight] = useState<string>('');
+
+  const handlePhoneChange = (val: string) => {
+    const cleanDigits = val.replace(/\D/g, '').slice(0, 10);
+    setPhone(cleanDigits);
+
+    if (cleanDigits.length > 5) {
+      setFormattedPhone(`${cleanDigits.slice(0, 5)} ${cleanDigits.slice(5, 10)}`);
+    } else {
+      setFormattedPhone(cleanDigits);
+    }
+  };
+
+  // Initialize the MSG91 OTP widget SDK and check resume state on mount
   useEffect(() => {
     const diag = OTPService.getDiagnostics();
     console.log('[OTP Service] Safe Diagnostics on Mount:', diag);
     const widgetId = process.env.EXPO_PUBLIC_MSG91_WIDGET_ID || '';
     const tokenAuth = process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH || '';
     OTPService.initialize(widgetId, tokenAuth);
+
+    const checkResumeState = async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+      const { isLoggedIn, user } = useUserStore.getState();
+      if (isLoggedIn && user && user.registrationStatus !== 'complete') {
+        console.log(`[get-started] Resuming incomplete user: ${user.name} (status: ${user.registrationStatus})`);
+        setTempUserObj(user);
+        setNewUserIdToRegister(user.id);
+        
+        // Sync profile
+        Database.setCurrentUserId(user.id);
+        await useUserProfileStore.getState().syncFromDB();
+        const profile = Database.getProfile(user.id);
+        
+        if (user.registrationStatus === 'name_pending' || !user.name || user.name === 'Complete your profile') {
+          setSetupStep(0);
+        } else if (!profile?.gender) {
+          setSetupStep(1);
+        } else if (!profile?.selectedGoals || profile.selectedGoals.length === 0) {
+          setSetupStep(2);
+        } else {
+          setSetupStep(3);
+        }
+      }
+    };
+    checkResumeState();
   }, []);
 
   // Track retry countdown
@@ -53,17 +100,12 @@ export default function GetStartedScreen() {
 
   const handleMobileSubmit = async () => {
     console.log('[DEBUG] Mobile Submit Button pressed. Entering handleMobileSubmit.');
-    if (!phone || (isRegisterMode && !name)) {
-      console.log('[DEBUG] Mobile Submit Validation Failed: Missing phone or name');
-      Alert.alert('Required Fields', 'Please fill in all details');
+    if (!phone || phone.length !== 10) {
+      console.log('[DEBUG] Mobile Submit Validation Failed: Invalid phone length');
+      Alert.alert('Required Fields', 'Please enter a valid 10-digit Indian mobile number.');
       return;
     }
-    if (!useOtp && !password) {
-      console.log('[DEBUG] Mobile Submit Validation Failed: Missing password');
-      Alert.alert('Required Fields', 'Please enter your password');
-      return;
-    }
-    if (useOtp && !otpCode) {
+    if (!otpCode) {
       console.log('[DEBUG] Mobile Submit Validation Failed: Missing OTP code');
       Alert.alert('Required Fields', 'Please enter the OTP code');
       return;
@@ -72,109 +114,206 @@ export default function GetStartedScreen() {
     setIsLoading(true);
 
     try {
-      if (useOtp) {
-        // Real MSG91 OTP verification
-        console.log('[DEBUG] Initiating client verifyOTP check...');
-        const verifyRes = await OTPService.verifyOTP(phone, otpCode, reqId);
-        
-        if (!verifyRes.success || !verifyRes.token) {
-          throw new Error(verifyRes.error || 'The OTP is incorrect. Please try again.');
-        }
+      // Real MSG91 OTP verification
+      console.log('[DEBUG] Initiating client verifyOTP check...');
+      const verifyRes = await OTPService.verifyOTP(phone, otpCode, reqId);
+      
+      if (!verifyRes.success || !verifyRes.token) {
+        throw new Error(verifyRes.error || 'The OTP is incorrect or has expired. Please try again.');
+      }
 
-        // Backend secure token verification
-        console.log('[DEBUG] Token verified by MSG91 client. Requesting backend database verification...');
-        
-        // Optional local Edge Function override for local simulator testing
-        const localUrl = process.env.EXPO_PUBLIC_SUPABASE_FUNCTIONS_LOCAL_URL;
-        let result: any;
+      // Save token in state for subsequent registration step
+      setMsg91AccessToken(verifyRes.token);
 
-        if (localUrl && __DEV__) {
-          console.log('[DEBUG] Testing locally served Edge Function:', localUrl);
-          const res = await fetch(localUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accessToken: verifyRes.token })
-          });
-          result = await res.json();
-          if (!res.ok) {
-            throw new Error(result.error || 'Backend verification failed');
-          }
-        } else {
-          console.log('[DEBUG] Invoking Supabase production Edge Function: verify-otp');
-          
-          // Log client-side details before invocation
-          const tokenStr = verifyRes.token || '';
-          const tokenParts = tokenStr.split('.');
-          console.log(`[DEBUG] Forwarding token to verify-otp. Length: ${tokenStr.length}, segments: ${tokenParts.length}`);
+      // Backend secure token verification
+      console.log('[DEBUG] Token verified by MSG91 client. Requesting backend database verification...');
+      
+      const { data, error } = await supabase.functions.invoke('verify-otp', {
+        body: { accessToken: verifyRes.token }
+      });
 
-          const { data, error } = await supabase.functions.invoke('verify-otp', {
-            body: { accessToken: verifyRes.token }
-          });
-          if (error) {
-            let serverErrorMsg = '';
-            try {
-              if (error && (error as any).context) {
-                const ctxResponse = (error as any).context;
-                const cloned = ctxResponse.clone();
-                const body = await cloned.json();
-                serverErrorMsg = body.message || body.error || '';
-                
-                // Formulate descriptive diagnostic error for alert visibility
-                if (body.diagnostics) {
-                  const diag = body.diagnostics;
-                  const resKeys = diag.result ? Object.keys(diag.result).join(', ') : 'null';
-                  const jwtKeys = diag.jwtPayload ? Object.keys(diag.jwtPayload).join(', ') : 'null';
-                  
-                  // Safe type representation of potential fields
-                  const msgType = diag.result?.message || 'undefined';
-                  const statusType = diag.result?.status || 'undefined';
-                  const typeType = diag.result?.type || 'undefined';
-                  
-                  serverErrorMsg += `\n\n[Diagnostics - Result keys: [${resKeys}], JWT claims: [${jwtKeys}], msg: ${msgType}, status: ${statusType}, type: ${typeType}]`;
-                }
-              }
-            } catch (e) {
-              console.error('[DEBUG] Failed to parse backend error body:', e);
+      if (error) {
+        console.error('[OTP Error] Invocation failed:', error);
+        let errorMsg = 'Virla couldn\'t complete your sign-in right now. Please try again.';
+        try {
+          if ((error as any).context) {
+            const ctxResponse = (error as any).context;
+            const cloned = ctxResponse.clone();
+            const body = await cloned.json();
+            if (body && body.message) {
+              errorMsg = body.message;
             }
-            throw new Error(serverErrorMsg || error.message || 'Backend verification failed');
           }
-          result = data;
+        } catch (e) {
+          // ignore
         }
+        throw new Error(errorMsg);
+      }
 
-        if (result && result.success && result.user) {
-          const userObj = result.user;
+      console.log('[OTP] Function invocation completed, parsing result...');
+      const result = data;
+
+      // SAFE DIAGNOSTIC LOGGING OF THE BACKEND RESPONSE CONTRACT
+      console.log('[OTP Diagnostics] Backend response structure keys:', result ? Object.keys(result) : 'null/undefined');
+      if (result && typeof result === 'object') {
+        console.log('[OTP Diagnostics] success:', result.success);
+        console.log('[OTP Diagnostics] isNewUser:', result.isNewUser);
+        console.log('[OTP Diagnostics] user keys:', result.user ? Object.keys(result.user) : 'null');
+        if (result.user) {
+          console.log('[OTP Diagnostics] user.id:', result.user.id ? 'exists (len: ' + result.user.id.length + ')' : 'empty');
+          console.log('[OTP Diagnostics] user.name:', result.user.name ? 'exists (len: ' + result.user.name.length + ')' : 'empty');
+          console.log('[OTP Diagnostics] user.registrationStatus:', result.user.registrationStatus);
+        }
+        console.log('[OTP Diagnostics] session keys:', result.session ? Object.keys(result.session) : 'null');
+      }
+
+      if (result && result.success === true && result.user) {
+        const userObj = result.user;
+        const regStatus = userObj.registrationStatus || 'name_pending';
+
+        if (regStatus === 'complete') {
+          console.log('[DEBUG] Existing complete user detected. Proceeding to finalize session...');
           await finalizeUserSession(userObj);
+          Alert.alert('Welcome', `Successfully authenticated as ${userObj.name}!`);
+          router.replace('/(tabs)');
         } else {
-          throw new Error(result?.error || 'Invalid backend validation response');
+          console.log(`[DEBUG] Incomplete registration detected (status: ${regStatus}). Set up resume...`);
+          setTempUserObj(userObj);
+          setNewUserIdToRegister(userObj.id || "");
+
+          // Initialize/persist user session immediately for incomplete state so closures resume from setup
+          await finalizeUserSession(userObj);
+
+          const profile = Database.getProfile(userObj.id);
+
+          if (regStatus === 'name_pending' || !userObj.name || userObj.name === 'Complete your profile') {
+            setSetupStep(0);
+          } else if (!profile?.gender) {
+            setSetupStep(1);
+          } else if (!profile?.selectedGoals || profile.selectedGoals.length === 0) {
+            setSetupStep(2);
+          } else {
+            setSetupStep(3);
+          }
         }
       } else {
-        // Standard password login
-        const userObj = isRegisterMode
-          ? await Database.register(name, phone, password)
-          : await Database.login(phone, password);
-        await finalizeUserSession(userObj);
+        const failMsg = result?.message || 'Something went wrong while signing you in. Please try again.';
+        throw new Error(failMsg);
       }
     } catch (err: any) {
       console.error('[DEBUG ERROR] Mobile submit authentication failure:', err);
       
-      let friendlyMsg = 'Something went wrong. Please try again.';
+      let friendlyMsg = 'Something went wrong while signing you in. Please try again.';
       if (err.message) {
         const lowerMsg = err.message.toLowerCase();
-        if (lowerMsg.includes('authenticationfailure') || lowerMsg.includes('authkey') || lowerMsg.includes('credentials')) {
-          friendlyMsg = 'Authentication configuration error. Please try again later or contact support.';
-        } else if (lowerMsg.includes('incorrect') || lowerMsg.includes('invalid otp')) {
-          friendlyMsg = 'The OTP is incorrect. Please try again.';
-        } else if (lowerMsg.includes('expired')) {
-          friendlyMsg = 'The OTP has expired. Please request a new OTP.';
-        } else if (lowerMsg.includes('limit reached') || lowerMsg.includes('too many attempts')) {
-          friendlyMsg = 'Too many attempts. Please try again later.';
-        } else if (lowerMsg.includes('network') || lowerMsg.includes('timeout')) {
-          friendlyMsg = 'Network timeout. Please check your connection and try again.';
+        if (lowerMsg.includes('network') || lowerMsg.includes('fetch') || lowerMsg.includes('internet')) {
+          friendlyMsg = 'Please check your internet connection and try again.';
+        } else if (lowerMsg.includes('incorrect') || lowerMsg.includes('invalid otp') || lowerMsg.includes('expired')) {
+          friendlyMsg = 'The OTP is incorrect or has expired. Please try again.';
+        } else if (lowerMsg.includes('credentials') || lowerMsg.includes('authkey') || lowerMsg.includes('server')) {
+          friendlyMsg = 'Virla couldn\'t complete your sign-in right now. Please try again.';
         } else {
           friendlyMsg = err.message;
         }
       }
       Alert.alert('Authentication Error', friendlyMsg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setIsLoading(true);
+    try {
+      if (tempUserObj) {
+        // userId can be blank (for new users before name registration)
+        const userId = newUserIdToRegister || tempUserObj.id;
+
+        if (setupStep === 0) {
+          // --- STEP 0: NAME (Direct DB update since we already have the session and user row seeded) ---
+          if (!name.trim()) {
+            Alert.alert('Name Required', 'Please enter your full name to proceed.');
+            setIsLoading(false);
+            return;
+          }
+
+          console.log(`[DEBUG] Updating new user name to "${name}"...`);
+          
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({ name: name.trim(), registration_status: 'PROFILE_DETAILS_PENDING' })
+            .eq('id', userId);
+
+          if (updateError) {
+            throw new Error(updateError.message || 'Server failed to register name.');
+          }
+
+          const registeredUser = { ...tempUserObj, name: name.trim(), registrationStatus: 'incomplete' };
+          setTempUserObj(registeredUser);
+          setNewUserIdToRegister(registeredUser.id);
+          
+          // Seed local user profile record and initialize session
+          await finalizeUserSession(registeredUser);
+          
+          console.log('[DEBUG] Step 0 complete: Name registered.');
+          setSetupStep(1); // Proceed to Gender Selection
+
+        } else if (setupStep === 1) {
+          // --- STEP 1: GENDER ---
+          console.log(`[DEBUG] Saving gender preference: ${selectedGender}`);
+          Database.updateProfile(userId, { gender: selectedGender });
+          setSetupStep(2); // Proceed to Goals Selection
+
+        } else if (setupStep === 2) {
+          // --- STEP 2: FITNESS GOALS ---
+          if (selectedGoals.length === 0) {
+            Alert.alert('Goals Required', 'Please select at least one fitness target.');
+            setIsLoading(false);
+            return;
+          }
+          console.log(`[DEBUG] Saving fitness targets: ${selectedGoals.join(', ')}`);
+          Database.updateProfile(userId, { selectedGoals });
+          setSetupStep(3); // Proceed to Stats
+
+        } else if (setupStep === 3) {
+          // --- STEP 3: STATS (Age, Height, Weight) & FINISH ---
+          if (!age.trim() || !height.trim() || !weight.trim()) {
+            Alert.alert('Required Fields', 'Please complete your Age, Height, and Weight.');
+            setIsLoading(false);
+            return;
+          }
+
+          console.log('[DEBUG] Saving physical statistics and completing registration...');
+          Database.updateProfile(userId, {
+            age: parseInt(age) || 0,
+            height: height.trim(),
+            weight: weight.trim()
+          });
+
+          // Mark registration complete on remote Supabase users table
+          const { error: completeError } = await supabase
+            .from('users')
+            .update({ registration_status: 'complete' })
+            .eq('id', userId);
+
+          if (completeError) {
+            throw new Error(completeError.message || 'Failed to update registration status on server.');
+          }
+
+          const completedUserObj = { ...tempUserObj, registrationStatus: 'complete' };
+          await finalizeUserSession(completedUserObj);
+
+          Alert.alert('Welcome', `Successfully authenticated as ${completedUserObj.name}!`);
+          router.replace('/(tabs)');
+
+          // Clear wizard states
+          setNewUserIdToRegister(null);
+          setTempUserObj(null);
+        }
+      }
+    } catch (err: any) {
+      console.error('[DEBUG ERROR] Wizard step update failed:', err);
+      Alert.alert('Setup Failed', err.message || 'Could not complete registration step. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -195,9 +334,6 @@ export default function GetStartedScreen() {
     await useWalletStore.getState().syncFromDB();
     useAddressStore.getState().syncFromDB();
     console.log('[DEBUG] Store synchronization completed successfully.');
-
-    Alert.alert('Welcome', `Successfully authenticated as ${userObj.name}!`);
-    router.replace('/(tabs)');
   };
 
   const handleSendOtp = async () => {
@@ -416,18 +552,142 @@ export default function GetStartedScreen() {
             <View className="items-center mt-6">
               <AppLogo size="large" />
               <Heading className="mt-8 mb-2">
-                {showMobileForm 
-                  ? (isRegisterMode ? 'Create Account' : 'Welcome Back') 
-                  : 'Begin Your Journey'}
+                {newUserIdToRegister !== null
+                  ? (setupStep === 0 ? 'Welcome!' : `Welcome back, ${tempUserObj?.name && tempUserObj.name !== 'Complete your profile' ? tempUserObj.name.split(' ')[0] : 'User'}!`)
+                  : 'Welcome Back'}
               </Heading>
               <Subtitle align="center" className="max-w-[85%] mt-1">
-                {showMobileForm 
-                  ? (isRegisterMode ? 'Enter details to start your home wellness journey.' : 'Log in using your registered mobile number.')
-                  : 'Access India\'s premium home wellness platform. Professional coaching, personalized for you.'}
+                {newUserIdToRegister !== null
+                  ? (setupStep === 0 ? 'Step 1 of 4: Enter your full name to start registration.' : `Step ${setupStep + 1} of 4: Complete your details.`)
+                  : 'Log in using your registered mobile number.'}
               </Subtitle>
             </View>
 
-            {showMobileForm ? (
+            {newUserIdToRegister !== null ? (
+              /* Profile Setup Form Wizard for New Users */
+              <View 
+                className="bg-white p-6 rounded-[28px] border border-zinc-150 gap-4 my-6"
+                style={{
+                  elevation: 1,
+                  shadowColor: '#101828',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 2,
+                }}
+              >
+                {setupStep === 0 && (
+                  <View className="gap-4">
+                    <Heading>What is your name?</Heading>
+                    <Subtitle>Enter your full name to start registration.</Subtitle>
+                    <TextInput
+                      placeholder="Full Name"
+                      placeholderTextColor="#9CA3AF"
+                      value={name}
+                      onChangeText={setName}
+                      editable={!isLoading}
+                      className="w-full bg-zinc-50 border border-zinc-150 p-4 rounded-xl text-zinc-900 text-sm font-semibold"
+                    />
+                  </View>
+                )}
+
+                {setupStep === 1 && (
+                  <View className="gap-4">
+                    <Heading>Select your gender</Heading>
+                    <Subtitle>Helps match safety certified trainers.</Subtitle>
+                    <View className="flex-row gap-3">
+                      {['Male', 'Female', 'Other'].map((g) => {
+                        const isSel = selectedGender === g;
+                        return (
+                          <TouchableOpacity
+                            key={g}
+                            activeOpacity={0.8}
+                            onPress={() => setSelectedGender(g)}
+                            className={`flex-1 py-3.5 rounded-xl border items-center justify-center ${isSel ? 'bg-[#101828] border-[#101828]' : 'bg-white border-zinc-200'}`}
+                          >
+                            <Text className={`text-[10px] font-black uppercase tracking-wider ${isSel ? 'text-white' : 'text-zinc-650'}`}>{g}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+
+                {setupStep === 2 && (
+                  <View className="gap-4">
+                    <Heading>Choose fitness targets</Heading>
+                    <Subtitle>Select one or more workout priorities.</Subtitle>
+                    <View className="flex-row flex-wrap gap-2">
+                      {['Weight Loss', 'Fat Loss', 'Muscle Gain', 'Strength', 'Flexibility', 'General Fitness'].map((goal) => {
+                        const isSel = selectedGoals.includes(goal);
+                        return (
+                          <TouchableOpacity
+                            key={goal}
+                            activeOpacity={0.8}
+                            onPress={() => {
+                              if (isSel) {
+                                setSelectedGoals(selectedGoals.filter(x => x !== goal));
+                              } else {
+                                setSelectedGoals([...selectedGoals, goal]);
+                              }
+                            }}
+                            className={`px-3.5 py-2 rounded-xl border ${isSel ? 'bg-[#E11D48] border-[#E11D48]' : 'bg-white border-zinc-200'}`}
+                          >
+                            <Text className={`text-[9px] font-black uppercase tracking-wider ${isSel ? 'text-white' : 'text-zinc-700'}`}>{goal}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+
+                {setupStep === 3 && (
+                  <View className="gap-4">
+                    <Heading>Physical Statistics</Heading>
+                    <Subtitle>Complete your details to finish setup.</Subtitle>
+                    <View className="gap-3">
+                      <TextInput
+                        placeholder="Age"
+                        placeholderTextColor="#9CA3AF"
+                        keyboardType="number-pad"
+                        value={age}
+                        onChangeText={setAge}
+                        editable={!isLoading}
+                        className="w-full bg-zinc-50 border border-zinc-150 p-4 rounded-xl text-zinc-900 text-sm font-semibold"
+                      />
+                      <TextInput
+                        placeholder="Height (e.g. 175 cm)"
+                        placeholderTextColor="#9CA3AF"
+                        value={height}
+                        onChangeText={setHeight}
+                        editable={!isLoading}
+                        className="w-full bg-zinc-50 border border-zinc-150 p-4 rounded-xl text-zinc-900 text-sm font-semibold"
+                      />
+                      <TextInput
+                        placeholder="Weight (e.g. 70 kg)"
+                        placeholderTextColor="#9CA3AF"
+                        value={weight}
+                        onChangeText={setWeight}
+                        editable={!isLoading}
+                        className="w-full bg-zinc-50 border border-zinc-150 p-4 rounded-xl text-zinc-900 text-sm font-semibold"
+                      />
+                    </View>
+                  </View>
+                )}
+
+                {isLoading && (
+                  <View className="items-center justify-center py-2">
+                    <ActivityIndicator size="small" color="#4F46E5" />
+                  </View>
+                )}
+
+                <View className="mt-2 gap-3.5">
+                  <PrimaryButton
+                    title={isLoading ? 'Saving...' : setupStep === 3 ? 'Finish Setup' : 'Next Step'}
+                    onPress={isLoading ? () => {} : handleSaveProfile}
+                  />
+                </View>
+              </View>
+            ) : (
               /* Mobile Login/Register Form */
               <View 
                 className="bg-white p-6 rounded-[28px] border border-zinc-150 gap-4 my-6"
@@ -439,77 +699,38 @@ export default function GetStartedScreen() {
                   shadowRadius: 2,
                 }}
               >
-                {/* Password vs OTP Login toggle selector */}
-                {!isRegisterMode && (
-                  <View className="flex-row bg-zinc-50 border border-zinc-150 p-1.5 rounded-2xl mb-1">
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => { setUseOtp(false); setOtpSent(false); }}
-                      className={`flex-1 py-2.5 rounded-xl items-center justify-center ${!useOtp ? 'bg-[#101828]' : ''}`}
-                    >
-                      <Text className={`text-[10px] font-black uppercase tracking-wider ${!useOtp ? 'text-white' : 'text-zinc-500'}`}>Password</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => setUseOtp(true)}
-                      className={`flex-1 py-2.5 rounded-xl items-center justify-center ${useOtp ? 'bg-[#101828]' : ''}`}
-                    >
-                      <Text className={`text-[10px] font-black uppercase tracking-wider ${useOtp ? 'text-white' : 'text-zinc-500'}`}>OTP Login</Text>
-                    </TouchableOpacity>
+                <View className="flex-row gap-2 w-full items-center">
+                  <View className="flex-1 flex-row items-center bg-zinc-50 border border-zinc-150 rounded-xl px-4">
+                    <Text className="text-zinc-500 font-extrabold text-sm mr-2">+91</Text>
+                    <TextInput
+                      placeholder="98765 43210"
+                      placeholderTextColor="#9CA3AF"
+                      keyboardType="numeric"
+                      value={formattedPhone}
+                      onChangeText={handlePhoneChange}
+                      editable={!isLoading}
+                      className="flex-1 py-4 text-zinc-900 text-sm font-semibold"
+                    />
                   </View>
-                )}
-
-                {isRegisterMode && (
-                  <TextInput
-                    placeholder="Full Name"
-                    placeholderTextColor="#9CA3AF"
-                    value={name}
-                    onChangeText={setName}
-                    className="w-full bg-zinc-50 border border-zinc-150 p-4 rounded-xl text-zinc-900 text-sm font-semibold"
-                  />
-                )}
-                
-                <View className="flex-row gap-2 w-full">
-                  <TextInput
-                    placeholder="Mobile Number"
-                    placeholderTextColor="#9CA3AF"
-                    keyboardType="phone-pad"
-                    value={phone}
-                    onChangeText={setPhone}
-                    editable={!isLoading}
-                    className="flex-1 bg-zinc-50 border border-zinc-150 p-4 rounded-xl text-zinc-900 text-sm font-semibold"
-                  />
-                  {useOtp && (
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={isLoading ? () => {} : handleSendOtp}
-                      disabled={isLoading || resendCountdown > 0}
-                      className={`px-4 rounded-xl justify-center items-center ${isLoading || resendCountdown > 0 ? 'bg-zinc-400' : 'bg-[#101828]'}`}
-                    >
-                      <Text className="text-white text-xs font-bold uppercase tracking-wider">
-                        {otpSent ? (resendCountdown > 0 ? `Resend (${resendCountdown}s)` : 'Resend') : 'Send OTP'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={isLoading ? () => {} : handleSendOtp}
+                    disabled={isLoading || resendCountdown > 0}
+                    className={`px-4 py-4 rounded-xl justify-center items-center ${isLoading || resendCountdown > 0 ? 'bg-zinc-400' : 'bg-[#101828]'}`}
+                  >
+                    <Text className="text-white text-xs font-bold uppercase tracking-wider">
+                      {otpSent ? (resendCountdown > 0 ? `Resend (${resendCountdown}s)` : 'Resend') : 'Send OTP'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
 
-                {useOtp ? (
+                {otpSent && (
                   <TextInput
                     placeholder="Enter 6-Digit OTP Code"
                     placeholderTextColor="#9CA3AF"
                     keyboardType="number-pad"
                     value={otpCode}
                     onChangeText={setOtpCode}
-                    editable={!isLoading}
-                    className="w-full bg-zinc-50 border border-zinc-150 p-4 rounded-xl text-zinc-900 text-sm font-semibold"
-                  />
-                ) : (
-                  <TextInput
-                    placeholder="Password"
-                    placeholderTextColor="#9CA3AF"
-                    secureTextEntry
-                    value={password}
-                    onChangeText={setPassword}
                     editable={!isLoading}
                     className="w-full bg-zinc-50 border border-zinc-150 p-4 rounded-xl text-zinc-900 text-sm font-semibold"
                   />
@@ -523,56 +744,13 @@ export default function GetStartedScreen() {
 
                 <View className="mt-2 gap-3.5">
                   <PrimaryButton
-                    title={isLoading ? 'Processing...' : (isRegisterMode ? 'Create Account' : 'Log In')}
+                    title={isLoading ? 'Processing...' : 'Verify & Log In'}
                     onPress={isLoading ? () => {} : handleMobileSubmit}
                   />
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => setIsRegisterMode(!isRegisterMode)}
-                    className="items-center py-1"
-                  >
-                    <Text className="text-indigo-600 text-xs font-black uppercase tracking-wider">
-                      {isRegisterMode ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      setShowMobileForm(false);
-                    }}
-                    className="items-center py-1"
-                  >
-                    <Text className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">
-                      Go Back
-                    </Text>
-                  </TouchableOpacity>
                 </View>
               </View>
-            ) : (
-              /* Auth Buttons Group */
-              <View className="gap-4 my-8 px-2">
-                {/* Primary Mobile Button */}
-                <PrimaryButton
-                  title="Continue with Mobile Number"
-                  onPress={() => setShowMobileForm(true)}
-                  icon={<Text className="text-white text-base">📱</Text>}
-                />
-
-                {/* Secondary Google Button */}
-                <SecondaryButton
-                  title="Continue with Google"
-                  onPress={() => handleOAuth('google')}
-                  icon={<Text className="text-zinc-800 text-base">🌐</Text>}
-                />
-
-                {/* Secondary Apple Button */}
-                <SecondaryButton
-                  title="Continue with Apple"
-                  onPress={() => handleOAuth('apple')}
-                  icon={<Text className="text-zinc-800 text-lg font-bold"></Text>}
-                />
-              </View>
             )}
+
 
             {/* Terms & Privacy Policies at the Bottom */}
             <View className="px-4">

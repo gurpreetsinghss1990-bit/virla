@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase, setClientUserId } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Workout, Coach, Booking, NotificationItem, Invoice, TrainerEarning, ScheduleSlot, AssignmentLog, TrainerWorkoutAssignment } from '../types';
 import { normalizeDate } from '../utils/date';
@@ -163,11 +163,24 @@ export interface DBUser {
   lastLogin: string;
   deviceInfo: string;
   notificationPrefs: string; // JSON string
+  registrationStatus?: string;
 }
 
 // ==================== MAPPERS ====================
 
 export function mapDBUser(row: any): DBUser {
+  let regStatus = 'name_pending';
+  const rawStatus = row.registration_status || '';
+  if (rawStatus === 'COMPLETE' || rawStatus === 'complete') {
+    regStatus = 'complete';
+  } else if (
+    rawStatus === 'PROFILE_DETAILS_PENDING' || 
+    rawStatus === 'PROFILE_NAME_PENDING' || 
+    rawStatus === 'incomplete'
+  ) {
+    regStatus = 'incomplete';
+  }
+
   return {
     id: row.id,
     name: row.name,
@@ -180,7 +193,8 @@ export function mapDBUser(row: any): DBUser {
     createdDate: row.created_date || '',
     lastLogin: row.last_login || '',
     deviceInfo: row.device_info || '',
-    notificationPrefs: JSON.stringify(row.notification_prefs || {})
+    notificationPrefs: JSON.stringify(row.notification_prefs || {}),
+    registrationStatus: regStatus
   };
 }
 
@@ -197,7 +211,8 @@ export function mapDBUserToPostgres(user: DBUser): any {
     created_date: user.createdDate,
     last_login: user.lastLogin,
     device_info: user.deviceInfo,
-    notification_prefs: JSON.parse(user.notificationPrefs || '{}')
+    notification_prefs: JSON.parse(user.notificationPrefs || '{}'),
+    registration_status: user.registrationStatus || 'PROFILE_NAME_PENDING'
   };
 }
 
@@ -1609,6 +1624,7 @@ class DatabaseClient {
 
   setCurrentUserId(id: string | null) {
     this.currentUserId = id;
+    setClientUserId(id);
   }
 
   // Profile Operations

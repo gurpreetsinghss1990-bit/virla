@@ -101,7 +101,9 @@ export default function BookingsScreen() {
 
   // Collapse slot controls by default when selected date changes
   useEffect(() => {
-    setIsSlotsExpanded(false);
+    setTimeout(() => {
+      setIsSlotsExpanded(false);
+    }, 0);
   }, [selectedDay, selectedMonth, selectedYear]);
 
   // Sync today timer

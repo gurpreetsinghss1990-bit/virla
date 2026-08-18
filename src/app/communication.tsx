@@ -262,6 +262,7 @@ export default function CommunicationScreen() {
 
             const isPending = (msg.sender === 'customer' && role === 'customer' || msg.sender === 'trainer' && role === 'trainer') &&
                               (getMinutesToSession() > 60) &&
+                              // eslint-disable-next-line react-hooks/purity
                               (Date.now() - new Date(msg.timestamp).getTime() < 120000);
 
             return (

@@ -6,6 +6,7 @@ export interface User {
   location: string;
   // Sprint 6 addition
   role?: 'customer' | 'trainer' | 'admin';
+  registrationStatus?: string;
 }
 
 export interface Membership {

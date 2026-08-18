@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Invoice } from '../types';
 import { Database } from '../database/Database';
@@ -13,6 +13,62 @@ import { useNotificationStore } from './notificationStore';
 import { useAIStore } from './aiStore';
 import { useAddressStore } from './addressStore';
 import { PushNotificationService } from '../services/PushNotificationService';
+
+let SecureStore: any = null;
+try {
+  SecureStore = require('expo-secure-store');
+} catch (e) {
+  // Gracefully catch missing native modules or build errors in dev-client
+}
+
+const isSecureStoreSupported = async (): Promise<boolean> => {
+  try {
+    if (!SecureStore || typeof SecureStore.isAvailableAsync !== 'function') {
+      return false;
+    }
+    return await SecureStore.isAvailableAsync();
+  } catch (e) {
+    return false;
+  }
+};
+
+const secureStorage: StateStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    try {
+      const supported = await isSecureStoreSupported();
+      if (supported) {
+        return (await SecureStore.getItemAsync(name)) || null;
+      }
+    } catch (e) {
+      console.warn('[secureStorage] SecureStore retrieve error, falling back to AsyncStorage:', e);
+    }
+    return (await AsyncStorage.getItem(name)) || null;
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    try {
+      const supported = await isSecureStoreSupported();
+      if (supported) {
+        await SecureStore.setItemAsync(name, value);
+        return;
+      }
+    } catch (e) {
+      console.warn('[secureStorage] SecureStore write error, falling back to AsyncStorage:', e);
+    }
+    await AsyncStorage.setItem(name, value);
+  },
+  removeItem: async (name: string): Promise<void> => {
+    try {
+      const supported = await isSecureStoreSupported();
+      if (supported) {
+        await SecureStore.deleteItemAsync(name);
+        return;
+      }
+    } catch (e) {
+      console.warn('[secureStorage] SecureStore remove error, falling back to AsyncStorage:', e);
+    }
+    await AsyncStorage.removeItem(name);
+  },
+};
 
 interface FamilyMember {
   id: string;
@@ -157,6 +213,7 @@ export const useUserStore = create<UserState>()(
               avatar: userDb.avatar,
               location: 'Mumbai, India',
               role: userDb.role,
+              registrationStatus: userDb.registrationStatus || 'PROFILE_NAME_PENDING',
             };
 
             const dbInvoices = Database.getLedgerTransactions(userId);
@@ -177,7 +234,7 @@ export const useUserStore = create<UserState>()(
     }),
     {
       name: 'virla-user-storage',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => secureStorage),
     }
   )
 );

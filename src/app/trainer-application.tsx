@@ -456,6 +456,7 @@ export default function TrainerApplicationScreen() {
 
     try {
       const ext = fileName.split('.').pop() || 'pdf';
+      // eslint-disable-next-line react-hooks/purity
       const cleanFileName = `${Date.now()}_${docType}.${ext}`;
       const filePath = `trainer-docs/${cleanFileName}`;
       

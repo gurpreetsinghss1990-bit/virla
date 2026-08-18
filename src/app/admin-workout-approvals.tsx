@@ -33,19 +33,21 @@ export default function AdminWorkoutApprovalsScreen() {
   const checkAdminAuth = async () => {
     const userId = Database.getCurrentUserId();
     if (!userId) {
-      setIsAdminAuthorized(false);
+      setTimeout(() => setIsAdminAuthorized(false), 0);
       return;
     }
-    setAdminUserId(userId);
+    setTimeout(() => {
+      setAdminUserId(userId);
+    }, 0);
     try {
       const { data, error } = await supabase.from('users').select('role').eq('id', userId).single();
       if (data && data.role === 'admin') {
-        setIsAdminAuthorized(true);
+        setTimeout(() => setIsAdminAuthorized(true), 0);
       } else {
-        setIsAdminAuthorized(false);
+        setTimeout(() => setIsAdminAuthorized(false), 0);
       }
     } catch (err) {
-      setIsAdminAuthorized(false);
+      setTimeout(() => setIsAdminAuthorized(false), 0);
     }
   };
 
@@ -223,7 +225,7 @@ export default function AdminWorkoutApprovalsScreen() {
                   {a.status === 'REJECTED' && a.rejectionReason && (
                     <View className="bg-rose-50/20 border border-rose-100/50 p-3 rounded-xl mb-4">
                       <Text className="text-rose-600 text-[8px] font-black uppercase">Declined Reason</Text>
-                      <Text className="text-rose-700 text-xs font-bold mt-1">"{a.rejectionReason}"</Text>
+                      <Text className="text-rose-700 text-xs font-bold mt-1">&quot;{a.rejectionReason}&quot;</Text>
                     </View>
                   )}
 
