@@ -3122,7 +3122,7 @@ class DatabaseClient {
           lng = coords.lng;
         }
         const newCoach: Coach = {
-          id: generateUUID('coach'),
+          id: userObj.id,
           name: app.fullName,
           gender: app.gender || 'male',
           photo: app.avatar || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=300&q=80',
