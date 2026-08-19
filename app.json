@@ -18,7 +18,8 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "Allow Virla to use your location to find nearby trainers and customize your experience.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow Virla to use your location to find nearby trainers and customize your experience.",
-        "NSCameraUsageDescription": "Allow Virla to use your camera to scan QR codes for linking development servers."
+        "NSCameraUsageDescription": "Allow Virla to use your camera to scan QR codes for linking development servers.",
+        "NSFaceIDUsageDescription": "Allow Virla to use Face ID to authenticate you securely."
       }
     },
     "android": {

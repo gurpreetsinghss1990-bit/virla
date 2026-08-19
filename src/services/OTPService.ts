@@ -1,14 +1,18 @@
 import { Platform } from 'react-native';
 
-// Safely require the mobile SDK only on native platforms
-let OTPWidget: any = null;
-if (Platform.OS !== 'web') {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    OTPWidget = require('@msg91comm/sendotp-react-native').OTPWidget;
-  } catch (e) {
-    console.error('[OTP Service] Failed to load @msg91comm/sendotp-react-native package:', e);
+// Safely resolve the mobile SDK widget on native platforms with lazy loading
+let OTPWidgetInstance: any = null;
+function getOTPWidget() {
+  if (Platform.OS === 'web') return null;
+  if (!OTPWidgetInstance) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      OTPWidgetInstance = require('@msg91comm/sendotp-react-native').OTPWidget;
+    } catch (e) {
+      console.error('[OTP Service] Failed to load @msg91comm/sendotp-react-native package:', e);
+    }
   }
+  return OTPWidgetInstance;
 }
 
 export class OTPService {
@@ -105,9 +109,10 @@ export class OTPService {
         }
       }
     } else {
-      if (OTPWidget) {
+      const widget = getOTPWidget();
+      if (widget) {
         try {
-          OTPWidget.initializeWidget(widgetId, tokenAuth);
+          widget.initializeWidget(widgetId, tokenAuth);
           console.log('[OTP Service] MSG91 Mobile SDK initialized successfully.');
         } catch (e) {
           console.error('[OTP Service] Failed to initialize mobile SDK:', e);
@@ -177,11 +182,12 @@ export class OTPService {
         }
       });
     } else {
-      if (!OTPWidget) {
+      const widget = getOTPWidget();
+      if (!widget) {
         return { success: false, error: 'Mobile authentication module is not available.' };
       }
       try {
-        const response = await OTPWidget.sendOTP({ identifier: normalized });
+        const response = await widget.sendOTP({ identifier: normalized });
         if (response && response.type === 'success') {
           const reqId = response.message || response.reqId || '';
           return { success: true, reqId };
@@ -229,12 +235,13 @@ export class OTPService {
         }
       });
     } else {
-      if (!OTPWidget) {
+      const widget = getOTPWidget();
+      if (!widget) {
         return { success: false, error: 'Mobile authentication module is not available.' };
       }
       try {
         // According to official SDK specification, identifier is NOT required for verifyOTP
-        const response = await OTPWidget.verifyOTP({
+        const response = await widget.verifyOTP({
           reqId,
           otp
         });
@@ -300,12 +307,13 @@ export class OTPService {
         }
       });
     } else {
-      if (!OTPWidget) {
+      const widget = getOTPWidget();
+      if (!widget) {
         return { success: false, error: 'Mobile authentication module is not available.' };
       }
       try {
         // According to official SDK specification, do NOT force channel parameters when using default widget configuration
-        const response = await OTPWidget.retryOTP({
+        const response = await widget.retryOTP({
           reqId
         });
         if (response && response.type === 'success') {
