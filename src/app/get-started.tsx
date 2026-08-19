@@ -323,7 +323,7 @@ export default function GetStartedScreen() {
     // Sync store states with user details
     setRole(userObj.role || 'customer');
     Database.setCurrentUserId(userObj.id);
-    setLoggedIn(true);
+    await setLoggedIn(true);
     setCompletedOnboarding(true);
     updateProfile(userObj);
     

@@ -1,5 +1,6 @@
 import { Database } from '../database/Database';
 import { useUserStore } from '../store/userStore';
+import { PushNotificationService } from '../services/PushNotificationService';
 import { useUserProfileStore } from '../store/userProfileStore';
 import { useBookingStore } from '../store/bookingStore';
 import { useCoachStore } from '../store/coachStore';
@@ -17,6 +18,11 @@ import { setupRealtimeSubscriptions } from './realtime';
  */
 export async function bootstrapApp(): Promise<void> {
   const initPromise = (async () => {
+    // Wait for Zustand store to rehydrate from persistent storage
+    while (!useUserStore.persist.hasHydrated()) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
     // 1. Restore session credentials first to ensure currentUserId is set in database instance
     const storedUser = useUserStore.getState().user;
     const isLoggedIn = useUserStore.getState().isLoggedIn;
@@ -68,6 +74,12 @@ async function restoreAuthentication(): Promise<void> {
   // Sync all store caches from the database
   useUserStore.getState().syncFromDB();
   useUserProfileStore.getState().syncFromDB();
+  
+  // Sync push token with backend after user is populated on startup
+  const userId = Database.getCurrentUserId();
+  if (userId && PushNotificationService.isNotificationsSupported()) {
+    PushNotificationService.syncTokenWithBackend(userId).then();
+  }
   useBookingStore.getState().syncFromDB();
   useCoachStore.getState().syncFromDB();
   useWorkoutStore.getState().syncFromDB();

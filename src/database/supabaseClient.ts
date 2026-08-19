@@ -13,9 +13,16 @@ export function setClientUserId(userId: string | null) {
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   global: {
     fetch: async (url, options = {}) => {
-      const headers = new Headers(options.headers);
+      const headers = options.headers instanceof Headers
+        ? new Headers(options.headers)
+        : { ...(options.headers || {}) } as any;
+
       if (clientUserId) {
-        headers.set('x-user-id', clientUserId);
+        if (headers instanceof Headers) {
+          headers.set('x-user-id', clientUserId);
+        } else {
+          headers['x-user-id'] = clientUserId;
+        }
       }
       return fetch(url, { ...options, headers });
     }

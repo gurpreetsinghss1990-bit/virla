@@ -1630,12 +1630,6 @@ class DatabaseClient {
   // Profile Operations
   getProfile(userId: string): UserProfile | null {
     const profile = this.schema.profiles.find(p => p.userId === userId) || null;
-    if (profile && typeof __DEV__ !== 'undefined' && __DEV__) {
-      const user = this.schema.users.find(u => u.id === userId);
-      if (user && user.role === 'admin' && profile.creditsBalance === 0) {
-        profile.creditsBalance = 50;
-      }
-    }
     return profile;
   }
 
