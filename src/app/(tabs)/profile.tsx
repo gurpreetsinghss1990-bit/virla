@@ -523,11 +523,6 @@ export default function ProfileScreen() {
                       <Text className="text-white text-base font-black">{membership.availableCredits} Credits</Text>
                     </View>
                     <View className="w-[1px] h-8 bg-zinc-800" />
-                    <View className="gap-0.5">
-                      <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">Freeze status</Text>
-                      <Text className="text-white text-base font-black">15 Days</Text>
-                    </View>
-                    <View className="w-[1px] h-8 bg-zinc-800" />
                     <View className="gap-0.5 items-end">
                       <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">Expiry Date</Text>
                       <Text className="text-white text-xs font-black mt-0.5">{membership.renewalDate}</Text>
