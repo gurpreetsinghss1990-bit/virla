@@ -2992,13 +2992,26 @@ class DatabaseClient {
     this.save();
   }
 
+  private normalizePhone(phone: string): string {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.startsWith('91') && digits.length === 12) {
+      return digits;
+    }
+    if (digits.length === 10) {
+      return '91' + digits;
+    }
+    return digits;
+  }
+
   async submitTrainerApplication(appData: Omit<TrainerApplication, 'id' | 'createdAt' | 'updatedAt' | 'status'>): Promise<TrainerApplication> {
     const gender = (appData.gender || '').toLowerCase();
     if (gender !== 'male' && gender !== 'female') {
       throw new Error('Please select a valid gender (Male or Female) to submit your application.');
     }
+    const normalizedPhone = this.normalizePhone(appData.phone);
     const normalizedApp = {
       ...appData,
+      phone: normalizedPhone,
       gender: gender
     };
 
@@ -3069,165 +3082,19 @@ class DatabaseClient {
   }
 
   async approveTrainerApplication(appId: string): Promise<void> {
-    const app = this.schema.trainer_applications.find(a => a.id === appId);
-    if (app) {
-      app.status = 'approved';
-      app.aadhaarStatus = 'verified';
-      app.panStatus = 'verified';
-      app.updatedAt = new Date().toISOString();
-
-      let userObj = this.schema.users.find(u => u.phone === app.phone);
-      if (!userObj) {
-        userObj = {
-          id: generateUUID('user'),
-          name: app.fullName,
-          phone: app.phone,
-          email: app.email,
-          passwordHash: hashPassword('password123'),
-          avatar: app.avatar || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80',
-          role: 'trainer',
-          status: 'active',
-          createdDate: new Date().toISOString(),
-          lastLogin: '',
-          deviceInfo: 'Simulated Onboard',
-          notificationPrefs: JSON.stringify({
-            bookingUpdates: true,
-            trainerMessages: true,
-            offers: true,
-            membershipAlerts: true
-          })
-        };
-        this.schema.users.push(userObj);
-      } else {
-        userObj.role = 'trainer';
-      }
-
-      let coachObj = this.schema.coaches.find(c => c.name === app.fullName);
-      if (!coachObj) {
-        let lat = 19.0176;
-        let lng = 72.8164;
-        try {
-          const res = await geocodeAddress(app.address || '');
-          lat = res.latitude;
-          lng = res.longitude;
-        } catch (e) {
-          const coords = geocodeAddressSync(app.address || '');
-          lat = coords.lat;
-          lng = coords.lng;
-        }
-        const newCoach: Coach = {
-          id: userObj.id,
-          name: app.fullName,
-          gender: app.gender || 'male',
-          photo: app.avatar || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=300&q=80',
-          experience: `${app.yearsOfExperience} yrs exp`,
-          rating: 5.0,
-          specialty: app.primaryWorkout,
-          yearsExperience: app.yearsOfExperience,
-          specialization: `${app.primaryWorkout}, ${app.secondarySkills}`,
-          languages: app.languages.split(',').map((s: string) => s.trim()),
-          shortBio: app.aboutMe,
-          completedSessions: 0,
-          aboutText: app.fitnessQualifications,
-          availability: app.workingDays,
-          workingRadius: `${app.preferredWorkingRadius} km`,
-          bankDetails: JSON.stringify({
-            accountName: app.bankAccountName || '',
-            bankName: app.bankName || '',
-            accountNumber: app.bankAccountNumber || '',
-            ifsc: app.bankIfsc || '',
-            upiId: app.bankUpiId || ''
-          }),
-          emergencyContact: app.emergencyContact,
-          preferences: {
-            online: false,
-            radiusKm: app.preferredWorkingRadius || 15,
-            maxDailySessions: 5,
-            categories: [app.primaryWorkout],
-            operatingAddress: app.address,
-            operatingLatitude: lat,
-            operatingLongitude: lng,
-            operatingLocationStatus: 'verified' as const,
-            addressChangeRequest: null
-          }
-        };
-        this.schema.coaches.push(newCoach);
-        coachObj = newCoach;
-      }
-
-      let profileObj = this.schema.profiles.find(p => p.userId === userObj!.id);
-      if (!profileObj) {
-        profileObj = {
-          id: generateUUID('prof'),
-          userId: userObj.id,
-          age: 30,
-          gender: app.gender,
-          height: '180 cm',
-          weight: '80 kg',
-          fitnessGoal: app.primaryWorkout,
-          preferredWorkout: 'PowerForge',
-          emergencyContact: app.emergencyContact,
-          medicalNotes: '',
-          membershipStatus: 'Trainer Account',
-          creditsBalance: 0,
-          trainerPreference: '',
-          dob: app.dob,
-          fitnessLevel: 'Trainer',
-          preferredLanguage: app.languages.split(',')[0] || 'English',
-          city: app.city,
-          memberSince: 'Jul 2025',
-          selectedGoals: [app.primaryWorkout]
-        };
-        this.schema.profiles.push(profileObj);
-      }
-
-      const pgApp = mapTrainerApplicationToPostgres(app);
-      const [resApp, resUser, resTrainer, resProfile] = await Promise.all([
-        supabase.from('trainer_applications').update({ 
-          status: 'approved', 
-          updated_at: app.updatedAt,
-          document_certifications: pgApp.document_certifications
-        }).eq('id', appId),
-        supabase.from('users').upsert(mapDBUserToPostgres(userObj)),
-        supabase.from('trainers').upsert(mapCoachToPostgres(coachObj)),
-        supabase.from('user_profiles').upsert(mapUserProfileToPostgres(profileObj))
-      ]);
-
-      if (resApp.error) throw new Error(`Failed to update application: ${resApp.error.message}`);
-      if (resUser.error) throw new Error(`Failed to update user: ${resUser.error.message}`);
-      if (resTrainer.error) throw new Error(`Failed to insert trainer: ${resTrainer.error.message}`);
-      if (resProfile.error) throw new Error(`Failed to insert profile: ${resProfile.error.message}`);
-
-      await this.save();
-      this.log('ApproveTrainer', `Approved application for ${app.fullName} and generated trainer login.`);
+    const { error } = await supabase.rpc('approve_trainer_application', { app_id: appId });
+    if (error) {
+      throw new Error(`Failed to approve trainer application: ${error.message}`);
     }
+    await this.reload();
   }
 
   async rejectTrainerApplication(appId: string): Promise<void> {
-    const app = this.schema.trainer_applications.find(a => a.id === appId);
-    if (app) {
-      if (app.status === 'approved') {
-        throw new Error('Cannot reject an already approved application');
-      }
-      app.status = 'rejected';
-      app.aadhaarStatus = 'rejected';
-      app.panStatus = 'rejected';
-      app.updatedAt = new Date().toISOString();
-      
-      const pgApp = mapTrainerApplicationToPostgres(app);
-      const { error } = await supabase.from('trainer_applications').update({ 
-        status: 'rejected', 
-        updated_at: app.updatedAt,
-        document_certifications: pgApp.document_certifications
-      }).eq('id', appId);
-      
-      if (error) {
-        throw new Error(`Failed to reject application: ${error.message}`);
-      }
-
-      await this.save();
-      this.log('RejectTrainer', `Rejected application for ${app.fullName}.`);
+    const { error } = await supabase.rpc('reject_trainer_application', { app_id: appId });
+    if (error) {
+      throw new Error(`Failed to reject trainer application: ${error.message}`);
     }
+    await this.reload();
   }
 
   async requestMoreInfoTrainerApplication(appId: string): Promise<void> {

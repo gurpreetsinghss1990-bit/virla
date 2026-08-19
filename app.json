@@ -10,7 +10,7 @@
     "ios": {
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.varshaniviral.Virla",
-      "buildNumber": "35",
+      "buildNumber": "36",
       "entitlements": {
         "aps-environment": "production"
       },

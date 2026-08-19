@@ -448,7 +448,7 @@ export default function ProfileScreen() {
           contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 140 }}
         >
           {/* Top Account Role Selector */}
-          {user.role === 'trainer' && (
+          {(user.role === 'trainer' || (user.role === 'admin' && coach)) && (
             <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1.5 rounded-2xl mb-6">
               <TouchableOpacity
                 activeOpacity={0.8}
