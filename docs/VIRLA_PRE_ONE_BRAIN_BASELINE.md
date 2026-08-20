@@ -7,17 +7,17 @@ This document represents the official and verified baseline of the Virla applica
 ## A. RELEASE INFORMATION
 - **App Name**: Virla
 - **App Version**: `1.0.0`
-- **Build Number**: `58`
+- **Build Number**: `59`
 - **Bundle Identifier**: `com.varshaniviral.Virla`
 - **Expo SDK Version**: `~57.0.13`
 - **React Native Version**: `0.86.2`
 - **Node.js Version**: `v25.6.1`
 - **Git Branch**: `main`
-- **Git Commit SHA**: `f471d59f9b3ef01af2798298b93e797ad6a4d2f4`
+- **Git Commit SHA**: `509b036573c09fcc645bbcdb85f269a8a72a1df6`
 - **Git Tag**: `virla-pre-one-brain-baseline`
 - **EAS Profile**: `production`
-- **EAS Build ID**: `57dafcde-3396-4b14-8945-c813877f41e2`
-- **EAS Build URL**: `https://expo.dev/accounts/varshaniviral/projects/Virla/builds/57dafcde-3396-4b14-8945-c813877f41e2`
+- **EAS Build ID**: `06954e78-f82c-4153-8817-376e2939a8d7`
+- **EAS Build URL**: `https://expo.dev/accounts/varshaniviral/projects/Virla/builds/06954e78-f82c-4153-8817-376e2939a8d7`
 
 ---
 
