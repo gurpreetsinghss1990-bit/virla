@@ -398,11 +398,11 @@ export default function BookingScreen() {
 
       // 3. Location approved
       const locationStatus = coach.preferences?.operatingLocationStatus;
-      const locationApproved = locationStatus === 'verified';
+      const locationApproved = locationStatus === 'verified' || locationStatus === 'pending' || !locationStatus;
 
       // 3b. Gender approved (using canonical lowercase comparison)
       const trainerGender = (coach.gender || '').toLowerCase();
-      const genderValid = trainerGender === 'male' || trainerGender === 'female';
+      const genderValid = !trainerGender || trainerGender === 'male' || trainerGender === 'female';
       
       let genderApproved = false;
       if (genderValid) {
@@ -447,6 +447,20 @@ export default function BookingScreen() {
 
       // 6. Slots availability mapping
       const overrides = coach.preferences?.availabilityOverrides || [];
+      
+      // Get current time in IST (UTC+5:30)
+      const now = new Date();
+      const nowUtc = now.getTime();
+      const istOffset = 5.5 * 60 * 60 * 1000;
+      const istTime = new Date(nowUtc + istOffset);
+      const istYear = istTime.getUTCFullYear();
+      const istMonth = istTime.getUTCMonth() + 1;
+      const istDay = istTime.getUTCDate();
+      const istHours = istTime.getUTCHours();
+      const istMinutes = istTime.getUTCMinutes();
+      const istSeconds = istTime.getUTCSeconds();
+      const nowIst = new Date(Date.UTC(istYear, istMonth - 1, istDay, istHours, istMinutes, istSeconds));
+
       const dailySlots = defaultDaySlots.map(slot => {
         const override = overrides.find(o => 
           normalizeDate(o.date) === normalizedDateStr && 
@@ -459,10 +473,36 @@ export default function BookingScreen() {
           isAvailable,
           category: slotCategory
         };
-      }).filter((s: any) => 
-        s.isAvailable && 
-        (!s.category || s.category === 'All Workouts' || s.category === 'ANY WORKOUT' || s.category === targetCategory)
-      );
+      }).filter((s: any) => {
+        if (!s.isAvailable) return false;
+
+        const categoryMatch = !s.category || s.category === 'All Workouts' || s.category === 'ANY WORKOUT' || s.category === targetCategory;
+        if (!categoryMatch) return false;
+
+        // Apply universal 15-minute slot visibility rule
+        const startPart = s.time.split('-')[0].trim(); // e.g. "07:00 PM"
+        const match = startPart.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        if (match) {
+          let hour = parseInt(match[1], 10);
+          const minute = parseInt(match[2], 10);
+          const ampm = match[3].toUpperCase();
+          if (ampm === 'PM' && hour < 12) hour += 12;
+          if (ampm === 'AM' && hour === 12) hour = 0;
+
+          const dateParts = normalizedDateStr.split('-');
+          const slotYear = parseInt(dateParts[0], 10);
+          const slotMonth = parseInt(dateParts[1], 10);
+          const slotDay = parseInt(dateParts[2], 10);
+
+          const slotStartIst = new Date(Date.UTC(slotYear, slotMonth - 1, slotDay, hour, minute, 0));
+          const visibilityStartMs = slotStartIst.getTime() - 15 * 60 * 1000;
+
+          if (nowIst.getTime() < visibilityStartMs) {
+            return false; // Hide slot if before T-15 minutes
+          }
+        }
+        return true;
+      });
 
       let hasAvailableSlot = false;
       for (const slot of dailySlots) {

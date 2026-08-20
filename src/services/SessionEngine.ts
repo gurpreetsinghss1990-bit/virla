@@ -4,6 +4,17 @@ import { supabase } from '../database/supabaseClient';
 import { normalizeDate } from '../utils/date';
 
 export class SessionEngine {
+  static TRAVEL_WINDOW_MINUTES = 25;
+
+  /**
+   * Checks if current time is inside the pre-session travel window.
+   * Lock opens 25 minutes before scheduled start time.
+   */
+  static isTravelWindowOpen(booking: Booking): boolean {
+    if (!booking) return false;
+    return this.getMinutesToSession(booking) <= this.TRAVEL_WINDOW_MINUTES;
+  }
+
   /**
    * Helper to parse booking date and time into a native Javascript Date object.
    */
@@ -167,10 +178,8 @@ export class SessionEngine {
         throw error;
       }
 
-      const serverStartedAt = Number(data);
       Database.updateBookingSessionDetails(bookingId, {
-        timelineStatus: 'workout_started',
-        workoutStartedAt: serverStartedAt
+        timelineStatus: 'otp_verified'
       });
       return true;
     } catch (e) {
@@ -183,11 +192,30 @@ export class SessionEngine {
         return false;
       }
       Database.updateBookingSessionDetails(bookingId, {
-        timelineStatus: 'workout_started',
-        workoutStartedAt: Date.now()
+        timelineStatus: 'otp_verified'
       });
       return true;
     }
+  }
+
+  /**
+   * Starts the workout session after OTP is verified.
+   */
+  static async startWorkout(bookingId: string): Promise<void> {
+    const booking = Database.schema.bookings.find(b => b.id === bookingId);
+    if (!booking) {
+      throw new Error("Booking not found");
+    }
+
+    if (booking.timelineStatus !== 'otp_verified') {
+      throw new Error("OTP must be verified before starting the workout.");
+    }
+
+    // Update to workout_started and save the timestamp
+    Database.updateBookingSessionDetails(bookingId, {
+      timelineStatus: 'workout_started',
+      workoutStartedAt: Date.now()
+    });
   }
 
   /**
@@ -199,7 +227,8 @@ export class SessionEngine {
 
     Database.updateBookingSessionDetails(bookingId, {
       status: 'completed',
-      timelineStatus: 'workout_completed'
+      timelineStatus: 'workout_completed',
+      workoutCompletedAt: Date.now()
     });
   }
 

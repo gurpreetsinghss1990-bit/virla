@@ -76,6 +76,8 @@ export interface Booking {
   trainerArrivalTime?: string;
   caloriesBurned?: number;
   durationMinutes?: number;
+  travelStartedAt?: number;
+  workoutCompletedAt?: number;
   ratingDetails?: {
     overallRating: number;
     trainerRating: number;

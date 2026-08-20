@@ -175,12 +175,40 @@ export const useUserStore = create<UserState>()(
       setCompletedOnboarding: (completed) => set({ hasCompletedOnboarding: completed }),
       role: 'customer',
       setRole: (r) => set((state) => {
-        const updatedUser = { ...state.user, role: r };
+        let canonicalRole = r;
+
+        // Guard: block unapproved customer promoting to trainer
+        if (r === 'trainer') {
+          let isApproved = state.user.role === 'trainer';
+          if (!isApproved) {
+            const coachRecord = Database.schema.coaches.find(c => c.id === state.user.id || c.name === state.user.name);
+            if (coachRecord) {
+              isApproved = true;
+            } else {
+              const userPhone = Database.schema.users.find(u => u.id === state.user.id)?.phone;
+              const application = Database.schema.trainer_applications.find(a => (a.userId === state.user.id || (userPhone && a.phone === userPhone)) && a.status === 'approved');
+              if (application) {
+                isApproved = true;
+              }
+            }
+          }
+          if (!isApproved) {
+            console.warn('[SECURITY] Denied self-promotion to trainer role.');
+            canonicalRole = 'customer';
+          }
+        }
+
+        // Guard: approved trainers must remain trainers
+        if (state.user.role === 'trainer') {
+          canonicalRole = 'trainer';
+        }
+
+        const updatedUser = { ...state.user, role: canonicalRole };
         if (updatedUser.id) {
-          Database.updateProfile(updatedUser.id, { role: r } as any);
+          Database.updateUser(updatedUser.id, { role: canonicalRole });
         }
         return {
-          role: r,
+          role: canonicalRole,
           user: updatedUser
         };
       }),
@@ -201,18 +229,39 @@ export const useUserStore = create<UserState>()(
         const userId = Database.getCurrentUserId();
         if (userId) {
           const profile = Database.getProfile(userId);
-          const userDb = Database.getWorkouts() // arbitrary call to database load assurance
-            ? Database.schema.users.find(u => u.id === userId)
-            : null;
+          const userDb = Database.schema.users.find(u => u.id === userId);
           
           if (userDb) {
+            // Detect if approved trainer status exists
+            let isApprovedTrainer = userDb.role === 'trainer';
+            if (!isApprovedTrainer) {
+              const coachRecord = Database.schema.coaches.find(c => c.id === userId || c.name === userDb.name);
+              if (coachRecord) {
+                isApprovedTrainer = true;
+              } else {
+                const application = Database.schema.trainer_applications.find(a => (a.userId === userId || a.phone === userDb.phone) && a.status === 'approved');
+                if (application) {
+                  isApprovedTrainer = true;
+                }
+              }
+            }
+
+            // Sync user role in database if not set
+            if (isApprovedTrainer && userDb.role !== 'trainer') {
+              userDb.role = 'trainer';
+              Database.updateUser(userId, { role: 'trainer' });
+              console.log(`[SYNC] Synchronized trainer role for user ID ${userId} in database.`);
+            }
+
+            const activeRole = isApprovedTrainer ? 'trainer' : userDb.role;
+
             const userObj: User = {
               id: userDb.id,
               name: userDb.name,
               email: userDb.email,
               avatar: userDb.avatar,
               location: 'Mumbai, India',
-              role: userDb.role,
+              role: activeRole,
               registrationStatus: userDb.registrationStatus || 'PROFILE_NAME_PENDING',
             };
 
@@ -224,7 +273,7 @@ export const useUserStore = create<UserState>()(
 
             set({
               user: userObj,
-              role: userDb.role,
+              role: activeRole,
               invoices: dbInvoices,
               familyMembers: familiesList
             });

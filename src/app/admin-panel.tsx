@@ -9,6 +9,7 @@ import { Coach } from '../types';
 import { LuxuryCard } from '../components/LuxuryCard';
 import { supabase } from '../database/supabaseClient';
 import { useBookingStore } from '../store/bookingStore';
+import { normalizeDate } from '../utils/date';
 
 export default function AdminPanelScreen() {
   const router = useRouter();
@@ -49,6 +50,8 @@ export default function AdminPanelScreen() {
   useEffect(() => {
     Promise.resolve().then(() => {
       checkAdminAuth();
+      useBookingStore.getState().syncFromDB();
+      useBookingStore.getState().refreshBookings();
     });
   }, []);
 
@@ -583,6 +586,114 @@ export default function AdminPanelScreen() {
                 </View>
               </View>
 
+              {/* TODAY'S BOOKED SESSIONS */}
+              {(() => {
+                const now = new Date();
+                const nowUtc = now.getTime();
+                const istOffset = 5.5 * 60 * 60 * 1000;
+                const istTime = new Date(nowUtc + istOffset);
+                const istYear = istTime.getUTCFullYear();
+                const istMonth = String(istTime.getUTCMonth() + 1).padStart(2, '0');
+                const istDay = String(istTime.getUTCDate()).padStart(2, '0');
+                const todayIstStr = `${istYear}-${istMonth}-${istDay}`;
+
+                const todayBooked = bookings.filter(b => 
+                  b.status === 'upcoming' && 
+                  normalizeDate(b.date) === todayIstStr && 
+                  b.timelineStatus !== 'booked' && 
+                  b.timelineStatus !== 'trainer_assigned'
+                );
+
+                const upcomingBooked = bookings.filter(b => 
+                  b.status === 'upcoming' && 
+                  normalizeDate(b.date) > todayIstStr && 
+                  b.timelineStatus !== 'booked' && 
+                  b.timelineStatus !== 'trainer_assigned'
+                );
+
+                return (
+                  <>
+                    {/* TODAY'S BOOKED */}
+                    <View className="gap-4">
+                      <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">{"TODAY'S BOOKED SESSIONS (" + todayBooked.length + ")"}</Text>
+                      {todayBooked.length === 0 ? (
+                        <View className="bg-white border border-zinc-200 p-8 rounded-[24px] items-center justify-center">
+                          <Feather name="calendar" size={20} color="#9CA3AF" />
+                          <Text className="text-zinc-400 text-[10px] font-black uppercase mt-2">No bookings scheduled for today.</Text>
+                        </View>
+                      ) : (
+                        todayBooked.map((b) => (
+                          <LuxuryCard key={b.id} className="p-5" interactive={false}>
+                            <View className="flex-row justify-between items-start mb-3">
+                              <View className="gap-0.5">
+                                <Text className="text-[#101828] text-base font-extrabold">{b.workoutTitle}</Text>
+                                <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Booking ID: {b.id}</Text>
+                              </View>
+                              <View className="bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-xl">
+                                <Text className="text-emerald-600 text-[8px] font-bold uppercase tracking-wider">{b.timelineStatus}</Text>
+                              </View>
+                            </View>
+                            <View className="h-[1px] bg-zinc-100 my-2" />
+                            <View className="gap-1.5 mb-3.5">
+                              <Text className="text-zinc-650 text-xs font-medium">Client Name: <Text className="font-bold text-zinc-900">{b.clientName || 'Viral'}</Text></Text>
+                              <Text className="text-zinc-650 text-xs font-medium">Trainer Name: <Text className="font-bold text-zinc-900">{b.trainerName}</Text></Text>
+                              <Text className="text-zinc-650 text-xs font-medium">Workout Type: <Text className="font-bold text-zinc-900">{b.workoutTitle}</Text></Text>
+                              <Text className="text-zinc-650 text-xs font-medium">Booking Status: <Text className="font-bold text-zinc-900">Confirmed / Booked</Text></Text>
+                              <Text className="text-zinc-650 text-xs font-medium">Time: <Text className="font-bold text-zinc-900">{b.date} @ {b.time}</Text></Text>
+                            </View>
+                            <TouchableOpacity
+                              onPress={() => setSelectedAuditSession(b)}
+                              className="bg-zinc-800 py-3 rounded-xl items-center justify-center"
+                            >
+                              <Text className="text-white text-xs font-black uppercase tracking-wider">View Audit Timeline</Text>
+                            </TouchableOpacity>
+                          </LuxuryCard>
+                        ))
+                      )}
+                    </View>
+
+                    {/* UPCOMING BOOKED SESSIONS */}
+                    <View className="gap-4 mt-2">
+                      <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">UPCOMING BOOKED SESSIONS ({upcomingBooked.length})</Text>
+                      {upcomingBooked.length === 0 ? (
+                        <View className="bg-white border border-zinc-200 p-8 rounded-[24px] items-center justify-center">
+                          <Feather name="clock" size={20} color="#9CA3AF" />
+                          <Text className="text-zinc-400 text-[10px] font-black uppercase mt-2">No upcoming bookings scheduled.</Text>
+                        </View>
+                      ) : (
+                        upcomingBooked.map((b) => (
+                          <LuxuryCard key={b.id} className="p-5" interactive={false}>
+                            <View className="flex-row justify-between items-start mb-3">
+                              <View className="gap-0.5">
+                                <Text className="text-[#101828] text-base font-extrabold">{b.workoutTitle}</Text>
+                                <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Booking ID: {b.id}</Text>
+                              </View>
+                              <View className="bg-indigo-50 border border-indigo-150 px-3 py-1 rounded-xl">
+                                <Text className="text-indigo-600 text-[8px] font-bold uppercase tracking-wider">{b.timelineStatus}</Text>
+                              </View>
+                            </View>
+                            <View className="h-[1px] bg-zinc-100 my-2" />
+                            <View className="gap-1.5 mb-3.5">
+                              <Text className="text-zinc-650 text-xs font-medium">Client Name: <Text className="font-bold text-zinc-900">{b.clientName || 'Viral'}</Text></Text>
+                              <Text className="text-zinc-650 text-xs font-medium">Trainer Name: <Text className="font-bold text-zinc-900">{b.trainerName}</Text></Text>
+                              <Text className="text-zinc-650 text-xs font-medium">Workout Type: <Text className="font-bold text-zinc-900">{b.workoutTitle}</Text></Text>
+                              <Text className="text-zinc-650 text-xs font-medium">Booking Status: <Text className="font-bold text-zinc-900">Confirmed / Booked</Text></Text>
+                              <Text className="text-zinc-650 text-xs font-medium">Time: <Text className="font-bold text-zinc-900">{b.date} @ {b.time}</Text></Text>
+                            </View>
+                            <TouchableOpacity
+                              onPress={() => setSelectedAuditSession(b)}
+                              className="bg-indigo-600 py-3 rounded-xl items-center justify-center"
+                            >
+                              <Text className="text-white text-xs font-black uppercase tracking-wider">View Audit Timeline</Text>
+                            </TouchableOpacity>
+                          </LuxuryCard>
+                        ))
+                      )}
+                    </View>
+                  </>
+                );
+              })()}
+
               {/* Live Session List */}
               <View className="gap-4">
                 <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">Live Ongoing Sessions</Text>
@@ -620,9 +731,13 @@ export default function AdminPanelScreen() {
                         </TouchableOpacity>
                         
                         <TouchableOpacity
-                          onPress={() => {
-                            updateTimelineStatus(b.id, 'trainer_arrived');
-                            Alert.alert('Session Advanced', 'Trainer marked as arrived.');
+                          onPress={async () => {
+                            try {
+                              await updateTimelineStatus(b.id, 'trainer_arrived');
+                              Alert.alert('Session Advanced', 'Trainer marked as arrived.');
+                            } catch (err: any) {
+                              Alert.alert('Error', err.message || 'Could not advance status.');
+                            }
                           }}
                           className="flex-1 bg-zinc-100 border border-zinc-200 py-2 rounded-lg items-center justify-center"
                         >
@@ -685,7 +800,7 @@ export default function AdminPanelScreen() {
           )}
 
           {activeTab === 'acceptance' && (() => {
-            const pending = bookings.filter(b => b.status === 'upcoming' && b.timelineStatus === 'booked' && b.trainerId && b.trainerId !== 'searching');
+            const pending = bookings.filter(b => b.status === 'upcoming' && (b.timelineStatus === 'booked' || b.timelineStatus === 'trainer_assigned'));
             const autoAccepted = bookings.filter(b => b.status === 'upcoming' && b.acceptanceMethod === 'SYSTEM_AUTO_ACCEPT');
             const recent = bookings.filter(b => b.status === 'upcoming' && b.acceptanceMethod === 'TRAINER_MANUAL_ACCEPT');
 
@@ -698,12 +813,12 @@ export default function AdminPanelScreen() {
                   </Text>
                 </View>
 
-                {/* Section 1: Pending Acceptance */}
+                {/* Section 1: ACTIVE TRAINING REQUESTS */}
                 <View className="gap-4">
-                  <Text className="text-zinc-800 text-[11px] font-black uppercase tracking-wider pl-1">Pending Acceptance ({pending.length})</Text>
+                  <Text className="text-zinc-800 text-[11px] font-black uppercase tracking-wider pl-1">ACTIVE TRAINING REQUESTS ({pending.length})</Text>
                   {pending.length === 0 ? (
                     <View className="p-6 bg-zinc-50 border border-dashed border-zinc-200 rounded-[28px] items-center justify-center">
-                      <Text className="text-zinc-400 text-xs font-bold">No bookings pending acceptance.</Text>
+                      <Text className="text-zinc-400 text-xs font-bold">No active training requests.</Text>
                     </View>
                   ) : (
                     pending.map(b => (
@@ -720,7 +835,7 @@ export default function AdminPanelScreen() {
                         <View className="h-[1px] bg-zinc-100 my-2" />
                         <View className="gap-1.5 mb-3.5">
                           <Text className="text-zinc-650 text-xs font-medium">Client: <Text className="font-bold text-zinc-900">{b.clientName || 'Viral'}</Text></Text>
-                          <Text className="text-zinc-650 text-xs font-medium">Assigned Trainer: <Text className="font-bold text-zinc-900">{b.trainerName}</Text></Text>
+                          <Text className="text-zinc-650 text-xs font-medium">Assigned Trainer: <Text className="font-bold text-zinc-900">{b.trainerId === 'searching' || !b.trainerId ? 'Searching for Trainer...' : b.trainerName}</Text></Text>
                           <Text className="text-zinc-650 text-xs font-medium">Booked Time: <Text className="font-bold text-zinc-900">{b.date} @ {b.time}</Text></Text>
                         </View>
                         <TouchableOpacity

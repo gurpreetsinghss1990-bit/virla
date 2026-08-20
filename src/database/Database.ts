@@ -440,6 +440,8 @@ export function mapBooking(row: any): Booking {
     originalPackageType: row.original_package_type || 'SINGLE',
     partnerName: row.partner_name || undefined,
     partnerPhone: row.partner_phone || undefined,
+    travelStartedAt: row.travel_started_at ? Number(row.travel_started_at) : undefined,
+    workoutCompletedAt: row.workout_completed_at ? Number(row.workout_completed_at) : undefined,
   };
 }
 
@@ -484,6 +486,8 @@ export function mapBookingToPostgres(b: Booking): any {
     original_package_type: b.originalPackageType || 'SINGLE',
     partner_name: b.partnerName || null,
     partner_phone: b.partnerPhone || null,
+    travel_started_at: b.travelStartedAt || null,
+    workout_completed_at: b.workoutCompletedAt || null,
   };
 }
 
@@ -1938,6 +1942,9 @@ class DatabaseClient {
   getBookings(userId: string): Booking[] {
     this.runBackgroundSyncChecks();
     const userObj = this.schema.users.find(u => u.id === userId);
+    if (userObj && userObj.role === 'admin') {
+      return this.schema.bookings;
+    }
     if (userObj && userObj.role === 'trainer') {
       return this.schema.bookings.filter(b => b.trainerId === userObj.id || b.trainerName === userObj.name);
     }
@@ -2337,28 +2344,54 @@ class DatabaseClient {
     }
   }
 
-  updateTimelineStatus(bookingId: string, timelineStatus: Booking['timelineStatus']): void {
+  async updateTimelineStatus(bookingId: string, timelineStatus: Booking['timelineStatus']): Promise<void> {
     const booking = this.schema.bookings.find(b => b.id === bookingId);
     if (booking) {
-      booking.timelineStatus = timelineStatus;
-      if (timelineStatus === 'session_closed' || timelineStatus === 'workout_completed') {
-        booking.status = 'completed';
-      }
-      
       const nowMs = Date.now();
+      
+      let nextStatus = booking.status;
+      if (timelineStatus === 'session_closed' || timelineStatus === 'workout_completed') {
+        nextStatus = 'completed';
+      }
+
       const updatePayload: any = {
-        status: booking.status,
-        timeline_status: booking.timelineStatus
+        status: nextStatus,
+        timeline_status: timelineStatus
       };
+
+      if (timelineStatus === 'trainer_travelling') {
+        updatePayload.travel_started_at = nowMs;
+      }
+
+      if (timelineStatus === 'workout_completed') {
+        updatePayload.workout_completed_at = nowMs;
+      }
+
+      if (timelineStatus === 'trainer_accepted' && !booking.acceptanceMethod) {
+        updatePayload.acceptance_method = 'TRAINER_MANUAL_ACCEPT';
+        updatePayload.trainer_accepted_at = nowMs;
+      }
+
+      const { error } = await supabase.from('bookings').update(updatePayload).eq('id', bookingId);
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      booking.timelineStatus = timelineStatus;
+      booking.status = nextStatus;
+
+      if (timelineStatus === 'trainer_travelling') {
+        booking.travelStartedAt = nowMs;
+      }
+
+      if (timelineStatus === 'workout_completed') {
+        booking.workoutCompletedAt = nowMs;
+      }
 
       if (timelineStatus === 'trainer_accepted' && !booking.acceptanceMethod) {
         booking.acceptanceMethod = 'TRAINER_MANUAL_ACCEPT';
         booking.trainerAcceptedAt = nowMs;
-        updatePayload.acceptance_method = booking.acceptanceMethod;
-        updatePayload.trainer_accepted_at = booking.trainerAcceptedAt;
       }
-
-      supabase.from('bookings').update(updatePayload).eq('id', bookingId).then();
 
       this.save();
       this.log('UpdateTimelineStatus', `Updated booking ${bookingId} status to ${timelineStatus}`);
@@ -2429,31 +2462,41 @@ class DatabaseClient {
     }
   }
 
-  updateBookingSessionDetails(bookingId: string, details: {
+  async updateBookingSessionDetails(bookingId: string, details: {
     status?: Booking['status'];
     timelineStatus?: Booking['timelineStatus'];
     otp?: string;
     gracePeriodStartedAt?: number;
     otpExpiresAt?: number;
     workoutStartedAt?: number;
-  }): void {
+    travelStartedAt?: number;
+    workoutCompletedAt?: number;
+  }): Promise<void> {
     const booking = this.schema.bookings.find(b => b.id === bookingId);
     if (booking) {
+      const updatePayload: any = {};
+      if (details.status !== undefined) updatePayload.status = details.status;
+      if (details.timelineStatus !== undefined) updatePayload.timeline_status = details.timelineStatus;
+      if (details.otp !== undefined) updatePayload.otp = details.otp;
+      if (details.gracePeriodStartedAt !== undefined) updatePayload.grace_period_started_at = details.gracePeriodStartedAt;
+      if (details.otpExpiresAt !== undefined) updatePayload.otp_expires_at = details.otpExpiresAt;
+      if (details.workoutStartedAt !== undefined) updatePayload.workout_started_at = details.workoutStartedAt;
+      if (details.travelStartedAt !== undefined) updatePayload.travel_started_at = details.travelStartedAt;
+      if (details.workoutCompletedAt !== undefined) updatePayload.workout_completed_at = details.workoutCompletedAt;
+
+      const { error } = await supabase.from('bookings').update(updatePayload).eq('id', bookingId);
+      if (error) {
+        throw new Error(error.message);
+      }
+
       if (details.status !== undefined) booking.status = details.status;
       if (details.timelineStatus !== undefined) booking.timelineStatus = details.timelineStatus;
       if (details.otp !== undefined) booking.otp = details.otp;
       if (details.gracePeriodStartedAt !== undefined) booking.gracePeriodStartedAt = details.gracePeriodStartedAt;
       if (details.otpExpiresAt !== undefined) booking.otpExpiresAt = details.otpExpiresAt;
       if (details.workoutStartedAt !== undefined) booking.workoutStartedAt = details.workoutStartedAt;
-      
-      supabase.from('bookings').update({
-        status: booking.status,
-        timeline_status: booking.timelineStatus,
-        otp: booking.otp,
-        grace_period_started_at: booking.gracePeriodStartedAt,
-        otp_expires_at: booking.otpExpiresAt,
-        workout_started_at: booking.workoutStartedAt
-      }).eq('id', bookingId).then(() => {});
+      if (details.travelStartedAt !== undefined) booking.travelStartedAt = details.travelStartedAt;
+      if (details.workoutCompletedAt !== undefined) booking.workoutCompletedAt = details.workoutCompletedAt;
 
       this.save();
       this.log('UpdateBookingSessionDetails', `Updated session details for booking ${bookingId} to status: ${booking.status}, timeline: ${booking.timelineStatus}`);

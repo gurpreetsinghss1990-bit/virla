@@ -1790,13 +1790,17 @@ export default function HomeScreen() {
 
                       {nextSession.timelineStatus === 'trainer_accepted' ? (
                         <TouchableOpacity
-                          onPress={() => {
-                            updateTimelineStatus(nextSession.id, 'trainer_travelling');
-                            useNotificationStore.getState().addNotification({
-                              title: 'Coach On The Way 🚗',
-                              body: 'Coach has started travelling to your venue.',
-                              icon: 'user-check'
-                            });
+                          onPress={async () => {
+                            try {
+                              await updateTimelineStatus(nextSession.id, 'trainer_travelling');
+                              useNotificationStore.getState().addNotification({
+                                title: 'Coach On The Way 🚗',
+                                body: 'Coach has started travelling to your venue.',
+                                icon: 'user-check'
+                              });
+                            } catch (err: any) {
+                              Alert.alert('Error', err.message || 'Could not start travel.');
+                            }
                           }}
                           className="w-full bg-indigo-600 py-3.5 rounded-xl items-center justify-center"
                         >
@@ -1804,13 +1808,17 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                       ) : nextSession.timelineStatus === 'trainer_travelling' ? (
                         <TouchableOpacity
-                          onPress={() => {
-                            updateTimelineStatus(nextSession.id, 'trainer_arrived');
-                            useNotificationStore.getState().addNotification({
-                              title: 'Coach Arrived 🔔',
-                              body: 'Coach has arrived at your location.',
-                              icon: 'lock'
-                            });
+                          onPress={async () => {
+                            try {
+                              await updateTimelineStatus(nextSession.id, 'trainer_arrived');
+                              useNotificationStore.getState().addNotification({
+                                title: 'Coach Arrived 🔔',
+                                body: 'Coach has arrived at your location.',
+                                icon: 'lock'
+                              });
+                            } catch (err: any) {
+                              Alert.alert('Error', err.message || 'Could not update status.');
+                            }
                           }}
                           className="w-full bg-emerald-600 py-3.5 rounded-xl items-center justify-center"
                         >

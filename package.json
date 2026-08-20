@@ -49,6 +49,7 @@
     "eas-cli": "^21.8.0",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~57.0.1",
+    "lightningcss-darwin-x64": "^1.33.0",
     "typescript": "~6.0.3"
   },
   "scripts": {

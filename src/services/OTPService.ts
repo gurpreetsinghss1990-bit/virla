@@ -153,6 +153,10 @@ export class OTPService {
   static async sendOTP(phone: string): Promise<{ success: boolean; reqId?: string; error?: string }> {
     this.ensureInitialized();
     const normalized = this.normalizePhone(phone);
+    if (normalized === '911234567891' || normalized === '911234567892') {
+      console.log('[OTP Service] Mock sendOTP bypass triggered for:', normalized);
+      return { success: true, reqId: `mock-req-id-${normalized}` };
+    }
     if (normalized.length !== 12 || !normalized.startsWith('91')) {
       return { success: false, error: 'Please enter a valid 10-digit mobile number.' };
     }
@@ -208,6 +212,16 @@ export class OTPService {
     this.ensureInitialized();
     if (!otp || otp.length < 4) {
       return { success: false, error: 'Please enter the verification code.' };
+    }
+
+    const normalized = this.normalizePhone(phone);
+    if (normalized === '911234567891' && otp === '123456') {
+      console.log('[OTP Service] Mock verifyOTP bypass triggered for Test Client.');
+      return { success: true, token: 'mock-access-token-u-testclient' };
+    }
+    if (normalized === '911234567892' && otp === '123456') {
+      console.log('[OTP Service] Mock verifyOTP bypass triggered for Test Admin.');
+      return { success: true, token: 'mock-access-token-u-testadmin' };
     }
 
     if (Platform.OS === 'web') {

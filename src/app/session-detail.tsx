@@ -348,27 +348,35 @@ export default function SessionDetailScreen() {
   }, [currentStatus, pulseScale]);
 
   // Automated travel simulation
-  const startTravelSimulation = () => {
+  const startTravelSimulation = async () => {
     if (simIntervalId) clearInterval(simIntervalId);
     setJourneyProgress(0);
-    updateTimelineStatus(booking.id, 'trainer_travelling');
+    try {
+      await updateTimelineStatus(booking.id, 'trainer_travelling');
 
-    const interval = setInterval(() => {
-      setJourneyProgress(prev => {
-        const next = prev + 0.02;
-        if (next >= 1.0) {
-          clearInterval(interval);
-          setSimIntervalId(null);
-          // Automatically transition to Arrived
-          setTimeout(() => {
-            updateTimelineStatus(booking.id, 'trainer_arrived');
-          }, 800);
-          return 1.0;
-        }
-        return next;
-      });
-    }, 300); // Takes ~15s to complete journey simulation
-    setSimIntervalId(interval);
+      const interval = setInterval(() => {
+        setJourneyProgress(prev => {
+          const next = prev + 0.02;
+          if (next >= 1.0) {
+            clearInterval(interval);
+            setSimIntervalId(null);
+            // Automatically transition to Arrived
+            setTimeout(async () => {
+              try {
+                await updateTimelineStatus(booking.id, 'trainer_arrived');
+              } catch (e: any) {
+                Alert.alert('Error', e.message || 'Could not update to trainer_arrived.');
+              }
+            }, 800);
+            return 1.0;
+          }
+          return next;
+        });
+      }, 300); // Takes ~15s to complete journey simulation
+      setSimIntervalId(interval);
+    } catch (e: any) {
+      Alert.alert('Travel Simulation Error', e.message || 'Could not start travel.');
+    }
   };
 
   useEffect(() => {
@@ -404,18 +412,13 @@ export default function SessionDetailScreen() {
     if (success) {
       Alert.alert(
         'Check-In Verified',
-        'Verification code correct. Starting the workout session.',
+        'Verification code correct. Click "Start Workout" under your console to begin.',
         [
           {
-            text: "Let's Go",
+            text: 'OK',
             onPress: () => {
               setOtpInput('');
               syncFromDB();
-              addNotification({
-                title: 'Workout Started 🏋️‍♂️',
-                body: `Coach ${booking.trainerName} started your active session. Warmup drills underway.`,
-                icon: 'user-check'
-              });
             }
           }
         ]
@@ -429,8 +432,8 @@ export default function SessionDetailScreen() {
     const success = await SessionEngine.verifyOTP(booking.id, customerOtpInput);
     if (success) {
       Alert.alert(
-        'Session Started 🏋️‍♂️',
-        'Verification successful! Enjoy your session.',
+        'Check-In Verified',
+        'Verification successful! Your coach will start the workout shortly.',
         [
           {
             text: 'OK',
@@ -448,7 +451,7 @@ export default function SessionDetailScreen() {
   };
 
   // Submit report questionnaire
-  const handleQuestionnaireSubmit = () => {
+  const handleQuestionnaireSubmit = async () => {
     if (!coachSignature.trim()) {
       Alert.alert('Signature Required', 'Please input your digital signature to authorize report closure.');
       return;
@@ -460,42 +463,54 @@ export default function SessionDetailScreen() {
       coachSignature: coachSignature.trim(),
     });
     // Set to report submitted and advance to feedback pending
-    updateTimelineStatus(booking.id, 'trainer_report_submitted');
-    addNotification({
-      title: 'Workout Completed 🏆',
-      body: `Coach ${booking.trainerName} submitted your post-workout mobility index report.`,
-      icon: 'award'
-    });
-
-    setTimeout(() => {
-      updateTimelineStatus(booking.id, 'customer_review_pending');
+    try {
+      await updateTimelineStatus(booking.id, 'trainer_report_submitted');
       addNotification({
-        title: 'Rate Session Experience 🌟',
-        body: 'Please leave a rating and share your post-workout feedback.',
-        icon: 'bell'
+        title: 'Workout Completed 🏆',
+        body: `Coach ${booking.trainerName} submitted your post-workout mobility index report.`,
+        icon: 'award'
       });
-    }, 600);
 
-    setShowQuestionnaire(false);
+      setTimeout(async () => {
+        try {
+          await updateTimelineStatus(booking.id, 'customer_review_pending');
+          addNotification({
+            title: 'Rate Session Experience 🌟',
+            body: 'Please leave a rating and share your post-workout feedback.',
+            icon: 'bell'
+          });
+        } catch (err: any) {
+          Alert.alert('Error', err.message || 'Could not advance session status.');
+        }
+      }, 600);
+
+      setShowQuestionnaire(false);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Could not submit report.');
+    }
   };
 
   // User Rating review submit
-  const handleClientFeedbackSubmit = () => {
-    updateBookingRating(booking.id, {
-      overallRating,
-      trainerRating,
-      workoutRating,
-      difficulty,
-      energy,
-      comments: comments.trim(),
-    });
-    updateTimelineStatus(booking.id, 'session_closed');
-    addNotification({
-      title: 'Session Closed successfully ✅',
-      body: 'Thank you! Rating details saved and transaction invoice closed.',
-      icon: 'check-circle'
-    });
-    syncProfile();
+  const handleClientFeedbackSubmit = async () => {
+    try {
+      await updateTimelineStatus(booking.id, 'session_closed');
+      updateBookingRating(booking.id, {
+        overallRating,
+        trainerRating,
+        workoutRating,
+        difficulty,
+        energy,
+        comments: comments.trim(),
+      });
+      addNotification({
+        title: 'Session Closed successfully ✅',
+        body: 'Thank you! Rating details saved and transaction invoice closed.',
+        icon: 'check-circle'
+      });
+      syncProfile();
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Could not close session.');
+    }
   };
 
   // Call mock simulator
@@ -770,9 +785,13 @@ export default function SessionDetailScreen() {
                   { text: 'Cancel', style: 'cancel' },
                   {
                     text: 'Accept',
-                    onPress: () => {
-                      updateTimelineStatus(booking.id, 'trainer_accepted');
-                      Alert.alert('Booking Accepted', 'You have accepted the session request.');
+                    onPress: async () => {
+                      try {
+                        await updateTimelineStatus(booking.id, 'trainer_accepted');
+                        Alert.alert('Booking Accepted', 'You have accepted the session request.');
+                      } catch (err: any) {
+                        Alert.alert('Accept Failed', err.message || 'Could not accept booking.');
+                      }
                     }
                   }
                 ]
@@ -816,7 +835,13 @@ export default function SessionDetailScreen() {
           {currentStatus === 'trainer_assigned' && role === 'trainer' && (
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() => updateTimelineStatus(booking.id, 'trainer_accepted')}
+              onPress={async () => {
+                try {
+                  await updateTimelineStatus(booking.id, 'trainer_accepted');
+                } catch (e: any) {
+                  Alert.alert('Simulation Error', e.message);
+                }
+              }}
               className="px-3.5 py-1.5 bg-indigo-600 rounded-xl"
             >
               <Text className="text-white text-[7px] font-black uppercase">Simulate Accept</Text>
@@ -826,7 +851,13 @@ export default function SessionDetailScreen() {
           {currentStatus === 'trainer_accepted' && role === 'trainer' && (
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() => updateTimelineStatus(booking.id, 'trainer_preparing')}
+              onPress={async () => {
+                try {
+                  await updateTimelineStatus(booking.id, 'trainer_preparing');
+                } catch (e: any) {
+                  Alert.alert('Simulation Error', e.message);
+                }
+              }}
               className="px-3.5 py-1.5 bg-indigo-600 rounded-xl"
             >
               <Text className="text-white text-[7px] font-black uppercase">Simulate Prep Gear</Text>
@@ -846,10 +877,14 @@ export default function SessionDetailScreen() {
           {currentStatus === 'trainer_travelling' && (
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() => {
+              onPress={async () => {
                 if (simIntervalId) clearInterval(simIntervalId);
                 setJourneyProgress(1.0);
-                updateTimelineStatus(booking.id, 'trainer_arrived');
+                try {
+                  await updateTimelineStatus(booking.id, 'trainer_arrived');
+                } catch (e: any) {
+                  Alert.alert('Simulation Error', e.message);
+                }
               }}
               className="px-3.5 py-1.5 bg-green-600 rounded-xl"
             >
@@ -1218,16 +1253,29 @@ export default function SessionDetailScreen() {
                 {role === 'trainer' && (
                   <View className="border-t border-zinc-100 pt-3.5 mt-1 gap-3">
                     {(currentStatus === 'trainer_accepted' || currentStatus === 'trainer_preparing') && (
-                      <TouchableOpacity
-                        onPress={() => {
-                          handleNavigateAddress();
-                          updateTimelineStatus(booking.id, 'trainer_travelling');
-                        }}
-                        className="w-full bg-[#E11D48] py-3.5 rounded-[18px] items-center justify-center flex-row gap-2 shadow-sm"
-                      >
-                        <Feather name="navigation" size={14} color="white" />
-                        <Text className="text-white text-xs font-black uppercase">Start Navigation</Text>
-                      </TouchableOpacity>
+                      SessionEngine.isTravelWindowOpen(booking) ? (
+                        <TouchableOpacity
+                          onPress={async () => {
+                            handleNavigateAddress();
+                            try {
+                              await updateTimelineStatus(booking.id, 'trainer_travelling');
+                            } catch (err: any) {
+                              Alert.alert('Error', err.message || 'Could not start travel.');
+                            }
+                          }}
+                          className="w-full bg-[#E11D48] py-3.5 rounded-[18px] items-center justify-center flex-row gap-2 shadow-sm"
+                        >
+                          <Feather name="navigation" size={14} color="white" />
+                          <Text className="text-white text-xs font-black uppercase">Start Navigation</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <View className="bg-zinc-950 p-4 rounded-xl items-center justify-center border border-zinc-800">
+                          <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Travel Window Locked</Text>
+                          <Text className="text-zinc-500 text-[8px] font-medium text-center mt-1 leading-normal">
+                            You can start travel 25 minutes before the scheduled session.
+                          </Text>
+                        </View>
+                      )
                     )}
 
                     {currentStatus === 'trainer_travelling' && (
@@ -1249,6 +1297,28 @@ export default function SessionDetailScreen() {
                       >
                         <Feather name="check-circle" size={14} color="white" />
                         <Text className="text-white text-xs font-black uppercase">Check In</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {currentStatus === 'otp_verified' && (
+                      <TouchableOpacity
+                        onPress={async () => {
+                          try {
+                            await SessionEngine.startWorkout(booking.id);
+                            syncFromDB();
+                            addNotification({
+                              title: 'Workout Started 🏋️‍♂️',
+                              body: `Coach ${booking.trainerName} started your active session. Warmup drills underway.`,
+                              icon: 'user-check'
+                            });
+                          } catch (err: any) {
+                            Alert.alert('Error', err.message || 'Could not start workout.');
+                          }
+                        }}
+                        className="w-full bg-[#10B981] py-3.5 rounded-[18px] items-center justify-center flex-row gap-2 shadow-sm"
+                      >
+                        <Feather name="play" size={14} color="white" />
+                        <Text className="text-white text-xs font-black uppercase">Start Workout</Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -1374,6 +1444,32 @@ export default function SessionDetailScreen() {
                     </View>
                   </View>
                 )}
+              </View>
+            )}
+
+            {currentStatus === 'otp_verified' && (role === 'customer' || role === 'admin') && (
+              <View className="bg-zinc-950 p-6 rounded-[28px] border border-zinc-800 shadow-xl gap-4">
+                <View className="flex-row items-center gap-2">
+                  <View className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  <Text className="text-emerald-400 text-[10px] font-black uppercase tracking-wider">Check-in Verified</Text>
+                </View>
+                <Text className="text-white text-base font-bold">Check-in verified successfully.</Text>
+                <Text className="text-zinc-500 text-xs leading-relaxed">
+                  Waiting for Coach {booking.trainerName} to start the workout. Please prepare for your session.
+                </Text>
+              </View>
+            )}
+
+            {currentStatus === 'otp_verified' && role === 'trainer' && (
+              <View className="bg-zinc-950 p-6 rounded-[28px] border border-zinc-800 shadow-xl gap-4">
+                <View className="flex-row items-center gap-2">
+                  <View className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  <Text className="text-emerald-400 text-[10px] font-black uppercase tracking-wider">Check-in Verified</Text>
+                </View>
+                <Text className="text-white text-base font-bold">Client check-in verified successfully.</Text>
+                <Text className="text-zinc-500 text-xs leading-relaxed">
+                  The client has been checked in. You are now ready to begin the workout. Tap &quot;Start Workout&quot; below to start the timer.
+                </Text>
               </View>
             )}
 

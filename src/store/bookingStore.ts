@@ -12,7 +12,7 @@ interface BookingState {
   cancelSession: (id: string) => void;
   rescheduleSession: (id: string, date: string, time: string) => void;
   addBooking: (booking: Omit<Booking, 'status'>) => void;
-  updateTimelineStatus: (id: string, status: Booking['timelineStatus']) => void;
+  updateTimelineStatus: (id: string, status: Booking['timelineStatus']) => Promise<void>;
   updateBookingRating: (id: string, ratingDetails: Booking['ratingDetails']) => void;
   updateBookingNote: (id: string, note: string) => void;
   updateBookingSessionDetails: (id: string, details: {
@@ -22,10 +22,12 @@ interface BookingState {
     gracePeriodStartedAt?: number;
     otpExpiresAt?: number;
     workoutStartedAt?: number;
-  }) => void;
+    travelStartedAt?: number;
+    workoutCompletedAt?: number;
+  }) => Promise<void>;
   
   // Sprint 6 state machine actions
-  acceptBooking: (id: string) => void;
+  acceptBooking: (id: string) => Promise<void>;
   triggerClientNoShow: (id: string) => void;
   triggerTrainerNoShow: (id: string) => void;
   submitQuestionnaire: (id: string, questionnaire: NonNullable<Booking['questionnaire']>) => void;
@@ -79,7 +81,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       get().syncFromDB();
     }
   },
-  updateTimelineStatus: (id, status) => {
+  updateTimelineStatus: async (id, status) => {
     if (status === 'trainer_accepted') {
       const target = get().bookings.find(b => b.id === id);
       if (target) {
@@ -99,7 +101,9 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       }
     }
 
-    Database.updateTimelineStatus(id, status);
+    await Database.updateTimelineStatus(id, status);
+    get().syncFromDB();
+
     const target = get().bookings.find(b => b.id === id);
     if (target) {
       const userId = Database.getCurrentUserId();
@@ -178,7 +182,6 @@ export const useBookingStore = create<BookingState>((set, get) => ({
         }
       }
     }
-    get().syncFromDB();
   },
   updateBookingRating: (id, ratingDetails) => {
     Database.updateBookingRating(id, ratingDetails);
@@ -192,12 +195,12 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     Database.updateBookingNote(id, note);
     get().syncFromDB();
   },
-  updateBookingSessionDetails: (id, details) => {
-    Database.updateBookingSessionDetails(id, details);
+  updateBookingSessionDetails: async (id, details) => {
+    await Database.updateBookingSessionDetails(id, details);
     get().syncFromDB();
   },
-  acceptBooking: (id) => {
-    get().updateTimelineStatus(id, 'trainer_accepted');
+  acceptBooking: async (id) => {
+    await get().updateTimelineStatus(id, 'trainer_accepted');
   },
   reassignTrainer: (bookingId, action) => {
     const booking = get().bookings.find(b => b.id === bookingId);
