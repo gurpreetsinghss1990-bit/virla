@@ -23,6 +23,7 @@ ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS scheduled_end_at timestampt
 ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS request_created_at timestamptz DEFAULT now();
 ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS manual_accepted_at timestamptz;
 ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS auto_accepted_at timestamptz;
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS trainer_arrived_at timestamptz;
 
 -- Alter slot_reservations columns from bigint to timestamptz
 ALTER TABLE public.slot_reservations ALTER COLUMN expires_at TYPE timestamptz USING to_timestamp(expires_at / 1000.0);
@@ -1170,7 +1171,7 @@ DECLARE
   v_notify_id text;
   v_trainer_body text;
 BEGIN
-  IF auth.uid() IS NOT NULL AND NOT public.is_admin(auth.uid()) THEN
+  IF auth.uid() IS NOT NULL AND NOT public.is_admin(auth.uid()::text) THEN
      RAISE EXCEPTION 'Access denied. System scheduler functions can only be invoked by administrators or the system.';
   END IF;
   FOR b IN
@@ -1219,7 +1220,7 @@ CREATE OR REPLACE FUNCTION public.expire_stale_bookings() RETURNS void
 DECLARE
   b RECORD;
 BEGIN
-  IF auth.uid() IS NOT NULL AND NOT public.is_admin(auth.uid()) THEN
+  IF auth.uid() IS NOT NULL AND NOT public.is_admin(auth.uid()::text) THEN
      RAISE EXCEPTION 'Access denied. System scheduler functions can only be invoked by administrators or the system.';
   END IF;
   FOR b IN 
@@ -1253,7 +1254,7 @@ DECLARE
   v_trainer_body text;
   v_client_name text;
 BEGIN
-  IF auth.uid() IS NOT NULL AND NOT public.is_admin(auth.uid()) THEN
+  IF auth.uid() IS NOT NULL AND NOT public.is_admin(auth.uid()::text) THEN
      RAISE EXCEPTION 'Access denied. System scheduler functions can only be invoked by administrators or the system.';
   END IF;
   FOR b IN 
@@ -1374,17 +1375,17 @@ ALTER TABLE public.user_profiles ADD CONSTRAINT check_credits_balance_non_negati
 
 DROP POLICY IF EXISTS "Enable UPDATE for self or admin" ON public.user_profiles;
 CREATE POLICY "Enable UPDATE profile details except credits" ON public.user_profiles
-  FOR UPDATE USING (user_id = auth.uid() OR public.is_admin(auth.uid()))
+  FOR UPDATE USING (user_id = auth.uid()::text OR public.is_admin(auth.uid()::text))
   WITH CHECK (
-    (user_id = auth.uid() AND (credits_balance IS NOT DISTINCT FROM (SELECT credits_balance FROM public.user_profiles WHERE user_id = auth.uid())))
-    OR public.is_admin(auth.uid())
+    (user_id = auth.uid()::text AND (credits_balance IS NOT DISTINCT FROM (SELECT credits_balance FROM public.user_profiles WHERE user_id = auth.uid()::text)))
+    OR public.is_admin(auth.uid()::text)
   );
 
 -- bookings status & timeline lockout
 DROP POLICY IF EXISTS "Enable UPDATE for participant" ON public.bookings;
 DROP POLICY IF EXISTS "Restrict bookings updates to non-timeline fields" ON public.bookings;
 CREATE POLICY "Restrict bookings updates to non-timeline fields" ON public.bookings
-  FOR UPDATE USING (client_id = auth.uid() OR trainer_id = auth.uid() OR public.is_admin(auth.uid()))
+  FOR UPDATE USING (client_id = auth.uid()::text OR trainer_id = auth.uid()::text OR public.is_admin(auth.uid()::text))
   WITH CHECK (
     (
       status IS NOT DISTINCT FROM (SELECT status FROM public.bookings WHERE id = bookings.id) AND
@@ -1400,14 +1401,14 @@ CREATE POLICY "Restrict bookings updates to non-timeline fields" ON public.booki
       manual_accepted_at IS NOT DISTINCT FROM (SELECT manual_accepted_at FROM public.bookings WHERE id = bookings.id) AND
       auto_accepted_at IS NOT DISTINCT FROM (SELECT auto_accepted_at FROM public.bookings WHERE id = bookings.id)
     )
-    OR public.is_admin(auth.uid())
+    OR public.is_admin(auth.uid()::text)
   );
 
 -- client block direct inserts into credit_transactions and trainer_earnings
 DROP POLICY IF EXISTS "Enable INSERT for self only" ON public.credit_transactions;
 CREATE POLICY "Restrict INSERT for transactions to system RPC" ON public.credit_transactions
-  FOR INSERT WITH CHECK (public.is_admin(auth.uid()));
+  FOR INSERT WITH CHECK (public.is_admin(auth.uid()::text));
 
 DROP POLICY IF EXISTS "Enable INSERT for simulation trainers" ON public.trainers;
 CREATE POLICY "Restrict trainers details insert to admin" ON public.trainers
-  FOR INSERT WITH CHECK (public.is_admin(auth.uid()));
+  FOR INSERT WITH CHECK (public.is_admin(auth.uid()::text));
