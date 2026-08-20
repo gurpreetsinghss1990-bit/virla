@@ -2471,12 +2471,15 @@ class DatabaseClient {
 
     const { error } = await supabase.rpc('submit_customer_review', {
       p_booking_id: bookingId,
-      p_overall_rating: ratingDetails?.overallRating || 5,
-      p_trainer_rating: ratingDetails?.trainerRating || 5,
-      p_workout_rating: ratingDetails?.workoutRating || 5,
-      p_difficulty: ratingDetails?.difficulty || 'Medium',
-      p_energy: ratingDetails?.energy || 'Medium',
-      p_comments: ratingDetails?.comments || ''
+      p_rating_details: {
+        rating: ratingDetails?.overallRating || 5,
+        overallRating: ratingDetails?.overallRating || 5,
+        trainerRating: ratingDetails?.trainerRating || 5,
+        workoutRating: ratingDetails?.workoutRating || 5,
+        difficulty: ratingDetails?.difficulty || 'Medium',
+        energy: ratingDetails?.energy || 'Medium',
+        comments: ratingDetails?.comments || ''
+      }
     });
 
     if (error) {
@@ -2497,7 +2500,7 @@ class DatabaseClient {
 
     const { error } = await supabase.rpc('handle_no_show', {
       p_booking_id: bookingId,
-      p_actor: actor
+      p_no_show_type: actor
     });
 
     if (error) {
@@ -2518,10 +2521,12 @@ class DatabaseClient {
 
     const { error } = await supabase.rpc('submit_trainer_report', {
       p_booking_id: bookingId,
-      p_mobility_score: report.mobilityScore || 0,
-      p_workout_summary: report.workoutSummary || '',
-      p_coach_notes: report.coachNotes || '',
-      p_coach_signature: report.coachSignature || ''
+      p_questionnaire: {
+        mobilityScore: report.mobilityScore || 0,
+        workoutSummary: report.workoutSummary || '',
+        coachNotes: report.coachNotes || '',
+        coachSignature: report.coachSignature || ''
+      }
     });
 
     if (error) {

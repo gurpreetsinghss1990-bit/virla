@@ -150,9 +150,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
     const cleanPhone = toPhone.replace(/\D/g, '');
     const { data, error } = await supabase.rpc('transfer_credits', {
-      p_sender_id: userId,
-      p_recipient_phone: cleanPhone,
-      p_credits: amount
+      p_to_phone: cleanPhone,
+      p_amount: amount
     });
 
     if (error) {

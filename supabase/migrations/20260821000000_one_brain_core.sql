@@ -116,11 +116,20 @@ BEGIN
     v_credit_cost := 1;
   END IF;
 
-  -- Verify and deduct client balance
-  SELECT credits_balance, name, phone INTO v_current_credits, v_client_name, v_client_phone
+  -- Verify caller role is customer
+  IF NOT EXISTS (SELECT 1 FROM public.users WHERE id = v_client_id AND role = 'customer') THEN
+    RAISE EXCEPTION 'Only customers can create bookings.';
+  END IF;
+
+  -- Lock user profile row for update to prevent negative balance race condition
+  SELECT credits_balance INTO v_current_credits
   FROM public.user_profiles
-  JOIN public.users ON users.id = user_profiles.user_id
-  WHERE user_profiles.user_id = v_client_id;
+  WHERE user_id = v_client_id
+  FOR UPDATE;
+
+  SELECT name, phone INTO v_client_name, v_client_phone
+  FROM public.users
+  WHERE id = v_client_id;
 
   IF v_current_credits < v_credit_cost THEN
     RAISE EXCEPTION 'Insufficient credits balance. Required: %, Available: %', v_credit_cost, v_current_credits;
@@ -190,10 +199,20 @@ DECLARE
   v_booking record;
   v_coach record;
   v_now_ms bigint;
+  v_caller_id text;
 BEGIN
+  v_caller_id := auth.uid();
+
   SELECT * INTO v_booking FROM public.bookings WHERE id = p_booking_id FOR UPDATE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Booking not found';
+  END IF;
+
+  -- Enforce authorization: Only allow currently assigned trainer, admin, or system/cron (caller is null)
+  IF v_caller_id IS NOT NULL THEN
+    IF v_booking.trainer_id != v_caller_id AND NOT public.is_admin(v_caller_id) THEN
+      RAISE EXCEPTION 'Access denied. You are not authorized to trigger reassignment.';
+    END IF;
   END IF;
 
   -- Select next best available trainer who matches parameters and has no slot overlaps
@@ -285,6 +304,11 @@ BEGIN
      RAISE EXCEPTION 'Unauthorized';
   END IF;
 
+  -- Verify trainer role
+  IF NOT EXISTS (SELECT 1 FROM public.users WHERE id = v_trainer_id AND role = 'trainer') THEN
+    RAISE EXCEPTION 'Access denied. Only trainers can accept bookings.';
+  END IF;
+
   SELECT * INTO v_booking FROM public.bookings WHERE id = p_booking_id FOR UPDATE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Booking not found';
@@ -331,7 +355,13 @@ DECLARE
   v_client_body text;
   v_trainer_body text;
   v_admin_body text;
+  v_caller_id text;
 BEGIN
+  v_caller_id := auth.uid();
+  IF v_caller_id IS NOT NULL AND NOT public.is_admin(v_caller_id) THEN
+     RAISE EXCEPTION 'Access denied. Auto-acceptance can only be triggered by system or administrator.';
+  END IF;
+
   SELECT * INTO v_booking FROM public.bookings WHERE id = p_booking_id FOR UPDATE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Booking not found';
@@ -413,6 +443,11 @@ BEGIN
     RAISE EXCEPTION 'Unauthorized';
   END IF;
 
+  -- Verify trainer role
+  IF NOT EXISTS (SELECT 1 FROM public.users WHERE id = v_trainer_id AND role = 'trainer') THEN
+    RAISE EXCEPTION 'Access denied. Only trainers can start travel.';
+  END IF;
+
   SELECT * INTO v_booking FROM public.bookings WHERE id = p_booking_id FOR UPDATE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Booking not found';
@@ -463,6 +498,11 @@ BEGIN
   v_trainer_id := auth.uid();
   IF v_trainer_id IS NULL THEN
     RAISE EXCEPTION 'Unauthorized';
+  END IF;
+
+  -- Verify trainer role
+  IF NOT EXISTS (SELECT 1 FROM public.users WHERE id = v_trainer_id AND role = 'trainer') THEN
+    RAISE EXCEPTION 'Access denied. Only trainers can mark arrived.';
   END IF;
 
   SELECT * INTO v_booking FROM public.bookings WHERE id = p_booking_id FOR UPDATE;
@@ -520,6 +560,11 @@ BEGIN
     RAISE EXCEPTION 'Booking not found';
   END IF;
 
+  -- Verify client, trainer, or admin caller authorization
+  IF v_booking.client_id != v_caller_id AND v_booking.trainer_id != v_caller_id AND NOT public.is_admin(v_caller_id) THEN
+     RAISE EXCEPTION 'Access denied. Caller is not a participant of this booking.';
+  END IF;
+
   IF v_booking.timeline_status = 'OTP_VERIFIED' THEN
     RETURN jsonb_build_object('success', true);
   END IF;
@@ -564,6 +609,11 @@ BEGIN
      RAISE EXCEPTION 'Unauthorized';
   END IF;
 
+  -- Verify trainer role
+  IF NOT EXISTS (SELECT 1 FROM public.users WHERE id = v_trainer_id AND role = 'trainer') THEN
+    RAISE EXCEPTION 'Access denied. Only trainers can start session.';
+  END IF;
+
   SELECT * INTO v_booking FROM public.bookings WHERE id = p_booking_id FOR UPDATE;
   IF NOT FOUND THEN
      RAISE EXCEPTION 'Booking not found';
@@ -605,6 +655,11 @@ BEGIN
   v_trainer_id := auth.uid();
   IF v_trainer_id IS NULL THEN
      RAISE EXCEPTION 'Unauthorized';
+  END IF;
+
+  -- Verify trainer role
+  IF NOT EXISTS (SELECT 1 FROM public.users WHERE id = v_trainer_id AND role = 'trainer') THEN
+    RAISE EXCEPTION 'Access denied. Only trainers can complete session.';
   END IF;
 
   SELECT * INTO v_booking FROM public.bookings WHERE id = p_booking_id FOR UPDATE;
@@ -656,6 +711,11 @@ BEGIN
   v_trainer_id := auth.uid();
   IF v_trainer_id IS NULL THEN
      RAISE EXCEPTION 'Unauthorized';
+  END IF;
+
+  -- Verify trainer role
+  IF NOT EXISTS (SELECT 1 FROM public.users WHERE id = v_trainer_id AND role = 'trainer') THEN
+    RAISE EXCEPTION 'Access denied. Only trainers can submit reports.';
   END IF;
 
   SELECT * INTO v_booking FROM public.bookings WHERE id = p_booking_id FOR UPDATE;
@@ -726,6 +786,11 @@ BEGIN
   v_client_id := auth.uid();
   IF v_client_id IS NULL THEN
      RAISE EXCEPTION 'Unauthorized';
+  END IF;
+
+  -- Verify customer or admin role
+  IF NOT EXISTS (SELECT 1 FROM public.users WHERE id = v_client_id AND role = 'customer') AND NOT public.is_admin(v_client_id) THEN
+    RAISE EXCEPTION 'Access denied. Only customers can submit reviews.';
   END IF;
 
   SELECT * INTO v_booking FROM public.bookings WHERE id = p_booking_id FOR UPDATE;
@@ -991,10 +1056,20 @@ CREATE OR REPLACE FUNCTION public.close_session(
 LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
   v_booking record;
+  v_caller_id text;
 BEGIN
+  v_caller_id := auth.uid();
+
   SELECT * INTO v_booking FROM public.bookings WHERE id = p_booking_id FOR UPDATE;
   IF NOT FOUND THEN
      RAISE EXCEPTION 'Booking not found';
+  END IF;
+
+  -- Verify participant or admin/system authorization
+  IF v_caller_id IS NOT NULL THEN
+    IF v_booking.client_id != v_caller_id AND v_booking.trainer_id != v_caller_id AND NOT public.is_admin(v_caller_id) THEN
+      RAISE EXCEPTION 'Access denied. Caller is not a participant of this booking.';
+    END IF;
   END IF;
 
   IF v_booking.timeline_status = 'SESSION_CLOSED' THEN
@@ -1022,6 +1097,7 @@ DECLARE
   v_from_client_id text;
   v_to_client_id text;
   v_from_balance integer;
+  v_to_balance integer;
   v_to_name text;
   v_now_ms bigint;
 BEGIN
@@ -1034,14 +1110,22 @@ BEGIN
      RAISE EXCEPTION 'Transfer amount must be greater than 0';
   END IF;
 
-  SELECT credits_balance INTO v_from_balance FROM public.user_profiles WHERE user_id = v_from_client_id;
-  IF v_from_balance < p_amount THEN
-     RAISE EXCEPTION 'Insufficient credits available for transfer';
-  END IF;
-
   SELECT id, name INTO v_to_client_id, v_to_name FROM public.users WHERE phone = p_to_phone AND role = 'customer';
   IF NOT FOUND THEN
      RAISE EXCEPTION 'Recipient phone number not found or not a client';
+  END IF;
+
+  -- Lock user profiles in a sorted order to guarantee zero deadlocks
+  IF v_from_client_id < v_to_client_id THEN
+    SELECT credits_balance INTO v_from_balance FROM public.user_profiles WHERE user_id = v_from_client_id FOR UPDATE;
+    SELECT credits_balance INTO v_to_balance FROM public.user_profiles WHERE user_id = v_to_client_id FOR UPDATE;
+  ELSE
+    SELECT credits_balance INTO v_to_balance FROM public.user_profiles WHERE user_id = v_to_client_id FOR UPDATE;
+    SELECT credits_balance INTO v_from_balance FROM public.user_profiles WHERE user_id = v_from_client_id FOR UPDATE;
+  END IF;
+
+  IF v_from_balance < p_amount THEN
+     RAISE EXCEPTION 'Insufficient credits available for transfer';
   END IF;
 
   v_now_ms := (EXTRACT(epoch FROM now()) * 1000)::bigint;
@@ -1086,6 +1170,9 @@ DECLARE
   v_notify_id text;
   v_trainer_body text;
 BEGIN
+  IF auth.uid() IS NOT NULL AND NOT public.is_admin(auth.uid()) THEN
+     RAISE EXCEPTION 'Access denied. System scheduler functions can only be invoked by administrators or the system.';
+  END IF;
   FOR b IN
     SELECT id, client_id, client_name, trainer_id, trainer_name, workout_title, request_created_at,
            acceptance_notification_count
@@ -1132,6 +1219,9 @@ CREATE OR REPLACE FUNCTION public.expire_stale_bookings() RETURNS void
 DECLARE
   b RECORD;
 BEGIN
+  IF auth.uid() IS NOT NULL AND NOT public.is_admin(auth.uid()) THEN
+     RAISE EXCEPTION 'Access denied. System scheduler functions can only be invoked by administrators or the system.';
+  END IF;
   FOR b IN 
     SELECT id, scheduled_start_at, status, timeline_status 
     FROM public.bookings 
@@ -1163,6 +1253,9 @@ DECLARE
   v_trainer_body text;
   v_client_name text;
 BEGIN
+  IF auth.uid() IS NOT NULL AND NOT public.is_admin(auth.uid()) THEN
+     RAISE EXCEPTION 'Access denied. System scheduler functions can only be invoked by administrators or the system.';
+  END IF;
   FOR b IN 
     SELECT id, client_id, trainer_id, trainer_name, workout_title, scheduled_start_at
     FROM public.bookings
@@ -1275,7 +1368,10 @@ FOR EACH ROW EXECUTE FUNCTION public.dispatch_audit_notification();
 
 -- 8. TIGHTENED ROW LEVEL SECURITY (RLS) POLICIES
 
--- user_profiles credits_balance update lockout
+-- user_profiles credits_balance constraint and update lockout
+ALTER TABLE public.user_profiles DROP CONSTRAINT IF EXISTS check_credits_balance_non_negative;
+ALTER TABLE public.user_profiles ADD CONSTRAINT check_credits_balance_non_negative CHECK (credits_balance >= 0);
+
 DROP POLICY IF EXISTS "Enable UPDATE for self or admin" ON public.user_profiles;
 CREATE POLICY "Enable UPDATE profile details except credits" ON public.user_profiles
   FOR UPDATE USING (user_id = auth.uid() OR public.is_admin(auth.uid()))
@@ -1286,6 +1382,7 @@ CREATE POLICY "Enable UPDATE profile details except credits" ON public.user_prof
 
 -- bookings status & timeline lockout
 DROP POLICY IF EXISTS "Enable UPDATE for participant" ON public.bookings;
+DROP POLICY IF EXISTS "Restrict bookings updates to non-timeline fields" ON public.bookings;
 CREATE POLICY "Restrict bookings updates to non-timeline fields" ON public.bookings
   FOR UPDATE USING (client_id = auth.uid() OR trainer_id = auth.uid() OR public.is_admin(auth.uid()))
   WITH CHECK (
@@ -1293,7 +1390,15 @@ CREATE POLICY "Restrict bookings updates to non-timeline fields" ON public.booki
       status IS NOT DISTINCT FROM (SELECT status FROM public.bookings WHERE id = bookings.id) AND
       timeline_status IS NOT DISTINCT FROM (SELECT timeline_status FROM public.bookings WHERE id = bookings.id) AND
       scheduled_start_at IS NOT DISTINCT FROM (SELECT scheduled_start_at FROM public.bookings WHERE id = bookings.id) AND
-      otp IS NOT DISTINCT FROM (SELECT otp FROM public.bookings WHERE id = bookings.id)
+      scheduled_end_at IS NOT DISTINCT FROM (SELECT scheduled_end_at FROM public.bookings WHERE id = bookings.id) AND
+      travel_started_at IS NOT DISTINCT FROM (SELECT travel_started_at FROM public.bookings WHERE id = bookings.id) AND
+      trainer_arrived_at IS NOT DISTINCT FROM (SELECT trainer_arrived_at FROM public.bookings WHERE id = bookings.id) AND
+      session_started_at IS NOT DISTINCT FROM (SELECT session_started_at FROM public.bookings WHERE id = bookings.id) AND
+      session_completed_at IS NOT DISTINCT FROM (SELECT session_completed_at FROM public.bookings WHERE id = bookings.id) AND
+      otp IS NOT DISTINCT FROM (SELECT otp FROM public.bookings WHERE id = bookings.id) AND
+      otp_expires_at IS NOT DISTINCT FROM (SELECT otp_expires_at FROM public.bookings WHERE id = bookings.id) AND
+      manual_accepted_at IS NOT DISTINCT FROM (SELECT manual_accepted_at FROM public.bookings WHERE id = bookings.id) AND
+      auto_accepted_at IS NOT DISTINCT FROM (SELECT auto_accepted_at FROM public.bookings WHERE id = bookings.id)
     )
     OR public.is_admin(auth.uid())
   );
