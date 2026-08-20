@@ -34,13 +34,13 @@ interface RequestCardProps {
 }
 
 export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }: RequestCardProps) {
-  const [timeLeft, setTimeLeft] = useState(60);
+  const [timeLeft, setTimeLeft] = useState(600);
 
   useEffect(() => {
     const calculateTimeLeft = () => {
       const nowMs = getCurrentServerTime().getTime();
       const elapsed = Math.floor((nowMs - (booking.createdAt || nowMs)) / 1000);
-      return Math.max(0, 60 - elapsed);
+      return Math.max(0, 600 - elapsed);
     };
 
     const updateTimer = () => {
@@ -67,6 +67,12 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
     };
   }, [booking.id, booking.createdAt]);
 
+  const formatRemainingTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${String(s).padStart(2, '0')} minutes remaining`;
+  };
+
   const customerId = `VIRLA-C${booking.id.slice(-6).toUpperCase()}`;
   const customerGender = booking.id.charCodeAt(booking.id.length - 1) % 2 === 0 ? 'Female' : 'Male';
 
@@ -84,7 +90,7 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
         
         <View className="bg-rose-50 border border-rose-100 px-3 py-1 rounded-full flex-row items-center gap-1.5">
           <Feather name="clock" size={10} color="#E11D48" />
-          <Text className="text-[#E11D48] text-[10px] font-black">{timeLeft}s left</Text>
+          <Text className="text-[#E11D48] text-[10px] font-black">{formatRemainingTime(timeLeft)}</Text>
         </View>
       </View>
 

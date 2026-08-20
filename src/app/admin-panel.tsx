@@ -634,6 +634,10 @@ export default function AdminPanelScreen() {
                               <Text className="text-zinc-650 text-xs font-medium">Workout Type: <Text className="font-bold text-zinc-900">{b.workoutTitle}</Text></Text>
                               <Text className="text-zinc-650 text-xs font-medium">Booking Status: <Text className="font-bold text-zinc-900">Confirmed / Booked</Text></Text>
                               <Text className="text-zinc-650 text-xs font-medium">Time: <Text className="font-bold text-zinc-900">{b.date} @ {b.time}</Text></Text>
+                              <Text className="text-zinc-650 text-xs font-medium">Acceptance Type: <Text className="font-bold text-zinc-900">{b.acceptanceMethod === 'auto' ? 'AUTO-ACCEPTED' : (b.acceptanceMethod === 'manual' ? 'MANUALLY ACCEPTED' : 'PENDING')}</Text></Text>
+                              {(b.autoAcceptedAt || b.trainerAcceptedAt) && (
+                                <Text className="text-zinc-650 text-xs font-medium">Accepted At: <Text className="font-bold text-zinc-900">{new Date(Number(b.autoAcceptedAt || b.trainerAcceptedAt)).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</Text></Text>
+                              )}
                             </View>
                             <TouchableOpacity
                               onPress={() => setSelectedAuditSession(b)}
@@ -673,6 +677,10 @@ export default function AdminPanelScreen() {
                               <Text className="text-zinc-650 text-xs font-medium">Workout Type: <Text className="font-bold text-zinc-900">{b.workoutTitle}</Text></Text>
                               <Text className="text-zinc-650 text-xs font-medium">Booking Status: <Text className="font-bold text-zinc-900">Confirmed / Booked</Text></Text>
                               <Text className="text-zinc-650 text-xs font-medium">Time: <Text className="font-bold text-zinc-900">{b.date} @ {b.time}</Text></Text>
+                              <Text className="text-zinc-650 text-xs font-medium">Acceptance Type: <Text className="font-bold text-zinc-900">{b.acceptanceMethod === 'auto' ? 'AUTO-ACCEPTED' : (b.acceptanceMethod === 'manual' ? 'MANUALLY ACCEPTED' : 'PENDING')}</Text></Text>
+                              {(b.autoAcceptedAt || b.trainerAcceptedAt) && (
+                                <Text className="text-zinc-650 text-xs font-medium">Accepted At: <Text className="font-bold text-zinc-900">{new Date(Number(b.autoAcceptedAt || b.trainerAcceptedAt)).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</Text></Text>
+                              )}
                             </View>
                             <TouchableOpacity
                               onPress={() => setSelectedAuditSession(b)}

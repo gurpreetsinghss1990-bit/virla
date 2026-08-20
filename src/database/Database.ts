@@ -636,7 +636,7 @@ export function mapBooking(row: any): Booking {
     reminderSent: row.reminder_sent ?? false,
     acceptanceNotificationCount: row.acceptance_notification_count ? Number(row.acceptance_notification_count) : undefined,
     lastAcceptanceNotificationAt: row.last_acceptance_notification_at ? Number(row.last_acceptance_notification_at) : undefined,
-    acceptanceMethod: row.acceptance_method || undefined,
+    acceptanceMethod: row.acceptance_method === 'SYSTEM_AUTO_ACCEPT' || row.acceptance_method === 'auto' ? 'auto' : (row.acceptance_method === 'TRAINER_MANUAL_ACCEPT' || row.acceptance_method === 'manual' ? 'manual' : undefined),
     acceptanceDeadline: row.acceptance_deadline ? Number(row.acceptance_deadline) : undefined,
     autoAcceptedAt: row.auto_accepted_at ? Number(row.auto_accepted_at) : undefined,
     trainerAcceptedAt: row.trainer_accepted_at ? Number(row.trainer_accepted_at) : undefined,
@@ -2324,9 +2324,10 @@ class DatabaseClient {
       clientId: userId,
       clientName: userRec?.name || 'Viral',
       clientPhone: userRec?.phone || '',
+      createdAt: nowMs,
       acceptanceNotificationCount: 1,
       lastAcceptanceNotificationAt: nowMs,
-      acceptanceDeadline: nowMs + 30 * 60 * 1000
+      acceptanceDeadline: nowMs + 10 * 60 * 1000
     };
 
     // Decrement credits
@@ -2453,6 +2454,7 @@ class DatabaseClient {
     const bookingId = generateUUID('booking');
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
     const userRec = this.schema.users?.find(u => u.id === userId);
+    const nowMs = Date.now();
     const newBooking: Booking = {
       ...bookingData,
       id: bookingId,
@@ -2461,7 +2463,11 @@ class DatabaseClient {
       otp,
       clientId: userId,
       clientName: userRec?.name || 'Viral',
-      clientPhone: userRec?.phone || ''
+      clientPhone: userRec?.phone || '',
+      createdAt: nowMs,
+      acceptanceNotificationCount: 1,
+      lastAcceptanceNotificationAt: nowMs,
+      acceptanceDeadline: nowMs + 10 * 60 * 1000
     };
 
     // Validate booking data before caching and saving
@@ -2609,7 +2615,7 @@ class DatabaseClient {
       }
 
       if (timelineStatus === 'trainer_accepted' && !booking.acceptanceMethod) {
-        updatePayload.acceptance_method = 'TRAINER_MANUAL_ACCEPT';
+        updatePayload.acceptance_method = 'manual';
         updatePayload.trainer_accepted_at = nowMs;
       }
 
@@ -2630,7 +2636,7 @@ class DatabaseClient {
       }
 
       if (timelineStatus === 'trainer_accepted' && !booking.acceptanceMethod) {
-        booking.acceptanceMethod = 'TRAINER_MANUAL_ACCEPT';
+        booking.acceptanceMethod = 'manual';
         booking.trainerAcceptedAt = nowMs;
       }
 

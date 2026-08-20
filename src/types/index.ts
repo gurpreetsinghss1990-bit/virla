@@ -63,7 +63,7 @@ export interface Booking {
   timelineStatus?: 'booked' | 'trainer_assigned' | 'trainer_accepted' | 'trainer_preparing' | 'trainer_travelling' | 'trainer_arrived' | 'otp_verified' | 'workout_started' | 'workout_completed' | 'trainer_report_submitted' | 'customer_review_pending' | 'session_closed';
   acceptanceNotificationCount?: number;
   lastAcceptanceNotificationAt?: number;
-  acceptanceMethod?: 'TRAINER_MANUAL_ACCEPT' | 'SYSTEM_AUTO_ACCEPT';
+  acceptanceMethod?: 'TRAINER_MANUAL_ACCEPT' | 'SYSTEM_AUTO_ACCEPT' | 'manual' | 'auto';
   acceptanceDeadline?: number;
   autoAcceptedAt?: number;
   trainerAcceptedAt?: number;
