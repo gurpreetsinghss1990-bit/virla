@@ -1649,7 +1649,19 @@ export default function HomeScreen() {
                       <View className="bg-rose-50 border border-rose-100 px-3 py-1 rounded-full flex-row items-center gap-1.5">
                         <View className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                         <Text className="text-rose-600 text-[9px] font-black uppercase tracking-wider">
-                          Session In Progress
+                          {(() => {
+                            const range = getBookingISTDateRange(activeSession);
+                            const now = getCurrentServerTime();
+                            if (now < range.start) {
+                              if (activeSession.timelineStatus === 'trainer_travelling') return 'Trainer En Route';
+                              if (activeSession.timelineStatus === 'trainer_arrived') return 'Trainer Arrived';
+                              return 'Ready';
+                            }
+                            if (now >= range.start && now < range.end) {
+                              return 'Session In Progress';
+                            }
+                            return 'Session Ended';
+                          })()}
                         </Text>
                       </View>
                       <Text className="text-zinc-450 text-[10px] font-bold">

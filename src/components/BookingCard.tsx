@@ -9,7 +9,7 @@ import { Feather } from '@expo/vector-icons';
 import { useUserStore } from '../store/userStore';
 import { SessionEngine } from '../services/SessionEngine';
 import { AddPartnerModal } from './AddPartnerModal';
-import { Database } from '../database/Database';
+import { Database, getISTDateInfo } from '../database/Database';
 
 interface BookingCardProps {
   booking: Booking;
@@ -149,10 +149,11 @@ export function BookingCard({ booking }: BookingCardProps) {
         if (!isBeforeWindow) return null;
         const sessionDate = SessionEngine.getSessionStartDate(booking);
         const startWindow = new Date(sessionDate.getTime() - 30 * 60 * 1000);
+        const istInfo = getISTDateInfo(startWindow);
         
-        const formatTimeOnly = (d: Date) => {
-          let hr = d.getHours();
-          const min = String(d.getMinutes()).padStart(2, '0');
+        const formatTimeOnly = () => {
+          let hr = istInfo.hour;
+          const min = String(istInfo.minute).padStart(2, '0');
           const ampm = hr >= 12 ? 'PM' : 'AM';
           hr = hr % 12;
           hr = hr ? hr : 12;
@@ -163,7 +164,7 @@ export function BookingCard({ booking }: BookingCardProps) {
           <View className="bg-amber-50 border border-amber-150 px-4 py-2.5 rounded-xl mb-3 flex-row items-center gap-2">
             <Feather name="clock" size={10} color="#D97706" />
             <Text className="text-[#D97706] text-[10px] font-bold uppercase tracking-wider">
-              Start Session available from {formatTimeOnly(startWindow)}
+              Start Session available from {formatTimeOnly()}
             </Text>
           </View>
         );
@@ -217,9 +218,10 @@ export function BookingCard({ booking }: BookingCardProps) {
                 const isBeforeWindow = SessionEngine.isBeforeStartWindow(booking);
                 const sessionDate = SessionEngine.getSessionStartDate(booking);
                 const startWindow = new Date(sessionDate.getTime() - 30 * 60 * 1000);
-                const formatTimeOnly = (d: Date) => {
-                  let hr = d.getHours();
-                  const min = String(d.getMinutes()).padStart(2, '0');
+                const istInfo = getISTDateInfo(startWindow);
+                const formatTimeOnly = () => {
+                  let hr = istInfo.hour;
+                  const min = String(istInfo.minute).padStart(2, '0');
                   const ampm = hr >= 12 ? 'PM' : 'AM';
                   hr = hr % 12;
                   hr = hr ? hr : 12;
@@ -230,7 +232,7 @@ export function BookingCard({ booking }: BookingCardProps) {
                   return (
                     <TouchableOpacity
                       activeOpacity={1}
-                      onPress={() => Alert.alert('Session Locked', `This session can only be started from ${formatTimeOnly(startWindow)}.`)}
+                      onPress={() => Alert.alert('Session Locked', `This session can only be started from ${formatTimeOnly()}.`)}
                       className="flex-1 py-3 rounded-xl items-center justify-center bg-zinc-200 border border-zinc-200"
                     >
                       <Text className="text-zinc-400 text-xs font-black uppercase tracking-wider">Start Session</Text>

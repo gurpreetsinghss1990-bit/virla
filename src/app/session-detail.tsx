@@ -13,6 +13,7 @@ import { SessionEngine } from '../services/SessionEngine';
 import { AssignmentConfig } from '../config/AssignmentConfig';
 import { AddPartnerModal } from '../components/AddPartnerModal';
 import * as Location from 'expo-location';
+import { Database, getCurrentServerTime, getBookingISTDateRange, getISTDateInfo } from '../database/Database';
 
 // Map coordinates path waypoints (scaled to fit beautiful SVG canvas)
 const waypoints = [
@@ -201,72 +202,49 @@ export default function SessionDetailScreen() {
   }, [booking?.id, booking?.createdAt, currentStatus, role]);
 
   const getSessionStartDate = (): Date => {
-    try {
-      if (!booking) return new Date();
-      let datePart = booking.date;
-      if (datePart.startsWith('Today, ')) {
-        datePart = datePart.replace('Today, ', '');
-      } else if (datePart.startsWith('Tomorrow, ')) {
-        datePart = datePart.replace('Tomorrow, ', '');
-      }
-
-      const timePart = booking.time.split('-')[0].trim();
-      const combined = `${datePart} ${timePart}`;
-      const d = new Date(combined);
-      if (!isNaN(d.getTime())) {
-        return d;
-      }
-    } catch (e) {
-      console.log('Error parsing date:', e);
-    }
-    const fallback = new Date();
-    fallback.setHours(fallback.getHours() + 2);
-    return fallback;
+    if (!booking) return new Date();
+    return getBookingISTDateRange(booking).start;
   };
 
   const getMinutesToSession = () => {
     if (!booking) return 0;
     const sessionDate = getSessionStartDate();
-    const now = new Date();
+    const now = getCurrentServerTime();
     return (sessionDate.getTime() - now.getTime()) / (1000 * 60);
   };
 
   const getStatusText = (status: string) => {
-    if (role === 'customer' || role === 'admin') {
-      if (status === 'booked' || status === 'trainer_assigned') {
-        return 'SESSION BOOKED & CONFIRMED';
-      }
+    if (!booking) return '';
+    
+    // Check timezone-safe start and end time boundaries
+    const range = getBookingISTDateRange(booking);
+    const now = getCurrentServerTime();
+    
+    if (now < range.start) {
+      if (status === 'trainer_travelling') return 'Trainer En Route';
+      if (status === 'trainer_arrived') return 'Trainer Arrived';
+      if (status === 'otp_verified' || status === 'workout_started') return 'Ready';
+      if (status === 'trainer_accepted') return 'Trainer Confirmed';
+      if (status === 'trainer_preparing') return 'Session Scheduled';
+      return 'Upcoming';
     }
 
-    const isSearching = !booking?.trainerId || booking?.trainerId === 'searching' || booking?.trainerName === 'No Trainer Available';
-    
-    if (status === 'booked' || status === 'trainer_assigned') {
-      if (isSearching) {
-        return 'Searching for Trainer';
-      } else {
-        return 'Waiting for Trainer Confirmation';
-      }
-    }
-    switch (status) {
-      case 'trainer_accepted':
-        return 'Trainer Confirmed';
-      case 'trainer_preparing':
-        return 'Session Scheduled';
-      case 'trainer_travelling':
-        return 'Trainer En Route';
-      case 'trainer_arrived':
-        return 'Trainer Arrived';
-      case 'otp_verified':
-      case 'workout_started':
+    if (now >= range.start && now < range.end) {
+      if (['otp_verified', 'workout_started'].includes(status)) {
         return 'Session In Progress';
-      case 'workout_completed':
-      case 'trainer_report_submitted':
-      case 'customer_review_pending':
-      case 'session_closed':
-        return 'Session Completed';
-      default:
-        return 'Searching for Trainer';
+      }
+      if (status === 'trainer_travelling') return 'Trainer En Route';
+      if (status === 'trainer_arrived') return 'Trainer Arrived';
+      if (status === 'trainer_accepted') return 'Trainer Confirmed';
+      if (status === 'trainer_preparing') return 'Session Scheduled';
+      return 'Session Scheduled';
     }
+
+    // After session_end_time
+    if (['workout_completed', 'trainer_report_submitted', 'customer_review_pending', 'session_closed'].includes(status)) {
+      return 'Session Completed';
+    }
+    return 'Session Ended';
   };
 
   const [otpInput, setOtpInput] = useState('');

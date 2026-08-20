@@ -110,6 +110,8 @@ export interface Booking {
   originalPackageType?: 'SINGLE' | 'COUPLE';
   partnerName?: string;
   partnerPhone?: string;
+  isInvalidData?: boolean;
+  validationError?: string;
 }
 
 export interface Coach {

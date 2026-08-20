@@ -563,11 +563,48 @@ export function mapWorkoutToPostgres(w: Workout): any {
   };
 }
 
-export function mapBooking(row: any): Booking {
-  const calculatedDuration = calculateDurationFromTime(row.time);
-  if (row.duration_minutes && row.duration_minutes !== calculatedDuration) {
-    console.warn(`[DATABASE] Booking ID ${row.id} time range "${row.time}" calculated duration (${calculatedDuration} mins) mismatch with stored duration_minutes (${row.duration_minutes} mins). Enforcing calculated duration.`);
+export function validateBookingData(row: any): { isValid: boolean; reason?: string } {
+  if (!row) {
+    return { isValid: false, reason: 'Null or undefined booking row' };
   }
+  if (!row.id) {
+    return { isValid: false, reason: 'Missing booking ID' };
+  }
+  if (!row.date || !row.time) {
+    return { isValid: false, reason: 'Missing date or time string' };
+  }
+
+  const parts = row.time.split('-');
+  const startPart = parts[0]?.trim();
+  const endPart = parts[1]?.trim();
+  if (!startPart || !endPart) {
+    return { isValid: false, reason: `Malformed time range: "${row.time}"` };
+  }
+
+  const calculatedDuration = calculateDurationFromTime(row.time);
+  const storedDuration = row.duration_minutes || 60;
+
+  if (calculatedDuration <= 0) {
+    return { isValid: false, reason: `Invalid time range: calculated duration is ${calculatedDuration} mins` };
+  }
+
+  if (calculatedDuration !== storedDuration) {
+    return { 
+      isValid: false, 
+      reason: `Duration mismatch: calculated duration is ${calculatedDuration} mins but stored duration is ${storedDuration} mins` 
+    };
+  }
+
+  return { isValid: true };
+}
+
+export function mapBooking(row: any): Booking {
+  const validation = validateBookingData(row);
+  if (!validation.isValid) {
+    console.error(`[DATABASE DATA INTEGRITY ERROR] Booking ${row.id} is invalid. Reason: ${validation.reason}. Record: Date=${row.date}, Time=${row.time}, Stored Duration=${row.duration_minutes}`);
+  }
+
+  const calculatedDuration = calculateDurationFromTime(row.time);
   return {
     id: row.id,
     status: row.status,
@@ -610,6 +647,8 @@ export function mapBooking(row: any): Booking {
     partnerPhone: row.partner_phone || undefined,
     travelStartedAt: row.travel_started_at ? Number(row.travel_started_at) : undefined,
     workoutCompletedAt: row.workout_completed_at ? Number(row.workout_completed_at) : undefined,
+    isInvalidData: !validation.isValid,
+    validationError: validation.reason,
   };
 }
 
@@ -1187,7 +1226,7 @@ class DatabaseClient {
       this.schema.profiles = (resProfiles.data || []).map(mapUserProfile);
       this.schema.coaches = (resTrainers.data || []).map(mapCoach);
       this.schema.workouts = (resWorkouts.data || []).map(mapWorkout);
-      this.schema.bookings = (resBookings.data || []).map(mapBooking);
+      this.schema.bookings = (resBookings.data || []).map(mapBooking).filter((b: Booking) => !b.isInvalidData);
       this.runBackgroundSyncChecks();
       this.schema.credit_transactions = (resTransactions.data || []).map(mapInvoice);
       this.schema.hydration = (resHydration.data || []).map(mapHydrationLog);
@@ -2143,7 +2182,7 @@ class DatabaseClient {
     try {
       const { data, error } = await supabase.from('bookings').select('*');
       if (data && !error) {
-        this.schema.bookings = data.map(mapBooking);
+        this.schema.bookings = data.map(mapBooking).filter((b: Booking) => !b.isInvalidData);
         this.runBackgroundSyncChecks();
         this.save();
       }
@@ -2306,6 +2345,13 @@ class DatabaseClient {
       credits: 1
     };
 
+    // Validate booking data before caching and saving
+    const validation = validateBookingData(newBooking);
+    if (!validation.isValid) {
+      console.error(`[DATABASE DATA INTEGRITY ERROR] Attempted to create invalid direct booking. Reason: ${validation.reason}`);
+      throw new Error(`Invalid booking data: ${validation.reason}`);
+    }
+
     // Save locally
     this.schema.bookings.unshift(newBooking);
     this.schema.credit_transactions.unshift(tx);
@@ -2417,6 +2463,13 @@ class DatabaseClient {
       clientName: userRec?.name || 'Viral',
       clientPhone: userRec?.phone || ''
     };
+
+    // Validate booking data before caching and saving
+    const validation = validateBookingData(newBooking);
+    if (!validation.isValid) {
+      console.error(`[DATABASE DATA INTEGRITY ERROR] Attempted to create invalid booking. Reason: ${validation.reason}`);
+      throw new Error(`Invalid booking data: ${validation.reason}`);
+    }
 
     this.schema.bookings.unshift(newBooking);
 
