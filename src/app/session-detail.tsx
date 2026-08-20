@@ -1258,12 +1258,12 @@ export default function SessionDetailScreen() {
 
                     {currentStatus === 'trainer_travelling' && (
                       <TouchableOpacity
-                        onPress={() => {
+                        onPress={async () => {
                           if (!SessionEngine.canCheckIn(booking)) {
                             Alert.alert('Check-In Locked', 'You can check in 30 minutes before the scheduled session.');
                           } else {
                             try {
-                              SessionEngine.checkIn(booking.id);
+                              await SessionEngine.checkIn(booking.id);
                               syncFromDB();
                               Alert.alert('Checked In', 'You have successfully checked in at the customer location.');
                             } catch (err: any) {
@@ -1460,10 +1460,14 @@ export default function SessionDetailScreen() {
                 {role === 'trainer' && (
                   <TouchableOpacity
                     disabled={workoutTimeLeft > 0}
-                    onPress={() => {
-                      SessionEngine.completeSession(booking.id);
-                      syncFromDB();
-                      Alert.alert('Workout Completed', 'Workout session has been completed.');
+                    onPress={async () => {
+                      try {
+                        await SessionEngine.completeSession(booking.id);
+                        syncFromDB();
+                        Alert.alert('Workout Completed', 'Workout session has been completed.');
+                      } catch (err: any) {
+                        Alert.alert('Completion Error', err.message || 'Could not complete workout.');
+                      }
                     }}
                     className={`mt-3 px-6 py-2.5 rounded-full ${
                       workoutTimeLeft > 0 ? 'bg-zinc-850 opacity-40' : 'bg-emerald-500'

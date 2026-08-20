@@ -112,6 +112,8 @@ export interface Booking {
   partnerPhone?: string;
   isInvalidData?: boolean;
   validationError?: string;
+  scheduledStartAt?: string;
+  scheduledEndAt?: string;
 }
 
 export interface Coach {

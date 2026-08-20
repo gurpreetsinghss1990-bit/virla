@@ -85,128 +85,70 @@ export class SessionEngine {
 
   /**
    * Performs the Check-In action for the trainer.
-   * Generates a unique 6-digit OTP, sets the 15-minute grace period timeout,
-   * updates status to 'trainer_arrived', and fires a customer notification.
+   * Invokes mark_trainer_arrived RPC, generating OTP on Supabase server.
    */
-  static checkIn(bookingId: string): void {
-    const booking = Database.schema.bookings.find(b => b.id === bookingId);
-    if (!booking) {
-      throw new Error("Booking not found");
-    }
-
-    if (!this.canCheckIn(booking)) {
-      throw new Error("You can check in maximum 30 minutes before the scheduled session.");
-    }
-
-    // Generate a unique 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const gracePeriodStartedAt = Date.now();
-    const otpExpiresAt = gracePeriodStartedAt + 15 * 60 * 1000; // 15 mins expiry
-
-    // Save check-in state to database
-    Database.updateBookingSessionDetails(bookingId, {
-      timelineStatus: 'trainer_arrived',
-      otp: otp,
-      gracePeriodStartedAt: gracePeriodStartedAt,
-      otpExpiresAt: otpExpiresAt
+  static async checkIn(bookingId: string): Promise<void> {
+    const { error } = await supabase.rpc('mark_trainer_arrived', {
+      p_booking_id: bookingId
     });
 
-    // Fire customer check-in notification
-    try {
-      const notificationStore = require('../store/notificationStore').useNotificationStore;
-      notificationStore.getState().addNotification({
-        title: 'Trainer Arrived 🔔',
-        body: `Your trainer ${booking.trainerName} has arrived. Please share the OTP to begin your session.`,
-        icon: 'bell',
-        type: 'Safety',
-        priority: 'high'
-      });
-    } catch (e) {
-      console.log('[SESSION ENGINE] Notification store error:', e);
+    if (error) {
+      console.error('[SESSION ENGINE] checkIn failed:', error);
+      throw new Error(error.message);
     }
+
+    await Database.refreshBookings();
   }
 
   /**
-   * Verifies the 6-digit OTP code on database via RPC, falls back to local.
-   * If correct, transitions the timelineStatus to 'workout_started'.
+   * Verifies the 6-digit OTP code on database via RPC.
+   * If correct, transitions the timelineStatus to 'otp_verified'.
    */
   static async verifyOTP(bookingId: string, enteredOtp: string): Promise<boolean> {
-    const booking = Database.schema.bookings.find(b => b.id === bookingId);
-    if (!booking) return false;
+    const { error } = await supabase.rpc('verify_session_otp', {
+      p_booking_id: bookingId,
+      p_entered_otp: enteredOtp
+    });
 
-    // 1. Strict status check
-    if (booking.status !== 'upcoming') return false;
-
-    // 2. Strict window check
-    if (!this.isWithinStartWindow(booking)) return false;
-
-    // 3. Strict trainer check
-    const currentUserId = Database.getCurrentUserId();
-    if (currentUserId && booking.trainerId && booking.trainerId !== currentUserId) return false;
-
-    try {
-      const { data, error } = await supabase.rpc('verify_and_start_session', {
-        booking_id: bookingId,
-        entered_otp: enteredOtp
-      });
-
-      if (error) {
-        console.log('[SESSION ENGINE] Server-side OTP validation failed:', error.message);
-        throw error;
-      }
-
-      Database.updateBookingSessionDetails(bookingId, {
-        timelineStatus: 'otp_verified'
-      });
-      return true;
-    } catch (e) {
-      // Local fallback for offline mode or network failure
-      console.log('[SESSION ENGINE] RPC failed, using local OTP verification fallback:', e);
-      if (booking.otp !== enteredOtp) {
-        return false;
-      }
-      if (booking.otpExpiresAt && Date.now() > booking.otpExpiresAt) {
-        return false;
-      }
-      Database.updateBookingSessionDetails(bookingId, {
-        timelineStatus: 'otp_verified'
-      });
-      return true;
+    if (error) {
+      console.error('[SESSION ENGINE] Server-side OTP validation failed:', error.message);
+      return false;
     }
+
+    await Database.refreshBookings();
+    return true;
   }
 
   /**
    * Starts the workout session after OTP is verified.
    */
   static async startWorkout(bookingId: string): Promise<void> {
-    const booking = Database.schema.bookings.find(b => b.id === bookingId);
-    if (!booking) {
-      throw new Error("Booking not found");
-    }
-
-    if (booking.timelineStatus !== 'otp_verified') {
-      throw new Error("OTP must be verified before starting the workout.");
-    }
-
-    // Update to workout_started and save the timestamp
-    Database.updateBookingSessionDetails(bookingId, {
-      timelineStatus: 'workout_started',
-      workoutStartedAt: Date.now()
+    const { error } = await supabase.rpc('start_session', {
+      p_booking_id: bookingId
     });
+
+    if (error) {
+      console.error('[SESSION ENGINE] startWorkout failed:', error);
+      throw new Error(error.message);
+    }
+
+    await Database.refreshBookings();
   }
 
   /**
    * Completes the active workout session.
    */
-  static completeSession(bookingId: string): void {
-    const booking = Database.schema.bookings.find(b => b.id === bookingId);
-    if (!booking) return;
-
-    Database.updateBookingSessionDetails(bookingId, {
-      status: 'completed',
-      timelineStatus: 'workout_completed',
-      workoutCompletedAt: Date.now()
+  static async completeSession(bookingId: string): Promise<void> {
+    const { error } = await supabase.rpc('complete_session', {
+      p_booking_id: bookingId
     });
+
+    if (error) {
+      console.error('[SESSION ENGINE] completeSession failed:', error);
+      throw new Error(error.message);
+    }
+
+    await Database.refreshBookings();
   }
 
   /**

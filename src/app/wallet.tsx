@@ -18,7 +18,7 @@ export default function WalletScreen() {
   const [transferPhone, setTransferPhone] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
 
-  const handleTransfer = () => {
+  const handleTransfer = async () => {
     if (!transferPhone.trim()) {
       Alert.alert('Validation Error', 'Please enter a recipient phone number.');
       return;
@@ -28,7 +28,7 @@ export default function WalletScreen() {
       Alert.alert('Validation Error', 'Please enter a valid credit amount greater than 0.');
       return;
     }
-    const res = transferCredits(transferPhone.trim(), amt);
+    const res = await transferCredits(transferPhone.trim(), amt);
     if (res.success) {
       Alert.alert('Transfer Successful', `Successfully shared ${amt} ${amt === 1 ? 'credit' : 'credits'} with ${transferPhone}.`);
       setTransferPhone('');

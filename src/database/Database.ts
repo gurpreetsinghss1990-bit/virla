@@ -608,7 +608,7 @@ export function mapBooking(row: any): Booking {
   return {
     id: row.id,
     status: row.status,
-    timelineStatus: row.timeline_status,
+    timelineStatus: row.timeline_status ? row.timeline_status.toLowerCase() as any : undefined,
     otp: row.otp,
     clientName: row.client_name || '',
     clientPhone: row.client_phone || '',
@@ -632,21 +632,26 @@ export function mapBooking(row: any): Booking {
     durationMinutes: calculatedDuration,
     ratingDetails: row.rating_details ? (typeof row.rating_details === 'string' ? JSON.parse(row.rating_details) : row.rating_details) : undefined,
     trainerNote: row.trainer_note || undefined,
-    createdAt: row.created_at ? Number(row.created_at) : undefined,
+    createdAt: row.request_created_at ? new Date(row.request_created_at).getTime() : (row.created_at ? Number(row.created_at) : undefined),
     reminderSent: row.reminder_sent ?? false,
     acceptanceNotificationCount: row.acceptance_notification_count ? Number(row.acceptance_notification_count) : undefined,
     lastAcceptanceNotificationAt: row.last_acceptance_notification_at ? Number(row.last_acceptance_notification_at) : undefined,
     acceptanceMethod: row.acceptance_method === 'SYSTEM_AUTO_ACCEPT' || row.acceptance_method === 'auto' ? 'auto' : (row.acceptance_method === 'TRAINER_MANUAL_ACCEPT' || row.acceptance_method === 'manual' ? 'manual' : undefined),
     acceptanceDeadline: row.acceptance_deadline ? Number(row.acceptance_deadline) : undefined,
-    autoAcceptedAt: row.auto_accepted_at ? Number(row.auto_accepted_at) : undefined,
-    trainerAcceptedAt: row.trainer_accepted_at ? Number(row.trainer_accepted_at) : undefined,
+    autoAcceptedAt: row.auto_accepted_at ? new Date(row.auto_accepted_at).getTime() : undefined,
+    trainerAcceptedAt: row.manual_accepted_at ? new Date(row.manual_accepted_at).getTime() : (row.trainer_accepted_at ? Number(row.trainer_accepted_at) : undefined),
     participantCount: row.participant_count || 1,
     sessionType: row.session_type || 'SINGLE',
     originalPackageType: row.original_package_type || 'SINGLE',
     partnerName: row.partner_name || undefined,
     partnerPhone: row.partner_phone || undefined,
-    travelStartedAt: row.travel_started_at ? Number(row.travel_started_at) : undefined,
-    workoutCompletedAt: row.workout_completed_at ? Number(row.workout_completed_at) : undefined,
+    travelStartedAt: row.travel_started_at ? new Date(row.travel_started_at).getTime() : undefined,
+    workoutCompletedAt: row.session_completed_at ? new Date(row.session_completed_at).getTime() : undefined,
+    workoutStartedAt: row.session_started_at ? new Date(row.session_started_at).getTime() : undefined,
+    gracePeriodStartedAt: row.grace_period_started_at ? new Date(row.grace_period_started_at).getTime() : (row.trainer_arrived_at ? new Date(row.trainer_arrived_at).getTime() : undefined),
+    otpExpiresAt: row.otp_expires_at ? new Date(row.otp_expires_at).getTime() : undefined,
+    scheduledStartAt: row.scheduled_start_at || undefined,
+    scheduledEndAt: row.scheduled_end_at || undefined,
     isInvalidData: !validation.isValid,
     validationError: validation.reason,
   };
@@ -657,7 +662,7 @@ export function mapBookingToPostgres(b: Booking): any {
   return {
     id: b.id,
     status: b.status,
-    timeline_status: b.timelineStatus,
+    timeline_status: b.timelineStatus ? b.timelineStatus.toUpperCase() : null,
     otp: b.otp,
     client_name: b.clientName || '',
     client_phone: b.clientPhone || '',
@@ -687,15 +692,20 @@ export function mapBookingToPostgres(b: Booking): any {
     last_acceptance_notification_at: b.lastAcceptanceNotificationAt || null,
     acceptance_method: b.acceptanceMethod || null,
     acceptance_deadline: b.acceptanceDeadline || null,
-    auto_accepted_at: b.autoAcceptedAt || null,
-    trainer_accepted_at: b.trainerAcceptedAt || null,
+    auto_accepted_at: b.autoAcceptedAt ? new Date(b.autoAcceptedAt).toISOString() : null,
+    manual_accepted_at: b.trainerAcceptedAt ? new Date(b.trainerAcceptedAt).toISOString() : null,
     participant_count: b.participantCount || 1,
     session_type: b.sessionType || 'SINGLE',
     original_package_type: b.originalPackageType || 'SINGLE',
     partner_name: b.partnerName || null,
     partner_phone: b.partnerPhone || null,
-    travel_started_at: b.travelStartedAt || null,
-    workout_completed_at: b.workoutCompletedAt || null,
+    travel_started_at: b.travelStartedAt ? new Date(b.travelStartedAt).toISOString() : null,
+    session_completed_at: b.workoutCompletedAt ? new Date(b.workoutCompletedAt).toISOString() : null,
+    session_started_at: b.workoutStartedAt ? new Date(b.workoutStartedAt).toISOString() : null,
+    grace_period_started_at: b.gracePeriodStartedAt ? new Date(b.gracePeriodStartedAt).toISOString() : null,
+    otp_expires_at: b.otpExpiresAt ? new Date(b.otpExpiresAt).toISOString() : null,
+    scheduled_start_at: b.scheduledStartAt || null,
+    scheduled_end_at: b.scheduledEndAt || null,
   };
 }
 
@@ -2204,24 +2214,40 @@ class DatabaseClient {
 
   async reserveSlot(clientId: string, trainerId: string, date: string, time: string): Promise<string | null> {
     this.cleanExpiredReservations();
+    
+    const range = getBookingISTDateRange({ date, time } as any);
+    const scheduledStartAt = range.start.toISOString();
+    const scheduledEndAt = range.end.toISOString();
+
+    const id = `res-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+    
     // Check if already reserved by another client
     const isReserved = this.schema.slot_reservations.some(r => 
       r.trainer_id === trainerId && normalizeDate(r.slot_date) === normalizeDate(date) && r.slot_time === time && r.client_id !== clientId
     );
     if (isReserved) return null;
 
-    const id = `res-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 mins
     const reservation = {
       id,
       slot_time: time,
       slot_date: date,
       trainer_id: trainerId,
       client_id: clientId,
-      expires_at: expiresAt
+      expires_at: expiresAt,
+      scheduled_start_at: scheduledStartAt,
+      scheduled_end_at: scheduledEndAt
     };
 
-    this.schema.slot_reservations.push(reservation);
+    this.schema.slot_reservations.push({
+      id,
+      slot_time: time,
+      slot_date: date,
+      trainer_id: trainerId,
+      client_id: clientId,
+      expires_at: Date.now() + 5 * 60 * 1000 as any
+    });
+
     try {
       await supabase.from('slot_reservations').insert(reservation);
     } catch (e) {
@@ -2240,201 +2266,39 @@ class DatabaseClient {
   }
 
   async addBookingWithValidation(userId: string, bookingData: Omit<Booking, 'id' | 'status' | 'timelineStatus'>): Promise<Booking> {
-    this.cleanExpiredReservations();
-    
+    const bookingId = generateUUID('booking');
+    const range = getBookingISTDateRange(bookingData as any);
+    const scheduledStartAt = range.start.toISOString();
+    const scheduledEndAt = range.end.toISOString();
+
+    const workout = this.schema.workouts.find(w => w.title === bookingData.workoutTitle);
+    const workoutId = workout?.id || 'w-powerforge';
     const assignedTrainerId = bookingData.trainerId;
     if (!assignedTrainerId) throw new Error('Trainer ID is required.');
-    const date = bookingData.date;
-    const time = bookingData.time;
 
-    // 1. Verify Trainer Availability (exists and is online/supports category)
-    const coach = this.schema.coaches.find(c => c.id === assignedTrainerId);
-    if (!coach) throw new Error('Trainer not found.');
-    if (coach.preferences?.online === false) throw new Error('Trainer is currently offline.');
-
-    // 1b. Verify Trainer profile verification and gender integrity
-    const trainerGender = (coach.gender || '').toLowerCase();
-    const genderValid = trainerGender === 'male' || trainerGender === 'female';
-    if (!genderValid || coach.verifiedBadge === false) {
-      throw new Error('This Trainer is currently unavailable due to profile verification requirements.');
-    }
-
-    // 1c. Verify Trainer matching gender preference
-    const clientProfile = this.getProfile(userId);
-    const clientPref = (clientProfile?.trainerPreference || 'no_preference').toLowerCase();
-    if (clientPref === 'male' && trainerGender !== 'male') {
-      throw new Error('This Trainer does not match your selected preference. Please choose another available Trainer.');
-    }
-    if (clientPref === 'female' && trainerGender !== 'female') {
-      throw new Error('This Trainer does not match your selected preference. Please choose another available Trainer.');
-    }
-
-    // 2. Verify slot is not disabled by trainer overrides
-    const overrides = coach.preferences?.availabilityOverrides || [];
-    const override = overrides.find(o => normalizeDate(o.date) === normalizeDate(date) && o.time === time);
-    const isAvailable = override ? override.isAvailable : true;
-    if (!isAvailable) {
-      throw new Error('This slot is no longer available. Please select another slot.');
-    }
-
-    // 3. Verify no conflicting bookings (Double Booking Check)
-    const isDoubleBooked = this.schema.bookings.some(b => 
-      b.trainerId === assignedTrainerId && b.status === 'upcoming' && normalizeDate(b.date) === normalizeDate(date) && b.time === time
-    );
-    if (isDoubleBooked) {
-      throw new Error('This slot is no longer available. Please select another slot.');
-    }
-
-    // 4. Slot Buffer Check (30 minutes travel buffer)
-    const targetMinutes = this.parseTimeToMinutesHelper(time);
-    const hasBufferConflict = this.schema.bookings.some(b => {
-      if (b.trainerId !== assignedTrainerId || b.status !== 'upcoming' || normalizeDate(b.date) !== normalizeDate(date)) return false;
-      const bMinutes = this.parseTimeToMinutesHelper(b.time);
-      const diff = Math.abs(bMinutes - targetMinutes);
-      const duration = b.durationMinutes || 60;
-      return diff < (duration + 30); // 30 minutes buffer
-    });
-    if (hasBufferConflict) {
-      throw new Error('Trainer has a back-to-back session buffer conflict.');
-    }
-
-    // 5. Dynamic Workload limit calculation
-    const activeBookingsCount = this.schema.bookings.filter(b => 
-      b.trainerId === assignedTrainerId && 
-      normalizeDate(b.date) === normalizeDate(date) &&
-      b.status === 'upcoming' &&
-      (b.timelineStatus === 'booked' || b.timelineStatus === 'trainer_assigned' || b.timelineStatus === 'trainer_accepted' || b.timelineStatus === 'trainer_preparing' || b.timelineStatus === 'trainer_travelling' || b.timelineStatus === 'trainer_arrived' || b.timelineStatus === 'otp_verified' || b.timelineStatus === 'workout_started')
-    ).length;
-    const maxSessions = coach.preferences?.maxDailySessions || 5;
-    if (activeBookingsCount >= maxSessions) {
-      throw new Error('Trainer has reached maximum daily workload limit.');
-    }
-
-    // All checks pass! Perform transaction operations atomically
-    const bookingId = generateUUID('booking');
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    const nowMs = Date.now();
-    const userRec = this.schema.users?.find(u => u.id === userId);
-    const newBooking: Booking = {
-      ...bookingData,
-      id: bookingId,
-      status: 'upcoming',
-      timelineStatus: 'booked',
-      otp,
-      clientId: userId,
-      clientName: userRec?.name || 'Viral',
-      clientPhone: userRec?.phone || '',
-      createdAt: nowMs,
-      acceptanceNotificationCount: 1,
-      lastAcceptanceNotificationAt: nowMs,
-      acceptanceDeadline: nowMs + 10 * 60 * 1000
-    };
-
-    // Decrement credits
-    const profile = this.getProfile(userId);
-    if (profile) {
-      profile.creditsBalance = Math.max(0, profile.creditsBalance - 1);
-    }
-
-    const tx: Invoice = {
-      id: generateUUID('tx'),
-      userId,
-      type: 'spend',
-      amount: '₹0',
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-      status: 'paid',
-      credits: 1
-    };
-
-    // Validate booking data before caching and saving
-    const validation = validateBookingData(newBooking);
-    if (!validation.isValid) {
-      console.error(`[DATABASE DATA INTEGRITY ERROR] Attempted to create invalid direct booking. Reason: ${validation.reason}`);
-      throw new Error(`Invalid booking data: ${validation.reason}`);
-    }
-
-    // Save locally
-    this.schema.bookings.unshift(newBooking);
-    this.schema.credit_transactions.unshift(tx);
-    this.save();
-
-    // Dispatch the T+0 new booking alert to Trainer immediately (Section 10)
-    this.addNotification(assignedTrainerId, {
-      title: 'New Booking — Action Required 🔔',
-      body: `You have a new session request for ${bookingData.workoutTitle} on ${date} @ ${time}.`,
-      icon: 'bell',
-      type: 'Trainer Updates',
-      priority: 'high',
-      actionLabel: 'View Details',
-      deepLink: `/session-detail?id=${bookingId}`
+    const { data, error } = await supabase.rpc('create_booking', {
+      p_booking_id: bookingId,
+      p_workout_id: workoutId,
+      p_scheduled_start_at: scheduledStartAt,
+      p_scheduled_end_at: scheduledEndAt,
+      p_assigned_trainer_id: assignedTrainerId
     });
 
-    // Log the assignment audit log
-    this.logAssignmentEvent({
-      bookingId,
-      trainerId: assignedTrainerId,
-      score: 100,
-      reason: 'Dynamically booked real trainer slot',
-      action: 'assigned'
-    });
-
-    // Write to Supabase (Atomically trigger)
-    try {
-      const bookingPayload = mapBookingToPostgres(newBooking);
-      const [resBooking, resProfile, resTx] = await Promise.all([
-        supabase.from('bookings').insert(bookingPayload),
-        profile ? supabase.from('user_profiles').update({ credits_balance: profile.creditsBalance }).eq('user_id', userId) : Promise.resolve({ error: null }),
-        supabase.from('credit_transactions').insert(mapInvoiceToPostgres(tx, userId))
-      ]);
-
-      if (resBooking.error) {
-        // Fallback for Solo sessions if the migration columns are missing from the schema cache
-        const isMissingColumnError = resBooking.error.message && (
-          resBooking.error.message.includes('original_package_type') ||
-          resBooking.error.message.includes('session_type') ||
-          resBooking.error.message.includes('participant_count') ||
-          resBooking.error.message.includes('partner_name') ||
-          resBooking.error.message.includes('partner_phone')
-        );
-
-        if (isMissingColumnError && newBooking.sessionType === 'SINGLE') {
-          console.warn('[DB WARNING] Missing partner columns in bookings table schema cache. Retrying Solo booking without them.');
-          
-          const fallbackPayload = { ...bookingPayload };
-          delete fallbackPayload.participant_count;
-          delete fallbackPayload.session_type;
-          delete fallbackPayload.original_package_type;
-          delete fallbackPayload.partner_name;
-          delete fallbackPayload.partner_phone;
-
-          const resRetry = await supabase.from('bookings').insert(fallbackPayload);
-          if (resRetry.error) throw resRetry.error;
-        } else {
-          throw resBooking.error;
-        }
-      }
-      if (resProfile.error) throw resProfile.error;
-      if (resTx.error) throw resTx.error;
-
-    } catch (dbErr: any) {
-      // Rollback local state in case of database insert failure
-      this.schema.bookings = this.schema.bookings.filter(b => b.id !== bookingId);
-      this.schema.credit_transactions = this.schema.credit_transactions.filter(t => t.id !== tx.id);
-      if (profile) {
-        profile.creditsBalance = profile.creditsBalance + 1;
-      }
-      this.save();
-      
-      console.error('[DB ERROR] addBookingWithValidation error:', dbErr);
-      
-      // Translate Postgres unique constraint violation
-      if (dbErr.code === '23505' || (dbErr.message && dbErr.message.includes('unique'))) {
+    if (error) {
+      console.error('[DB ERROR] create_booking RPC failed:', error);
+      if (error.message && (error.message.includes('unavailable') || error.message.includes('overlapping') || error.message.includes('buffer'))) {
         throw new Error('This slot is no longer available. Please select another slot.');
       }
-      throw new Error(dbErr.message || 'Database write operation failed. Rolled back booking transaction.');
+      throw new Error(error.message || 'Database write operation failed. Rolled back booking transaction.');
     }
 
-    this.log('AddBooking', `User ${userId} booked ${bookingData.workoutTitle} with OTP ${otp}`);
+    await this.refreshBookings();
+    await this.refreshUserData(userId);
+
+    const newBooking = this.schema.bookings.find(b => b.id === bookingId);
+    if (!newBooking) {
+      throw new Error('Booking was created but could not be loaded.');
+    }
     return newBooking;
   }
 
@@ -2450,125 +2314,67 @@ class DatabaseClient {
     return hours * 60 + minutes;
   }
 
+  async refreshUserData(userId: string): Promise<void> {
+    try {
+      const [resProfiles, resTransactions, resEarnings] = await Promise.all([
+        supabase.from('user_profiles').select('*').eq('user_id', userId),
+        supabase.from('credit_transactions').select('*').eq('user_id', userId),
+        supabase.from('trainer_earnings').select('*').eq('trainer_id', userId)
+      ]);
+      if (resProfiles.data) {
+        this.schema.profiles = this.schema.profiles.filter(p => p.userId !== userId).concat((resProfiles.data || []).map(mapUserProfile));
+      }
+      if (resTransactions.data) {
+        this.schema.credit_transactions = this.schema.credit_transactions.filter(t => t.userId !== userId).concat((resTransactions.data || []).map(mapInvoice));
+      }
+      if (resEarnings.data) {
+        this.schema.earnings = (resEarnings.data || []).map(mapTrainerEarning);
+      }
+      this.save();
+    } catch (e) {
+      console.error('refreshUserData error:', e);
+    }
+  }
+
   addBooking(userId: string, bookingData: Omit<Booking, 'id' | 'status' | 'timelineStatus'>): Booking {
     const bookingId = generateUUID('booking');
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    const userRec = this.schema.users?.find(u => u.id === userId);
-    const nowMs = Date.now();
-    const newBooking: Booking = {
+    const tempBooking: Booking = {
       ...bookingData,
       id: bookingId,
       status: 'upcoming',
       timelineStatus: 'booked',
-      otp,
-      clientId: userId,
-      clientName: userRec?.name || 'Viral',
-      clientPhone: userRec?.phone || '',
-      createdAt: nowMs,
-      acceptanceNotificationCount: 1,
-      lastAcceptanceNotificationAt: nowMs,
-      acceptanceDeadline: nowMs + 10 * 60 * 1000
-    };
-
-    // Validate booking data before caching and saving
-    const validation = validateBookingData(newBooking);
-    if (!validation.isValid) {
-      console.error(`[DATABASE DATA INTEGRITY ERROR] Attempted to create invalid booking. Reason: ${validation.reason}`);
-      throw new Error(`Invalid booking data: ${validation.reason}`);
-    }
-
-    this.schema.bookings.unshift(newBooking);
-
-    const profile = this.getProfile(userId);
-    if (profile) {
-      profile.creditsBalance = Math.max(0, profile.creditsBalance - 1);
-    }
-
-    const tx: Invoice = {
-      id: generateUUID('tx'),
-      userId,
-      type: 'spend',
-      amount: '₹0',
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-      status: 'paid',
-      credits: 1
-    };
-
-    this.schema.credit_transactions.unshift(tx);
-
-    const bookingPayload = mapBookingToPostgres(newBooking);
-    const insertBookingAsync = async () => {
-      try {
-        const res = await supabase.from('bookings').insert(bookingPayload);
-        if (res.error) {
-          const isMissingColumnError = res.error.message && (
-            res.error.message.includes('original_package_type') ||
-            res.error.message.includes('session_type') ||
-            res.error.message.includes('participant_count') ||
-            res.error.message.includes('partner_name') ||
-            res.error.message.includes('partner_phone')
-          );
-          if (isMissingColumnError && newBooking.sessionType === 'SINGLE') {
-            const fallbackPayload = { ...bookingPayload };
-            delete fallbackPayload.participant_count;
-            delete fallbackPayload.session_type;
-            delete fallbackPayload.original_package_type;
-            delete fallbackPayload.partner_name;
-            delete fallbackPayload.partner_phone;
-            await supabase.from('bookings').insert(fallbackPayload);
-          } else {
-            console.error('[DB ERROR] addBooking insert failed:', res.error);
-          }
-        }
-      } catch (err) {
-        console.error('[DB ERROR] addBooking exception:', err);
-      }
-    };
-
-    Promise.all([
-      insertBookingAsync(),
-      profile ? supabase.from('user_profiles').update({ credits_balance: profile.creditsBalance }).eq('user_id', userId) : Promise.resolve(),
-      supabase.from('credit_transactions').insert(mapInvoiceToPostgres(tx, userId))
-    ]).then();
-
+      createdAt: Date.now()
+    } as any;
+    
+    // Optimistically insert locally so UI shows it, but we will write it via RPC in background
+    this.schema.bookings.unshift(tempBooking);
     this.save();
-    this.log('AddBooking', `User ${userId} booked ${bookingData.workoutTitle} with OTP ${otp}`);
-    return newBooking;
+
+    // Call RPC asynchronously
+    this.addBookingWithValidation(userId, bookingData)
+      .then(() => {
+        console.log(`[DB] Async booking creation succeeded for ID: ${bookingId}`);
+      })
+      .catch((err) => {
+        console.error(`[DB ERROR] Async booking creation failed:`, err);
+        // Rollback local cache
+        this.schema.bookings = this.schema.bookings.filter(b => b.id !== bookingId);
+        this.save();
+      });
+
+    return tempBooking;
   }
 
-  cancelBooking(userId: string, bookingId: string, reason = ''): void {
-    const booking = this.schema.bookings.find(b => b.id === bookingId);
-    if (booking && booking.status === 'upcoming') {
-      const isLate = booking.timelineStatus === 'trainer_travelling' || booking.timelineStatus === 'trainer_arrived';
-      booking.status = 'cancelled';
-      booking.timelineStatus = 'session_closed';
-
-      const refundAmount = booking.sessionType === 'COUPLE' ? 2 : 1;
-      const tx: Invoice = {
-        id: generateUUID('tx'),
-        userId,
-        type: isLate ? 'penalty' : 'refund',
-        amount: '₹0',
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-        status: 'paid',
-        credits: refundAmount
-      };
-      
-      this.schema.credit_transactions.unshift(tx);
-
-      const profile = this.getProfile(userId);
-      if (!isLate && profile) {
-        profile.creditsBalance += refundAmount;
-      }
-
-      Promise.all([
-        supabase.from('bookings').update({ status: booking.status, timeline_status: booking.timelineStatus }).eq('id', bookingId),
-        supabase.from('credit_transactions').insert(mapInvoiceToPostgres(tx, userId)),
-        profile ? supabase.from('user_profiles').update({ credits_balance: profile.creditsBalance }).eq('user_id', userId) : Promise.resolve()
-      ]).then();
-
-      this.save();
+  async cancelBooking(userId: string, bookingId: string, reason = ''): Promise<void> {
+    const { data, error } = await supabase.rpc('cancel_booking', {
+      p_booking_id: bookingId
+    });
+    if (error) {
+      console.error('[DB ERROR] cancel_booking RPC failed:', error);
+      throw new Error(error.message);
     }
+    await this.refreshBookings();
+    await this.refreshUserData(userId);
   }
 
   rescheduleBooking(bookingId: string, date: string, time: string): void {
@@ -2593,55 +2399,39 @@ class DatabaseClient {
 
   async updateTimelineStatus(bookingId: string, timelineStatus: Booking['timelineStatus']): Promise<void> {
     const booking = this.schema.bookings.find(b => b.id === bookingId);
-    if (booking) {
-      const nowMs = Date.now();
-      
-      let nextStatus = booking.status;
-      if (timelineStatus === 'session_closed' || timelineStatus === 'workout_completed') {
-        nextStatus = 'completed';
-      }
+    if (!booking) return;
 
-      const updatePayload: any = {
-        status: nextStatus,
-        timeline_status: timelineStatus
-      };
+    let res: { error: any } = { error: null };
+    const statusUpper = timelineStatus ? timelineStatus.toUpperCase() : '';
 
-      if (timelineStatus === 'trainer_travelling') {
-        updatePayload.travel_started_at = nowMs;
-      }
+    if (timelineStatus === 'trainer_accepted') {
+      res = await supabase.rpc('trainer_accept_booking', { p_booking_id: bookingId });
+    } else if (timelineStatus === 'trainer_travelling') {
+      res = await supabase.rpc('start_travel', { p_booking_id: bookingId });
+    } else if (timelineStatus === 'trainer_arrived') {
+      res = await supabase.rpc('mark_trainer_arrived', { p_booking_id: bookingId });
+    } else if (timelineStatus === 'workout_started') {
+      res = await supabase.rpc('start_session', { p_booking_id: bookingId });
+    } else if (timelineStatus === 'workout_completed') {
+      res = await supabase.rpc('complete_session', { p_booking_id: bookingId });
+    } else if (timelineStatus === 'session_closed') {
+      res = await supabase.rpc('close_session', { p_booking_id: bookingId });
+    } else {
+      res = await supabase.rpc('update_session_timeline', {
+        p_booking_id: bookingId,
+        p_target_status: statusUpper
+      });
+    }
 
-      if (timelineStatus === 'workout_completed') {
-        updatePayload.workout_completed_at = nowMs;
-      }
+    if (res.error) {
+      console.error(`[DB ERROR] updateTimelineStatus failed for ${timelineStatus}:`, res.error);
+      throw new Error(res.error.message);
+    }
 
-      if (timelineStatus === 'trainer_accepted' && !booking.acceptanceMethod) {
-        updatePayload.acceptance_method = 'manual';
-        updatePayload.trainer_accepted_at = nowMs;
-      }
-
-      const { error } = await supabase.from('bookings').update(updatePayload).eq('id', bookingId);
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      booking.timelineStatus = timelineStatus;
-      booking.status = nextStatus;
-
-      if (timelineStatus === 'trainer_travelling') {
-        booking.travelStartedAt = nowMs;
-      }
-
-      if (timelineStatus === 'workout_completed') {
-        booking.workoutCompletedAt = nowMs;
-      }
-
-      if (timelineStatus === 'trainer_accepted' && !booking.acceptanceMethod) {
-        booking.acceptanceMethod = 'manual';
-        booking.trainerAcceptedAt = nowMs;
-      }
-
-      this.save();
-      this.log('UpdateTimelineStatus', `Updated booking ${bookingId} status to ${timelineStatus}`);
+    await this.refreshBookings();
+    const userId = this.currentUserId || booking.clientId || '';
+    if (userId) {
+      await this.refreshUserData(userId);
     }
   }
 
@@ -2657,118 +2447,92 @@ class DatabaseClient {
     }
   }
 
-  async updateBookingTrainer(bookingId: string, trainer: {
-    trainerId?: string;
-    trainerName?: string;
-    trainerPhoto?: string;
-    trainerLevel?: string;
-    trainerRating?: number;
-    trainerCompletedSessions?: number;
-    trainerSpeciality?: string;
-    trainerLanguages?: string[];
-    price?: number;
-    createdAt?: number;
-    currentTrainerIndex?: number;
-    status?: Booking['status'];
-    timelineStatus?: Booking['timelineStatus'];
-  }): Promise<void> {
-    const booking = this.schema.bookings.find(b => b.id === bookingId);
-    if (booking) {
-      if (trainer.trainerId !== undefined) booking.trainerId = trainer.trainerId;
-      if (trainer.trainerName !== undefined) booking.trainerName = trainer.trainerName;
-      if (trainer.trainerPhoto !== undefined) booking.trainerPhoto = trainer.trainerPhoto;
-      if (trainer.trainerLevel !== undefined) booking.trainerLevel = trainer.trainerLevel as any;
-      if (trainer.trainerRating !== undefined) booking.trainerRating = trainer.trainerRating;
-      if (trainer.trainerCompletedSessions !== undefined) booking.trainerCompletedSessions = trainer.trainerCompletedSessions;
-      if (trainer.trainerSpeciality !== undefined) booking.trainerSpeciality = trainer.trainerSpeciality;
-      if (trainer.trainerLanguages !== undefined) booking.trainerLanguages = trainer.trainerLanguages;
-      if (trainer.price !== undefined) booking.price = trainer.price;
-      if (trainer.createdAt !== undefined) booking.createdAt = trainer.createdAt;
-      if (trainer.currentTrainerIndex !== undefined) booking.currentTrainerIndex = trainer.currentTrainerIndex;
-      if (trainer.status !== undefined) booking.status = trainer.status;
-      if (trainer.timelineStatus !== undefined) booking.timelineStatus = trainer.timelineStatus;
-      
-      const { error } = await supabase.from('bookings').update({
-        trainer_id: trainer.trainerId || booking.trainerId || null,
-        trainer_name: trainer.trainerName || booking.trainerName,
-        trainer_photo: trainer.trainerPhoto || booking.trainerPhoto,
-        trainer_level: trainer.trainerLevel || booking.trainerLevel,
-        trainer_rating: trainer.trainerRating !== undefined ? trainer.trainerRating : booking.trainerRating,
-        trainer_completed_sessions: trainer.trainerCompletedSessions !== undefined ? trainer.trainerCompletedSessions : booking.trainerCompletedSessions,
-        trainer_speciality: trainer.trainerSpeciality || booking.trainerSpeciality,
-        trainer_languages: trainer.trainerLanguages || booking.trainerLanguages,
-        price: trainer.price !== undefined ? trainer.price : booking.price,
-        created_at: trainer.createdAt || booking.createdAt || null,
-        current_trainer_index: trainer.currentTrainerIndex ?? booking.currentTrainerIndex ?? null,
-        status: trainer.status || booking.status,
-        timeline_status: trainer.timelineStatus || booking.timelineStatus || null
-      }).eq('id', bookingId);
+  async updateBookingTrainer(bookingId: string, trainer?: any): Promise<void> {
+    const { error } = await supabase.rpc('reassign_booking_trainer', {
+      p_booking_id: bookingId,
+      p_action: trainer?.action || 'timeout'
+    });
+    if (error) {
+      console.error('[DB ERROR] reassign_booking_trainer failed:', error);
+      throw new Error(error.message);
+    }
+    await this.refreshBookings();
+  }
 
-      if (error) {
-        throw new Error(`Failed to update booking trainer in database: ${error.message}`);
-      }
-
-      await this.save();
-      this.log('ReassignTrainer', `Reassigned booking ${bookingId} to trainer ${trainer.trainerName || 'No Trainer Available'}`);
+  async updateBookingSessionDetails(bookingId: string, details: any): Promise<void> {
+    if (details.timelineStatus) {
+      await this.updateTimelineStatus(bookingId, details.timelineStatus);
     }
   }
 
-  async updateBookingSessionDetails(bookingId: string, details: {
-    status?: Booking['status'];
-    timelineStatus?: Booking['timelineStatus'];
-    otp?: string;
-    gracePeriodStartedAt?: number;
-    otpExpiresAt?: number;
-    workoutStartedAt?: number;
-    travelStartedAt?: number;
-    workoutCompletedAt?: number;
-  }): Promise<void> {
+  async updateBookingRating(bookingId: string, ratingDetails: Booking['ratingDetails']): Promise<void> {
     const booking = this.schema.bookings.find(b => b.id === bookingId);
-    if (booking) {
-      const updatePayload: any = {};
-      if (details.status !== undefined) updatePayload.status = details.status;
-      if (details.timelineStatus !== undefined) updatePayload.timeline_status = details.timelineStatus;
-      if (details.otp !== undefined) updatePayload.otp = details.otp;
-      if (details.gracePeriodStartedAt !== undefined) updatePayload.grace_period_started_at = details.gracePeriodStartedAt;
-      if (details.otpExpiresAt !== undefined) updatePayload.otp_expires_at = details.otpExpiresAt;
-      if (details.workoutStartedAt !== undefined) updatePayload.workout_started_at = details.workoutStartedAt;
-      if (details.travelStartedAt !== undefined) updatePayload.travel_started_at = details.travelStartedAt;
-      if (details.workoutCompletedAt !== undefined) updatePayload.workout_completed_at = details.workoutCompletedAt;
+    if (!booking) return;
 
-      const { error } = await supabase.from('bookings').update(updatePayload).eq('id', bookingId);
-      if (error) {
-        throw new Error(error.message);
-      }
+    const { error } = await supabase.rpc('submit_customer_review', {
+      p_booking_id: bookingId,
+      p_overall_rating: ratingDetails?.overallRating || 5,
+      p_trainer_rating: ratingDetails?.trainerRating || 5,
+      p_workout_rating: ratingDetails?.workoutRating || 5,
+      p_difficulty: ratingDetails?.difficulty || 'Medium',
+      p_energy: ratingDetails?.energy || 'Medium',
+      p_comments: ratingDetails?.comments || ''
+    });
 
-      if (details.status !== undefined) booking.status = details.status;
-      if (details.timelineStatus !== undefined) booking.timelineStatus = details.timelineStatus;
-      if (details.otp !== undefined) booking.otp = details.otp;
-      if (details.gracePeriodStartedAt !== undefined) booking.gracePeriodStartedAt = details.gracePeriodStartedAt;
-      if (details.otpExpiresAt !== undefined) booking.otpExpiresAt = details.otpExpiresAt;
-      if (details.workoutStartedAt !== undefined) booking.workoutStartedAt = details.workoutStartedAt;
-      if (details.travelStartedAt !== undefined) booking.travelStartedAt = details.travelStartedAt;
-      if (details.workoutCompletedAt !== undefined) booking.workoutCompletedAt = details.workoutCompletedAt;
+    if (error) {
+      console.error('[DB ERROR] submit_customer_review RPC failed:', error);
+      throw new Error(error.message);
+    }
 
-      this.save();
-      this.log('UpdateBookingSessionDetails', `Updated session details for booking ${bookingId} to status: ${booking.status}, timeline: ${booking.timelineStatus}`);
+    await this.refreshBookings();
+    const userId = this.currentUserId || booking.clientId || '';
+    if (userId) {
+      await this.refreshUserData(userId);
     }
   }
 
-  updateBookingRating(bookingId: string, ratingDetails: Booking['ratingDetails']): void {
+  async handleNoShow(bookingId: string, actor: 'client' | 'trainer'): Promise<void> {
     const booking = this.schema.bookings.find(b => b.id === bookingId);
-    if (booking) {
-      booking.ratingDetails = ratingDetails;
-      booking.timelineStatus = 'session_closed';
-      booking.status = 'completed';
+    if (!booking) return;
 
-      supabase.from('bookings').update({
-        status: booking.status,
-        timeline_status: booking.timelineStatus,
-        rating_details: ratingDetails
-      }).eq('id', bookingId).then();
+    const { error } = await supabase.rpc('handle_no_show', {
+      p_booking_id: bookingId,
+      p_actor: actor
+    });
 
-      this.save();
-      this.log('RateSession', `Rated session ${bookingId} overall ${ratingDetails?.overallRating}`);
+    if (error) {
+      console.error('[DB ERROR] handle_no_show RPC failed:', error);
+      throw new Error(error.message);
+    }
+
+    await this.refreshBookings();
+    const userId = this.currentUserId || booking.clientId || '';
+    if (userId) {
+      await this.refreshUserData(userId);
+    }
+  }
+
+  async submitTrainerReport(bookingId: string, report: NonNullable<Booking['questionnaire']>): Promise<void> {
+    const booking = this.schema.bookings.find(b => b.id === bookingId);
+    if (!booking) return;
+
+    const { error } = await supabase.rpc('submit_trainer_report', {
+      p_booking_id: bookingId,
+      p_mobility_score: report.mobilityScore || 0,
+      p_workout_summary: report.workoutSummary || '',
+      p_coach_notes: report.coachNotes || '',
+      p_coach_signature: report.coachSignature || ''
+    });
+
+    if (error) {
+      console.error('[DB ERROR] submit_trainer_report RPC failed:', error);
+      throw new Error(error.message);
+    }
+
+    await this.refreshBookings();
+    const userId = this.currentUserId || booking.clientId || '';
+    if (userId) {
+      await this.refreshUserData(userId);
     }
   }
 
@@ -2873,9 +2637,7 @@ class DatabaseClient {
   }
 
   addLedgerTransaction(userId: string, tx: Invoice): void {
-    this.schema.credit_transactions.unshift(tx);
-    supabase.from('credit_transactions').insert(mapInvoiceToPostgres(tx, userId)).then();
-    this.save();
+    console.log('[DB] addLedgerTransaction client call ignored. Ledger is authoritative on Supabase.');
   }
 
   // Disputes & Kit requests
@@ -3269,21 +3031,7 @@ class DatabaseClient {
   }
 
   addEarning(earning: Omit<TrainerEarning, 'id' | 'date'>): void {
-    const date = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
-    const id = generateUUID('earn');
-    const newEarn = {
-      ...earning,
-      id,
-      date
-    };
-    this.schema.earnings.unshift(newEarn);
-    
-    if (earning.bookingId) {
-      // Find trainer user matching current trainer name or ID
-      const trainerId = this.currentUserId || '';
-      supabase.from('trainer_earnings').insert(mapTrainerEarningToPostgres(newEarn, trainerId)).then();
-    }
-    this.save();
+    console.log('[DB] addEarning client call ignored. Earnings are authoritative on Supabase.');
   }
 
   private normalizePhone(phone: string): string {

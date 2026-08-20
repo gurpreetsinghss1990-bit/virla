@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { useUserStore } from './userStore';
 import { useMembershipStore } from './membershipStore';
 import { Database } from '../database/Database';
+import { supabase } from '../database/supabaseClient';
 
 export interface LedgerTransaction {
   id: string;
@@ -38,7 +39,7 @@ interface WalletState {
   deductCreditLateCancel: (reason: string) => void;
   addBonusCredit: (reason: string) => void;
   syncFromDB: () => void;
-  transferCredits: (toPhone: string, amount: number) => { success: boolean; error?: string };
+  transferCredits: (toPhone: string, amount: number) => Promise<{ success: boolean; error?: string }>;
   clearCreditsForTesting: () => void;
 }
 
@@ -63,88 +64,20 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   },
 
   spendCredit: (reason) => {
-    if (useMembershipStore.getState().isExpired()) {
-      return false;
-    }
-    const userId = Database.getCurrentUserId();
-    if (userId) {
-      const profile = Database.getProfile(userId);
-      if (profile && profile.creditsBalance > 0) {
-        profile.creditsBalance -= 1;
-        Database.addLedgerTransaction(userId, {
-          id: Database.generateUUID('tx'),
-          type: 'spend',
-          amount: '₹0',
-          status: 'paid',
-          credits: 1,
-          date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
-        });
-        useMembershipStore.getState().syncFromDB();
-        get().syncFromDB();
-        return true;
-      }
-    }
-    return false;
+    console.log('[useWalletStore] spendCredit call ignored. Credits are authoritatively deducted on Supabase.');
+    return true;
   },
 
   refundCredit: (reason) => {
-    const userId = Database.getCurrentUserId();
-    if (userId) {
-      const profile = Database.getProfile(userId);
-      if (profile) {
-        profile.creditsBalance += 1;
-        Database.addLedgerTransaction(userId, {
-          id: Database.generateUUID('tx'),
-          type: 'refund',
-          amount: '₹0',
-          status: 'paid',
-          credits: 1,
-          date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
-        });
-        useMembershipStore.getState().syncFromDB();
-        get().syncFromDB();
-      }
-    }
+    console.log('[useWalletStore] refundCredit call ignored. Credits are authoritatively refunded on Supabase.');
   },
 
   deductCreditLateCancel: (reason) => {
-    const userId = Database.getCurrentUserId();
-    if (userId) {
-      const profile = Database.getProfile(userId);
-      if (profile) {
-        profile.creditsBalance = Math.max(0, profile.creditsBalance - 1);
-        Database.addLedgerTransaction(userId, {
-          id: Database.generateUUID('tx'),
-          type: 'penalty',
-          amount: '₹0',
-          status: 'paid',
-          credits: 1,
-          date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
-        });
-        useMembershipStore.getState().syncFromDB();
-        get().syncFromDB();
-      }
-    }
+    console.log('[useWalletStore] deductCreditLateCancel call ignored. Credits are authoritatively penalised on Supabase.');
   },
 
   addBonusCredit: (reason) => {
-    const userId = Database.getCurrentUserId();
-    if (userId) {
-      const profile = Database.getProfile(userId);
-      if (profile) {
-        profile.creditsBalance += 1;
-        Database.addLedgerTransaction(userId, {
-          id: Database.generateUUID('tx'),
-          type: 'refund',
-          amount: '₹0',
-          status: 'paid',
-          credits: 1,
-          date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
-        });
-        useMembershipStore.getState().syncFromDB();
-        get().syncFromDB();
-      }
-    }
+    console.log('[useWalletStore] addBonusCredit call ignored. Credits are authoritatively added on Supabase.');
   },
   syncFromDB: () => {
     const userId = Database.getCurrentUserId();
@@ -205,50 +138,34 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       });
     }
   },
-  transferCredits: (toPhone: string, amount: number) => {
+  transferCredits: async (toPhone: string, amount: number) => {
     if (useMembershipStore.getState().isExpired()) {
       return { success: false, error: 'Cannot transfer credits: your membership has expired.' };
     }
-    const currentBalance = get().creditBalance;
     if (amount <= 0) {
       return { success: false, error: 'Transfer amount must be greater than 0.' };
     }
-    if (currentBalance < amount) {
-      return { success: false, error: 'Insufficient credits available for transfer.' };
-    }
     const userId = Database.getCurrentUserId();
-    if (userId) {
-      const profile = Database.getProfile(userId);
-      if (profile) {
-        profile.creditsBalance -= amount;
-        Database.updateProfile(userId, { creditsBalance: profile.creditsBalance });
-        
-        Database.addLedgerTransaction(userId, {
-          id: Database.generateUUID('tx'),
-          type: 'transfer',
-          amount: '₹0',
-          status: 'paid',
-          credits: amount,
-          date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
-        });
+    if (!userId) return { success: false, error: 'User not logged in.' };
 
-        get().syncFromDB();
-        useMembershipStore.getState().syncFromDB();
-        return { success: true };
-      }
+    const cleanPhone = toPhone.replace(/\D/g, '');
+    const { data, error } = await supabase.rpc('transfer_credits', {
+      p_sender_id: userId,
+      p_recipient_phone: cleanPhone,
+      p_credits: amount
+    });
+
+    if (error) {
+      console.error('[DB ERROR] transfer_credits failed:', error);
+      return { success: false, error: error.message };
     }
-    return { success: false, error: 'An unexpected error occurred during transfer.' };
+
+    await Database.refreshUserData(userId);
+    get().syncFromDB();
+    useMembershipStore.getState().syncFromDB();
+    return { success: true };
   },
   clearCreditsForTesting: () => {
-    const userId = Database.getCurrentUserId();
-    if (userId) {
-      const profile = Database.getProfile(userId);
-      if (profile) {
-        profile.creditsBalance = 0;
-        Database.updateProfile(userId, { creditsBalance: 0 });
-        get().syncFromDB();
-        useMembershipStore.getState().syncFromDB();
-      }
-    }
+    console.log('[useWalletStore] clearCreditsForTesting ignored due to RLS blocks.');
   }
 }));
