@@ -20,6 +20,170 @@ export function hashPassword(password: string): string {
   return `secure-hash-${hash}-${password.length}`;
 }
 
+// --- Authoritative NTP Clock & Timezone-Safe Asia/Kolkata (IST) Helpers ---
+let serverTimeOffset = 0;
+
+export async function syncServerTime(): Promise<void> {
+  try {
+    const start = Date.now();
+    const { data, error } = await supabase.rpc('get_server_time');
+    if (data && !error) {
+      const serverMs = new Date(data).getTime();
+      const end = Date.now();
+      const latency = (end - start) / 2;
+      serverTimeOffset = (serverMs + latency) - end;
+      console.log(`[NTP CLOCK] Synced with Supabase server. Offset: ${serverTimeOffset}ms (latency: ${latency}ms)`);
+    } else if (error) {
+      console.warn('[NTP CLOCK] get_server_time RPC error:', error);
+    }
+  } catch (e) {
+    console.error('[NTP CLOCK] Failed to sync server time:', e);
+  }
+}
+
+export function getCurrentServerTime(): Date {
+  return new Date(Date.now() + serverTimeOffset);
+}
+
+export function getISTDateInfo(date: Date) {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  const parts = formatter.formatToParts(date);
+  const info: any = {};
+  for (const part of parts) {
+    info[part.type] = part.value;
+  }
+  
+  const year = parseInt(info.year, 10);
+  const month = parseInt(info.month, 10); // 1-12
+  const day = parseInt(info.day, 10);
+  const hour = parseInt(info.hour, 10);
+  const minute = parseInt(info.minute, 10);
+  const second = parseInt(info.second, 10);
+  
+  const dateString = `${info.year}-${info.month}-${info.day}`;
+  
+  return { year, month, day, hour, minute, second, dateString };
+}
+
+export function parseISTToUTCDate(year: number, month: number, day: number, hour: number, minute: number): Date {
+  // Construct Date assuming UTC components
+  const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+  // Subtract Asia/Kolkata offset (+5:30 = 330 minutes)
+  return new Date(utcDate.getTime() - 330 * 60 * 1000);
+}
+
+export function calculateDurationFromTime(timeStr: string): number {
+  if (!timeStr) return 60;
+  const parts = timeStr.split('-');
+  const startPart = parts[0]?.trim();
+  const endPart = parts[1]?.trim();
+  if (!startPart || !endPart) return 60;
+  
+  function parseTimePart(part: string) {
+    const match = part.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!match) return { hour: 0, minute: 0 };
+    let h = parseInt(match[1], 10);
+    const m = parseInt(match[2], 10);
+    const ampm = match[3].toUpperCase();
+    if (ampm === 'PM' && h < 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return { hour: h, minute: m };
+  }
+  
+  const start = parseTimePart(startPart);
+  const end = parseTimePart(endPart);
+  
+  let startMinutes = start.hour * 60 + start.minute;
+  let endMinutes = end.hour * 60 + end.minute;
+  
+  if (endMinutes < startMinutes) {
+    endMinutes += 24 * 60; // crossover midnight
+  }
+  
+  return endMinutes - startMinutes;
+}
+
+export function getBookingISTDateRange(b: Booking) {
+  const dateStr = b.date;
+  const monthsMap: { [key: string]: number } = {
+    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+  };
+  
+  let year = new Date().getFullYear();
+  let month = new Date().getMonth();
+  let day = new Date().getDate();
+  
+  if (dateStr && !dateStr.includes('Today') && !dateStr.includes('Tomorrow')) {
+    const cleanDate = dateStr.replace(/,/g, '');
+    const parts = cleanDate.trim().split(/\s+/);
+    if (parts.length >= 3) {
+      const mStr = parts[0].substring(0, 3).toLowerCase();
+      if (monthsMap[mStr] !== undefined) {
+        month = monthsMap[mStr];
+      }
+      day = parseInt(parts[1], 10);
+      year = parseInt(parts[2], 10);
+    }
+  } else if (dateStr && dateStr.includes('Tomorrow')) {
+    const istNow = getCurrentServerTime();
+    const istTomorrow = new Date(istNow.getTime() + 24 * 60 * 60 * 1000);
+    const istInfo = getISTDateInfo(istTomorrow);
+    year = istInfo.year;
+    month = istInfo.month - 1;
+    day = istInfo.day;
+  } else {
+    const istNow = getCurrentServerTime();
+    const istInfo = getISTDateInfo(istNow);
+    year = istInfo.year;
+    month = istInfo.month - 1;
+    day = istInfo.day;
+  }
+  
+  const timeStr = b.time || '';
+  const timeParts = timeStr.split('-');
+  const startPart = timeParts[0]?.trim();
+  const endPart = timeParts[1]?.trim();
+  
+  function parseTimePart(part: string) {
+    const match = part.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!match) return { hour: 0, minute: 0 };
+    let h = parseInt(match[1], 10);
+    const m = parseInt(match[2], 10);
+    const ampm = match[3].toUpperCase();
+    if (ampm === 'PM' && h < 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return { hour: h, minute: m };
+  }
+  
+  const startInfo = parseTimePart(startPart);
+  const endInfo = parseTimePart(endPart);
+  
+  return {
+    start: parseISTToUTCDate(year, month + 1, day, startInfo.hour, startInfo.minute),
+    end: parseISTToUTCDate(year, month + 1, day, endInfo.hour, endInfo.minute)
+  };
+}
+
+export function isSessionGenuinelyActive(b: Booking, now: Date): boolean {
+  if (!b || b.status !== 'upcoming') return false;
+  if (!['trainer_travelling', 'trainer_arrived', 'otp_verified', 'workout_started'].includes(b.timelineStatus || '')) {
+    return false;
+  }
+  const range = getBookingISTDateRange(b);
+  const travelUnlockTime = range.start.getTime() - 25 * 60 * 1000;
+  return now.getTime() >= travelUnlockTime && now.getTime() <= range.end.getTime();
+}
+
 export interface UserProfile {
   id: string;
   userId: string;
@@ -400,6 +564,10 @@ export function mapWorkoutToPostgres(w: Workout): any {
 }
 
 export function mapBooking(row: any): Booking {
+  const calculatedDuration = calculateDurationFromTime(row.time);
+  if (row.duration_minutes && row.duration_minutes !== calculatedDuration) {
+    console.warn(`[DATABASE] Booking ID ${row.id} time range "${row.time}" calculated duration (${calculatedDuration} mins) mismatch with stored duration_minutes (${row.duration_minutes} mins). Enforcing calculated duration.`);
+  }
   return {
     id: row.id,
     status: row.status,
@@ -424,7 +592,7 @@ export function mapBooking(row: any): Booking {
     trainerDistance: row.trainer_distance,
     trainerArrivalTime: row.trainer_arrival_time,
     caloriesBurned: row.calories_burned,
-    durationMinutes: row.duration_minutes,
+    durationMinutes: calculatedDuration,
     ratingDetails: row.rating_details ? (typeof row.rating_details === 'string' ? JSON.parse(row.rating_details) : row.rating_details) : undefined,
     trainerNote: row.trainer_note || undefined,
     createdAt: row.created_at ? Number(row.created_at) : undefined,
@@ -446,6 +614,7 @@ export function mapBooking(row: any): Booking {
 }
 
 export function mapBookingToPostgres(b: Booking): any {
+  const calculatedDuration = calculateDurationFromTime(b.time);
   return {
     id: b.id,
     status: b.status,
@@ -470,7 +639,7 @@ export function mapBookingToPostgres(b: Booking): any {
     trainer_distance: b.trainerDistance,
     trainer_arrival_time: b.trainerArrivalTime,
     calories_burned: b.caloriesBurned,
-    duration_minutes: b.durationMinutes,
+    duration_minutes: calculatedDuration,
     rating_details: b.ratingDetails ? JSON.stringify(b.ratingDetails) : null,
     trainer_note: b.trainerNote || null,
     created_at: b.createdAt || null,
@@ -1058,6 +1227,7 @@ class DatabaseClient {
       }
 
       this.syncCoachesWithAssignments();
+      await syncServerTime();
       console.log('[DEBUG-DB] Database.load() completed successfully from Supabase.');
       this.isLoaded = true;
       this.loadSource = 'supabase';
@@ -1813,20 +1983,38 @@ class DatabaseClient {
   }
 
   autoExpireStaleBookingsLocal(): void {
-    const now = Date.now();
+    const now = getCurrentServerTime();
     let changed = false;
     this.schema.bookings.forEach(b => {
-      if (b.status === 'upcoming' && (!b.timelineStatus || ['booked', 'trainer_assigned', 'trainer_accepted', 'trainer_preparing', 'trainer_travelling', 'trainer_arrived'].includes(b.timelineStatus))) {
-        const bookedTime = this.parseBookingDateHelper(b);
-        const expireTime = bookedTime.getTime() + 30 * 60 * 1000;
-        if (now > expireTime) {
-          b.status = 'missed_session_not_started';
-          b.timelineStatus = 'session_closed';
-          changed = true;
-          supabase.from('bookings').update({
-            status: 'missed_session_not_started',
-            timeline_status: 'session_closed'
-          }).eq('id', b.id).then();
+      if (b.status === 'upcoming') {
+        const range = getBookingISTDateRange(b);
+        
+        // 1. Unstarted bookings: auto-expire 30 minutes after scheduled start time
+        if (!b.timelineStatus || ['booked', 'trainer_assigned', 'trainer_accepted', 'trainer_preparing', 'trainer_travelling', 'trainer_arrived'].includes(b.timelineStatus)) {
+          const expireTime = range.start.getTime() + 30 * 60 * 1000;
+          if (now.getTime() > expireTime) {
+            b.status = 'missed_session_not_started';
+            b.timelineStatus = 'session_closed';
+            changed = true;
+            supabase.from('bookings').update({
+              status: 'missed_session_not_started',
+              timeline_status: 'session_closed'
+            }).eq('id', b.id).then();
+            console.log(`[AUTO-EXPIRE] Expired unstarted booking ${b.id} (Scheduled: ${b.time} on ${b.date})`);
+          }
+        }
+        // 2. Started but unclosed bookings: auto-complete after scheduled end time
+        else if (['otp_verified', 'workout_started'].includes(b.timelineStatus)) {
+          if (now.getTime() > range.end.getTime()) {
+            b.status = 'completed';
+            b.timelineStatus = 'session_closed';
+            changed = true;
+            supabase.from('bookings').update({
+              status: 'completed',
+              timeline_status: 'session_closed'
+            }).eq('id', b.id).then();
+            console.log(`[AUTO-COMPLETE] Auto-completed unclosed booking ${b.id} (Scheduled end: ${range.end.toISOString()})`);
+          }
         }
       }
     });
@@ -2410,7 +2598,7 @@ class DatabaseClient {
     }
   }
 
-  updateBookingTrainer(bookingId: string, trainer: {
+  async updateBookingTrainer(bookingId: string, trainer: {
     trainerId?: string;
     trainerName?: string;
     trainerPhoto?: string;
@@ -2424,7 +2612,7 @@ class DatabaseClient {
     currentTrainerIndex?: number;
     status?: Booking['status'];
     timelineStatus?: Booking['timelineStatus'];
-  }): void {
+  }): Promise<void> {
     const booking = this.schema.bookings.find(b => b.id === bookingId);
     if (booking) {
       if (trainer.trainerId !== undefined) booking.trainerId = trainer.trainerId;
@@ -2441,7 +2629,7 @@ class DatabaseClient {
       if (trainer.status !== undefined) booking.status = trainer.status;
       if (trainer.timelineStatus !== undefined) booking.timelineStatus = trainer.timelineStatus;
       
-      supabase.from('bookings').update({
+      const { error } = await supabase.from('bookings').update({
         trainer_id: trainer.trainerId || booking.trainerId || null,
         trainer_name: trainer.trainerName || booking.trainerName,
         trainer_photo: trainer.trainerPhoto || booking.trainerPhoto,
@@ -2455,9 +2643,13 @@ class DatabaseClient {
         current_trainer_index: trainer.currentTrainerIndex ?? booking.currentTrainerIndex ?? null,
         status: trainer.status || booking.status,
         timeline_status: trainer.timelineStatus || booking.timelineStatus || null
-      }).eq('id', bookingId).then();
+      }).eq('id', bookingId);
 
-      this.save();
+      if (error) {
+        throw new Error(`Failed to update booking trainer in database: ${error.message}`);
+      }
+
+      await this.save();
       this.log('ReassignTrainer', `Reassigned booking ${bookingId} to trainer ${trainer.trainerName || 'No Trainer Available'}`);
     }
   }

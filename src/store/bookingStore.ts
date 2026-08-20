@@ -31,7 +31,7 @@ interface BookingState {
   triggerClientNoShow: (id: string) => void;
   triggerTrainerNoShow: (id: string) => void;
   submitQuestionnaire: (id: string, questionnaire: NonNullable<Booking['questionnaire']>) => void;
-  reassignTrainer: (bookingId: string, action?: 'declined' | 'timeout') => void;
+  reassignTrainer: (bookingId: string, action?: 'declined' | 'timeout') => Promise<void>;
   syncFromDB: () => void;
   refreshBookings: () => Promise<void>;
 }
@@ -202,7 +202,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   acceptBooking: async (id) => {
     await get().updateTimelineStatus(id, 'trainer_accepted');
   },
-  reassignTrainer: (bookingId, action) => {
+  reassignTrainer: async (bookingId, action) => {
     const booking = get().bookings.find(b => b.id === bookingId);
     if (!booking) return;
 
@@ -245,7 +245,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
           action: 'assigned'
         });
 
-        Database.updateBookingTrainer(bookingId, {
+        await Database.updateBookingTrainer(bookingId, {
           trainerId: nextCoach.id,
           trainerName: nextCoach.name,
           trainerPhoto: nextCoach.photo,
@@ -271,7 +271,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     }
 
     // Fallback: If no more trainers are in the pool, keep searching
-    Database.updateBookingTrainer(bookingId, {
+    await Database.updateBookingTrainer(bookingId, {
       status: 'upcoming',
       timelineStatus: 'booked',
       trainerName: 'No Trainer Available',

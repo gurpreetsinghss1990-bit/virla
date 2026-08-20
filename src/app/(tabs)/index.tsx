@@ -2,7 +2,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { Alert, Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet, AppState, AppStateStatus } from 'react-native';
 import Svg, { Rect, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -17,7 +17,7 @@ import { useUserStore } from '../../store/userStore';
 import { useUserProfileStore } from '../../store/userProfileStore';
 import { useWorkoutStore } from '../../store/workoutStore';
 import { useWalletStore } from '../../store/walletStore';
-import { Database } from '../../database/Database';
+import { Database, getCurrentServerTime, getBookingISTDateRange, getISTDateInfo, isSessionGenuinelyActive } from '../../database/Database';
 import { AddPartnerModal } from '../../components/AddPartnerModal';
 import { supabase } from '../../database/supabaseClient';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
@@ -38,28 +38,33 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
 
   useEffect(() => {
     const calculateTimeLeft = () => {
-      const elapsed = Math.floor((Date.now() - (booking.createdAt || Date.now())) / 1000);
+      const nowMs = getCurrentServerTime().getTime();
+      const elapsed = Math.floor((nowMs - (booking.createdAt || nowMs)) / 1000);
       return Math.max(0, 60 - elapsed);
     };
 
-    const initialTimeLeft = calculateTimeLeft();
-    setTimeLeft(initialTimeLeft);
+    const updateTimer = () => {
+      const nextTime = calculateTimeLeft();
+      setTimeLeft(nextTime);
+      if (nextTime <= 0) {
+        onTimeout(booking.id);
+      }
+    };
 
-    if (initialTimeLeft > 0) {
-      const timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          const nextTime = calculateTimeLeft();
-          if (nextTime <= 0) {
-            clearInterval(timer);
-            onTimeout(booking.id);
-            return 0;
-          }
-          return nextTime;
-        });
-      }, 1000);
+    updateTimer();
 
-      return () => clearInterval(timer);
-    }
+    const timer = setInterval(updateTimer, 1000);
+
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active') {
+        updateTimer();
+      }
+    });
+
+    return () => {
+      clearInterval(timer);
+      subscription.remove();
+    };
   }, [booking.id, booking.createdAt]);
 
   const customerId = `VIRLA-C${booking.id.slice(-6).toUpperCase()}`;
@@ -106,13 +111,18 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
 
       <View className="flex-row">
         <TouchableOpacity
+          disabled={timeLeft <= 0}
           onPress={(e) => {
             e.stopPropagation();
-            onAccept(booking.id);
+            if (timeLeft > 0) {
+              onAccept(booking.id);
+            }
           }}
-          className="flex-1 bg-[#E11D48] py-3.5 rounded-2xl items-center justify-center"
+          className={`flex-1 py-3.5 rounded-2xl items-center justify-center ${timeLeft <= 0 ? 'bg-zinc-300' : 'bg-[#E11D48]'}`}
         >
-          <Text className="text-white text-xs font-black uppercase">Accept Request</Text>
+          <Text className={`text-xs font-black uppercase ${timeLeft <= 0 ? 'text-zinc-500' : 'text-white'}`}>
+            {timeLeft <= 0 ? 'Expired' : 'Accept Request'}
+          </Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -219,54 +229,11 @@ export default function HomeScreen() {
     return `${days[now.getDay()]} • ${now.getDate()} ${months[now.getMonth()]}`;
   };
 
-  const getBookingDateObj = (dateStr: string) => {
-    if (!dateStr) return new Date();
-    if (dateStr.includes('Today')) return new Date();
-    if (dateStr.includes('Tomorrow')) {
-      const d = new Date();
-      d.setDate(d.getDate() + 1);
-      return d;
-    }
-    const normalized = normalizeDate(dateStr);
-    if (normalized) {
-      return new Date(normalized);
-    }
-    return new Date(dateStr);
-  };
-
-  const getBookingStartDateTime = (b: Booking): Date => {
-    const dateObj = getBookingDateObj(b.date);
-    const timeStr = (b.time || '').split('-')[0].trim();
-    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-    if (match) {
-      let h = parseInt(match[1]);
-      const m = parseInt(match[2]);
-      const ampm = match[3].toUpperCase();
-      if (ampm === 'PM' && h < 12) h += 12;
-      if (ampm === 'AM' && h === 12) h = 0;
-      dateObj.setHours(h, m, 0, 0);
-    }
-    return dateObj;
-  };
-
   const sortBookingsChronologically = (list: Booking[]) => {
     return [...list].sort((a, b) => {
-      const dateA = getBookingDateObj(a.date);
-      const dateB = getBookingDateObj(b.date);
-      if (dateA.getTime() !== dateB.getTime()) {
-        return dateA.getTime() - dateB.getTime();
-      }
-      const parseTimeToMinutes = (t: string) => {
-        const match = (t || '').split('-')[0].trim().match(/(\d+):(\d+)\s*(AM|PM)/i);
-        if (!match) return 0;
-        let h = parseInt(match[1]);
-        const m = parseInt(match[2]);
-        const ampm = match[3].toUpperCase();
-        if (ampm === 'PM' && h < 12) h += 12;
-        if (ampm === 'AM' && h === 12) h = 0;
-        return h * 60 + m;
-      };
-      return parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time);
+      const startA = getBookingISTDateRange(a).start.getTime();
+      const startB = getBookingISTDateRange(b).start.getTime();
+      return startA - startB;
     });
   };
 
@@ -286,27 +253,27 @@ export default function HomeScreen() {
   );
 
   const sortedConfirmed = sortBookingsChronologically(confirmedBookings);
-  const nowTime = new Date();
+  const serverNow = getCurrentServerTime();
   
   const activeSession = sortedConfirmed.find(b => 
-    ['trainer_travelling', 'trainer_arrived', 'otp_verified', 'workout_started'].includes(b.timelineStatus || '')
+    isSessionGenuinelyActive(b, serverNow)
   );
 
   const nextSession = sortedConfirmed.find(b => {
     if (activeSession && b.id === activeSession.id) return false;
     if (b.timelineStatus === 'workout_completed' || b.timelineStatus === 'session_closed' || b.status === 'completed' || b.status === 'cancelled') return false;
-    const start = getBookingStartDateTime(b);
-    const end = new Date(start.getTime() + (b.durationMinutes || 60) * 60 * 1000);
-    return end > nowTime;
+    const range = getBookingISTDateRange(b);
+    return range.end > serverNow;
   });
 
   let countdownText = '';
   let isNextSessionToday = false;
   if (nextSession) {
-    const start = getBookingStartDateTime(nextSession);
-    isNextSessionToday = normalizeDate(start) === normalizeDate(nowTime);
+    const range = getBookingISTDateRange(nextSession);
+    const start = range.start;
+    isNextSessionToday = getISTDateInfo(start).dateString === getISTDateInfo(serverNow).dateString;
     
-    const diffMs = start.getTime() - nowTime.getTime();
+    const diffMs = start.getTime() - serverNow.getTime();
     if (diffMs > 0) {
       const diffMins = Math.floor(diffMs / 60000);
       const hours = Math.floor(diffMins / 60);
@@ -323,25 +290,29 @@ export default function HomeScreen() {
 
   const nextSessionTime = nextSession ? (nextSession.time || '').split('-')[0].trim() : '';
 
+  const todayIstStr = getISTDateInfo(serverNow).dateString;
   const todayBookings = sortedConfirmed.filter(b => {
-    return normalizeDate(getBookingDateObj(b.date)) === normalizeDate(nowTime);
+    const range = getBookingISTDateRange(b);
+    return getISTDateInfo(range.start).dateString === todayIstStr;
   });
   
   const todaySessionsCount = todayBookings.length;
   const todaySessionsHours = todayBookings.reduce((sum, b) => sum + (b.durationMinutes || 60), 0) / 60;
   const formattedTodayHours = todaySessionsHours.toFixed(1).replace('.0', '');
 
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowDateStr = normalizeDate(tomorrow);
+  const tomorrowDateStr = (() => {
+    const t = new Date(serverNow.getTime() + 24 * 60 * 60 * 1000);
+    return getISTDateInfo(t).dateString;
+  })();
 
   const tomorrowBookings = sortedConfirmed.filter(b => {
-    return normalizeDate(getBookingDateObj(b.date)) === tomorrowDateStr;
+    const range = getBookingISTDateRange(b);
+    return getISTDateInfo(range.start).dateString === tomorrowDateStr;
   });
 
   const getIsTomorrowScheduleEnabled = () => {
     if (!currentCoach) return false;
-    const allTomorrowSlots = generateMonthlySlots(tomorrow.getMonth(), tomorrow.getFullYear());
+    const allTomorrowSlots = generateMonthlySlots(new Date(serverNow.getTime() + 24 * 60 * 60 * 1000).getMonth(), new Date(serverNow.getTime() + 24 * 60 * 60 * 1000).getFullYear());
     const tomorrowSlotsData = allTomorrowSlots.find((d: any) => d.date === tomorrowDateStr)?.slots || [];
     const availabilityOverrides = currentCoach.preferences?.availabilityOverrides || [];
     const tomorrowActiveSlots = tomorrowSlotsData.filter((slot: any) => {
@@ -413,7 +384,7 @@ export default function HomeScreen() {
       const dateStrYMD = normalizeDate(d);
       
       const dayBookingsCount = confirmedBookings.filter(b => 
-        normalizeDate(getBookingDateObj(b.date)) === dateStrYMD
+        getISTDateInfo(getBookingISTDateRange(b).start).dateString === dateStrYMD
       ).length;
 
       let availableSlots = 0;
@@ -604,7 +575,13 @@ export default function HomeScreen() {
 
   const upcomingBookings = bookings.filter((b) => b.status === 'upcoming');
   const pastBookings = bookings.filter((b) => b.status === 'completed');
-  const activeBooking = bookings.find(b => b.status === 'upcoming' && b.timelineStatus && b.timelineStatus !== 'session_closed');
+  const activeBooking = bookings.find(b => {
+    if (b.status !== 'upcoming' || !b.timelineStatus || b.timelineStatus === 'session_closed') {
+      return false;
+    }
+    const range = getBookingISTDateRange(b);
+    return serverNow.getTime() <= range.end.getTime();
+  });
 
   // Hydration state
   const [waterMl, setWaterMl] = useState(0);
@@ -1713,9 +1690,9 @@ export default function HomeScreen() {
                   Next Session
                 </Text>
                 {nextSession ? (() => {
-                  const start = getBookingStartDateTime(nextSession);
-                  const isTomorrow = normalizeDate(start) === tomorrowDateStr;
-                  const isToday = normalizeDate(start) === normalizeDate(nowTime);
+                  const start = getBookingISTDateRange(nextSession).start;
+                  const isTomorrow = getISTDateInfo(start).dateString === tomorrowDateStr;
+                  const isToday = getISTDateInfo(start).dateString === todayIstStr;
 
                   return (
                     <View

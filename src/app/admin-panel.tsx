@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Pla
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
-import { Database, TrainerApplication } from '../database/Database';
+import { Database, TrainerApplication, getCurrentServerTime, getBookingISTDateRange, getISTDateInfo } from '../database/Database';
 import { Booking } from '../types';
 import { Coach } from '../types';
 import { LuxuryCard } from '../components/LuxuryCard';
@@ -588,28 +588,22 @@ export default function AdminPanelScreen() {
 
               {/* TODAY'S BOOKED SESSIONS */}
               {(() => {
-                const now = new Date();
-                const nowUtc = now.getTime();
-                const istOffset = 5.5 * 60 * 60 * 1000;
-                const istTime = new Date(nowUtc + istOffset);
-                const istYear = istTime.getUTCFullYear();
-                const istMonth = String(istTime.getUTCMonth() + 1).padStart(2, '0');
-                const istDay = String(istTime.getUTCDate()).padStart(2, '0');
-                const todayIstStr = `${istYear}-${istMonth}-${istDay}`;
+                const serverNow = getCurrentServerTime();
+                const todayIstStr = getISTDateInfo(serverNow).dateString;
 
-                const todayBooked = bookings.filter(b => 
-                  b.status === 'upcoming' && 
-                  normalizeDate(b.date) === todayIstStr && 
-                  b.timelineStatus !== 'booked' && 
-                  b.timelineStatus !== 'trainer_assigned'
-                );
+                const todayBooked = bookings.filter(b => {
+                  if (b.status !== 'upcoming') return false;
+                  if (b.timelineStatus === 'booked' || b.timelineStatus === 'trainer_assigned') return false;
+                  const range = getBookingISTDateRange(b);
+                  return getISTDateInfo(range.start).dateString === todayIstStr;
+                });
 
-                const upcomingBooked = bookings.filter(b => 
-                  b.status === 'upcoming' && 
-                  normalizeDate(b.date) > todayIstStr && 
-                  b.timelineStatus !== 'booked' && 
-                  b.timelineStatus !== 'trainer_assigned'
-                );
+                const upcomingBooked = bookings.filter(b => {
+                  if (b.status !== 'upcoming') return false;
+                  if (b.timelineStatus === 'booked' || b.timelineStatus === 'trainer_assigned') return false;
+                  const range = getBookingISTDateRange(b);
+                  return getISTDateInfo(range.start).dateString > todayIstStr;
+                });
 
                 return (
                   <>

@@ -1,4 +1,4 @@
-import { Database } from '../database/Database';
+import { Database, getCurrentServerTime, getBookingISTDateRange } from '../database/Database';
 import { Booking } from '../types';
 import { supabase } from '../database/supabaseClient';
 import { normalizeDate } from '../utils/date';
@@ -12,51 +12,28 @@ export class SessionEngine {
    */
   static isTravelWindowOpen(booking: Booking): boolean {
     if (!booking) return false;
-    return this.getMinutesToSession(booking) <= this.TRAVEL_WINDOW_MINUTES;
+    const range = getBookingISTDateRange(booking);
+    const now = getCurrentServerTime();
+    const unlockTime = range.start.getTime() - this.TRAVEL_WINDOW_MINUTES * 60 * 1000;
+    return now.getTime() >= unlockTime;
   }
 
   /**
    * Helper to parse booking date and time into a native Javascript Date object.
    */
   static getSessionStartDate(booking: Booking): Date {
-    try {
-      if (!booking) return new Date();
-      
-      const dateStr = normalizeDate(booking.date);
-      if (!dateStr) return new Date();
-      
-      const timePart = booking.time.split('-')[0].trim();
-      const match = timePart.match(/(\d+):(\d+)\s*(AM|PM)/i);
-      if (match) {
-        let hours = parseInt(match[1], 10);
-        const minutes = parseInt(match[2], 10);
-        const ampm = match[3].toUpperCase();
-        if (ampm === 'PM' && hours < 12) hours += 12;
-        if (ampm === 'AM' && hours === 12) hours = 0;
-        
-        const [year, month, day] = dateStr.split('-').map(x => parseInt(x, 10));
-        const d = new Date(year, month - 1, day, hours, minutes, 0, 0);
-        if (!isNaN(d.getTime())) {
-          return d;
-        }
-      }
-    } catch (e) {
-      console.log('[SESSION ENGINE] Error parsing date:', e);
-    }
-    
-    // Default fallback: 2 hours in the future
-    const fallback = new Date();
-    fallback.setHours(fallback.getHours() + 2);
-    return fallback;
+    if (!booking) return getCurrentServerTime();
+    return getBookingISTDateRange(booking).start;
   }
 
   /**
    * Returns difference in minutes between current time and the scheduled session start time.
    */
   static getMinutesToSession(booking: Booking): number {
-    const sessionDate = this.getSessionStartDate(booking);
-    const now = new Date();
-    return (sessionDate.getTime() - now.getTime()) / (1000 * 60);
+    if (!booking) return 0;
+    const range = getBookingISTDateRange(booking);
+    const now = getCurrentServerTime();
+    return (range.start.getTime() - now.getTime()) / (1000 * 60);
   }
 
   /**
@@ -74,7 +51,7 @@ export class SessionEngine {
    */
   static isWithinStartWindow(booking: Booking): boolean {
     const { start, end } = this.getSessionWindow(booking);
-    const now = new Date();
+    const now = getCurrentServerTime();
     return now.getTime() >= start.getTime() && now.getTime() <= end.getTime();
   }
 
@@ -83,7 +60,7 @@ export class SessionEngine {
    */
   static isBeforeStartWindow(booking: Booking): boolean {
     const { start } = this.getSessionWindow(booking);
-    const now = new Date();
+    const now = getCurrentServerTime();
     return now.getTime() < start.getTime();
   }
 
