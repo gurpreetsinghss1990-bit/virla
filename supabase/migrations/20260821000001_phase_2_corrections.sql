@@ -2,6 +2,9 @@
 -- Correct Phase 2 issues:
 -- 1. Convert bookings.auto_accepted_at from BIGINT (Unix milliseconds) to timestamptz (idempotent block)
 -- 2. Add trainer_check_in RPC wrapper delegating to mark_trainer_arrived (idempotent definition)
+-- 3. Add missing questionnaire column to bookings table
+
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS questionnaire jsonb;
 
 -- 1. DROP policy that depends on auto_accepted_at
 DROP POLICY IF EXISTS "Restrict bookings updates to non-timeline fields" ON public.bookings;
