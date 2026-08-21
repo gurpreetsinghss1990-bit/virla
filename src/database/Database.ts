@@ -2171,8 +2171,9 @@ class DatabaseClient {
   }
 
   runBackgroundSyncChecks(): void {
-    this.autoAcceptPendingBookingsLocal();
-    this.autoExpireStaleBookingsLocal();
+    // Disabled client-side mutations that conflict with One Brain database authority
+    // this.autoAcceptPendingBookingsLocal();
+    // this.autoExpireStaleBookingsLocal();
     this.checkAndSendLocalReminders();
   }
 
@@ -2787,48 +2788,43 @@ class DatabaseClient {
     return this.schema.payments;
   }
 
-  purchasePlan(userId: string, planName: string, credits: number, priceText: string, gstText: string, totalText: string): void {
+  async purchasePlan(userId: string, planName: string, credits: number, priceText: string, gstText: string, totalText: string): Promise<void> {
     const invoiceNo = `VR-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     const date = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
 
-    const newPay = {
-      id: generateUUID('pay'),
-      invoiceNo,
-      date,
-      planName,
-      credits,
-      amount: priceText,
-      gst: gstText,
-      total: totalText,
-      method: 'Apple Pay (•••• 4920)',
-      status: 'completed'
-    };
+    try {
+      const { data, error } = await supabase.rpc('purchase_credits', {
+        p_plan_name: planName,
+        p_credits: credits,
+        p_amount: totalText
+      });
 
-    const newTx: Invoice = {
-      id: generateUUID('tx'),
-      userId,
-      type: 'purchase',
-      amount: totalText,
-      date,
-      status: 'paid',
-      credits
-    };
+      if (error) {
+        console.error('[DB ERROR] purchase_credits RPC failed:', error);
+        throw new Error(error.message);
+      }
 
-    this.schema.payments.unshift(newPay);
-    this.schema.credit_transactions.unshift(newTx);
+      const newPay = {
+        id: data?.tx_id || generateUUID('pay'),
+        invoiceNo,
+        date,
+        planName,
+        credits,
+        amount: priceText,
+        gst: gstText,
+        total: totalText,
+        method: 'Apple Pay (•••• 4920)',
+        status: 'completed' as const
+      };
 
-    const profile = this.getProfile(userId);
-    if (profile) {
-      profile.creditsBalance += credits;
+      this.schema.payments.unshift(newPay);
+      await this.refreshUserData(userId);
+      this.save();
+      this.log('PurchaseCredits', `User ${userId} bought ${planName} for ${totalText} adding ${credits} credits`);
+    } catch (e: any) {
+      console.error('[DB ERROR] purchasePlan failed:', e);
+      throw e;
     }
-
-    Promise.all([
-      supabase.from('credit_transactions').insert(mapInvoiceToPostgres(newTx, userId)),
-      profile ? supabase.from('user_profiles').update({ credits_balance: profile.creditsBalance }).eq('user_id', userId) : Promise.resolve()
-    ]).then();
-
-    this.save();
-    this.log('PurchaseCredits', `User ${userId} bought ${planName} for ${totalText} adding ${credits} credits`);
   }
 
   // Notifications Operations
@@ -2846,7 +2842,11 @@ class DatabaseClient {
     };
     this.schema.notifications.unshift(newNotify);
     
-    supabase.from('notifications').insert(mapNotificationItemToPostgres(newNotify, userId)).then();
+    // Only write to Supabase if the notification is for the currently logged in user.
+    // Direct inserts for other users are blocked by RLS.
+    if (!this.currentUserId || userId === this.currentUserId) {
+      supabase.from('notifications').insert(mapNotificationItemToPostgres(newNotify, userId)).then();
+    }
 
     this.save();
     this.log('AddNotification', `Logged notification for user ${userId}: ${item.title}`);

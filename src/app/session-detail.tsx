@@ -471,8 +471,7 @@ export default function SessionDetailScreen() {
   // User Rating review submit
   const handleClientFeedbackSubmit = async () => {
     try {
-      await updateTimelineStatus(booking.id, 'session_closed');
-      updateBookingRating(booking.id, {
+      await updateBookingRating(booking.id, {
         overallRating,
         trainerRating,
         workoutRating,

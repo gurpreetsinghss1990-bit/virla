@@ -50,16 +50,20 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   ledger: [],
   payments: [],
 
-  purchasePlan: (planName, credits, priceText, totalText, gstText) => {
+  purchasePlan: async (planName, credits, priceText, totalText, gstText) => {
     const userId = Database.getCurrentUserId();
     if (userId) {
-      Database.purchasePlan(userId, planName, credits, priceText, gstText, totalText);
-      if (planName.toLowerCase().includes('elite')) {
-        Database.updateProfile(userId, { membershipStatus: 'Elite' });
+      try {
+        await Database.purchasePlan(userId, planName, credits, priceText, gstText, totalText);
+        if (planName.toLowerCase().includes('elite')) {
+          Database.updateProfile(userId, { membershipStatus: 'Elite' });
+        }
+        useUserStore.getState().syncFromDB();
+        useMembershipStore.getState().syncFromDB();
+        get().syncFromDB();
+      } catch (err) {
+        console.error('[walletStore] purchasePlan failed:', err);
       }
-      useUserStore.getState().syncFromDB();
-      useMembershipStore.getState().syncFromDB();
-      get().syncFromDB();
     }
   },
 
