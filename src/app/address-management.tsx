@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { useUserProfileStore, SavedAddress } from '../store/userProfileStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import { fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords, AutocompleteSuggestion } from '../utils/distance';
+import { fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords, AutocompleteSuggestion, getCurrentLocationCoords } from '../utils/distance';
 
 export default function AddressManagementScreen() {
   const router = useRouter();
@@ -79,16 +79,8 @@ export default function AddressManagementScreen() {
   const handleUseCurrentLocation = async () => {
     setIsSearching(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Location permission is required to use your current location.');
-        setIsSearching(false);
-        return;
-      }
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced
-      });
-      const { latitude, longitude } = loc.coords;
+      const coords = await getCurrentLocationCoords();
+      const { latitude, longitude } = coords;
       const res = await reverseGeocodeCoords(latitude, longitude);
 
       setLat(latitude);

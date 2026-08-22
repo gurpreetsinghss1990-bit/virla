@@ -1,3 +1,5 @@
+import { getCurrentServerTime, getISTDateInfo } from '../database/Database';
+
 /**
  * Normalizes a date representation from any of the formats:
  * - "Aug 20, 2026" or "Today, Aug 14, 2026" or "Tomorrow, Aug 15, 2026"
@@ -131,4 +133,87 @@ export function canonicalizeTimeRange(timeStr: string | undefined | null): strin
   }
   return cleaned;
 }
+
+
+
+export function getBookingISTDateRange(b: { date?: string; time?: string }) {
+  const dateStr = b.date;
+  const monthsMap: { [key: string]: number } = {
+    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+  };
+  
+  let year = new Date().getFullYear();
+  let month = new Date().getMonth();
+  let day = new Date().getDate();
+  
+  if (dateStr && !dateStr.includes('Today') && !dateStr.includes('Tomorrow')) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())) {
+      const parts = dateStr.trim().split('-');
+      year = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10) - 1;
+      day = parseInt(parts[2], 10);
+    } else {
+      const cleanDate = dateStr.replace(/,/g, '');
+      const parts = cleanDate.trim().split(/\s+/);
+      if (parts.length >= 3) {
+        const mStr = parts[0].substring(0, 3).toLowerCase();
+        if (monthsMap[mStr] !== undefined) {
+          month = monthsMap[mStr];
+        }
+        day = parseInt(parts[1], 10);
+        year = parseInt(parts[2], 10);
+      }
+    }
+  } else if (dateStr && dateStr.includes('Tomorrow')) {
+    const istNow = getCurrentServerTime();
+    const istTomorrow = new Date(istNow.getTime() + 24 * 60 * 60 * 1000);
+    const istInfo = getISTDateInfo(istTomorrow);
+    year = istInfo.year;
+    month = istInfo.month - 1;
+    day = istInfo.day;
+  } else {
+    const istNow = getCurrentServerTime();
+    const istInfo = getISTDateInfo(istNow);
+    year = istInfo.year;
+    month = istInfo.month - 1;
+    day = istInfo.day;
+  }
+  
+  const timeStr = b.time || '';
+  const timeParts = timeStr.split('-');
+  const startPart = timeParts[0]?.trim();
+  const endPart = timeParts[1]?.trim();
+  
+  function parseTimePart(part: string) {
+    const match = part.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!match) return { hour: 0, minute: 0 };
+    let h = parseInt(match[1], 10);
+    const m = parseInt(match[2], 10);
+    const ampm = match[3].toUpperCase();
+    if (ampm === 'PM' && h < 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return { hour: h, minute: m };
+  }
+  
+  const startInfo = parseTimePart(startPart);
+  const endInfo = parseTimePart(endPart);
+  
+  const start = new Date(year, month, day, startInfo.hour, startInfo.minute, 0, 0);
+  const end = new Date(year, month, day, endInfo.hour, endInfo.minute, 0, 0);
+  
+  return { start, end };
+}
+
+export function getDisplayWorkoutTitle(title: string): string {
+  if (!title) return '';
+  const t = title.toLowerCase();
+  if (t === 'rhythmx' || t === 'rhythm burn') return 'Rhythm Dance';
+  if (t === 'zenflow') return 'Flow Motion';
+  if (t === 'powerforge') return 'Forge Strength';
+  if (t === 'kinetix') return 'Reset Studio';
+  if (t === 'fightlab') return 'Combat Core';
+  return title;
+}
+
 

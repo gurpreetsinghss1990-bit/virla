@@ -228,6 +228,10 @@ export const useUserStore = create<UserState>()(
       syncFromDB: () => {
         const userId = Database.getCurrentUserId();
         if (userId) {
+          if (!Database.getIsLoaded()) {
+            console.warn('[UserStore] syncFromDB called before database finished loading. Skipping sync.');
+            return;
+          }
           const profile = Database.getProfile(userId);
           const userDb = Database.schema.users.find(u => u.id === userId);
           

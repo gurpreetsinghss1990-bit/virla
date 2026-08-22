@@ -115,7 +115,7 @@ interface UserProfileState {
   settings: GeneralSettings;
   
   // Actions
-  updateCoreProfile: (fields: Partial<Omit<UserProfileState, 'addresses' | 'emergencyContacts' | 'healthProfile' | 'notifications' | 'privacy' | 'settings'>>) => void;
+  updateCoreProfile: (fields: Partial<Omit<UserProfileState, 'addresses' | 'emergencyContacts' | 'healthProfile' | 'notifications' | 'privacy' | 'settings'>>) => Promise<void>;
   updateHealthProfile: (fields: Partial<HealthProfile>) => void;
   toggleGoal: (goal: string) => void;
   
@@ -214,10 +214,32 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
     timeFormat: '12h'
   },
 
-  updateCoreProfile: (fields) => {
+  updateCoreProfile: async (fields) => {
     const userId = Database.getCurrentUserId();
     if (userId) {
-      Database.updateProfile(userId, fields as any);
+      const userFields: any = {};
+      const profileFields: any = { ...fields };
+      
+      if ('name' in fields) {
+        userFields.name = fields.name;
+        delete profileFields.name;
+      }
+      if ('email' in fields) {
+        userFields.email = fields.email;
+        delete profileFields.email;
+      }
+      if ('mobile' in fields) {
+        userFields.phone = fields.mobile;
+        delete profileFields.mobile;
+      }
+
+      if (Object.keys(userFields).length > 0) {
+        await Database.updateUser(userId, userFields);
+      }
+      if (Object.keys(profileFields).length > 0) {
+        await Database.updateProfile(userId, profileFields);
+      }
+      
       get().syncFromDB();
     }
   },
@@ -339,6 +361,10 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
   syncFromDB: () => {
     const userId = Database.getCurrentUserId();
     if (userId) {
+      if (!Database.getIsLoaded()) {
+        console.warn('[ProfileStore] syncFromDB called before database finished loading. Skipping sync.');
+        return;
+      }
       const profile = Database.getProfile(userId);
       const userDb = Database.schema.users.find(u => u.id === userId);
       if (profile && userDb) {

@@ -1845,7 +1845,14 @@ class DatabaseClient {
     return this.currentUserId;
   }
 
+  getIsLoaded(): boolean {
+    return this.isLoaded;
+  }
+
   setCurrentUserId(id: string | null) {
+    if (this.currentUserId !== id) {
+      this.isLoaded = false;
+    }
     this.currentUserId = id;
     setClientUserId(id);
   }
@@ -1856,7 +1863,7 @@ class DatabaseClient {
     return profile;
   }
 
-  updateUser(userId: string, fields: Partial<DBUser>): void {
+  async updateUser(userId: string, fields: Partial<DBUser>): Promise<void> {
     const user = this.schema.users.find(u => u.id === userId);
     if (user) {
       Object.assign(user, fields);
@@ -1867,14 +1874,23 @@ class DatabaseClient {
         const snakeKey = k.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
         updateFields[snakeKey] = pgUser[snakeKey];
       }
-      supabase.from('users').update(updateFields).eq('id', userId).then();
+      
+      const { data, error } = await supabase.from('users').update(updateFields).eq('id', userId).select();
+      if (error) {
+        throw new Error(`Failed to update users table: ${error.message}`);
+      }
+      if (!data || data.length === 0) {
+        throw new Error('Failed to update users table: No rows affected by the update (verify RLS policies).');
+      }
 
       this.save();
       this.log('UpdateUser', `Updated user fields for ID ${userId}`);
+    } else {
+      throw new Error(`User with ID ${userId} not found in database cache.`);
     }
   }
 
-  updateProfile(userId: string, fields: Partial<UserProfile>): void {
+  async updateProfile(userId: string, fields: Partial<UserProfile>): Promise<void> {
     const profile = this.getProfile(userId);
     if (profile) {
       Object.assign(profile, fields);
@@ -1885,10 +1901,19 @@ class DatabaseClient {
         const snakeKey = k.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
         updateFields[snakeKey] = pgProfile[snakeKey];
       }
-      supabase.from('user_profiles').update(updateFields).eq('user_id', userId).then();
+      
+      const { data, error } = await supabase.from('user_profiles').update(updateFields).eq('user_id', userId).select();
+      if (error) {
+        throw new Error(`Failed to update user_profiles table: ${error.message}`);
+      }
+      if (!data || data.length === 0) {
+        throw new Error('Failed to update user_profiles table: No rows affected by the update (verify RLS policies).');
+      }
 
       this.save();
       this.log('UpdateProfile', `Updated profile fields for user ID ${userId}`);
+    } else {
+      throw new Error(`Profile for user ID ${userId} not found in database cache.`);
     }
   }
 
@@ -2796,7 +2821,7 @@ class DatabaseClient {
       const { data, error } = await supabase.rpc('purchase_credits', {
         p_plan_name: planName,
         p_credits: credits,
-        p_amount: totalText
+        p_amount: priceText
       });
 
       if (error) {

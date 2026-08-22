@@ -5,6 +5,7 @@ import { Coach, TrainerEarning, ScheduleSlot, AvailabilityOverride, TrainerWorko
 import { Alert } from 'react-native';
 import { Database } from '../database/Database';
 import { normalizeDate, canonicalizeTimeRange } from '../utils/date';
+import { useUserStore } from './userStore';
 
 interface CoachState {
   coaches: Coach[];
@@ -132,11 +133,21 @@ export const useCoachStore = create<CoachState>((set, get) => ({
   availabilityOverrides: [],
 
   toggleMonthlySlotAvailability: async (trainerId, date, time) => {
+    console.log('[AVAILABILITY-HARD-FIX] STORE FUNCTION ENTERED: toggleMonthlySlotAvailability');
+    console.log('[AVAILABILITY-HARD-FIX] trainer id:', trainerId);
+    console.log('[AVAILABILITY-HARD-FIX] date:', date);
+    console.log('[AVAILABILITY-HARD-FIX] time:', time);
+
     const coachesList = Database.getCoaches();
     const coach = coachesList.find(c => c.id === trainerId);
-    if (!coach) return;
+    if (!coach) {
+      console.warn('[AVAILABILITY-HARD-FIX] coach not found for ID:', trainerId);
+      return;
+    }
 
     const currentOverrides = coach.preferences?.availabilityOverrides || [];
+    console.log('[AVAILABILITY-HARD-FIX] PREVIOUS OVERRIDES:', JSON.stringify(currentOverrides, null, 2));
+
     const idx = currentOverrides.findIndex(o => 
       normalizeDate(o.date) === normalizeDate(date) && 
       canonicalizeTimeRange(o.time) === canonicalizeTimeRange(time)
@@ -162,6 +173,17 @@ export const useCoachStore = create<CoachState>((set, get) => ({
       });
     }
 
+    // Deduplicate overrides by date + time
+    const seen = new Set<string>();
+    updatedOverrides = updatedOverrides.filter(o => {
+      const key = `${normalizeDate(o.date)}#${canonicalizeTimeRange(o.time)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    console.log('[AVAILABILITY-HARD-FIX] NEW OVERRIDES:', JSON.stringify(updatedOverrides, null, 2));
+
     const prevOverrides = coach.preferences?.availabilityOverrides ? JSON.parse(JSON.stringify(coach.preferences.availabilityOverrides)) : [];
 
     // Optimistically update local cache
@@ -171,9 +193,19 @@ export const useCoachStore = create<CoachState>((set, get) => ({
     };
     get().syncFromDB();
 
+    console.log('[AVAILABILITY-HARD-FIX] ZUSTAND AFTER UPDATE:', JSON.stringify(get().availabilityOverrides, null, 2));
+    console.log('[AVAILABILITY-HARD-FIX] PERSISTING overrides to database...');
+
     try {
       await Database.updateTrainerPreferences(trainerId, { availabilityOverrides: updatedOverrides });
+      console.log('[AVAILABILITY-HARD-FIX] DB persistence succeeded');
+
+      // Database verification
+      const reloadedCoach = Database.schema.coaches.find(c => c.id === trainerId);
+      const reloadedOverrides = reloadedCoach?.preferences?.availabilityOverrides || [];
+      console.log('[AVAILABILITY-HARD-FIX] DATABASE VERIFICATION (reloaded overrides count):', reloadedOverrides.length);
     } catch (err: any) {
+      console.error('[AVAILABILITY-HARD-FIX] DB persistence FAILED:', err.message);
       // Rollback
       coach.preferences.availabilityOverrides = prevOverrides;
       get().syncFromDB();
@@ -210,6 +242,15 @@ export const useCoachStore = create<CoachState>((set, get) => ({
       }
     }
 
+    // Deduplicate overrides by date + time
+    const seen = new Set<string>();
+    updatedOverrides = updatedOverrides.filter(o => {
+      const key = `${normalizeDate(o.date)}#${canonicalizeTimeRange(o.time)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
     const prevOverrides = coach.preferences?.availabilityOverrides ? JSON.parse(JSON.stringify(coach.preferences.availabilityOverrides)) : [];
 
     // Optimistically update
@@ -230,14 +271,31 @@ export const useCoachStore = create<CoachState>((set, get) => ({
   },
 
   disableAllSlotsForDay: async (trainerId, date) => {
+    console.log('[AVAILABILITY-HARD-FIX] STORE FUNCTION ENTERED: disableAllSlotsForDay');
+    console.log('[AVAILABILITY-HARD-FIX] trainer id:', trainerId);
+    console.log('[AVAILABILITY-HARD-FIX] date:', date);
+
     const coachesList = Database.getCoaches();
     const coach = coachesList.find(c => c.id === trainerId);
-    if (!coach) return;
+    if (!coach) {
+      console.warn('[AVAILABILITY-HARD-FIX] coach not found for ID:', trainerId);
+      return;
+    }
 
     const currentOverrides = coach.preferences?.availabilityOverrides || [];
-    const parsedDate = new Date(date);
-    const daySlots = generateMonthlySlots(parsedDate.getMonth(), parsedDate.getFullYear())
+    console.log('[AVAILABILITY-HARD-FIX] PREVIOUS OVERRIDES:', JSON.stringify(currentOverrides, null, 2));
+
+    const parts = date.split('-');
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const daySlots = generateMonthlySlots(month, year)
       .find(d => d.date === date)?.slots || [];
+
+    console.log('[AVAILABILITY-HARD-FIX] GENERATED SLOTS COUNT:', daySlots.length);
+    if (daySlots.length === 0) {
+      console.error('[AVAILABILITY-HARD-FIX] ERROR: GENERATED SLOTS COUNT IS 0! STOPPING.');
+      return;
+    }
 
     const bookings = Database.schema.bookings || [];
     const bookedTimes = bookings
@@ -247,13 +305,32 @@ export const useCoachStore = create<CoachState>((set, get) => ({
     let updatedOverrides = [...currentOverrides];
     daySlots.forEach(slot => {
       if (bookedTimes.includes(slot.time)) return;
-      const idx = updatedOverrides.findIndex(o => normalizeDate(o.date) === normalizeDate(date) && o.time === slot.time);
+      const canonicalTime = canonicalizeTimeRange(slot.time);
+      const idx = updatedOverrides.findIndex(o => 
+        normalizeDate(o.date) === normalizeDate(date) && 
+        canonicalizeTimeRange(o.time) === canonicalTime
+      );
       if (idx >= 0) {
         updatedOverrides[idx] = { ...updatedOverrides[idx], isAvailable: false };
       } else {
-        updatedOverrides.push({ date, time: slot.time, isAvailable: false });
+        updatedOverrides.push({ 
+          date: normalizeDate(date), 
+          time: canonicalTime, 
+          isAvailable: false 
+        });
       }
     });
+
+    // Deduplicate overrides by date + time
+    const seen = new Set<string>();
+    updatedOverrides = updatedOverrides.filter(o => {
+      const key = `${normalizeDate(o.date)}#${canonicalizeTimeRange(o.time)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    console.log('[AVAILABILITY-HARD-FIX] NEW OVERRIDES:', JSON.stringify(updatedOverrides, null, 2));
 
     const prevOverrides = coach.preferences?.availabilityOverrides ? JSON.parse(JSON.stringify(coach.preferences.availabilityOverrides)) : [];
 
@@ -264,9 +341,19 @@ export const useCoachStore = create<CoachState>((set, get) => ({
     };
     get().syncFromDB();
 
+    console.log('[AVAILABILITY-HARD-FIX] ZUSTAND AFTER UPDATE:', JSON.stringify(get().availabilityOverrides, null, 2));
+    console.log('[AVAILABILITY-HARD-FIX] PERSISTING overrides to database...');
+
     try {
       await Database.updateTrainerPreferences(trainerId, { availabilityOverrides: updatedOverrides });
+      console.log('[AVAILABILITY-HARD-FIX] DB persistence succeeded');
+
+      // Database verification
+      const reloadedCoach = Database.schema.coaches.find(c => c.id === trainerId);
+      const reloadedOverrides = reloadedCoach?.preferences?.availabilityOverrides || [];
+      console.log('[AVAILABILITY-HARD-FIX] DATABASE VERIFICATION (reloaded overrides count):', reloadedOverrides.length);
     } catch (err: any) {
+      console.error('[AVAILABILITY-HARD-FIX] DB persistence FAILED:', err.message);
       // Rollback
       coach.preferences.availabilityOverrides = prevOverrides;
       get().syncFromDB();
@@ -275,12 +362,32 @@ export const useCoachStore = create<CoachState>((set, get) => ({
   },
 
   enableAllSlotsForDay: async (trainerId, date) => {
+    console.log('[AVAILABILITY-HARD-FIX] STORE FUNCTION ENTERED: enableAllSlotsForDay');
+    console.log('[AVAILABILITY-HARD-FIX] trainer id:', trainerId);
+    console.log('[AVAILABILITY-HARD-FIX] date:', date);
+
     const coachesList = Database.getCoaches();
     const coach = coachesList.find(c => c.id === trainerId);
-    if (!coach) return;
+    if (!coach) {
+      console.warn('[AVAILABILITY-HARD-FIX] coach not found for ID:', trainerId);
+      return;
+    }
 
     const currentOverrides = coach.preferences?.availabilityOverrides || [];
-    const updatedOverrides = currentOverrides.filter(o => normalizeDate(o.date) !== normalizeDate(date));
+    console.log('[AVAILABILITY-HARD-FIX] PREVIOUS OVERRIDES:', JSON.stringify(currentOverrides, null, 2));
+
+    let updatedOverrides = currentOverrides.filter(o => normalizeDate(o.date) !== normalizeDate(date));
+
+    // Deduplicate overrides by date + time
+    const seen = new Set<string>();
+    updatedOverrides = updatedOverrides.filter(o => {
+      const key = `${normalizeDate(o.date)}#${canonicalizeTimeRange(o.time)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    console.log('[AVAILABILITY-HARD-FIX] NEW OVERRIDES:', JSON.stringify(updatedOverrides, null, 2));
 
     const prevOverrides = coach.preferences?.availabilityOverrides ? JSON.parse(JSON.stringify(coach.preferences.availabilityOverrides)) : [];
 
@@ -291,9 +398,19 @@ export const useCoachStore = create<CoachState>((set, get) => ({
     };
     get().syncFromDB();
 
+    console.log('[AVAILABILITY-HARD-FIX] ZUSTAND AFTER UPDATE:', JSON.stringify(get().availabilityOverrides, null, 2));
+    console.log('[AVAILABILITY-HARD-FIX] PERSISTING overrides to database...');
+
     try {
       await Database.updateTrainerPreferences(trainerId, { availabilityOverrides: updatedOverrides });
+      console.log('[AVAILABILITY-HARD-FIX] DB persistence succeeded');
+
+      // Database verification
+      const reloadedCoach = Database.schema.coaches.find(c => c.id === trainerId);
+      const reloadedOverrides = reloadedCoach?.preferences?.availabilityOverrides || [];
+      console.log('[AVAILABILITY-HARD-FIX] DATABASE VERIFICATION (reloaded overrides count):', reloadedOverrides.length);
     } catch (err: any) {
+      console.error('[AVAILABILITY-HARD-FIX] DB persistence FAILED:', err.message);
       // Rollback
       coach.preferences.availabilityOverrides = prevOverrides;
       get().syncFromDB();
@@ -302,7 +419,7 @@ export const useCoachStore = create<CoachState>((set, get) => ({
   },
 
   syncFromDB: () => {
-    const userId = Database.getCurrentUserId();
+    const userId = useUserStore.getState().user?.id || Database.getCurrentUserId();
     const coachesList = Database.getCoaches();
     let earningsList: TrainerEarning[] = [];
     let overrides: AvailabilityOverride[] = [];
@@ -310,7 +427,10 @@ export const useCoachStore = create<CoachState>((set, get) => ({
     if (userId) {
       earningsList = Database.getEarnings(userId);
       const userObj = Database.schema.users.find(u => u.id === userId);
-      const coachObj = userObj ? coachesList.find(c => c.name === userObj.name) : undefined;
+      let coachObj = coachesList.find(c => c.id === userId);
+      if (!coachObj && userObj) {
+        coachObj = coachesList.find(c => c.name === userObj.name);
+      }
       if (coachObj) {
         overrides = coachObj.preferences?.availabilityOverrides || [];
       }

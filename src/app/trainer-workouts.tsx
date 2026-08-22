@@ -21,7 +21,7 @@ export default function TrainerWorkoutsScreen() {
   const { user } = useUserStore();
   const { coaches, workoutAssignments, syncFromDB } = useCoachStore();
 
-  const coach = coaches.find(c => c.name === user.name) || coaches[0];
+  const coach = coaches.find(c => c.id === user.id || c.name === user.name) || coaches[0];
   const assignments = coach ? workoutAssignments.filter(a => a.trainerId === coach.id) : [];
 
   const [modalVisible, setModalVisible] = useState(false);

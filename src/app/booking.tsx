@@ -4,7 +4,7 @@ import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Aler
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
 import { useMembershipStore } from '../store/membershipStore';
-import { calculateDistanceKm, geocodeAddressSync, fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords, AutocompleteSuggestion } from '../utils/distance';
+import { calculateDistanceKm, geocodeAddressSync, fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords, AutocompleteSuggestion, getCurrentLocationCoords } from '../utils/distance';
 import { normalizeDate, canonicalizeTimeRange } from '../utils/date';
 import * as Location from 'expo-location';
 import { useAddressStore } from '../store/addressStore';
@@ -50,7 +50,7 @@ const EXPERIENCES: Experience[] = [
   },
   {
     id: 'exp-rhythm',
-    title: 'Rhythm Burn',
+    title: 'Rhythm Dance',
     description: 'High-intensity dance cardio to burn maximum calories',
     icon: 'music',
     gradientColors: ['#EC4899', '#BE185D'],
@@ -254,6 +254,22 @@ export default function BookingScreen() {
   useEffect(() => {
     const initData = async () => {
       try {
+        console.log('[BOOKING] Waiting for userStore hydration on mount...');
+        // Wait for Zustand store to rehydrate from persistent storage
+        while (!useUserStore.persist.hasHydrated()) {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+
+        const user = useUserStore.getState().user;
+        const isLoggedIn = useUserStore.getState().isLoggedIn;
+        console.log('[BOOKING] userStore hydrated. isLoggedIn:', isLoggedIn, 'userId:', user?.id);
+
+        if (isLoggedIn && user && user.id) {
+          Database.setCurrentUserId(user.id);
+        } else {
+          console.warn('[BOOKING] User is not logged in or userId is missing on mount');
+        }
+
         console.log('[BOOKING] Reloading database from Supabase on mount...');
         await Database.reload();
         useCoachStore.getState().syncFromDB();
@@ -497,8 +513,8 @@ export default function BookingScreen() {
           const slotStartIst = new Date(Date.UTC(slotYear, slotMonth - 1, slotDay, hour, minute, 0));
           const visibilityStartMs = slotStartIst.getTime() - 15 * 60 * 1000;
 
-          if (nowIst.getTime() < visibilityStartMs) {
-            return false; // Hide slot if before T-15 minutes
+          if (nowIst.getTime() > visibilityStartMs) {
+            return false; // Hide slot if after T-15 minutes
           }
         }
         return true;
@@ -779,16 +795,8 @@ export default function BookingScreen() {
   const handleUseCurrentGps = async () => {
     setIsSearchingLocation(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Location permission is required to resolve your current coordinates.');
-        setIsSearchingLocation(false);
-        return;
-      }
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced
-      });
-      const { latitude, longitude } = loc.coords;
+      const coords = await getCurrentLocationCoords();
+      const { latitude, longitude } = coords;
       const res = await reverseGeocodeCoords(latitude, longitude);
 
       setActiveCoords({ lat: latitude, lng: longitude });
@@ -812,7 +820,16 @@ export default function BookingScreen() {
     setSelectedTime(slotTime);
     const tempBooking = {
       id: 'temp-id',
-      workoutTitle: selectedExperience.title,
+      workoutTitle: (() => {
+        switch (selectedExperience.id) {
+          case 'exp-strength': return 'PowerForge';
+          case 'exp-flow': return 'ZenFlow';
+          case 'exp-rhythm': return 'RhythmX';
+          case 'exp-reset': return 'KinetiX';
+          case 'exp-combat': return 'FightLab';
+          default: return 'PowerForge';
+        }
+      })(),
       date: selectedDate,
       time: slotTime,
       address: (() => {
@@ -1088,7 +1105,11 @@ export default function BookingScreen() {
     if (step > 1) {
       triggerTransition(step - 1);
     } else {
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)');
+      }
     }
   };
 
@@ -1197,7 +1218,16 @@ export default function BookingScreen() {
       trainerId: activeCoach.id,
       trainerName: activeCoach.name,
       trainerPhoto: activeCoach.photo,
-      workoutTitle: selectedExperience.title,
+      workoutTitle: (() => {
+        switch (selectedExperience.id) {
+          case 'exp-strength': return 'PowerForge';
+          case 'exp-flow': return 'ZenFlow';
+          case 'exp-rhythm': return 'RhythmX';
+          case 'exp-reset': return 'KinetiX';
+          case 'exp-combat': return 'FightLab';
+          default: return 'PowerForge';
+        }
+      })(),
       date: selectedDate,
       time: selectedTime,
       price: activeCoach.price || 1200,
@@ -2255,7 +2285,7 @@ export default function BookingScreen() {
                               {/* Save Address Button */}
                               <TouchableOpacity
                                 activeOpacity={0.8}
-                                onPress={() => {
+                                onPress={async () => {
                                   if (!newHouseNo.trim() || !newBuildingName.trim()) {
                                     Alert.alert('Missing Info', 'Please enter Flat/House No and Building Name.');
                                     return;
@@ -2266,6 +2296,15 @@ export default function BookingScreen() {
                                     return;
                                   }
 
+                                  console.log('[DIAGNOSTIC] Save button pressed. Inputs:', {
+                                    newHouseNo,
+                                    newBuildingName,
+                                    newFloor,
+                                    newLandmark,
+                                    newAddressLabelType,
+                                    newCustomLabel,
+                                    activeCoords
+                                  });
                                   const finalLabel = newAddressLabelType === 'Custom'
                                     ? (newCustomLabel.trim() || 'Custom') as any
                                     : newAddressLabelType;
@@ -2273,32 +2312,30 @@ export default function BookingScreen() {
                                   const fullBuilding = `${newHouseNo.trim()}, ${newBuildingName.trim()}`;
                                   const fullStreet = [newFloor.trim() ? `${newFloor.trim()}` : '', newLandmark.trim()].filter(Boolean).join(', ');
 
-                                  addAddress({
-                                    label: finalLabel,
-                                    building: fullBuilding,
-                                    street: fullStreet,
-                                    landmark: newLandmark.trim(),
-                                    city: 'Mumbai',
-                                    pinCode: '',
-                                    isDefault: false,
-                                    lat: activeCoords.lat,
-                                    lng: activeCoords.lng,
-                                    apartment: '',
-                                    floor: newFloor.trim(),
-                                    notes: ''
-                                  });
+                                  try {
+                                    const added = await addAddress({
+                                      label: finalLabel,
+                                      building: fullBuilding,
+                                      street: fullStreet,
+                                      landmark: newLandmark.trim(),
+                                      city: 'Mumbai',
+                                      pinCode: '',
+                                      isDefault: false,
+                                      lat: activeCoords.lat,
+                                      lng: activeCoords.lng,
+                                      apartment: '',
+                                      floor: newFloor.trim(),
+                                      notes: ''
+                                    });
 
-                                  // Retrieve newly created ID to select it
-                                  setTimeout(() => {
-                                    const updatedList = useAddressStore.getState().addresses;
-                                    const matched = updatedList.find(a => a.building === fullBuilding);
-                                    if (matched) {
-                                      setSelectedAddressId(matched.id);
-                                    }
-                                  }, 150);
-
-                                  setIsAddAddressModalVisible(false);
-                                  Alert.alert('Address Saved', 'New training venue has been saved and selected.');
+                                    console.log('[DIAGNOSTIC] Save completed and verified in DB:', added);
+                                    setSelectedAddressId(added.id);
+                                    setIsAddAddressModalVisible(false);
+                                    Alert.alert('Address Saved', 'New training venue has been saved and selected.');
+                                  } catch (err: any) {
+                                    console.error('[DIAGNOSTIC] Saving address failed:', err);
+                                    Alert.alert('Save Failed', `Database error: ${err?.message || 'Could not persist location.'}`);
+                                  }
                                 }}
                                 className="w-full h-14 bg-[#E11D48] rounded-2xl items-center justify-center mt-2"
                               >

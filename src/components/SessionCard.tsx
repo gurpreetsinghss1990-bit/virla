@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image, TouchableOpacity, Alert } from 'react-native';
 import { Booking } from '../types';
 import { useBookingStore } from '../store/bookingStore';
+import { getDisplayWorkoutTitle } from '../utils/date';
 
 interface SessionCardProps {
   booking: Booking;
@@ -72,7 +73,7 @@ export function SessionCard({ booking }: SessionCardProps) {
         </View>
         <View className="bg-indigo-50 border border-indigo-100 px-3 py-1 rounded-full">
           <Text className="text-indigo-700 text-[10px] font-black uppercase tracking-wider">
-            {booking.workoutTitle}
+            {getDisplayWorkoutTitle(booking.workoutTitle)}
           </Text>
         </View>
       </View>

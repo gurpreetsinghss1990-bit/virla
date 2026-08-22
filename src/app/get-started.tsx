@@ -45,6 +45,11 @@ export default function GetStartedScreen() {
   const [weight, setWeight] = useState<string>('');
 
   const handlePhoneChange = (val: string) => {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      setPhone(val);
+      setFormattedPhone(val);
+      return;
+    }
     const cleanDigits = val.replace(/\D/g, '').slice(0, 10);
     setPhone(cleanDigits);
 
@@ -73,6 +78,7 @@ export default function GetStartedScreen() {
         
         // Sync profile
         Database.setCurrentUserId(user.id);
+        await Database.load();
         await useUserProfileStore.getState().syncFromDB();
         const profile = Database.getProfile(user.id);
         
@@ -100,10 +106,12 @@ export default function GetStartedScreen() {
 
   const handleMobileSubmit = async () => {
     console.log('[DEBUG] Mobile Submit Button pressed. Entering handleMobileSubmit.');
-    if (!phone || phone.length !== 10) {
-      console.log('[DEBUG] Mobile Submit Validation Failed: Invalid phone length');
-      Alert.alert('Required Fields', 'Please enter a valid 10-digit Indian mobile number.');
-      return;
+    if (!(typeof __DEV__ !== 'undefined' && __DEV__ && phone === 'demo.trainer')) {
+      if (!phone || phone.length !== 10) {
+        console.log('[DEBUG] Mobile Submit Validation Failed: Invalid phone length');
+        Alert.alert('Required Fields', 'Please enter a valid 10-digit Indian mobile number.');
+        return;
+      }
     }
     if (!otpCode) {
       console.log('[DEBUG] Mobile Submit Validation Failed: Missing OTP code');
@@ -415,7 +423,7 @@ export default function GetStartedScreen() {
       console.log(`[DEBUG] Provider response received successfully. Authenticated user ID: ${userObj.id}, Role: ${userObj.role}`);
       
       Database.setCurrentUserId(userObj.id);
-      setLoggedIn(true);
+      await setLoggedIn(true);
       setCompletedOnboarding(true);
       setRole(userObj.role || 'customer');
       updateProfile(userObj);
@@ -520,7 +528,7 @@ export default function GetStartedScreen() {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <TouchableWithoutFeedback onPress={Platform.OS === 'web' ? undefined : Keyboard.dismiss}>
       <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 16) }}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -705,7 +713,7 @@ export default function GetStartedScreen() {
                     <TextInput
                       placeholder="98765 43210"
                       placeholderTextColor="#9CA3AF"
-                      keyboardType="numeric"
+                      keyboardType="phone-pad"
                       value={formattedPhone}
                       onChangeText={handlePhoneChange}
                       editable={!isLoading}

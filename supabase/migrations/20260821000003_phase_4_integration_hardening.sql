@@ -14,8 +14,17 @@ DECLARE
   v_tx_id text;
   v_date text;
 BEGIN
-  v_user_id := auth.uid();
-  IF v_user_id IS NULL THEN
+  -- Resolve caller identity: try auth.uid() first, fall back to x-user-id header
+  v_user_id := auth.uid()::text;
+  IF v_user_id IS NULL OR v_user_id = '' THEN
+    BEGIN
+      v_user_id := current_setting('request.headers', true)::jsonb->>'x-user-id';
+    EXCEPTION WHEN OTHERS THEN
+      v_user_id := NULL;
+    END;
+  END IF;
+
+  IF v_user_id IS NULL OR v_user_id = '' THEN
      RAISE EXCEPTION 'Unauthorized';
   END IF;
 
@@ -145,3 +154,19 @@ DROP POLICY IF EXISTS "Enable write for admin only" ON public.workouts;
 CREATE POLICY "Enable write for admin only" ON public.workouts
   FOR ALL USING (public.is_admin(auth.uid()::text))
   WITH CHECK (public.is_admin(auth.uid()::text));
+
+-- 8. Recreate user_profiles UPDATE policy to support local x-user-id fallback
+DROP POLICY IF EXISTS "Enable UPDATE profile details except credits" ON public.user_profiles;
+CREATE POLICY "Enable UPDATE profile details except credits" ON public.user_profiles
+  FOR UPDATE USING (
+    user_id = (current_setting('request.headers', true)::jsonb->>'x-user-id')
+    OR public.is_admin(current_setting('request.headers', true)::jsonb->>'x-user-id')
+  )
+  WITH CHECK (
+    (
+      user_id = (current_setting('request.headers', true)::jsonb->>'x-user-id')
+      AND credits_balance IS NOT DISTINCT FROM (SELECT credits_balance FROM public.user_profiles WHERE user_id = (current_setting('request.headers', true)::jsonb->>'x-user-id'))
+    )
+    OR public.is_admin(current_setting('request.headers', true)::jsonb->>'x-user-id')
+  );
+

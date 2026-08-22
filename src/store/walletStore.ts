@@ -1,3 +1,4 @@
+// WALLET FUNCTIONALITY LOCKED
 import { create } from 'zustand';
 import { useUserStore } from './userStore';
 import { useMembershipStore } from './membershipStore';
@@ -86,6 +87,10 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   syncFromDB: () => {
     const userId = Database.getCurrentUserId();
     if (userId) {
+      if (!Database.getIsLoaded()) {
+        console.warn('[WalletStore] syncFromDB called before database finished loading. Skipping sync.');
+        return;
+      }
       const profile = Database.getProfile(userId);
       if (profile) {
         const ledgerList = Database.getLedgerTransactions(userId) as any[];

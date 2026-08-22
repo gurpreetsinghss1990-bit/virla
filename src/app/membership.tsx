@@ -144,18 +144,15 @@ export default function MembershipScreen() {
   // Selection states
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [checkoutActive, setCheckoutActive] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [showDemoPayment, setShowDemoPayment] = useState(false);
-  const currentX = useRef(0);
 
   // Animations using useMemo to avoid render-phase ref reads
   const slideUpAnim = useMemo(() => new Animated.Value(600), []);
   const overlayOpacity = useMemo(() => new Animated.Value(0), []);
   const progressAnim = useMemo(() => new Animated.Value(0), []);
 
-  // Swipe slider state
-  const swipeX = useMemo(() => new Animated.Value(0), []);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [showDemoPayment, setShowDemoPayment] = useState(false);
 
   const openPlanDetails = (plan: Plan) => {
     setSelectedPlan(plan);
@@ -163,8 +160,6 @@ export default function MembershipScreen() {
     setIsProcessing(false);
     setIsSuccess(false);
     setShowDemoPayment(false);
-    currentX.current = 0;
-    swipeX.setValue(0);
     
     Animated.parallel([
       Animated.timing(overlayOpacity, { toValue: 1, duration: 250, useNativeDriver: true }),
@@ -179,14 +174,11 @@ export default function MembershipScreen() {
     ]).start(() => {
       setSelectedPlan(null);
       setShowDemoPayment(false);
-      currentX.current = 0;
-      swipeX.setValue(0);
     });
   };
 
   const startCheckout = () => {
     setCheckoutActive(true);
-    swipeX.setValue(0);
   };
 
   // Simulated Apple Pay Confirm Swipe
@@ -215,24 +207,22 @@ export default function MembershipScreen() {
     });
   };
 
-  const onSwipeRelease = () => {
-    const limit = 220;
-    const threshold = limit * 0.85;
-    if (currentX.current >= threshold) {
-      Animated.timing(swipeX, { toValue: limit, duration: 150, useNativeDriver: true }).start(() => {
-        setShowDemoPayment(true);
-      });
-    } else {
-      currentX.current = 0;
-      Animated.spring(swipeX, { toValue: 0, useNativeDriver: true }).start();
-    }
-  };
+
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
-        <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
+        <TouchableOpacity 
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(tabs)/profile');
+            }
+          }} 
+          className="w-8 h-8 items-center justify-center"
+        >
           <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
@@ -470,8 +460,6 @@ export default function MembershipScreen() {
                       <TouchableOpacity 
                         onPress={() => {
                           setShowDemoPayment(false);
-                          currentX.current = 0;
-                          swipeX.setValue(0);
                         }} 
                         className="w-8 h-8 rounded-full bg-zinc-50 items-center justify-center border border-zinc-150"
                       >
@@ -534,8 +522,6 @@ export default function MembershipScreen() {
                         activeOpacity={0.8}
                         onPress={() => {
                           setShowDemoPayment(false);
-                          currentX.current = 0;
-                          swipeX.setValue(0);
                         }}
                         className="w-full bg-zinc-50 border border-zinc-150 rounded-2xl items-center justify-center"
                         style={{ height: 56 }}
@@ -621,31 +607,20 @@ export default function MembershipScreen() {
                       </View>
                     </View>
 
-                    {/* Slide confirmation track slider (re-usable gestural Apple Pay check) */}
-                    <View 
-                      className="h-14 bg-zinc-950 rounded-2xl justify-center px-2.5 relative overflow-hidden mt-2"
-                      onTouchMove={(e) => {
-                        const touchX = e.nativeEvent.locationX;
-                        const limit = 220;
-                        const translation = Math.max(0, Math.min(limit, touchX - 20));
-                        currentX.current = translation;
-                        swipeX.setValue(translation);
+                    {/* Purchase confirmation button */}
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      disabled={isProcessing}
+                      onPress={() => {
+                        setShowDemoPayment(true);
                       }}
-                      onTouchEnd={onSwipeRelease}
+                      className={`h-14 rounded-2xl items-center justify-center mt-2 shadow-md ${isProcessing ? 'bg-zinc-800' : 'bg-zinc-950'}`}
+                      style={{ height: 56 }}
                     >
-                      <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest text-center pointer-events-none">
-                        Slide To Purchase
+                      <Text className="text-white text-xs font-black uppercase tracking-wider">
+                        {isProcessing ? 'Purchasing...' : 'Purchase Now'}
                       </Text>
-                      
-                      <Animated.View
-                        style={{
-                          transform: [{ translateX: swipeX }],
-                        }}
-                        className="absolute left-2.5 w-10 h-10 rounded-xl bg-white justify-center items-center shadow-md"
-                      >
-                        <Feather name="arrow-right" size={16} color="#101828" />
-                      </Animated.View>
-                    </View>
+                    </TouchableOpacity>
                   </View>
                 )}
               </>

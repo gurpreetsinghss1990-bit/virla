@@ -1,7 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = 'https://ferowbqvgsbbovnwqkae.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_qAKxXPFGSpMxz-7jZyHm0A_dIJfpVll';
+const isDev = typeof __DEV__ !== 'undefined' && __DEV__;
+
+const SUPABASE_URL = 
+  process.env.EXPO_PUBLIC_SUPABASE_URL || 
+  (isDev ? 'http://127.0.0.1:54321' : 'https://ferowbqvgsbbovnwqkae.supabase.co');
+
+const SUPABASE_ANON_KEY = 
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 
+  (isDev 
+    ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' 
+    : 'sb_publishable_qAKxXPFGSpMxz-7jZyHm0A_dIJfpVll');
 
 let clientUserId: string | null = null;
 

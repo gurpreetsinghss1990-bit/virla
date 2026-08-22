@@ -153,6 +153,10 @@ export class OTPService {
   static async sendOTP(phone: string): Promise<{ success: boolean; reqId?: string; error?: string }> {
     this.ensureInitialized();
     const normalized = this.normalizePhone(phone);
+    if (typeof __DEV__ !== 'undefined' && __DEV__ && (phone === 'demo.trainer' || phone === '9123456789' || normalized === '919123456789')) {
+      console.log('[OTP Service] Dev mock sendOTP bypass for demo.trainer.');
+      return { success: true, reqId: 'mock-req-id-demo-trainer' };
+    }
     if (normalized === '911234567891' || normalized === '911234567892') {
       console.log('[OTP Service] Mock sendOTP bypass triggered for:', normalized);
       return { success: true, reqId: `mock-req-id-${normalized}` };
@@ -215,6 +219,14 @@ export class OTPService {
     }
 
     const normalized = this.normalizePhone(phone);
+    if (typeof __DEV__ !== 'undefined' && __DEV__ && (phone === 'demo.trainer' || phone === '9123456789' || normalized === '919123456789')) {
+      if (otp === 'VirlaTrainer@123' || otp === '123456') {
+        console.log('[OTP Service] Mock verifyOTP bypass triggered for Demo Trainer.');
+        return { success: true, token: 'mock-access-token-demo.trainer' };
+      }
+      return { success: false, error: 'Incorrect development password/OTP.' };
+    }
+
     if (normalized === '911234567891' && otp === '123456') {
       console.log('[OTP Service] Mock verifyOTP bypass triggered for Test Client.');
       return { success: true, token: 'mock-access-token-u-testclient' };

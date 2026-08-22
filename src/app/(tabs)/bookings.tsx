@@ -7,7 +7,7 @@ import { BookingCard } from '../../components/BookingCard';
 import { EmptyState } from '../../components/EmptyState';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { useUserStore } from '../../store/userStore';
-import { Database } from '../../database/Database';
+import { Database, getCurrentServerTime } from '../../database/Database';
 import { useCoachStore, generateMonthlySlots } from '../../store/coachStore';
 import { normalizeDate, canonicalizeTimeRange } from '../../utils/date';
 import { Feather } from '@expo/vector-icons';
@@ -72,6 +72,44 @@ const getBookingDateObj = (dateStr: string) => {
   return new Date(dateStr);
 };
 
+const isSlotVisibleForTrainer = (
+  year: number,
+  month: number,
+  day: number,
+  timeRange: string,
+  now: Date
+): boolean => {
+  const slotDate = new Date(year, month, day);
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+
+  if (slotDate > todayStart) {
+    return true;
+  }
+  if (slotDate < todayStart) {
+    return false;
+  }
+
+  const startPart = timeRange.split(' - ')[0].trim();
+  const match = startPart.match(/^(\d+):(\d+)\s*(AM|PM)$/i);
+  if (!match) return true;
+
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const ampm = match[3].toUpperCase();
+
+  if (ampm === 'PM' && hours < 12) {
+    hours += 12;
+  } else if (ampm === 'AM' && hours === 12) {
+    hours = 0;
+  }
+
+  const slotStart = new Date(year, month, day, hours, minutes, 0, 0);
+  const cutoffTime = new Date(now.getTime() + 30 * 60 * 1000);
+
+  return slotStart.getTime() > cutoffTime.getTime();
+};
+
 export default function BookingsScreen() {
   const router = useRouter();
   const { bookings } = useBookingStore();
@@ -99,13 +137,6 @@ export default function BookingsScreen() {
 
   const coach = coaches.find(c => c.id === user.id || c.name === user.name);
 
-  // Collapse slot controls by default when selected date changes
-  useEffect(() => {
-    setTimeout(() => {
-      setIsSlotsExpanded(false);
-    }, 0);
-  }, [selectedDay, selectedMonth, selectedYear]);
-
   // Sync today timer
   useEffect(() => {
     const interval = setInterval(() => {
@@ -122,10 +153,35 @@ export default function BookingsScreen() {
   }, [today]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
+    const initData = async () => {
+      // 1. Wait for Zustand store hydration
+      if (!useUserStore.persist.hasHydrated()) {
+        const unsub = useUserStore.persist.onHydrate(() => {
+          unsub();
+          initData();
+        });
+        return;
+      }
+
+      // 2. Set currentUserId context on Database
+      const userId = useUserStore.getState().user?.id;
+      if (userId) {
+        Database.setCurrentUserId(userId);
+      }
+
+      try {
+        setLoading(true);
+        console.log('[BOOKINGS TAB] Reloading database from Supabase on mount...');
+        await Database.reload();
+        useCoachStore.getState().syncFromDB();
+        console.log('[BOOKINGS TAB] Database reloaded and synced.');
+      } catch (err) {
+        console.warn('Failed to load database in bookings tab:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    initData();
   }, []);
 
   if (role !== prevRole) {
@@ -146,6 +202,7 @@ export default function BookingsScreen() {
     if (isMonthInAllowedRange(prev.year, prev.month, today)) {
       setSelectedMonth(prev.month);
       setSelectedYear(prev.year);
+      setIsSlotsExpanded(false);
       // Select first allowed day in the new month
       const daysCount = new Date(prev.year, prev.month + 1, 0).getDate();
       for (let d = 1; d <= daysCount; d++) {
@@ -162,6 +219,7 @@ export default function BookingsScreen() {
     if (isMonthInAllowedRange(next.year, next.month, today)) {
       setSelectedMonth(next.month);
       setSelectedYear(next.year);
+      setIsSlotsExpanded(false);
       // Select first allowed day in the new month
       const daysCount = new Date(next.year, next.month + 1, 0).getDate();
       for (let d = 1; d <= daysCount; d++) {
@@ -202,7 +260,7 @@ export default function BookingsScreen() {
           r.trainer_id === coach.id &&
           normalizeDate(r.slot_date) === dStr &&
           canonicalizeTimeRange(r.slot_time) === canonicalizeTimeRange(slot.time) &&
-          r.expires_at > Date.now()
+          r.expires_at > getCurrentServerTime().getTime()
         );
         const override = overrides.find((o: any) => 
           normalizeDate(o.date) === dStr && 
@@ -263,7 +321,7 @@ export default function BookingsScreen() {
       r.trainer_id === coach?.id &&
       normalizeDate(r.slot_date) === normalizeDate(dateStr) &&
       canonicalizeTimeRange(r.slot_time) === canonicalizeTimeRange(slot.time) &&
-      r.expires_at > Date.now()
+      r.expires_at > getCurrentServerTime().getTime()
     );
 
     const override = availabilityOverrides.find(o => normalizeDate(o.date) === normalizeDate(dateStr) && canonicalizeTimeRange(o.time) === canonicalizeTimeRange(slot.time));
@@ -425,7 +483,10 @@ export default function BookingsScreen() {
                             key={colIdx}
                             activeOpacity={isDisabled ? 1 : 0.8}
                             disabled={isDisabled}
-                            onPress={() => setSelectedDay(dayNum)}
+                            onPress={() => {
+                              setSelectedDay(dayNum);
+                              setIsSlotsExpanded(false);
+                            }}
                             className="flex-1 items-center justify-center py-1.5"
                             style={{ aspectRatio: 1 }}
                           >
@@ -516,6 +577,20 @@ export default function BookingsScreen() {
                     <TouchableOpacity
                       activeOpacity={0.8}
                       onPress={() => {
+                        if (Platform.OS === 'web') {
+                          const confirmMsg = isAvailable 
+                            ? `Disable Schedule for ${dateStr}?\n\nThis will make all eligible availability slots unavailable.`
+                            : `Enable Schedule for ${dateStr}?`;
+                          if (window.confirm(confirmMsg)) {
+                            if (isAvailable) {
+                              disableAllSlotsForDay(coach.id, dateStr);
+                            } else {
+                              enableAllSlotsForDay(coach.id, dateStr);
+                            }
+                          }
+                          return;
+                        }
+
                         if (isAvailable) {
                           const proceedToDisable = () => {
                             const dayName = getSelectedDateLongString().split(',')[0];
@@ -574,7 +649,20 @@ export default function BookingsScreen() {
                 <View className="gap-3">
                   <TouchableOpacity
                     activeOpacity={0.8}
-                    onPress={() => setIsSlotsExpanded(!isSlotsExpanded)}
+                    onPress={() => {
+                      console.log('[AVAILABILITY-CLICK-TRACE] MANAGE SLOTS PRESSED');
+                      console.log('[AVAILABILITY-CLICK-TRACE]', {
+                        selectedDate: dateStr,
+                        trainerId: coach.id,
+                        isLoading: loading,
+                        isHydrated: useUserStore.persist.hasHydrated(),
+                        isSelectedDateOutOfRange,
+                        currentAvailability: dailySlots.filter(s => s.isAvailable && !s.isBooked).length > 0 ? 'AVAILABLE' : 'UNAVAILABLE',
+                        disabled: false,
+                        handlerExists: true
+                      });
+                      setIsSlotsExpanded(!isSlotsExpanded);
+                    }}
                     className="flex-row items-center justify-between py-2 border-b border-zinc-50"
                   >
                     <Text className="text-indigo-600 text-xs font-black uppercase tracking-wider">
@@ -582,38 +670,59 @@ export default function BookingsScreen() {
                     </Text>
                   </TouchableOpacity>
 
-                  {isSlotsExpanded && (
-                    <View className="gap-2.5 mt-1">
-                      {dailySlots.map((slot) => (
-                        <View 
-                          key={slot.id}
-                          className={`p-3 rounded-2xl border flex-row justify-between items-center ${
-                            slot.isAvailable ? 'bg-white border-zinc-200' : 'bg-zinc-50 border-zinc-150'
-                          }`}
-                        >
-                          <TouchableOpacity
-                            activeOpacity={slot.isBooked || isSelectedDateOutOfRange ? 1 : 0.8}
-                            disabled={slot.isBooked || isSelectedDateOutOfRange}
-                            onPress={() => {
-                              if (slot.isAvailable) {
-                                Alert.alert(
-                                  'Disable slot?',
-                                  'Are you sure you want to disable this availability slot?',
-                                  [
-                                    { text: 'CANCEL', style: 'cancel' },
-                                    { 
-                                      text: 'DISABLE SLOT', 
-                                      style: 'destructive', 
-                                      onPress: () => toggleMonthlySlotAvailability(coach.id, dateStr, slot.time) 
-                                    }
-                                  ]
-                                );
-                              } else {
-                                toggleMonthlySlotAvailability(coach.id, dateStr, slot.time);
-                              }
-                            }}
-                            className="flex-row items-center gap-3 flex-1 pr-4"
-                          >
+                   {isSlotsExpanded && (
+                     <View className="gap-2.5 mt-1">
+                       {dailySlots
+                         .filter((s) =>
+                           isSlotVisibleForTrainer(
+                             selectedYear,
+                             selectedMonth,
+                             selectedDay,
+                             s.time,
+                             today
+                           )
+                         )
+                         .map((slot) => (
+                           <View 
+                             key={slot.id}
+                             className={`p-3 rounded-2xl border flex-row justify-between items-center ${
+                               slot.isAvailable ? 'bg-white border-zinc-200' : 'bg-zinc-50 border-zinc-150'
+                             }`}
+                           >
+                             <TouchableOpacity
+                               activeOpacity={slot.isBooked || isSelectedDateOutOfRange ? 1 : 0.8}
+                               disabled={slot.isBooked || isSelectedDateOutOfRange}
+                               onPress={() => {
+                                 if (Platform.OS === 'web') {
+                                   if (slot.isAvailable) {
+                                     if (window.confirm(`Disable availability slot: ${slot.time}?`)) {
+                                       toggleMonthlySlotAvailability(coach.id, dateStr, slot.time);
+                                     }
+                                   } else {
+                                     toggleMonthlySlotAvailability(coach.id, dateStr, slot.time);
+                                   }
+                                   return;
+                                 }
+
+                                 if (slot.isAvailable) {
+                                   Alert.alert(
+                                     'Disable slot?',
+                                     'Are you sure you want to disable this availability slot?',
+                                     [
+                                       { text: 'CANCEL', style: 'cancel' },
+                                       { 
+                                         text: 'DISABLE SLOT', 
+                                         style: 'destructive', 
+                                         onPress: () => toggleMonthlySlotAvailability(coach.id, dateStr, slot.time) 
+                                       }
+                                     ]
+                                   );
+                                 } else {
+                                   toggleMonthlySlotAvailability(coach.id, dateStr, slot.time);
+                                 }
+                               }}
+                               className="flex-row items-center gap-3 flex-1 pr-4"
+                             >
                             {/* Checkbox / Booked indicator */}
                             <View className={`w-4 h-4 rounded-md border justify-center items-center ${
                               slot.isBooked 
@@ -643,7 +752,7 @@ export default function BookingsScreen() {
                                 <Text className={`text-[8px] font-black uppercase ${slot.isAvailable ? 'text-[#4F46E5]' : 'text-zinc-400'}`}>
                                   {slot.isAvailable ? 'Available' : 'Unavailable'}
                                 </Text>
-                                {slot.category && (
+                                {!!slot.category && (
                                   <>
                                     <Text className="text-zinc-300 text-[8px]">•</Text>
                                     <Text className="text-zinc-500 text-[8px] font-black uppercase">

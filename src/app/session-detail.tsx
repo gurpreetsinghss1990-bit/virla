@@ -13,7 +13,8 @@ import { SessionEngine } from '../services/SessionEngine';
 import { AssignmentConfig } from '../config/AssignmentConfig';
 import { AddPartnerModal } from '../components/AddPartnerModal';
 import * as Location from 'expo-location';
-import { Database, getCurrentServerTime, getBookingISTDateRange, getISTDateInfo } from '../database/Database';
+import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
+import { getBookingISTDateRange, getDisplayWorkoutTitle } from '../utils/date';
 
 // Map coordinates path waypoints (scaled to fit beautiful SVG canvas)
 const waypoints = [
@@ -142,8 +143,9 @@ export default function SessionDetailScreen() {
     if (!booking) return;
 
     const calculateTimeLeft = () => {
-      const elapsed = Math.floor((Date.now() - (booking.createdAt || Date.now())) / 1000);
-      return Math.max(0, 60 - elapsed);
+      const nowMs = getCurrentServerTime().getTime();
+      const elapsed = Math.floor((nowMs - (booking.createdAt || nowMs)) / 1000);
+      return Math.max(0, 600 - elapsed);
     };
 
     if (role === 'trainer' && currentStatus === 'booked') {
@@ -153,10 +155,11 @@ export default function SessionDetailScreen() {
     const updateTimers = () => {
       if (role === 'trainer' && currentStatus === 'booked') {
         const nextTime = calculateTimeLeft();
-        const elapsed = Math.floor((Date.now() - (booking.createdAt || Date.now())) / 1000);
+        const nowMs = getCurrentServerTime().getTime();
+        const elapsed = Math.floor((nowMs - (booking.createdAt || nowMs)) / 1000);
         if (nextTime <= 0) {
           // Only trigger timeout reassign if the booking is fresh
-          const isFresh = elapsed < 65;
+          const isFresh = elapsed < 605;
           if (isFresh) {
             reassignTrainer(booking.id, 'timeout');
             router.back();
@@ -182,7 +185,7 @@ export default function SessionDetailScreen() {
       ) {
         const sessionStart = SessionEngine.getSessionStartDate(booking);
         const alertThreshold = sessionStart.getTime() + AssignmentConfig.trainerDelayAlertDelayMin * 60 * 1000;
-        if (Date.now() > alertThreshold) {
+        if (getCurrentServerTime().getTime() > alertThreshold) {
           setHasDelayedAlertFired(true);
           addNotification({
             title: 'Trainer Delayed ⚠️',
@@ -216,7 +219,6 @@ export default function SessionDetailScreen() {
   const getStatusText = (status: string) => {
     if (!booking) return '';
     
-    // Check timezone-safe start and end time boundaries
     const range = getBookingISTDateRange(booking);
     const now = getCurrentServerTime();
     
@@ -224,8 +226,9 @@ export default function SessionDetailScreen() {
       if (status === 'trainer_travelling') return 'Trainer En Route';
       if (status === 'trainer_arrived') return 'Trainer Arrived';
       if (status === 'otp_verified' || status === 'workout_started') return 'Ready';
-      if (status === 'trainer_accepted') return 'Trainer Confirmed';
-      if (status === 'trainer_preparing') return 'Session Scheduled';
+      if (status === 'trainer_accepted') return 'Booking Confirmed';
+      if (status === 'trainer_preparing') return 'Booking Confirmed';
+      if (status === 'booked' || status === 'trainer_assigned') return 'Waiting for Trainer to Accept';
       return 'Upcoming';
     }
 
@@ -235,12 +238,11 @@ export default function SessionDetailScreen() {
       }
       if (status === 'trainer_travelling') return 'Trainer En Route';
       if (status === 'trainer_arrived') return 'Trainer Arrived';
-      if (status === 'trainer_accepted') return 'Trainer Confirmed';
-      if (status === 'trainer_preparing') return 'Session Scheduled';
+      if (status === 'trainer_accepted') return 'Booking Confirmed';
+      if (status === 'trainer_preparing') return 'Booking Confirmed';
       return 'Session Scheduled';
     }
 
-    // After session_end_time
     if (['workout_completed', 'trainer_report_submitted', 'customer_review_pending', 'session_closed'].includes(status)) {
       return 'Session Completed';
     }
@@ -627,7 +629,7 @@ export default function SessionDetailScreen() {
               <View className="gap-3">
                 <View className="flex-row justify-between border-b border-zinc-100 pb-2">
                   <Text className="text-zinc-400 text-[10px] font-bold uppercase">Workout Type</Text>
-                  <Text className="text-zinc-900 text-xs font-black">{booking.workoutTitle}</Text>
+                  <Text className="text-zinc-900 text-xs font-black">{getDisplayWorkoutTitle(booking.workoutTitle)}</Text>
                 </View>
 
                 <View className="flex-row justify-between border-b border-zinc-100 pb-2">
@@ -922,7 +924,7 @@ export default function SessionDetailScreen() {
                 <View className="gap-3">
                   <View className="flex-row justify-between items-center">
                     <Text className="text-[#6B7280] text-xs font-semibold">Workout Type</Text>
-                    <Text className="text-[#101828] text-xs font-extrabold">{booking.workoutTitle}</Text>
+                    <Text className="text-[#101828] text-xs font-extrabold">{getDisplayWorkoutTitle(booking.workoutTitle)}</Text>
                   </View>
                   <View className="flex-row justify-between items-center">
                     <Text className="text-[#6B7280] text-xs font-semibold">Date</Text>
@@ -1108,7 +1110,7 @@ export default function SessionDetailScreen() {
                       </View>
                     </View>
                     <Text className="text-zinc-400 text-[9px] font-black uppercase tracking-wider mt-0.5">
-                      {booking.trainerLevel || 'Certified'} Coach • {booking.workoutTitle} Specialist
+                      {booking.trainerLevel || 'Certified'} Coach • {getDisplayWorkoutTitle(booking.workoutTitle)} Specialist
                     </Text>
                     
                     <View className="flex-row items-center gap-1.5 mt-2 flex-wrap">
@@ -1551,7 +1553,7 @@ export default function SessionDetailScreen() {
                   </View>
                   <View className="w-[47%] gap-0.5">
                     <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Workout Category</Text>
-                    <Text className="text-zinc-900 text-sm font-black">{booking.workoutTitle}</Text>
+                    <Text className="text-zinc-900 text-sm font-black">{getDisplayWorkoutTitle(booking.workoutTitle)}</Text>
                   </View>
                   <View className="w-[47%] gap-0.5">
                     <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Credits Consumed</Text>

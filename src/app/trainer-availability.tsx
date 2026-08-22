@@ -3,9 +3,10 @@ import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } fr
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUserStore } from '../store/userStore';
 import { useCoachStore, generateMonthlySlots } from '../store/coachStore';
-import { Database } from '../database/Database';
+import { Database, getCurrentServerTime } from '../database/Database';
 import { normalizeDate, canonicalizeTimeRange } from '../utils/date';
 
 const getEndLimit = (baseDate: Date) => {
@@ -50,20 +51,6 @@ export default function TrainerAvailabilityScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useUserStore();
 
-  useEffect(() => {
-    const initData = async () => {
-      try {
-        console.log('[AVAILABILITY] Reloading database from Supabase on mount...');
-        await Database.reload();
-        useCoachStore.getState().syncFromDB();
-        console.log('[AVAILABILITY] Database reloaded and synced.');
-      } catch (err) {
-        console.warn('Failed to load database in availability:', err);
-      }
-    };
-    initData();
-  }, []);
-  
   const { 
     coaches,
     syncFromDB,
@@ -75,6 +62,7 @@ export default function TrainerAvailabilityScreen() {
   } = useCoachStore();
 
   const [today, setToday] = useState(new Date());
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -113,6 +101,97 @@ export default function TrainerAvailabilityScreen() {
   const [selectedDay, setSelectedDay] = useState(initialDate.day);
 
   useEffect(() => {
+    const initData = async () => {
+      // 1. Wait for Zustand store hydration
+      if (!useUserStore.persist.hasHydrated()) {
+        const unsub = useUserStore.persist.onHydrate(() => {
+          unsub();
+          initData();
+        });
+        return;
+      }
+
+      // 2. Set currentUserId context on Database
+      const userId = useUserStore.getState().user?.id;
+      if (userId) {
+        Database.setCurrentUserId(userId);
+      }
+
+      try {
+        console.log('[AVAILABILITY] Reloading database from Supabase on mount...');
+        await Database.reload();
+        useCoachStore.getState().syncFromDB();
+        console.log('[AVAILABILITY] Database reloaded and synced.');
+
+        // Root Cause Fix: resolve the best starting date
+        let targetDateStr = '';
+        if (params.date) {
+          targetDateStr = params.date;
+        } else {
+          // Check if there is a saved selection in AsyncStorage
+          try {
+            const saved = await AsyncStorage.getItem('last_selected_trainer_date');
+            if (saved) {
+              targetDateStr = saved;
+            }
+          } catch (e) {
+            console.warn('Failed to load saved date:', e);
+          }
+
+          // If no saved selection, look for the nearest upcoming override date >= today
+          if (!targetDateStr) {
+            const userObj = useUserStore.getState().user;
+            const currentCoach = Database.getCoaches().find(c => c.id === userObj?.id || c.name === userObj?.name);
+            const overrides = currentCoach?.preferences?.availabilityOverrides || [];
+            
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const upcoming = overrides
+              .filter(o => normalizeDate(o.date) >= todayStr)
+              .sort((a, b) => normalizeDate(a.date).localeCompare(normalizeDate(b.date)));
+
+            if (upcoming.length > 0) {
+              targetDateStr = normalizeDate(upcoming[0].date);
+            }
+          }
+        }
+
+        if (targetDateStr) {
+          const parts = targetDateStr.split('-');
+          if (parts.length === 3) {
+            const y = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10) - 1;
+            const d = parseInt(parts[2], 10);
+            if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+              setSelectedYear(y);
+              setSelectedMonth(m);
+              setSelectedDay(d);
+            }
+          }
+        }
+        setIsInitialized(true);
+      } catch (err) {
+        console.warn('Failed to load database in availability:', err);
+      }
+    };
+    initData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Save selected date to AsyncStorage to preserve across refresh/navigation
+  useEffect(() => {
+    if (!isInitialized) return;
+    const saveLastDate = async () => {
+      const dateStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
+      try {
+        await AsyncStorage.setItem('last_selected_trainer_date', dateStr);
+      } catch (e) {
+        console.warn('Failed to save last selected date:', e);
+      }
+    };
+    saveLastDate();
+  }, [selectedYear, selectedMonth, selectedDay, isInitialized]);
+
+  useEffect(() => {
     if (params.date) {
       const parts = params.date.split('-');
       if (parts.length === 3) {
@@ -132,6 +211,7 @@ export default function TrainerAvailabilityScreen() {
   }, [params.date]);
 
   useEffect(() => {
+    if (!isInitialized) return;
     if (!isDateInAllowedRange(selectedYear, selectedMonth, selectedDay, today)) {
       const t = setTimeout(() => {
         setSelectedMonth(today.getMonth());
@@ -140,7 +220,7 @@ export default function TrainerAvailabilityScreen() {
       }, 0);
       return () => clearTimeout(t);
     }
-  }, [today, selectedYear, selectedMonth, selectedDay]);
+  }, [today, selectedYear, selectedMonth, selectedDay, isInitialized]);
 
   const coach = coaches.find(c => c.id === user.id || c.name === user.name);
 
@@ -295,7 +375,7 @@ export default function TrainerAvailabilityScreen() {
       r.trainer_id === coach.id &&
       normalizeDate(r.slot_date) === normalizeDate(dateStr) &&
       canonicalizeTimeRange(r.slot_time) === canonicalizeTimeRange(slot.time) &&
-      r.expires_at > Date.now()
+      r.expires_at > getCurrentServerTime().getTime()
     );
 
     // 3. Find if override exists
@@ -343,7 +423,7 @@ export default function TrainerAvailabilityScreen() {
           r.trainer_id === coach.id &&
           normalizeDate(r.slot_date) === dStr &&
           canonicalizeTimeRange(r.slot_time) === canonicalizeTimeRange(slot.time) &&
-          r.expires_at > Date.now()
+          r.expires_at > getCurrentServerTime().getTime()
         );
         const override = overrides.find((o: any) => 
           normalizeDate(o.date) === dStr && 
@@ -741,7 +821,10 @@ export default function TrainerAvailabilityScreen() {
                   <TouchableOpacity
                     activeOpacity={slot.isBooked || isSelectedDateOutOfRange ? 1 : 0.8}
                     disabled={slot.isBooked || isSelectedDateOutOfRange}
-                    onPress={() => toggleMonthlySlotAvailability(coach.id, dateStr, slot.time)}
+                    onPress={() => {
+                      console.log('[DEBUG-AVAIL] TouchableRow pressed for slot:', slot.time, 'date:', dateStr);
+                      toggleMonthlySlotAvailability(coach.id, dateStr, slot.time);
+                    }}
                     className="flex-row items-center gap-3.5 flex-1 pr-4"
                   >
                     {/* Checkbox box indicator */}

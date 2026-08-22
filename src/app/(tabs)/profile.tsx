@@ -119,22 +119,56 @@ export default function ProfileScreen() {
   const [editLanguage, setEditLanguage] = useState(profile.preferredLanguage || '');
   const [editCity, setEditCity] = useState(profile.city || '');
 
-  const handleSaveProfile = () => {
-    profile.updateCoreProfile({
-      name: editName,
-      mobile: editMobile,
-      email: editEmail,
-      gender: editGender,
-      dob: editDob,
-      height: editHeight,
-      weight: editWeight,
-      fitnessLevel: editFitnessLevel,
-      targetGoal: editTargetGoal,
-      preferredLanguage: editLanguage,
-      city: editCity
-    });
-    setIsEditingProfile(false);
-    Alert.alert('Profile Saved', 'Your personal details have been updated.');
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setEditName(profile.name || '');
+      setEditMobile(profile.mobile || '');
+      setEditEmail(profile.email || '');
+      setEditGender(profile.gender || '');
+      setEditDob(profile.dob || '');
+      setEditHeight(profile.height || '');
+      setEditWeight(profile.weight || '');
+      setEditFitnessLevel(profile.fitnessLevel || '');
+      setEditTargetGoal(profile.targetGoal || '');
+      setEditLanguage(profile.preferredLanguage || '');
+      setEditCity(profile.city || '');
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [
+    profile.name,
+    profile.mobile,
+    profile.email,
+    profile.gender,
+    profile.dob,
+    profile.height,
+    profile.weight,
+    profile.fitnessLevel,
+    profile.targetGoal,
+    profile.preferredLanguage,
+    profile.city
+  ]);
+
+  const handleSaveProfile = async () => {
+    try {
+      await profile.updateCoreProfile({
+        name: editName,
+        mobile: editMobile,
+        email: editEmail,
+        gender: editGender,
+        dob: editDob,
+        height: editHeight,
+        weight: editWeight,
+        fitnessLevel: editFitnessLevel,
+        targetGoal: editTargetGoal,
+        preferredLanguage: editLanguage,
+        city: editCity
+      });
+      setIsEditingProfile(false);
+      Alert.alert('Profile Saved', 'Your personal details have been updated.');
+    } catch (err: any) {
+      console.error('[Profile Update Error]', err);
+      Alert.alert('Save Error', err.message || 'Failed to save profile changes. Please try again.');
+    }
   };
 
   // Trainer local states & parsing
@@ -212,7 +246,16 @@ export default function ProfileScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      // Ensure session is restored if store is hydrated
+      const storedUser = useUserStore.getState().user;
+      const isLoggedIn = useUserStore.getState().isLoggedIn;
+      if (isLoggedIn && storedUser && storedUser.id) {
+        Database.setCurrentUserId(storedUser.id);
+      }
+
       Database.load().then(() => {
+        useUserStore.getState().syncFromDB();
+        useUserProfileStore.getState().syncFromDB();
         useCoachStore.getState().syncFromDB();
         reloadDynamicLists();
         const latestCoach = Database.schema.coaches.find((c: any) => c.name === user.name || c.id === user.id);

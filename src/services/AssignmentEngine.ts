@@ -68,7 +68,7 @@ export class AssignmentEngine {
 
       // Eligibility Rule 5: Travel / Active session conflict detection
       const hasActiveSession = bookings.some(b => {
-        if (b.trainerName !== coach.name) return false;
+        if (b.trainerId !== coach.id && b.trainerName !== coach.name) return false;
         if (b.status !== 'upcoming') return false;
         
         const activeStatuses = ['trainer_travelling', 'trainer_arrived', 'otp_verified', 'workout_started'];
@@ -78,7 +78,7 @@ export class AssignmentEngine {
 
       // Eligibility Rule 6: Cooldown rule conflict
       const hasCooldownConflict = bookings.some(b => {
-        if (b.trainerName !== coach.name) return false;
+        if (b.trainerId !== coach.id && b.trainerName !== coach.name) return false;
         if (b.status !== 'completed' && b.timelineStatus !== 'workout_completed') return false;
         
         if (normalizeDate(b.date) !== normalizeDate(booking.date)) return false;
@@ -117,7 +117,7 @@ export class AssignmentEngine {
       // Eligibility Rule 8: Max daily sessions limit
       const maxSessions = coach.preferences?.maxDailySessions || 5;
       const todaySessionsCount = bookings.filter(b => 
-        b.trainerName === coach.name && 
+        (b.trainerId === coach.id || b.trainerName === coach.name) && 
         b.status !== 'cancelled' && 
         normalizeDate(b.date) === normalizeDate(booking.date)
       ).length;
@@ -147,7 +147,7 @@ export class AssignmentEngine {
       // Current Workload (10%)
       // Count bookings for this coach today
       const todayBookingsCount = bookings.filter(b => 
-        b.trainerName === coach.name && 
+        (b.trainerId === coach.id || b.trainerName === coach.name) && 
         b.status === 'upcoming' && 
         normalizeDate(b.date) === normalizeDate(booking.date)
       ).length;

@@ -10,6 +10,7 @@ import { useUserStore } from '../store/userStore';
 import { SessionEngine } from '../services/SessionEngine';
 import { AddPartnerModal } from './AddPartnerModal';
 import { Database, getISTDateInfo } from '../database/Database';
+import { getDisplayWorkoutTitle } from '../utils/date';
 
 interface BookingCardProps {
   booking: Booking;
@@ -108,13 +109,13 @@ export function BookingCard({ booking }: BookingCardProps) {
             </Text>
             <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider mt-0.5">
               {isTrainer 
-                ? `${booking.workoutTitle} • ${booking.sessionType === 'COUPLE' ? '2-Person' : 'Solo'} • 60 mins` 
+                ? `${getDisplayWorkoutTitle(booking.workoutTitle)} • ${booking.sessionType === 'COUPLE' ? '2-Person' : 'Solo'} • 60 mins` 
                 : (isUpcoming 
                     ? (!isAccepted 
-                        ? `${booking.workoutTitle} • ${booking.sessionType === 'COUPLE' ? '2-Person' : 'Solo'} • Trainer details shared soon` 
-                        : `${booking.workoutTitle} • ${booking.sessionType === 'COUPLE' ? '2-Person' : 'Solo'} • Trainer confirmed`
+                        ? `${getDisplayWorkoutTitle(booking.workoutTitle)} • ${booking.sessionType === 'COUPLE' ? '2-Person' : 'Solo'} • Trainer details shared soon` 
+                        : `${getDisplayWorkoutTitle(booking.workoutTitle)} • ${booking.sessionType === 'COUPLE' ? '2-Person' : 'Solo'} • Trainer confirmed`
                       ) 
-                    : `${booking.workoutTitle} • ${booking.sessionType === 'COUPLE' ? '2-Person' : 'Solo'} • ₹${booking.price || 1200}`
+                    : `${getDisplayWorkoutTitle(booking.workoutTitle)} • ${booking.sessionType === 'COUPLE' ? '2-Person' : 'Solo'} • ₹${booking.price || 1200}`
                   )}
             </Text>
           </View>

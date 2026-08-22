@@ -5,6 +5,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+function getEffectiveSupabaseUrl(): string {
+  return Deno.env.get('SUPABASE_URL') || '';
+}
+
 function decodeJwtPayload(token: string): any {
   try {
     const parts = token.split('.');
@@ -170,10 +174,10 @@ Deno.serve(async (req) => {
 
     if (accessToken.startsWith('mock-access-token-')) {
       const mockUserId = accessToken.replace('mock-access-token-', '');
-      if (mockUserId === 'u-testclient' || mockUserId === 'u-testadmin') {
+      if (mockUserId === 'u-testclient' || mockUserId === 'u-testadmin' || mockUserId === 'demo.trainer') {
         console.log('[Edge Function] Mock authentication bypass triggered for:', mockUserId);
         
-        const supabaseUrl = Deno.env.get('SUPABASE_URL');
+        const supabaseUrl = getEffectiveSupabaseUrl();
         const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
         if (!supabaseUrl || !supabaseServiceKey) {
           return errorResponse('MOCK_AUTH_CONFIG', 'Server database keys missing.', 500);
@@ -183,10 +187,17 @@ Deno.serve(async (req) => {
           auth: { autoRefreshToken: false, persistSession: false }
         });
         
+        console.log('[Edge Function] Querying users table for id:', mockUserId, 'SUPABASE_URL:', supabaseUrl);
         const { data: users, error: findError } = await supabaseAdmin
           .from('users')
           .select('*')
           .eq('id', mockUserId);
+          
+        if (findError) {
+          console.error('[Edge Function] Database query error:', findError);
+        } else {
+          console.log('[Edge Function] Database query users returned:', users ? users.length : 0, 'rows');
+        }
           
         if (findError || !users || users.length === 0) {
           return errorResponse('MOCK_AUTH_FAILED', 'User not found for mock token', 404);
@@ -287,7 +298,7 @@ Deno.serve(async (req) => {
     console.log('[Edge Function] Stage F: Verified phone number extracted and normalized (suffix: ...' + normalizedPhone.slice(-4) + ')');
 
     // Create Supabase admin client using server-side service role key to bypass RLS policies safely
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseUrl = getEffectiveSupabaseUrl()
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
     if (!supabaseUrl || !supabaseServiceKey) {

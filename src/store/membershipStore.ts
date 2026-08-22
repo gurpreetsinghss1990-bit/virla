@@ -223,7 +223,7 @@ export const useMembershipStore = create<MembershipState>((set, get) => ({
         const calculatedTier = hasActiveValidCredits ? 'PREMIUM' : 'STANDARD';
         
         // Update database if changed to keep it in sync
-        if (profile.membershipStatus !== calculatedTier) {
+        if (profile.membershipStatus?.toUpperCase() !== calculatedTier.toUpperCase()) {
           profile.membershipStatus = calculatedTier;
           Database.updateProfile(userId, { membershipStatus: calculatedTier });
         }

@@ -17,13 +17,13 @@ import { useUserStore } from '../../store/userStore';
 import { useUserProfileStore } from '../../store/userProfileStore';
 import { useWorkoutStore } from '../../store/workoutStore';
 import { useWalletStore } from '../../store/walletStore';
-import { Database, getCurrentServerTime, getBookingISTDateRange, getISTDateInfo, isSessionGenuinelyActive } from '../../database/Database';
+import { Database, getCurrentServerTime, getISTDateInfo, isSessionGenuinelyActive } from '../../database/Database';
 import { AddPartnerModal } from '../../components/AddPartnerModal';
 import { supabase } from '../../database/supabaseClient';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { useAIWellnessStore } from '../../store/aiWellnessStore';
 import { Booking } from '../../types';
-import { normalizeDate, canonicalizeTimeRange } from '../../utils/date';
+import { normalizeDate, canonicalizeTimeRange, getBookingISTDateRange, getDisplayWorkoutTitle } from '../../utils/date';
 
 interface RequestCardProps {
   booking: Booking;
@@ -95,7 +95,7 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
       </View>
 
       <View className="gap-2">
-        <Text className="text-[#101828] text-base font-black tracking-tight">{booking.workoutTitle}</Text>
+        <Text className="text-[#101828] text-base font-black tracking-tight">{getDisplayWorkoutTitle(booking.workoutTitle)}</Text>
         <Text className="text-zinc-500 text-xs font-semibold leading-relaxed">
           {booking.date} • {booking.time} ({booking.durationMinutes || 60} mins)
         </Text>
@@ -215,7 +215,7 @@ export default function HomeScreen() {
     reassignTrainer(id, 'timeout');
   };
 
-  const currentCoach = coaches.find(c => c.name === user.name);
+  const currentCoach = coaches.find(c => c.id === user.id || c.name === user.name);
 
   // Helper date calculations for Trainer Console Redesign
   const getGreeting = () => {
@@ -244,7 +244,7 @@ export default function HomeScreen() {
   };
 
   const trainerBookings = bookings.filter(b => 
-    (b.trainerName === user.name || (currentCoach && b.trainerId === currentCoach.id))
+    (b.trainerId === user.id || b.trainerName === user.name || (currentCoach && b.trainerId === currentCoach.id))
   );
 
   const confirmedBookings = trainerBookings.filter(b => 
@@ -455,7 +455,7 @@ export default function HomeScreen() {
       // Immediately revoke pending requests assigned to this coach when going offline
       if (!nextOnline) {
         const pendingRequests = bookings.filter(b => 
-          b.trainerName === currentCoach.name && 
+          (b.trainerId === currentCoach.id || b.trainerName === currentCoach.name) && 
           b.timelineStatus === 'booked'
         );
         for (const req of pendingRequests) {
@@ -560,8 +560,26 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const syncData = async () => {
+      // 1. Wait for Zustand store hydration
+      if (!useUserStore.persist.hasHydrated()) {
+        const unsub = useUserStore.persist.onHydrate(() => {
+          unsub();
+          syncData();
+        });
+        return;
+      }
+
+      // 2. Set currentUserId context on Database
+      const userId = useUserStore.getState().user?.id;
+      if (userId) {
+        Database.setCurrentUserId(userId);
+      }
+
       try {
-        await Database.load();
+        setLoading(true);
+        // Force reload database with the authenticated user context
+        await Database.reload();
+
         useUserStore.getState().syncFromDB();
         useUserProfileStore.getState().syncFromDB();
         useBookingStore.getState().syncFromDB();
@@ -1085,7 +1103,7 @@ export default function HomeScreen() {
                           {/* Right: Booking status */}
                           <View className="flex-1 gap-1">
                             <Text className="text-[#101828] text-[17px] font-black uppercase tracking-tight">
-                              {getWorkoutEmoji(activeBooking.workoutTitle)} {activeBooking.workoutTitle} Booked
+                              {getWorkoutEmoji(activeBooking.workoutTitle)} {getDisplayWorkoutTitle(activeBooking.workoutTitle)} Booked
                             </Text>
                             <Text className="text-[#6B7280] text-[14px] font-medium leading-relaxed mt-0.5">
                               Your session is confirmed. Trainer details will be shared soon.
@@ -1439,7 +1457,7 @@ export default function HomeScreen() {
                             />
                           )}
                           <View>
-                            <Text className="text-zinc-950 text-[15px] font-semibold">{bookingData.workoutTitle}</Text>
+                            <Text className="text-zinc-950 text-[15px] font-semibold">{getDisplayWorkoutTitle(bookingData.workoutTitle)}</Text>
                             <Text className="text-zinc-500 text-[13px] font-normal mt-0.5">
                               {!isAccepted 
                                 ? 'Trainer details will be shared soon.' 
@@ -1601,7 +1619,7 @@ export default function HomeScreen() {
               {(() => {
                 const requests = bookings.filter(b => 
                   b.timelineStatus === 'booked' && 
-                  (b.trainerName === user.name || (currentCoach && b.trainerId === currentCoach.id))
+                  (b.trainerId === user.id || b.trainerName === user.name || (currentCoach && b.trainerId === currentCoach.id))
                 );
                 if (requests.length === 0) return null;
                 return (
@@ -1676,7 +1694,7 @@ export default function HomeScreen() {
                     </View>
 
                     <View className="gap-1.5">
-                      <Text className="text-zinc-455 text-[9px] font-bold uppercase">Workout: {activeSession.workoutTitle}</Text>
+                      <Text className="text-zinc-455 text-[9px] font-bold uppercase">Workout: {getDisplayWorkoutTitle(activeSession.workoutTitle)}</Text>
                       <Text className="text-[#101828] text-base font-black tracking-tight mt-0.5">
                         Client: {activeSession.clientName || 'Viral'}
                       </Text>
@@ -1737,7 +1755,7 @@ export default function HomeScreen() {
                       </View>
 
                       <View className="gap-1">
-                        <Text className="text-zinc-500 text-[8px] font-black uppercase">Workout: {nextSession.workoutTitle}</Text>
+                        <Text className="text-zinc-500 text-[8px] font-black uppercase">Workout: {getDisplayWorkoutTitle(nextSession.workoutTitle)}</Text>
                         <Text className="text-white text-base font-semibold mt-1 leading-tight">
                           Client: {nextSession.clientName || 'Viral'}
                         </Text>
@@ -1885,7 +1903,7 @@ export default function HomeScreen() {
                             <Feather name="clock" size={14} color="#4F46E5" />
                           </View>
                           <View>
-                            <Text className="text-zinc-900 text-xs font-semibold">{booking.workoutTitle}</Text>
+                            <Text className="text-zinc-900 text-xs font-semibold">{getDisplayWorkoutTitle(booking.workoutTitle)}</Text>
                             <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">
                               {booking.time} • Client: {booking.clientName || 'Viral'}
                             </Text>
@@ -1980,7 +1998,7 @@ export default function HomeScreen() {
                           {tomorrowBookings.map((b) => (
                             <View key={b.id} className="flex-row justify-between items-center py-2 border-b border-zinc-50 last:border-b-0">
                               <View>
-                                <Text className="text-zinc-900 text-xs font-semibold">{b.workoutTitle}</Text>
+                                <Text className="text-zinc-900 text-xs font-semibold">{getDisplayWorkoutTitle(b.workoutTitle)}</Text>
                                 <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{b.time} • {b.clientName || 'Client'}</Text>
                               </View>
                               <Feather name="chevron-right" size={12} color="#9CA3AF" />

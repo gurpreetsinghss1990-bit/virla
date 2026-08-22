@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Pla
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
-import { Database, TrainerApplication, getCurrentServerTime, getBookingISTDateRange, getISTDateInfo } from '../database/Database';
+import { Database, TrainerApplication, getCurrentServerTime, getISTDateInfo } from '../database/Database';
+import { getBookingISTDateRange, getDisplayWorkoutTitle } from '../utils/date';
 import { Booking } from '../types';
 import { Coach } from '../types';
 import { LuxuryCard } from '../components/LuxuryCard';

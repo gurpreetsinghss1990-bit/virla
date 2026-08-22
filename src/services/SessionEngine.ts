@@ -1,7 +1,7 @@
-import { Database, getCurrentServerTime, getBookingISTDateRange } from '../database/Database';
+import { Database, getCurrentServerTime } from '../database/Database';
+import { getBookingISTDateRange } from '../utils/date';
 import { Booking } from '../types';
 import { supabase } from '../database/supabaseClient';
-import { normalizeDate } from '../utils/date';
 
 export class SessionEngine {
   static TRAVEL_WINDOW_MINUTES = 25;

@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+// WALLET FUNCTIONALITY LOCKED
+import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useWalletStore } from '../store/walletStore';
 import { useBookingStore } from '../store/bookingStore';
 import { useMembershipStore } from '../store/membershipStore';
+import { useUserStore } from '../store/userStore';
 import { Database } from '../database/Database';
 import { Ionicons, Feather } from '@expo/vector-icons';
 
@@ -14,6 +16,23 @@ export default function WalletScreen() {
   const { creditBalance, lifetimePurchased, creditsUsed, ledger, transferCredits, clearCreditsForTesting } = useWalletStore();
   const { bookings } = useBookingStore();
   const { membership, toggleExpiryDate, isExpired } = useMembershipStore();
+
+  useFocusEffect(
+    useCallback(() => {
+      // Ensure session is restored if store is hydrated
+      const storedUser = useUserStore.getState().user;
+      const isLoggedIn = useUserStore.getState().isLoggedIn;
+      if (isLoggedIn && storedUser && storedUser.id) {
+        Database.setCurrentUserId(storedUser.id);
+      }
+      
+      Database.load().then(() => {
+        useWalletStore.getState().syncFromDB();
+        useMembershipStore.getState().syncFromDB();
+        useBookingStore.getState().syncFromDB();
+      });
+    }, [])
+  );
 
   const [transferPhone, setTransferPhone] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
@@ -44,7 +63,16 @@ export default function WalletScreen() {
     <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
-        <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
+        <TouchableOpacity 
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(tabs)/profile');
+            }
+          }}
+          className="w-8 h-8 items-center justify-center"
+        >
           <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
         <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
