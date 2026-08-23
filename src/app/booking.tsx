@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
 import { useMembershipStore } from '../store/membershipStore';
 import { calculateDistanceKm, geocodeAddressSync, fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords, AutocompleteSuggestion, getCurrentLocationCoords } from '../utils/distance';
-import { normalizeDate, canonicalizeTimeRange } from '../utils/date';
+import { normalizeDate, canonicalizeTimeRange, formatToDDMMYYYY } from '../utils/date';
 import * as Location from 'expo-location';
 import { useAddressStore } from '../store/addressStore';
 import { useCoachStore, generateMonthlySlots } from '../store/coachStore';
@@ -15,7 +15,7 @@ import { EmptyState, ApplePayConfirmation, BookingSuccessAnimation } from '../co
 import { Ionicons, Feather } from '@expo/vector-icons';
 import Svg, { Circle, Line } from 'react-native-svg';
 import { AssignmentEngine } from '../services/AssignmentEngine';
-import { Database } from '../database/Database';
+import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
 import { WORKOUT_CATEGORY_MAPPING, getCategoryFromTitle } from '../config/WorkoutMapping';
 
 // 5 Premium experiences specified
@@ -218,11 +218,19 @@ export default function BookingScreen() {
   const [newAddressLabelType, setNewAddressLabelType] = useState<'Home' | 'Office' | 'Gym' | 'Custom'>('Home');
   const [newCustomLabel, setNewCustomLabel] = useState('');
 
+  const formatISTDate = (date: Date): string => {
+    const info = getISTDateInfo(date);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[info.month - 1]} ${info.day}, ${info.year}`;
+  };
+
   // Date selection
-  const [dateSelectionType, setDateSelectionType] = useState<'today' | 'tomorrow' | 'weekend' | 'calendar'>('today');
+  const [dateSelectionType, setDateSelectionType] = useState<'today' | 'tomorrow' | 'dayafter' | 'calendar'>('today');
   const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    return today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const istNow = getCurrentServerTime();
+    const info = getISTDateInfo(istNow);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[info.month - 1]} ${info.day}, ${info.year}`;
   });
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
 
@@ -465,7 +473,7 @@ export default function BookingScreen() {
       const overrides = coach.preferences?.availabilityOverrides || [];
       
       // Get current time in IST (UTC+5:30)
-      const now = new Date();
+      const now = getCurrentServerTime();
       const nowUtc = now.getTime();
       const istOffset = 5.5 * 60 * 60 * 1000;
       const istTime = new Date(nowUtc + istOffset);
@@ -975,31 +983,22 @@ export default function BookingScreen() {
     }
   }, [selectedAddressId, step, addresses]);
 
-  // Set selected date based on shortcuts
-  useEffect(() => {
+  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
 
-    const today = new Date();
-    if (dateSelectionType === 'today') {
-      const formatted = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      setSelectedDate(formatted);
-      setShowCalendarPicker(false);
-    } else if (dateSelectionType === 'tomorrow') {
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1);
-      const formatted = tomorrow.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      setSelectedDate(formatted);
-      setShowCalendarPicker(false);
-    } else if (dateSelectionType === 'weekend') {
-      // Find next Saturday
-      const saturday = new Date(today);
-      saturday.setDate(today.getDate() + (6 - today.getDay() + 7) % 7);
-      const formatted = saturday.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      setSelectedDate(formatted);
-      setShowCalendarPicker(false);
-    } else if (dateSelectionType === 'calendar') {
-      setShowCalendarPicker(true);
+  const loadAvailabilityForSelectedDate = useCallback(async (dateStr: string) => {
+    setIsLoadingAvailability(true);
+    try {
+      console.log(`[AVAILABILITY] Loading availability for date: ${dateStr}`);
+      await Database.reload();
+      useCoachStore.getState().syncFromDB();
+      useBookingStore.getState().syncFromDB();
+      useAddressStore.getState().syncFromDB();
+    } catch (err) {
+      console.warn('Failed to reload database for availability:', err);
+    } finally {
+      setIsLoadingAvailability(false);
     }
-  }, [dateSelectionType]);
+  }, []);
 
   // Pulse animation for radar scanning map
   useEffect(() => {
@@ -1082,9 +1081,25 @@ export default function BookingScreen() {
         Alert.alert('Outside Coverage', 'The selected address lies outside the VIRLA active fitness coverage zone.');
         return;
       }
+      // Navigate to step 4 (Select Date) with Today selected by default
+      setDateSelectionType('today');
+      setShowCalendarPicker(false);
+      const istNow = getCurrentServerTime();
+      const info = getISTDateInfo(istNow);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const formatted = `${months[info.month - 1]} ${info.day}, ${info.year}`;
+      setSelectedDate(formatted);
+      triggerTransition(4);
+      loadAvailabilityForSelectedDate(formatted);
+      return;
     }
-    if (step === 4 && !selectedDate) {
-      Alert.alert('Date Required', 'Please select a date.');
+    if (step === 4) {
+      if (!selectedDate) {
+        Alert.alert('Date Required', 'Please select a date.');
+        return;
+      }
+      triggerTransition(5);
+      loadAvailabilityForSelectedDate(selectedDate);
       return;
     }
     if (step === 5) {
@@ -1309,7 +1324,10 @@ export default function BookingScreen() {
   }
 
   const isTimeSlotPassed = (timeSlotStr: string, dateStr: string) => {
-    const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const istNow = getCurrentServerTime();
+    const info = getISTDateInfo(istNow);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const todayStr = `${months[info.month - 1]} ${info.day}, ${info.year}`;
     if (dateStr !== todayStr) {
       return false;
     }
@@ -1325,16 +1343,15 @@ export default function BookingScreen() {
       hours = 0;
     }
 
-    const slotDateTime = new Date();
-    slotDateTime.setHours(hours, minutes, 0, 0);
+    const slotDateTime = new Date(Date.UTC(info.year, info.month - 1, info.day, hours, minutes, 0, 0));
+    const slotTimeMs = slotDateTime.getTime() - 5.5 * 60 * 60 * 1000;
 
-    const now = new Date();
-    return slotDateTime.getTime() <= now.getTime();
+    return slotTimeMs <= istNow.getTime();
   };
 
   const getFilteredSlotsForPeriod = (): SlotItem[] => {
     const allAvailable = getDynamicAvailableSlots();
-    const todayNormalized = normalizeDate(new Date());
+    const todayNormalized = normalizeDate(getCurrentServerTime());
     if (normalizeDate(selectedDate) === todayNormalized) {
       return allAvailable.filter(slot => !isTimeSlotPassed(slot.time, selectedDate));
     }
@@ -1391,20 +1408,7 @@ export default function BookingScreen() {
   };
 
   const getFormattedDateLabel = () => {
-    const today = new Date();
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    const selectedNormalized = normalizeDate(selectedDate);
-    const todayNormalized = normalizeDate(today);
-    const tomorrowNormalized = normalizeDate(tomorrow);
-    
-    if (selectedNormalized === todayNormalized) {
-      return `Today, ${selectedDate}`;
-    } else if (selectedNormalized === tomorrowNormalized) {
-      return `Tomorrow, ${selectedDate}`;
-    }
-    return selectedDate;
+    return formatToDDMMYYYY(selectedDate);
   };
 
   const handleChipPress = (chip: string) => {
@@ -2361,34 +2365,53 @@ export default function BookingScreen() {
 
                   {/* Horizontal Date Capsules (Feature 4) */}
                   <View className="flex-row justify-between gap-2.5">
-                    {[
-                      { id: 'today', label: 'Today', sub: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) },
-                      { id: 'tomorrow', label: 'Tomorrow', sub: (() => {
-                        const d = new Date();
-                        d.setDate(d.getDate() + 1);
-                        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                      })() },
-                      { id: 'weekend', label: 'Weekend', sub: (() => {
-                        const sat = new Date();
-                        sat.setDate(sat.getDate() + (6 - sat.getDay() + 7) % 7);
-                        const sun = new Date(sat);
-                        sun.setDate(sun.getDate() + 1);
-                        if (sat.getMonth() === sun.getMonth()) {
-                          return `${sat.toLocaleDateString('en-US', { month: 'short' })} ${sat.getDate()}-${sun.getDate()}`;
-                        }
-                        return `${sat.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}-${sun.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-                      })() },
-                      { id: 'calendar', label: 'Calendar', sub: 'Open Grid' }
-                    ].map((capsule) => {
+                    {((istNow) => {
+                      const infoToday = getISTDateInfo(istNow);
+                      const tomorrowTime = new Date(istNow.getTime() + 24 * 60 * 60 * 1000);
+                      const infoTomorrow = getISTDateInfo(tomorrowTime);
+                      const dayAfterTime = new Date(istNow.getTime() + 2 * 24 * 60 * 60 * 1000);
+                      const infoDayAfter = getISTDateInfo(dayAfterTime);
+                      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                      const weekdays = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+                      
+                      const dayAfterDate = new Date(infoDayAfter.year, infoDayAfter.month - 1, infoDayAfter.day);
+                      const dayAfterLabel = weekdays[dayAfterDate.getDay()];
+
+                      return [
+                        { id: 'today', label: 'TODAY', sub: `${infoToday.day} ${months[infoToday.month - 1].toUpperCase()}` },
+                        { id: 'tomorrow', label: 'TOMORROW', sub: `${infoTomorrow.day} ${months[infoTomorrow.month - 1].toUpperCase()}` },
+                        { id: 'dayafter', label: dayAfterLabel, sub: `${infoDayAfter.day} ${months[infoDayAfter.month - 1].toUpperCase()}` },
+                        { id: 'calendar', label: 'CALENDAR', sub: 'Open Grid' }
+                      ];
+                    })(getCurrentServerTime()).map((capsule) => {
                       const isSelected = dateSelectionType === capsule.id;
                       return (
                         <TouchableOpacity
                           key={capsule.id}
                           activeOpacity={0.8}
-                          onPress={() => {
+                          onPress={async () => {
                             setDateSelectionType(capsule.id as any);
+                            setShowCalendarPicker(capsule.id === 'calendar');
                             if (capsule.id !== 'calendar') {
-                              setTimeout(() => triggerTransition(5), 250);
+                              const istNow = getCurrentServerTime();
+                              const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                              let targetDateFormatted = '';
+                              if (capsule.id === 'today') {
+                                const info = getISTDateInfo(istNow);
+                                targetDateFormatted = `${months[info.month - 1]} ${info.day}, ${info.year}`;
+                              } else if (capsule.id === 'tomorrow') {
+                                const tomorrowTime = new Date(istNow.getTime() + 24 * 60 * 60 * 1000);
+                                const info = getISTDateInfo(tomorrowTime);
+                                targetDateFormatted = `${months[info.month - 1]} ${info.day}, ${info.year}`;
+                              } else if (capsule.id === 'dayafter') {
+                                const dayAfterTime = new Date(istNow.getTime() + 2 * 24 * 60 * 60 * 1000);
+                                const info = getISTDateInfo(dayAfterTime);
+                                targetDateFormatted = `${months[info.month - 1]} ${info.day}, ${info.year}`;
+                              }
+                              
+                              setSelectedDate(targetDateFormatted);
+                              triggerTransition(5);
+                              await loadAvailabilityForSelectedDate(targetDateFormatted);
                             }
                           }}
                           className={`flex-1 px-1 py-3.5 rounded-2xl border items-center justify-center gap-1 ${
@@ -2433,33 +2456,83 @@ export default function BookingScreen() {
                       }}
                     >
                       <Text className="text-[#101828] text-xs font-black uppercase tracking-wider text-center">Select Available Date</Text>
-                      <View className="flex-row flex-wrap justify-between gap-y-3">
-                        {Array.from({ length: 12 }).map((_, i) => {
-                          const dateObj = new Date();
-                          dateObj.setDate(dateObj.getDate() + i + 2); // dates starting from 2 days from now
-                          const dateString = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                          const displayDay = dateObj.toLocaleDateString('en-US', { day: '2-digit' });
-                          const displayMonth = dateObj.toLocaleDateString('en-US', { month: 'short' });
-                          const isPicked = selectedDate === dateString;
+                      {(() => {
+                        const istNow = getCurrentServerTime();
+                        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                        const fullMonths = [
+                          'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
+                          'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
+                        ];
+                        const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-                          return (
-                            <TouchableOpacity
-                              key={i}
-                              activeOpacity={0.8}
-                              onPress={() => {
-                                setSelectedDate(dateString);
-                                setTimeout(() => triggerTransition(5), 250);
-                              }}
-                              className={`w-[22%] py-3 rounded-xl border items-center justify-center ${
-                                isPicked ? 'bg-[#101828] border-[#101828]' : 'bg-white border-[#E5E7EB]'
-                              }`}
-                            >
-                              <Text className={`text-xs font-black ${isPicked ? 'text-white' : 'text-zinc-800'}`}>{displayDay}</Text>
-                              <Text className={`text-[8px] font-bold uppercase mt-0.5 ${isPicked ? 'text-zinc-400' : 'text-[#6B7280]'}`}>{displayMonth}</Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
+                        const dates = Array.from({ length: 12 }).map((_, i) => {
+                          const dateObj = new Date(istNow.getTime() + (i + 2) * 24 * 60 * 60 * 1000);
+                          const info = getISTDateInfo(dateObj);
+                          const dateString = `${months[info.month - 1]} ${info.day}, ${info.year}`;
+                          
+                          const dayObj = new Date(info.year, info.month - 1, info.day);
+                          const weekdayName = weekdays[dayObj.getDay()];
+                          
+                          return {
+                            dateString,
+                            day: String(info.day).padStart(2, '0'),
+                            monthName: fullMonths[info.month - 1],
+                            displayDate: `${info.day} ${months[info.month - 1].toUpperCase()}`,
+                            weekday: weekdayName,
+                          };
+                        });
+
+                        const grouped: Record<string, typeof dates> = {};
+                        const monthOrder: string[] = [];
+                        for (const d of dates) {
+                          if (!grouped[d.monthName]) {
+                            grouped[d.monthName] = [];
+                            monthOrder.push(d.monthName);
+                          }
+                          grouped[d.monthName].push(d);
+                        }
+
+                        return monthOrder.map((mName) => (
+                          <View key={mName} className="gap-3.5 mb-2 w-full">
+                            <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider text-center mt-2">
+                              {mName}
+                            </Text>
+                            <View className="flex-row flex-wrap justify-between gap-y-3">
+                              {grouped[mName].map((dObj, idx) => {
+                                const isPicked = selectedDate === dObj.dateString;
+                                return (
+                                  <TouchableOpacity
+                                    key={idx}
+                                    activeOpacity={0.8}
+                                    onPress={async () => {
+                                      setSelectedDate(dObj.dateString);
+                                      triggerTransition(5);
+                                      await loadAvailabilityForSelectedDate(dObj.dateString);
+                                    }}
+                                    className={`w-[47%] py-4 rounded-[18px] border items-center justify-center gap-1 ${
+                                      isPicked ? 'bg-[#101828] border-[#101828]' : 'bg-white border-[#E5E7EB]'
+                                    }`}
+                                    style={{
+                                      shadowColor: '#101828',
+                                      shadowOffset: { width: 0, height: 1 },
+                                      shadowOpacity: 0.01,
+                                      shadowRadius: 2,
+                                      elevation: 1,
+                                    }}
+                                  >
+                                    <Text className={`text-xs font-black uppercase tracking-wider ${isPicked ? 'text-white' : 'text-zinc-900'}`}>
+                                      {dObj.displayDate}
+                                    </Text>
+                                    <Text className={`text-[10px] font-bold ${isPicked ? 'text-zinc-400' : 'text-[#6B7280]'}`}>
+                                      {dObj.weekday}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          </View>
+                        ));
+                      })()}
                     </View>
                   )}
 
@@ -2469,7 +2542,7 @@ export default function BookingScreen() {
                       <Feather name="calendar" size={16} color="#4F46E5" />
                       <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Selected Date</Text>
                     </View>
-                    <Text className="text-[#4F46E5] text-xs font-extrabold">{selectedDate || 'Select a date'}</Text>
+                    <Text className="text-[#4F46E5] text-xs font-extrabold">{formatToDDMMYYYY(selectedDate) || 'Select a date'}</Text>
                   </View>
                 </View>
               )}
@@ -2484,6 +2557,27 @@ export default function BookingScreen() {
 
 
                   {(() => {
+                    if (isLoadingAvailability) {
+                      return (
+                        <View 
+                          className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center justify-center mt-2 shadow-sm"
+                          style={{
+                            shadowColor: '#101828',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.02,
+                            shadowRadius: 6,
+                            elevation: 1,
+                            minHeight: 200
+                          }}
+                        >
+                          <ActivityIndicator size="large" color="#4F46E5" />
+                          <Text className="text-zinc-650 text-xs font-black uppercase tracking-widest text-center mt-4">
+                            Checking availability for {formatToDDMMYYYY(selectedDate)}...
+                          </Text>
+                        </View>
+                      );
+                    }
+
                     const customerAddress = addresses.find(a => a.id === selectedAddressId);
                     const customerHasNoCoords = selectedAddressId ? (!customerAddress || customerAddress.lat === undefined || customerAddress.lng === undefined || customerAddress.lat === null || customerAddress.lng === null) : false;
 
@@ -2589,6 +2683,32 @@ export default function BookingScreen() {
                     }, null, 2));
 
                     if (availableSlots.length === 0) {
+                      const selectedNormalized = normalizeDate(selectedDate);
+                      const todayNormalized = normalizeDate(getCurrentServerTime());
+                      const tomorrowTime = new Date(getCurrentServerTime().getTime() + 24 * 60 * 60 * 1000);
+                      const tomorrowNormalized = normalizeDate(tomorrowTime);
+
+                      const isTodayVal = (selectedNormalized === todayNormalized);
+                      const isTomorrowVal = (selectedNormalized === tomorrowNormalized);
+                      
+                      let dateLabel = '';
+                      if (isTodayVal) {
+                        dateLabel = 'today';
+                      } else if (isTomorrowVal) {
+                        dateLabel = 'tomorrow';
+                      } else {
+                        const parts = selectedNormalized.split('-');
+                        const y = parseInt(parts[0], 10);
+                        const m = parseInt(parts[1], 10) - 1;
+                        const d = parseInt(parts[2], 10);
+                        const dateObj = new Date(y, m, d);
+                        const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                        dateLabel = weekdays[dateObj.getDay()];
+                      }
+
+                      const mainText = `Sorry, we're fully booked for ${dateLabel}. Our trainers are in high demand and unfortunately, we don't have any sessions available ${isTodayVal ? 'today' : 'on this date'}.`;
+                      const subText = `Try ${isTodayVal ? 'tomorrow or choose ' : ''}another date to find an available session.`;
+
                       return (
                         <View 
                           className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center gap-6 mt-2 shadow-sm"
@@ -2600,17 +2720,21 @@ export default function BookingScreen() {
                             elevation: 1
                           }}
                         >
-                          <View className="w-16 h-16 rounded-full bg-rose-50 items-center justify-center">
-                            <Feather name="frown" size={32} color="#E11D48" />
+                          <View className="w-16 h-16 rounded-full bg-amber-50 items-center justify-center">
+                            <Feather name="flame" size={30} color="#F59E0B" />
                           </View>
                           <View className="items-center gap-2">
-                            <Text className="text-[#101828] text-base font-black tracking-tight text-center">
-                              {trainerPref === 'favourite' ? 'Favourite Trainer Unavailable' : `No ${WORKOUT_CATEGORY_MAPPING[selectedExperience.id] || 'Workout'} Trainers Available`}
+                            <Text className="text-zinc-900 text-[10px] font-black uppercase tracking-widest text-center">
+                              WE&apos;RE IN HIGH DEMAND
                             </Text>
-                            <Text className="text-[#6B7280] text-[10px] font-medium leading-relaxed text-center max-w-[80%]">
-                              {trainerPref === 'favourite' 
-                                ? 'No available sessions with your favourite Trainer at this time.' 
-                                : `All ${selectedExperience.title} coaches are fully booked or offline today. Choose another workout, change date, or set an alert.`}
+                            <Text className="text-[#101828] text-base font-black tracking-tight text-center mt-1">
+                              Fully Booked
+                            </Text>
+                            <Text className="text-[#6B7280] text-[11px] font-semibold leading-relaxed text-center max-w-[90%] mt-1">
+                              {mainText}
+                            </Text>
+                            <Text className="text-zinc-400 text-[10px] font-bold text-center max-w-[90%] mt-1">
+                              {subText}
                             </Text>
                           </View>
                           <View className="w-full gap-3">

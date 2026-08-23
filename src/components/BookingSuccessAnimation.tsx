@@ -3,6 +3,7 @@ import { View, Text, Animated, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Database } from '../database/Database';
 import { AddPartnerModal } from './AddPartnerModal';
+import { formatToDDMMYYYY } from '../utils/date';
 
 interface BookingSuccessAnimationProps {
   workoutTitle: string;
@@ -99,7 +100,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
 
           <View className="flex-row justify-between items-center">
             <Text className="text-[#6B7280] text-xs font-semibold">Scheduled Date</Text>
-            <Text className="text-[#101828] text-xs font-extrabold">{selectedDate}</Text>
+            <Text className="text-[#101828] text-xs font-extrabold">{formatToDDMMYYYY(selectedDate)}</Text>
           </View>
 
           <View className="flex-row justify-between items-center">

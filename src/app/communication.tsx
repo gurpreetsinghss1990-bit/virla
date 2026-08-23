@@ -10,6 +10,7 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import { Database } from '../database/Database';
 import { useUserStore } from '../store/userStore';
 import { supabase } from '../database/supabaseClient';
+import { getBookingISTDateRange } from '../utils/date';
 
 interface ChatMessage {
   id: string;
@@ -34,19 +35,7 @@ export default function CommunicationScreen() {
   const getSessionStartDate = (): Date => {
     try {
       if (!booking) return new Date();
-      let datePart = booking.date;
-      if (datePart.startsWith('Today, ')) {
-        datePart = datePart.replace('Today, ', '');
-      } else if (datePart.startsWith('Tomorrow, ')) {
-        datePart = datePart.replace('Tomorrow, ', '');
-      }
-
-      const timePart = booking.time.split('-')[0].trim();
-      const combined = `${datePart} ${timePart}`;
-      const d = new Date(combined);
-      if (!isNaN(d.getTime())) {
-        return d;
-      }
+      return getBookingISTDateRange(booking).start;
     } catch (e) {
       console.log('Error parsing date:', e);
     }

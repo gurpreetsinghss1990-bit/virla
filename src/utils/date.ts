@@ -30,7 +30,7 @@ export function normalizeDate(dateInput: string | Date | undefined | null): stri
       return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
     }
 
-    // 2b. If it contains slashes (e.g. YYYY/MM/DD, DD/MM/YYYY, MM/DD/YYYY)
+    // 2b. If it contains slashes (e.g. YYYY/MM/DD, DD/MM/YYYY)
     if (trimmed.includes('/')) {
       const slashParts = trimmed.split('/');
       if (slashParts.length === 3) {
@@ -39,15 +39,9 @@ export function normalizeDate(dateInput: string | Date | undefined | null): stri
         }
         if (slashParts[2].length === 4) {
           const year = slashParts[2];
-          const part1 = parseInt(slashParts[0], 10);
-          const part2 = parseInt(slashParts[1], 10);
-          if (part1 > 12) {
-            return `${year}-${String(part2).padStart(2, '0')}-${String(part1).padStart(2, '0')}`;
-          }
-          if (part2 > 12) {
-            return `${year}-${String(part1).padStart(2, '0')}-${String(part2).padStart(2, '0')}`;
-          }
-          return `${year}-${String(slashParts[0]).padStart(2, '0')}-${String(slashParts[1]).padStart(2, '0')}`;
+          const day = slashParts[0].padStart(2, '0');
+          const month = slashParts[1].padStart(2, '0');
+          return `${year}-${month}-${day}`;
         }
       }
     }
@@ -221,6 +215,37 @@ export function getDisplayWorkoutTitle(title: string): string {
   if (t === 'kinetix') return 'Reset Studio';
   if (t === 'fightlab') return 'Combat Core';
   return title;
+}
+
+/**
+ * Formats a Date object or standard date string into canonical "DD/MM/YYYY" format.
+ * Utilizes getISTDateInfo internally to be timezone-safe.
+ */
+export function formatToDDMMYYYY(dateInput: string | Date | undefined | null): string {
+  if (!dateInput) return '';
+  
+  // 1. If it's a Date object
+  if (dateInput instanceof Date) {
+    const info = getISTDateInfo(dateInput);
+    const d = String(info.day).padStart(2, '0');
+    const m = String(info.month).padStart(2, '0');
+    const y = info.year;
+    return `${d}/${m}/${y}`;
+  }
+
+  // 2. If it's a string, normalize it first to "YYYY-MM-DD"
+  const normalized = normalizeDate(dateInput);
+  if (!normalized) return '';
+
+  const parts = normalized.split('-');
+  if (parts.length === 3) {
+    const y = parts[0];
+    const m = parts[1].padStart(2, '0');
+    const d = parts[2].padStart(2, '0');
+    return `${d}/${m}/${y}`;
+  }
+
+  return '';
 }
 
 

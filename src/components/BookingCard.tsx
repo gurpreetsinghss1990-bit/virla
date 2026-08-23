@@ -10,7 +10,7 @@ import { useUserStore } from '../store/userStore';
 import { SessionEngine } from '../services/SessionEngine';
 import { AddPartnerModal } from './AddPartnerModal';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
-import { getDisplayWorkoutTitle, getBookingISTDateRange } from '../utils/date';
+import { getDisplayWorkoutTitle, getBookingISTDateRange, formatToDDMMYYYY } from '../utils/date';
 
 interface BookingCardProps {
   booking: Booking;
@@ -236,7 +236,7 @@ export function BookingCard({ booking }: BookingCardProps) {
       return;
     }
 
-    const confirmMsg = `Reschedule Session?\n\nCurrent: ${booking.date} @ ${booking.time}\nNew: ${selectedRescheduleDate} @ ${selectedRescheduleTime}`;
+    const confirmMsg = `Reschedule Session?\n\nCurrent: ${formatToDDMMYYYY(booking.date)} @ ${booking.time}\nNew: ${formatToDDMMYYYY(selectedRescheduleDate)} @ ${selectedRescheduleTime}`;
 
     if (Platform.OS === 'web') {
       const ok = window.confirm(confirmMsg);
@@ -246,7 +246,7 @@ export function BookingCard({ booking }: BookingCardProps) {
     } else {
       Alert.alert(
         'Reschedule Session?',
-        `Current: ${booking.date} @ ${booking.time}\nNew: ${selectedRescheduleDate} @ ${selectedRescheduleTime}`,
+        `Current: ${formatToDDMMYYYY(booking.date)} @ ${booking.time}\nNew: ${formatToDDMMYYYY(selectedRescheduleDate)} @ ${selectedRescheduleTime}`,
         [
           { text: 'KEEP CURRENT', style: 'cancel' },
           {
@@ -333,7 +333,7 @@ export function BookingCard({ booking }: BookingCardProps) {
       {/* Date & Time Row */}
       <View className="flex-row justify-between items-center bg-zinc-50 px-4 py-3 rounded-xl mb-4">
         <Text className="text-zinc-500 text-xs font-semibold">
-          📅 {booking.date}
+          📅 {formatToDDMMYYYY(booking.date)}
         </Text>
         <Text className="text-zinc-500 text-xs font-semibold">
           ⏱️ {booking.time}

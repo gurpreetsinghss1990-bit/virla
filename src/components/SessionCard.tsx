@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Image, TouchableOpacity, Alert } from 'react-native';
 import { Booking } from '../types';
 import { useBookingStore } from '../store/bookingStore';
-import { getDisplayWorkoutTitle } from '../utils/date';
+import { getDisplayWorkoutTitle, formatToDDMMYYYY } from '../utils/date';
 
 interface SessionCardProps {
   booking: Booking;
@@ -83,7 +83,7 @@ export function SessionCard({ booking }: SessionCardProps) {
         <View className="flex-row items-center gap-2">
           <Text className="text-base">📅</Text>
           <Text className="text-primary text-xs font-extrabold tracking-tight">
-            {booking.date}
+            {formatToDDMMYYYY(booking.date)}
           </Text>
         </View>
         <View className="flex-row items-center gap-2">

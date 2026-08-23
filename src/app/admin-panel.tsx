@@ -4,13 +4,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { Database, TrainerApplication, getCurrentServerTime, getISTDateInfo } from '../database/Database';
-import { getBookingISTDateRange, getDisplayWorkoutTitle } from '../utils/date';
-import { Booking } from '../types';
-import { Coach } from '../types';
+import { getBookingISTDateRange, getDisplayWorkoutTitle, normalizeDate, formatToDDMMYYYY } from '../utils/date';
+import { Booking, Coach } from '../types';
 import { LuxuryCard } from '../components/LuxuryCard';
 import { supabase } from '../database/supabaseClient';
 import { useBookingStore } from '../store/bookingStore';
-import { normalizeDate } from '../utils/date';
 
 export default function AdminPanelScreen() {
   const router = useRouter();
@@ -634,7 +632,7 @@ export default function AdminPanelScreen() {
                               <Text className="text-zinc-650 text-xs font-medium">Trainer Name: <Text className="font-bold text-zinc-900">{b.trainerName}</Text></Text>
                               <Text className="text-zinc-650 text-xs font-medium">Workout Type: <Text className="font-bold text-zinc-900">{b.workoutTitle}</Text></Text>
                               <Text className="text-zinc-650 text-xs font-medium">Booking Status: <Text className="font-bold text-zinc-900">Confirmed / Booked</Text></Text>
-                              <Text className="text-zinc-650 text-xs font-medium">Time: <Text className="font-bold text-zinc-900">{b.date} @ {b.time}</Text></Text>
+                              <Text className="text-zinc-650 text-xs font-medium">Time: <Text className="font-bold text-zinc-900">{formatToDDMMYYYY(b.date)} @ {b.time}</Text></Text>
                               <Text className="text-zinc-650 text-xs font-medium">Acceptance Type: <Text className="font-bold text-zinc-900">{b.acceptanceMethod === 'auto' ? 'AUTO-ACCEPTED' : (b.acceptanceMethod === 'manual' ? 'MANUALLY ACCEPTED' : 'PENDING')}</Text></Text>
                               {(b.autoAcceptedAt || b.trainerAcceptedAt) && (
                                 <Text className="text-zinc-650 text-xs font-medium">Accepted At: <Text className="font-bold text-zinc-900">{new Date(Number(b.autoAcceptedAt || b.trainerAcceptedAt)).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</Text></Text>
@@ -677,7 +675,7 @@ export default function AdminPanelScreen() {
                               <Text className="text-zinc-650 text-xs font-medium">Trainer Name: <Text className="font-bold text-zinc-900">{b.trainerName}</Text></Text>
                               <Text className="text-zinc-650 text-xs font-medium">Workout Type: <Text className="font-bold text-zinc-900">{b.workoutTitle}</Text></Text>
                               <Text className="text-zinc-650 text-xs font-medium">Booking Status: <Text className="font-bold text-zinc-900">Confirmed / Booked</Text></Text>
-                              <Text className="text-zinc-650 text-xs font-medium">Time: <Text className="font-bold text-zinc-900">{b.date} @ {b.time}</Text></Text>
+                              <Text className="text-zinc-650 text-xs font-medium">Time: <Text className="font-bold text-zinc-900">{formatToDDMMYYYY(b.date)} @ {b.time}</Text></Text>
                               <Text className="text-zinc-650 text-xs font-medium">Acceptance Type: <Text className="font-bold text-zinc-900">{b.acceptanceMethod === 'auto' ? 'AUTO-ACCEPTED' : (b.acceptanceMethod === 'manual' ? 'MANUALLY ACCEPTED' : 'PENDING')}</Text></Text>
                               {(b.autoAcceptedAt || b.trainerAcceptedAt) && (
                                 <Text className="text-zinc-650 text-xs font-medium">Accepted At: <Text className="font-bold text-zinc-900">{new Date(Number(b.autoAcceptedAt || b.trainerAcceptedAt)).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</Text></Text>
@@ -712,7 +710,7 @@ export default function AdminPanelScreen() {
                         <Image source={{ uri: b.trainerPhoto }} className="w-10 h-10 rounded-full" />
                         <View className="flex-1">
                           <Text className="text-zinc-950 text-xs font-black">Coach {b.trainerName} ↔ {b.clientName || 'Viral'}</Text>
-                          <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{b.workoutTitle} • {b.date} ({b.time})</Text>
+                          <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{b.workoutTitle} • {formatToDDMMYYYY(b.date)} ({b.time})</Text>
                         </View>
                         <View className="bg-indigo-50 border border-indigo-150 px-2 py-0.5 rounded-full">
                           <Text className="text-[#4F46E5] text-[7px] font-black uppercase">{b.timelineStatus}</Text>
@@ -767,7 +765,7 @@ export default function AdminPanelScreen() {
                         <Image source={{ uri: b.trainerPhoto }} className="w-10 h-10 rounded-full" />
                         <View className="flex-1">
                           <Text className="text-zinc-950 text-xs font-black">Coach {b.trainerName} ↔ {b.clientName || 'Viral'}</Text>
-                          <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{b.workoutTitle} • {b.date} ({b.time})</Text>
+                          <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{b.workoutTitle} • {formatToDDMMYYYY(b.date)} ({b.time})</Text>
                         </View>
                         <View className={`border px-2 py-0.5 rounded-full ${
                           b.status === 'completed' 
@@ -839,7 +837,7 @@ export default function AdminPanelScreen() {
                         <View className="gap-1.5 mb-3.5">
                           <Text className="text-zinc-650 text-xs font-medium">Client: <Text className="font-bold text-zinc-900">{b.clientName || 'Viral'}</Text></Text>
                           <Text className="text-zinc-650 text-xs font-medium">Assigned Trainer: <Text className="font-bold text-zinc-900">{b.trainerId === 'searching' || !b.trainerId ? 'Searching for Trainer...' : b.trainerName}</Text></Text>
-                          <Text className="text-zinc-650 text-xs font-medium">Booked Time: <Text className="font-bold text-zinc-900">{b.date} @ {b.time}</Text></Text>
+                          <Text className="text-zinc-650 text-xs font-medium">Booked Time: <Text className="font-bold text-zinc-900">{formatToDDMMYYYY(b.date)} @ {b.time}</Text></Text>
                         </View>
                         <TouchableOpacity
                           onPress={() => setSelectedAuditSession(b)}
@@ -880,7 +878,7 @@ export default function AdminPanelScreen() {
                           <View className="gap-1.5 mb-3.5">
                             <Text className="text-zinc-650 text-xs font-medium">Client: <Text className="font-bold text-zinc-900">{b.clientName || 'Viral'}</Text></Text>
                             <Text className="text-zinc-650 text-xs font-medium">Assigned Trainer: <Text className="font-bold text-zinc-900">{b.trainerName}</Text></Text>
-                            <Text className="text-zinc-650 text-xs font-medium">Booked Time: <Text className="font-bold text-zinc-900">{b.date} @ {b.time}</Text></Text>
+                            <Text className="text-zinc-650 text-xs font-medium">Booked Time: <Text className="font-bold text-zinc-900">{formatToDDMMYYYY(b.date)} @ {b.time}</Text></Text>
                             <Text className="text-zinc-650 text-xs font-medium">Auto-Accepted At: <Text className="font-bold text-zinc-900">{b.autoAcceptedAt ? new Date(b.autoAcceptedAt).toLocaleString() : 'N/A'}</Text></Text>
                             <Text className="text-zinc-650 text-xs font-medium">Acceptance Method: <Text className="font-bold text-zinc-900">AUTO AFTER 30 MINUTES</Text></Text>
                             <Text className="text-zinc-650 text-xs font-medium">Trainer Acknowledgement: <Text className="font-bold text-amber-700">PENDING</Text></Text>
@@ -920,7 +918,7 @@ export default function AdminPanelScreen() {
                         <View className="gap-1.5 mb-3.5">
                           <Text className="text-rose-900/80 text-xs font-medium">Client: <Text className="font-bold text-rose-900">{b.clientName || 'Viral'}</Text></Text>
                           <Text className="text-rose-900/80 text-xs font-medium">Assigned Trainer: <Text className="font-bold text-rose-900">{b.trainerName}</Text> (No response)</Text>
-                          <Text className="text-rose-900/80 text-xs font-medium">Booked Time: <Text className="font-bold text-rose-900">{b.date} @ {b.time}</Text></Text>
+                          <Text className="text-rose-900/80 text-xs font-medium">Booked Time: <Text className="font-bold text-rose-900">{formatToDDMMYYYY(b.date)} @ {b.time}</Text></Text>
                           <Text className="text-rose-900/80 text-xs font-medium">Trainer Acknowledgement: <Text className="font-bold text-rose-900">{b.trainerAcknowledgement === 'pending' ? 'PENDING' : 'COMPLETED'}</Text></Text>
                         </View>
                         <TouchableOpacity
@@ -957,7 +955,7 @@ export default function AdminPanelScreen() {
                         <View className="gap-1.5 mb-3.5">
                           <Text className="text-zinc-650 text-xs font-medium">Client: <Text className="font-bold text-zinc-900">{b.clientName || 'Viral'}</Text></Text>
                           <Text className="text-zinc-650 text-xs font-medium">Assigned Trainer: <Text className="font-bold text-zinc-900">{b.trainerName}</Text> (Accepted manually)</Text>
-                          <Text className="text-zinc-650 text-xs font-medium">Booked Time: <Text className="font-bold text-zinc-900">{b.date} @ {b.time}</Text></Text>
+                          <Text className="text-zinc-650 text-xs font-medium">Booked Time: <Text className="font-bold text-zinc-900">{formatToDDMMYYYY(b.date)} @ {b.time}</Text></Text>
                         </View>
                         <TouchableOpacity
                           onPress={() => setSelectedAuditSession(b)}
@@ -1103,7 +1101,7 @@ export default function AdminPanelScreen() {
                       </View>
                       <View className="w-[48%]">
                         <Text className="text-zinc-400 text-[8px] font-black uppercase">Booked Slot</Text>
-                        <Text className="text-[#101828] text-xs font-semibold mt-0.5">{b.date} • {b.time}</Text>
+                        <Text className="text-[#101828] text-xs font-semibold mt-0.5">{formatToDDMMYYYY(b.date)} • {b.time}</Text>
                       </View>
                     </View>
 

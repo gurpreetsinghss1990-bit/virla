@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useWalletStore } from '../store/walletStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import { formatToDDMMYYYY } from '../utils/date';
 
 export default function PaymentHistoryScreen() {
   const router = useRouter();
@@ -80,7 +81,7 @@ export default function PaymentHistoryScreen() {
                   >
                     <View className="flex-1 pr-3 gap-0.5">
                       <Text className="text-zinc-900 text-xs font-black">{pay.planName}</Text>
-                      <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Invoice: {pay.invoiceNo} • {pay.date}</Text>
+                      <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Invoice: {pay.invoiceNo} • {formatToDDMMYYYY(pay.date)}</Text>
                       <Text className="text-zinc-500 text-[9px] font-semibold mt-1">💳 {pay.method}</Text>
                     </View>
                     

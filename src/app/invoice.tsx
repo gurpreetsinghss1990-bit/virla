@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useWalletStore } from '../store/walletStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import { formatToDDMMYYYY } from '../utils/date';
 
 export default function InvoiceScreen() {
   const router = useRouter();
@@ -72,7 +73,7 @@ export default function InvoiceScreen() {
               </View>
               <View className="items-end gap-0.5">
                 <Text className="text-zinc-400 text-[8px] font-black uppercase">Issue Date</Text>
-                <Text className="text-zinc-800 text-xs font-black mt-0.5">{payment.date}</Text>
+                <Text className="text-zinc-800 text-xs font-black mt-0.5">{formatToDDMMYYYY(payment.date)}</Text>
               </View>
             </View>
 

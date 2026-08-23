@@ -14,15 +14,10 @@ import { AssignmentConfig } from '../config/AssignmentConfig';
 import { AddPartnerModal } from '../components/AddPartnerModal';
 import * as Location from 'expo-location';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
-import { getBookingISTDateRange, getDisplayWorkoutTitle } from '../utils/date';
+import { getBookingISTDateRange, getDisplayWorkoutTitle, formatToDDMMYYYY } from '../utils/date';
 
 function formatToIndianDate(dateStr: string): string {
-  if (!dateStr) return '';
-  const parts = dateStr.split('-');
-  if (parts.length === 3) {
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
-  }
-  return dateStr;
+  return formatToDDMMYYYY(dateStr);
 }
 
 function getClientGender(booking: any): string {
@@ -1077,7 +1072,7 @@ export default function SessionDetailScreen() {
                   <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
                     <Text className="text-[#6B7280] text-xs font-semibold">Date</Text>
                     <Text className="text-[#101828] text-xs font-extrabold">
-                      {role === 'trainer' ? formatToIndianDate(booking.date) : booking.date}
+                      {formatToDDMMYYYY(booking.date)}
                     </Text>
                   </View>
                   <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">

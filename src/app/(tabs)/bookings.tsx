@@ -7,9 +7,9 @@ import { BookingCard } from '../../components/BookingCard';
 import { EmptyState } from '../../components/EmptyState';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { useUserStore } from '../../store/userStore';
-import { Database, getCurrentServerTime } from '../../database/Database';
+import { Database, getCurrentServerTime, getISTDateInfo } from '../../database/Database';
 import { useCoachStore, generateMonthlySlots } from '../../store/coachStore';
-import { normalizeDate, canonicalizeTimeRange } from '../../utils/date';
+import { normalizeDate, canonicalizeTimeRange, formatToDDMMYYYY, getBookingISTDateRange } from '../../utils/date';
 import { Feather } from '@expo/vector-icons';
 
 type FilterType = 'upcoming' | 'completed' | 'cancelled' | 'today' | 'past';
@@ -119,10 +119,19 @@ export default function BookingsScreen() {
   const [loading, setLoading] = useState(true);
 
   // Trainer States
-  const [today, setToday] = useState(new Date());
-  const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
-  const [selectedYear, setSelectedYear] = useState(today.getFullYear());
-  const [selectedDay, setSelectedDay] = useState(today.getDate());
+  const [today, setToday] = useState(() => getCurrentServerTime());
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const t = getCurrentServerTime();
+    return getISTDateInfo(t).month - 1;
+  });
+  const [selectedYear, setSelectedYear] = useState(() => {
+    const t = getCurrentServerTime();
+    return getISTDateInfo(t).year;
+  });
+  const [selectedDay, setSelectedDay] = useState(() => {
+    const t = getCurrentServerTime();
+    return getISTDateInfo(t).day;
+  });
   const [trainerTab, setTrainerTab] = useState<TrainerTabType>('today');
   const [isSlotsExpanded, setIsSlotsExpanded] = useState(false);
 
@@ -140,11 +149,13 @@ export default function BookingsScreen() {
   // Sync today timer
   useEffect(() => {
     const interval = setInterval(() => {
-      const now = new Date();
+      const now = getCurrentServerTime();
+      const infoNow = getISTDateInfo(now);
+      const infoToday = getISTDateInfo(today);
       if (
-        now.getDate() !== today.getDate() ||
-        now.getMonth() !== today.getMonth() ||
-        now.getFullYear() !== today.getFullYear()
+        infoNow.day !== infoToday.day ||
+        infoNow.month !== infoToday.month ||
+        infoNow.year !== infoToday.year
       ) {
         setToday(now);
       }
@@ -194,7 +205,9 @@ export default function BookingsScreen() {
   
   const getSelectedDateLongString = () => {
     const dObj = new Date(selectedYear, selectedMonth, selectedDay);
-    return dObj.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const weekday = weekdays[dObj.getDay()];
+    return `${weekday}, ${formatToDDMMYYYY(dObj)}`;
   };
 
   const handlePrevMonth = () => {
@@ -351,16 +364,24 @@ export default function BookingsScreen() {
     const tomorrowStr = normalizeDate(tomorrow);
     
     if (tab === 'today') {
-      return trainerBookings.filter(b => normalizeDate(getBookingDateObj(b.date)) === todayStr && b.status === 'upcoming');
+      return trainerBookings
+        .filter(b => normalizeDate(getBookingDateObj(b.date)) === todayStr && b.status === 'upcoming')
+        .sort((a, b) => getBookingISTDateRange(a).start.getTime() - getBookingISTDateRange(b).start.getTime());
     }
     if (tab === 'tomorrow') {
-      return trainerBookings.filter(b => normalizeDate(getBookingDateObj(b.date)) === tomorrowStr && b.status === 'upcoming');
+      return trainerBookings
+        .filter(b => normalizeDate(getBookingDateObj(b.date)) === tomorrowStr && b.status === 'upcoming')
+        .sort((a, b) => getBookingISTDateRange(a).start.getTime() - getBookingISTDateRange(b).start.getTime());
     }
     if (tab === 'weekly') {
-      return trainerBookings.filter(b => b.status === 'upcoming');
+      return trainerBookings
+        .filter(b => b.status === 'upcoming')
+        .sort((a, b) => getBookingISTDateRange(a).start.getTime() - getBookingISTDateRange(b).start.getTime());
     }
     if (tab === 'history') {
-      return trainerBookings.filter(b => b.status === 'completed' || b.status === 'cancelled' || b.status === 'client_no_show' || b.status === 'trainer_no_show' || b.status === 'missed_session_not_started');
+      return trainerBookings
+        .filter(b => b.status === 'completed' || b.status === 'cancelled' || b.status === 'client_no_show' || b.status === 'trainer_no_show' || b.status === 'missed_session_not_started')
+        .sort((a, b) => getBookingISTDateRange(b).start.getTime() - getBookingISTDateRange(a).start.getTime());
     }
     return [];
   };
@@ -368,13 +389,24 @@ export default function BookingsScreen() {
   // Regular Customer Bookings list filter
   const filteredBookings = bookings.filter((b) => {
     if (activeFilter === 'upcoming') {
-      return b.status === 'upcoming';
+      const serverNow = getCurrentServerTime();
+      return b.status === 'upcoming' && getBookingISTDateRange(b).start.getTime() > serverNow.getTime();
     }
     if (activeFilter === 'cancelled') {
       return b.status === 'cancelled' || b.status === 'client_no_show' || b.status === 'trainer_no_show' || b.status === 'missed_session_not_started';
     }
     return b.status === activeFilter;
   });
+
+  if (activeFilter === 'upcoming') {
+    filteredBookings.sort((a, b) => {
+      return getBookingISTDateRange(a).start.getTime() - getBookingISTDateRange(b).start.getTime();
+    });
+  } else {
+    filteredBookings.sort((a, b) => {
+      return getBookingISTDateRange(b).start.getTime() - getBookingISTDateRange(a).start.getTime();
+    });
+  }
 
   const getFilterLabel = (type: FilterType) => {
     switch (type) {
@@ -885,7 +917,7 @@ export default function BookingsScreen() {
                     const dayBookings = trainerBookings.filter(b => normalizeDate(getBookingDateObj(b.date)) === dStr && b.status === 'upcoming');
                     weeklyList.push({
                       dayLabel: weekdays[d.getDay()],
-                      dateLabel: d.getDate(),
+                      dateLabel: formatToDDMMYYYY(d),
                       count: dayBookings.length
                     });
                   }
@@ -895,7 +927,7 @@ export default function BookingsScreen() {
                       {weeklyList.map((item, idx) => (
                         <View key={idx} className="flex-row justify-between items-center py-2.5 border-b border-zinc-50 last:border-b-0">
                           <Text className="text-zinc-950 text-xs font-semibold uppercase tracking-wider">
-                            {item.dayLabel} {item.dateLabel}
+                            {item.dayLabel} • {item.dateLabel}
                           </Text>
                           <Text className="text-zinc-500 text-xs font-bold uppercase">
                             {item.count} {item.count === 1 ? 'session' : 'sessions'}
@@ -927,8 +959,7 @@ export default function BookingsScreen() {
                           const cancelledCount = daySessions.filter(s => s.status === 'cancelled').length;
                           
                           const d = new Date(dateKey);
-                          const monthsAbbr = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                          const formattedDate = `${d.getDate()} ${monthsAbbr[d.getMonth()]}`;
+                          const formattedDate = formatToDDMMYYYY(d);
 
                           return (
                             <View key={dateKey} className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-2">

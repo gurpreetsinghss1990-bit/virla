@@ -23,7 +23,7 @@ import { supabase } from '../../database/supabaseClient';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { useAIWellnessStore } from '../../store/aiWellnessStore';
 import { Booking } from '../../types';
-import { normalizeDate, canonicalizeTimeRange, getBookingISTDateRange, getDisplayWorkoutTitle } from '../../utils/date';
+import { normalizeDate, canonicalizeTimeRange, getBookingISTDateRange, getDisplayWorkoutTitle, formatToDDMMYYYY } from '../../utils/date';
 
 function getClientGender(booking: Booking): string {
   if (!booking?.clientId) {
@@ -801,7 +801,9 @@ export default function HomeScreen() {
     syncData();
   }, [bookings.length]);
 
-  const upcomingBookings = bookings.filter((b) => b.status === 'upcoming');
+  const upcomingBookings = bookings
+    .filter((b) => b.status === 'upcoming' && getBookingISTDateRange(b).start.getTime() > serverNow.getTime())
+    .sort((a, b) => getBookingISTDateRange(a).start.getTime() - getBookingISTDateRange(b).start.getTime());
   const pastBookings = bookings.filter((b) => b.status === 'completed');
   const activeBooking = bookings.find(b => {
     if (b.status !== 'upcoming' || !b.timelineStatus || b.timelineStatus === 'session_closed') {
@@ -1579,7 +1581,7 @@ export default function HomeScreen() {
                             <Text className="text-white/50 text-[9px] font-bold uppercase">Next Session</Text>
                             <Text className="text-white text-xs font-black" numberOfLines={1}>
                               {upcomingBookings.length > 0 && upcomingBookings[0]?.date
-                                ? `${upcomingBookings[0].date.split(',')[0]} @ ${upcomingBookings[0].time}`
+                                ? `${formatToDDMMYYYY(upcomingBookings[0].date)} @ ${upcomingBookings[0].time}`
                                 : 'None scheduled'}
                             </Text>
                           </View>

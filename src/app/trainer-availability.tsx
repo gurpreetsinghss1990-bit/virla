@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUserStore } from '../store/userStore';
 import { useCoachStore, generateMonthlySlots } from '../store/coachStore';
 import { Database, getCurrentServerTime } from '../database/Database';
-import { normalizeDate, canonicalizeTimeRange } from '../utils/date';
+import { normalizeDate, canonicalizeTimeRange, formatToDDMMYYYY } from '../utils/date';
 
 const getEndLimit = (baseDate: Date) => {
   const endLimit = new Date(baseDate);
@@ -474,10 +474,9 @@ export default function TrainerAvailabilityScreen() {
   const weekDays = getSelectedWeekDays();
 
   const getSelectedDateLongString = () => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const d = new Date(selectedYear, selectedMonth, selectedDay);
-    return `${weekdays[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}`;
+    return `${weekdays[d.getDay()]}, ${formatToDDMMYYYY(d)}`;
   };
 
   const availableSlotsCount = dailySlots.filter(s => s.isAvailable && !s.isBooked).length;
