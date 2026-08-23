@@ -39,10 +39,7 @@ The following features were successfully verified as functional at this checkpoi
 ---
 
 ### ⚠️ KNOWN UNRESOLVED ISSUE
-The **Trainer Start Travel / native navigation handoff** is currently unresolved and has been intentionally deferred to the next work session. 
-* The date parsing fix for `DD/MM/YYYY` in `getBookingISTDateRange` and `public.parse_booking_start_time` has been successfully implemented and verified.
-* The duplicate "Navigate Address" button has been successfully removed from `session-detail.tsx`.
-* Native maps navigation launches correctly from both cards, but its integration with the simulated live-travel progress system will be resumed in the next session.
+"Trainer Start Travel → native map navigation handoff remains unresolved and is intentionally deferred to the next work session. Do not treat navigation as verified."
 
 ---
 
