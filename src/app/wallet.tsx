@@ -9,6 +9,7 @@ import { useMembershipStore } from '../store/membershipStore';
 import { useUserStore } from '../store/userStore';
 import { Database } from '../database/Database';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import { formatToDDMMYYYY } from '../utils/date';
 
 export default function WalletScreen() {
   const router = useRouter();
@@ -298,7 +299,7 @@ export default function WalletScreen() {
                   <View key={tx.id} className="flex-row justify-between items-center py-1">
                     <View className="flex-1 pr-3 gap-0.5">
                       <Text className="text-zinc-900 text-xs font-black leading-tight">{tx.title}</Text>
-                      <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{tx.date}</Text>
+                      <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{formatToDDMMYYYY(tx.date)}</Text>
                     </View>
                     <View className="items-end gap-1.5">
                       <Text className={`text-xs font-black ${isAdd ? 'text-emerald-600' : 'text-red-500'}`}>

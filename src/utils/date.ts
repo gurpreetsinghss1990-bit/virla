@@ -150,6 +150,11 @@ export function getBookingISTDateRange(b: { date?: string; time?: string }) {
       year = parseInt(parts[0], 10);
       month = parseInt(parts[1], 10) - 1;
       day = parseInt(parts[2], 10);
+    } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr.trim())) {
+      const parts = dateStr.trim().split('/');
+      day = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10) - 1;
+      year = parseInt(parts[2], 10);
     } else {
       const cleanDate = dateStr.replace(/,/g, '');
       const parts = cleanDate.trim().split(/\s+/);

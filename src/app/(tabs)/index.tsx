@@ -2,7 +2,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet, AppState, AppStateStatus, Vibration } from 'react-native';
+import { Alert, Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet, AppState, AppStateStatus, Vibration, Linking } from 'react-native';
 import Svg, { Rect, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -24,6 +24,33 @@ import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { useAIWellnessStore } from '../../store/aiWellnessStore';
 import { Booking } from '../../types';
 import { normalizeDate, canonicalizeTimeRange, getBookingISTDateRange, getDisplayWorkoutTitle, formatToDDMMYYYY } from '../../utils/date';
+
+function launchNavigation(address: string | undefined | null) {
+  if (!address || address.trim() === '') {
+    Alert.alert('Destination Missing ⚠️', 'This booking does not contain a valid service address.');
+    return;
+  }
+  const match = address.match(/\(([-\d.]+),\s*([-\d.]+)\)/);
+  let url = '';
+  if (match) {
+    const lat = match[1];
+    const lng = match[2];
+    url = Platform.select({
+      ios: `maps://?daddr=${lat},${lng}&dirflg=d`,
+      android: `google.navigation:q=${lat},${lng}`
+    }) || `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  } else {
+    const query = encodeURIComponent(address);
+    url = Platform.select({
+      ios: `maps://?q=${query}`,
+      android: `geo:0,0?q=${query}`
+    }) || `https://maps.google.com/?q=${query}`;
+  }
+  
+  Linking.openURL(url).catch(() => {
+    Alert.alert('Navigation Error', 'Could not open map navigation services.');
+  });
+}
 
 function getClientGender(booking: Booking): string {
   if (!booking?.clientId) {
@@ -172,7 +199,7 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
       <View className="gap-2">
         <Text className="text-[#101828] text-base font-black tracking-tight">{getDisplayWorkoutTitle(booking.workoutTitle)}</Text>
         <Text className="text-zinc-500 text-xs font-semibold leading-relaxed">
-          {booking.date} • {booking.time} ({booking.durationMinutes || 60} mins)
+          {formatToDDMMYYYY(booking.date)} • {booking.time} ({booking.durationMinutes || 60} mins)
         </Text>
         
         <View className="flex-row gap-2 mt-1 flex-wrap">
@@ -241,7 +268,7 @@ export function AcknowledgementCard({ booking, onAcknowledge, onPress }: Acknowl
       <View className="gap-2">
         <Text className="text-[#101828] text-base font-black tracking-tight">{getDisplayWorkoutTitle(booking.workoutTitle)}</Text>
         <Text className="text-zinc-500 text-xs font-semibold leading-relaxed">
-          {booking.date} • {booking.time} ({booking.durationMinutes || 60} mins)
+          {formatToDDMMYYYY(booking.date)} • {booking.time} ({booking.durationMinutes || 60} mins)
         </Text>
         
         <View className="flex-row gap-2 mt-1 flex-wrap">
@@ -1694,7 +1721,7 @@ export default function HomeScreen() {
                           {/* Text info */}
                           <View className="gap-3 flex-1">
                             <View>
-                              <Text className="text-zinc-950 text-[13px] font-semibold">{bookingData.date}</Text>
+                              <Text className="text-zinc-950 text-[13px] font-semibold">{formatToDDMMYYYY(bookingData.date)}</Text>
                               <Text className="text-zinc-400 text-[11px] font-medium mt-0.5">{bookingData.time ? bookingData.time.split(' - ')[0] : ''}</Text>
                             </View>
                             <View>
@@ -1976,7 +2003,7 @@ export default function HomeScreen() {
                     >
                       <View className="flex-row justify-between items-center">
                         <Text className="text-white text-sm font-black uppercase tracking-wider">
-                          {isToday ? 'Today' : isTomorrow ? 'Tomorrow' : nextSession.date.replace(/Today, |Tomorrow, /, '')} • {nextSessionTime}
+                          {isToday ? 'Today' : isTomorrow ? 'Tomorrow' : formatToDDMMYYYY(nextSession.date)} • {nextSessionTime}
                         </Text>
                         {isToday && countdownText ? (
                           <View className="bg-indigo-500/10 border border-indigo-500/25 px-2.5 py-0.5 rounded-full">
@@ -2044,6 +2071,7 @@ export default function HomeScreen() {
                                 body: 'Coach has started travelling to your venue.',
                                 icon: 'user-check'
                               });
+                              launchNavigation(nextSession.address);
                             } catch (err: any) {
                               Alert.alert('Error', err.message || 'Could not start travel.');
                             }

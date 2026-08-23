@@ -567,11 +567,26 @@ export default function SessionDetailScreen() {
   };
 
   const handleNavigateAddress = () => {
-    const query = encodeURIComponent(booking.address || 'Mumbai, Maharashtra');
-    const url = Platform.select({
-      ios: `maps://?q=${query}`,
-      android: `geo:0,0?q=${query}`
-    }) || `https://maps.google.com/?q=${query}`;
+    if (!booking.address || booking.address.trim() === '') {
+      Alert.alert('Destination Missing ⚠️', 'This booking does not contain a valid service address.');
+      return;
+    }
+    const match = booking.address.match(/\(([-\d.]+),\s*([-\d.]+)\)/);
+    let url = '';
+    if (match) {
+      const lat = match[1];
+      const lng = match[2];
+      url = Platform.select({
+        ios: `maps://?daddr=${lat},${lng}&dirflg=d`,
+        android: `google.navigation:q=${lat},${lng}`
+      }) || `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    } else {
+      const query = encodeURIComponent(booking.address);
+      url = Platform.select({
+        ios: `maps://?q=${query}`,
+        android: `geo:0,0?q=${query}`
+      }) || `https://maps.google.com/?q=${query}`;
+    }
     
     Linking.openURL(url).catch(() => {
       Alert.alert('Navigation Error', 'Could not open map navigation services.');
@@ -1438,12 +1453,6 @@ export default function SessionDetailScreen() {
               <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
                 <View className="flex-row justify-between items-center">
                   <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">Concierge Controls</Text>
-                  {!isPendingDetails && (
-                    <TouchableOpacity onPress={handleNavigateAddress} className="flex-row items-center gap-1">
-                      <Feather name="navigation" size={10} color="#4F46E5" />
-                      <Text className="text-[#4F46E5] text-[9px] font-bold uppercase">Navigate Address</Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
                 
                 <View className="flex-row justify-between">
@@ -1479,9 +1488,9 @@ export default function SessionDetailScreen() {
                       SessionEngine.isTravelWindowOpen(booking) ? (
                         <TouchableOpacity
                           onPress={async () => {
-                            handleNavigateAddress();
                             try {
                               await updateTimelineStatus(booking.id, 'trainer_travelling');
+                              handleNavigateAddress();
                             } catch (err: any) {
                               Alert.alert('Error', err.message || 'Could not start travel.');
                             }

@@ -1099,7 +1099,6 @@ export default function BookingScreen() {
         return;
       }
       triggerTransition(5);
-      loadAvailabilityForSelectedDate(selectedDate);
       return;
     }
     if (step === 5) {
@@ -2669,20 +2668,22 @@ export default function BookingScreen() {
                       return isOnline && isPartnerApproved && workoutApproved && locationApproved && insideRadius && genderValid && genderApproved;
                     });
 
+                    const slotsToDisplay = getFilteredSlotsForPeriod();
+
                     console.log('CUSTOMER_EMPTY_STATE_DEBUG', JSON.stringify({
                       finalEligibleTrainerCount: finalEligibleTrainers.length,
                       finalEligibleTrainerIds: finalEligibleTrainers.map(t => t.id),
                       finalEligibleTrainerNames: finalEligibleTrainers.map(t => t.name),
                       uiTrainerCount: finalEligibleTrainers.length,
-                      uiSlotCount: availableSlots.length,
+                      uiSlotCount: slotsToDisplay.length,
                       loading: false,
                       refreshing: false,
                       matching: false,
-                      emptyStateCondition: availableSlots.length === 0,
-                      emptyStateReason: availableSlots.length === 0 ? 'No available slot found for eligible trainers on selected date' : 'None'
+                      emptyStateCondition: slotsToDisplay.length === 0,
+                      emptyStateReason: slotsToDisplay.length === 0 ? 'No available slot found for eligible trainers on selected date' : 'None'
                     }, null, 2));
 
-                    if (availableSlots.length === 0) {
+                    if (slotsToDisplay.length === 0) {
                       const selectedNormalized = normalizeDate(selectedDate);
                       const todayNormalized = normalizeDate(getCurrentServerTime());
                       const tomorrowTime = new Date(getCurrentServerTime().getTime() + 24 * 60 * 60 * 1000);
@@ -2782,7 +2783,7 @@ export default function BookingScreen() {
                       <>
                         {/* Slots listing for period */}
                         <View className="gap-3.5">
-                          {getFilteredSlotsForPeriod().map((slotObj, idx) => {
+                          {slotsToDisplay.map((slotObj, idx) => {
                             const isPicked = selectedTime === slotObj.time;
                             const isDisabled = !!slotObj.isBooked;
                             const displayTime = getCustomerDisplayTime(slotObj.time);
@@ -3201,7 +3202,7 @@ export default function BookingScreen() {
           >
             <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">Back</Text>
           </TouchableOpacity>
-          {(step < 5 || getDynamicAvailableSlots().length > 0) && (
+          {(step < 5 || getFilteredSlotsForPeriod().length > 0) && (
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={handleNext}

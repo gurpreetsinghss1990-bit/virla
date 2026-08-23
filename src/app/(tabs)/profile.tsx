@@ -12,6 +12,7 @@ import { Database, TrainerApplication } from '../../database/Database';
 import { AutocompleteSuggestion, fetchGooglePlacesAutocomplete, reverseGeocodeCoords } from '../../utils/distance';
 import { LuxuryCard } from '../../components/LuxuryCard';
 import * as Location from 'expo-location';
+import { formatToDDMMYYYY } from '../../utils/date';
 
 type TrainerSectionType = 'profile' | 'workout' | 'operating' | 'availability' | 'banking' | 'support' | 'safety' | 'kit';
 
@@ -1313,7 +1314,7 @@ export default function ProfileScreen() {
                                   {earn.type === 'no_show_compensation' && `Cancellation Fee: ${earn.clientName}`}
                                   {earn.type === 'penalty' && `Cancellation Penalty`}
                                 </Text>
-                                <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{earn.date}</Text>
+                                <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{formatToDDMMYYYY(earn.date)}</Text>
                               </View>
                               <Text className={`text-xs font-black ${earn.amount >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
                                 {earn.amount >= 0 ? '+' : ''}₹{earn.amount.toLocaleString('en-IN')}
@@ -1404,7 +1405,7 @@ export default function ProfileScreen() {
                               </View>
                               {d.bookingId ? <Text className="text-zinc-400 text-[8px] font-bold">Booking ID: {d.bookingId}</Text> : null}
                               <Text className="text-zinc-650 text-xs leading-normal mt-1">{d.description}</Text>
-                              <Text className="text-zinc-450 text-[8px] font-semibold mt-1">Submitted: {d.date}</Text>
+                              <Text className="text-zinc-450 text-[8px] font-semibold mt-1">Submitted: {formatToDDMMYYYY(d.date)}</Text>
                             </View>
                           ))}
                         </View>
@@ -1536,7 +1537,7 @@ export default function ProfileScreen() {
                                 </View>
                               </View>
                               <Text className="text-zinc-700 text-xs font-semibold">Items: {item.items.join(', ')} (Size: {item.size})</Text>
-                              <Text className="text-zinc-450 text-[8px] font-semibold mt-1">Requested: {item.date}</Text>
+                              <Text className="text-zinc-450 text-[8px] font-semibold mt-1">Requested: {formatToDDMMYYYY(item.date)}</Text>
                             </View>
                           ))}
                         </View>

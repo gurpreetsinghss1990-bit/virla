@@ -28,6 +28,8 @@ BEGIN
   -- Combine and convert
   IF clean_date ~ '^\d{4}-\d{2}-\d{2}$' THEN
     result_ts := to_timestamp(clean_date || ' ' || start_time, 'YYYY-MM-DD HH12:MI AM');
+  ELSIF clean_date ~ '^\d{2}/\d{2}/\d{4}$' THEN
+    result_ts := to_timestamp(clean_date || ' ' || start_time, 'DD/MM/YYYY HH12:MI AM');
   ELSE
     result_ts := to_timestamp(clean_date || ' ' || start_time, 'Mon DD, YYYY HH12:MI AM');
   END IF;

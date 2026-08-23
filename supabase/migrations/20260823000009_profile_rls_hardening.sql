@@ -35,8 +35,19 @@ DROP POLICY IF EXISTS "Enable INSERT for admin" ON public.users;
 CREATE POLICY "Enable INSERT for admin" ON public.users FOR INSERT
   WITH CHECK (public.is_admin(COALESCE(nullif(current_setting('request.jwt.claim.sub', true), ''), (current_setting('request.headers', true)::jsonb->>'x-user-id'))));
 
+-- 5. Helper function to fetch credits bypassing RLS (breaks infinite recursion in WITH CHECK)
+CREATE OR REPLACE FUNCTION public.get_profile_credits(p_profile_id text)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN (SELECT credits_balance FROM public.user_profiles WHERE id = p_profile_id);
+END;
+$$;
 
--- 5. Recreate user_profiles UPDATE policy
+-- 6. Recreate user_profiles UPDATE policy
 DROP POLICY IF EXISTS "Enable UPDATE profile details except credits" ON public.user_profiles;
 CREATE POLICY "Enable UPDATE profile details except credits" ON public.user_profiles
   FOR UPDATE USING (
@@ -46,7 +57,8 @@ CREATE POLICY "Enable UPDATE profile details except credits" ON public.user_prof
   WITH CHECK (
     (
       user_id = COALESCE(nullif(current_setting('request.jwt.claim.sub', true), ''), (current_setting('request.headers', true)::jsonb->>'x-user-id'))
-      AND credits_balance IS NOT DISTINCT FROM (SELECT credits_balance FROM public.user_profiles WHERE id = user_profiles.id)
+      AND credits_balance IS NOT DISTINCT FROM public.get_profile_credits(id)
     )
     OR public.is_admin(COALESCE(nullif(current_setting('request.jwt.claim.sub', true), ''), (current_setting('request.headers', true)::jsonb->>'x-user-id')))
   );
+
