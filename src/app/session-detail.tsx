@@ -26,13 +26,24 @@ function formatToIndianDate(dateStr: string): string {
 }
 
 function getClientGender(booking: any): string {
-  if (!booking?.clientId) return 'Not specified';
+  if (!booking?.clientId) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      console.log(`[CLIENT-GENDER-TRACE] bookingId: ${booking?.id || 'N/A'}, booking.clientId: empty, resolved profile ID: N/A, resolved profile gender: N/A, final displayed gender: Not specified`);
+    }
+    return 'Not specified';
+  }
   const profile = Database.getProfile(booking.clientId);
-  if (!profile || !profile.gender) return 'Not specified';
-  const g = profile.gender.toLowerCase().trim();
-  if (g === 'male') return 'Male';
-  if (g === 'female') return 'Female';
-  return 'Not specified';
+  const rawGender = profile?.gender || 'N/A';
+  let displayGender = 'Not specified';
+  if (profile && profile.gender) {
+    const g = profile.gender.toLowerCase().trim();
+    if (g === 'male') displayGender = 'Male';
+    else if (g === 'female') displayGender = 'Female';
+  }
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    console.log(`[CLIENT-GENDER-TRACE] bookingId: ${booking.id}, booking.clientId: ${booking.clientId}, resolved profile ID: ${profile?.id || 'null'}, resolved profile gender: ${rawGender}, final displayed gender: ${displayGender}`);
+  }
+  return displayGender;
 }
 
 // Map coordinates path waypoints (scaled to fit beautiful SVG canvas)
