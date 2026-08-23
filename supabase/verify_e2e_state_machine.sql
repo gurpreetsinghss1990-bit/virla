@@ -202,9 +202,9 @@ END $$;
 DO $$
 BEGIN
   PERFORM set_test_identity('postgres', '');
-  -- Insert booking manually created at T-11m
+  -- Insert booking manually created at T-31m
   INSERT INTO public.bookings (id, status, timeline_status, client_id, trainer_id, request_created_at, scheduled_start_at, scheduled_end_at, date, time, workout_title, price, otp)
-  VALUES ('b-tc06', 'upcoming', 'BOOKED', '82a20b08-8e6d-4950-8b17-09a475d40a2c', '62a20b08-8e6d-4950-8b17-09a475d40a2c', now() - interval '11 minutes', now() + interval '1 hour', now() + interval '2 hours', '2026-08-22', '02:00 PM - 03:00 PM', 'PowerForge Single', 1200, '123456');
+  VALUES ('b-tc06', 'upcoming', 'BOOKED', '82a20b08-8e6d-4950-8b17-09a475d40a2c', '62a20b08-8e6d-4950-8b17-09a475d40a2c', now() - interval '31 minutes', now() + interval '1 hour', now() + interval '2 hours', '2026-08-22', '02:00 PM - 03:00 PM', 'PowerForge Single', 1200, '123456');
 
   PERFORM set_test_identity('authenticated', '62a20b08-8e6d-4950-8b17-09a475d40a2c');
   BEGIN
@@ -376,9 +376,9 @@ BEGIN
   PERFORM set_test_identity('postgres', '');
   -- Give Client 5 credits baseline
   UPDATE public.user_profiles SET credits_balance = 5 WHERE user_id = '82a20b08-8e6d-4950-8b17-09a475d40a2c';
-  -- Create booking scheduled in 2 hours
+  -- Create booking scheduled in 3 hours
   INSERT INTO public.bookings (id, status, timeline_status, client_id, trainer_id, scheduled_start_at, scheduled_end_at, date, time, workout_title, price, otp)
-  VALUES ('b-tc14', 'upcoming', 'TRAINER_ACCEPTED', '82a20b08-8e6d-4950-8b17-09a475d40a2c', '62a20b08-8e6d-4950-8b17-09a475d40a2c', now() + interval '2 hours', now() + interval '3 hours', '2026-08-30', '02:00 PM - 03:00 PM', 'PowerForge Single', 1200, '123456');
+  VALUES ('b-tc14', 'upcoming', 'TRAINER_ACCEPTED', '82a20b08-8e6d-4950-8b17-09a475d40a2c', '62a20b08-8e6d-4950-8b17-09a475d40a2c', now() + interval '3 hours', now() + interval '4 hours', '2026-08-30', '02:00 PM - 03:00 PM', 'PowerForge Single', 1200, '123456');
 
   SELECT credits_balance INTO v_credits_before FROM public.user_profiles WHERE user_id = '82a20b08-8e6d-4950-8b17-09a475d40a2c';
 
@@ -899,9 +899,9 @@ END $$;
 DO $$
 BEGIN
   PERFORM set_test_identity('postgres', '');
-  -- Insert booking manually created at T-11m
+  -- Insert booking manually created at T-31m
   INSERT INTO public.bookings (id, status, timeline_status, client_id, trainer_id, request_created_at, scheduled_start_at, scheduled_end_at, date, time, workout_title, price, otp)
-  VALUES ('b-e2e-s07', 'upcoming', 'BOOKED', '82a20b08-8e6d-4950-8b17-09a475d40a2c', '62a20b08-8e6d-4950-8b17-09a475d40a2c', now() - interval '11 minutes', now() + interval '1 hour', now() + interval '2 hours', '2026-09-05', '02:00 PM - 03:00 PM', 'PowerForge Single', 1200, '123456');
+  VALUES ('b-e2e-s07', 'upcoming', 'BOOKED', '82a20b08-8e6d-4950-8b17-09a475d40a2c', '62a20b08-8e6d-4950-8b17-09a475d40a2c', now() - interval '31 minutes', now() + interval '1 hour', now() + interval '2 hours', '2026-09-05', '02:00 PM - 03:00 PM', 'PowerForge Single', 1200, '123456');
 
   PERFORM set_test_identity('authenticated', '62a20b08-8e6d-4950-8b17-09a475d40a2c');
   BEGIN
@@ -1286,6 +1286,144 @@ BEGIN
     PERFORM set_test_identity('postgres', '');
     PERFORM record_e2e_result('E2E-I10', 'Integration', 'Workout write protection check', 'PASS', 'Block succeeded: ' || SQLERRM);
   END;
+END $$;
+
+-- TC-06-30: Acceptance after 30-minute SLA
+DO $$
+BEGIN
+  PERFORM set_test_identity('postgres', '');
+  INSERT INTO public.bookings (id, status, timeline_status, client_id, trainer_id, request_created_at, scheduled_start_at, scheduled_end_at, date, time, workout_title, price, otp)
+  VALUES ('b-tc06-30', 'upcoming', 'BOOKED', '82a20b08-8e6d-4950-8b17-09a475d40a2c', '62a20b08-8e6d-4950-8b17-09a475d40a2c', now() - interval '31 minutes', now() + interval '1 hour', now() + interval '2 hours', '2026-08-22', '03:00 PM - 04:00 PM', 'PowerForge Single', 1200, '123456');
+
+  PERFORM set_test_identity('authenticated', '62a20b08-8e6d-4950-8b17-09a475d40a2c');
+  BEGIN
+    PERFORM public.trainer_accept_booking('b-tc06-30');
+    PERFORM set_test_identity('postgres', '');
+    PERFORM record_e2e_result('TC-06-30', 'Regression', 'Acceptance after 30-minute SLA', 'FAIL', 'Acceptance succeeded unexpectedly after 30-minute SLA');
+  EXCEPTION WHEN OTHERS THEN
+    PERFORM set_test_identity('postgres', '');
+    IF SQLERRM LIKE '%expired%' OR SQLERRM LIKE '%closed%' THEN
+      PERFORM record_e2e_result('TC-06-30', 'Regression', 'Acceptance after 30-minute SLA', 'PASS', 'Block succeeded: ' || SQLERRM);
+    ELSE
+      PERFORM record_e2e_result('TC-06-30', 'Regression', 'Acceptance after 30-minute SLA', 'FAIL', 'Unexpected error: ' || SQLERRM);
+    END IF;
+  END;
+END $$;
+
+-- E2E-AUTO-01: Auto-acceptance after 30 minutes
+DO $$
+DECLARE
+  v_status text;
+  v_method text;
+  v_ack text;
+BEGIN
+  PERFORM set_test_identity('postgres', '');
+  -- Insert booking created 31 minutes ago
+  INSERT INTO public.bookings (id, status, timeline_status, client_id, trainer_id, request_created_at, scheduled_start_at, scheduled_end_at, date, time, workout_title, price, otp)
+  VALUES ('b-e2e-auto', 'upcoming', 'BOOKED', '82a20b08-8e6d-4950-8b17-09a475d40a2c', '62a20b08-8e6d-4950-8b17-09a475d40a2c', now() - interval '31 minutes', now() + interval '1 hour', now() + interval '2 hours', '2026-08-22', '04:00 PM - 05:00 PM', 'PowerForge Single', 1200, '123456');
+
+  -- Trigger auto-acceptance
+  PERFORM public.apply_auto_acceptances();
+
+  SELECT timeline_status, acceptance_method, trainer_acknowledgement INTO v_status, v_method, v_ack
+  FROM public.bookings WHERE id = 'b-e2e-auto';
+
+  IF v_status = 'TRAINER_ACCEPTED' AND v_method = 'auto' AND v_ack = 'pending' THEN
+    PERFORM record_e2e_result('E2E-AUTO-01', 'AutoAccept', 'Auto-accept booking after 30-min SLA', 'PASS', 'Auto-accepted, method: ' || v_method || ', ack: ' || v_ack);
+  ELSE
+    PERFORM record_e2e_result('E2E-AUTO-01', 'AutoAccept', 'Auto-accept booking after 30-min SLA', 'FAIL', 'Status: ' || v_status || ', method: ' || v_method || ', ack: ' || v_ack);
+  END IF;
+END $$;
+
+-- E2E-AUTO-02: Auto-accept idempotency
+DO $$
+DECLARE
+  v_status text;
+  v_method text;
+BEGIN
+  PERFORM set_test_identity('postgres', '');
+  -- Run again
+  PERFORM public.apply_auto_acceptances();
+  SELECT timeline_status, acceptance_method INTO v_status, v_method FROM public.bookings WHERE id = 'b-e2e-auto';
+  IF v_status = 'TRAINER_ACCEPTED' AND v_method = 'auto' THEN
+    PERFORM record_e2e_result('E2E-AUTO-02', 'AutoAccept', 'Auto-accept idempotency test', 'PASS', 'Idempotent, state unchanged');
+  ELSE
+    PERFORM record_e2e_result('E2E-AUTO-02', 'AutoAccept', 'Auto-accept idempotency test', 'FAIL', 'Unexpected change');
+  END IF;
+END $$;
+
+-- E2E-ACK-01: Trainer acknowledgement
+DO $$
+DECLARE
+  v_ack text;
+BEGIN
+  PERFORM set_test_identity('authenticated', '62a20b08-8e6d-4950-8b17-09a475d40a2c'); -- Trainer A
+  PERFORM public.acknowledge_auto_accept('b-e2e-auto');
+
+  PERFORM set_test_identity('postgres', '');
+  SELECT trainer_acknowledgement INTO v_ack FROM public.bookings WHERE id = 'b-e2e-auto';
+  IF v_ack = 'acknowledged' THEN
+    PERFORM record_e2e_result('E2E-ACK-01', 'Acknowledge', 'Trainer acknowledgement of auto-accepted booking', 'PASS', 'Acknowledged successfully');
+  ELSE
+    PERFORM record_e2e_result('E2E-ACK-01', 'Acknowledge', 'Trainer acknowledgement of auto-accepted booking', 'FAIL', 'Status is: ' || v_ack);
+  END IF;
+END $$;
+
+-- E2E-ACK-02: Duplicate acknowledgement idempotency
+DO $$
+DECLARE
+  v_ack text;
+BEGIN
+  PERFORM set_test_identity('authenticated', '62a20b08-8e6d-4950-8b17-09a475d40a2c');
+  PERFORM public.acknowledge_auto_accept('b-e2e-auto');
+
+  PERFORM set_test_identity('postgres', '');
+  SELECT trainer_acknowledgement INTO v_ack FROM public.bookings WHERE id = 'b-e2e-auto';
+  IF v_ack = 'acknowledged' THEN
+    PERFORM record_e2e_result('E2E-ACK-02', 'Acknowledge', 'Duplicate acknowledgement is idempotent', 'PASS', 'Remained acknowledged');
+  ELSE
+    PERFORM record_e2e_result('E2E-ACK-02', 'Acknowledge', 'Duplicate acknowledgement is idempotent', 'FAIL', 'Status is: ' || v_ack);
+  END IF;
+END $$;
+
+-- E2E-ACK-03: Block wrong trainer from acknowledging
+DO $$
+BEGIN
+  PERFORM set_test_identity('authenticated', '52a20b08-8e6d-4950-8b17-09a475d40a2c'); -- Trainer B
+  BEGIN
+    PERFORM public.acknowledge_auto_accept('b-e2e-auto');
+    PERFORM set_test_identity('postgres', '');
+    PERFORM record_e2e_result('E2E-ACK-03', 'Acknowledge', 'Block wrong trainer from acknowledging', 'FAIL', 'Allowed wrong trainer to acknowledge');
+  EXCEPTION WHEN OTHERS THEN
+    PERFORM set_test_identity('postgres', '');
+    IF SQLERRM LIKE '%Access denied%' THEN
+      PERFORM record_e2e_result('E2E-ACK-03', 'Acknowledge', 'Block wrong trainer from acknowledging', 'PASS', 'Block succeeded: ' || SQLERRM);
+    ELSE
+      PERFORM record_e2e_result('E2E-ACK-03', 'Acknowledge', 'Block wrong trainer from acknowledging', 'FAIL', 'Unexpected error: ' || SQLERRM);
+    END IF;
+  END;
+END $$;
+
+-- E2E-MISS-01: Past unstarted session leaves Upcoming
+DO $$
+DECLARE
+  v_status text;
+  v_timeline_status text;
+BEGIN
+  PERFORM set_test_identity('postgres', '');
+  -- Insert booking starting in the past
+  INSERT INTO public.bookings (id, status, timeline_status, client_id, trainer_id, request_created_at, scheduled_start_at, scheduled_end_at, date, time, workout_title, price, otp)
+  VALUES ('b-e2e-missed', 'upcoming', 'BOOKED', '82a20b08-8e6d-4950-8b17-09a475d40a2c', '62a20b08-8e6d-4950-8b17-09a475d40a2c', now() - interval '4 hours', now() - interval '3 hours', now() - interval '2 hours', '2026-08-22', '05:00 PM - 06:00 PM', 'PowerForge Single', 1200, '123456');
+
+  -- Trigger expiry check
+  PERFORM public.expire_stale_bookings();
+
+  SELECT status, timeline_status INTO v_status, v_timeline_status FROM public.bookings WHERE id = 'b-e2e-missed';
+  IF v_status = 'missed_session_not_started' AND v_timeline_status = 'SESSION_CLOSED' THEN
+    PERFORM record_e2e_result('E2E-MISS-01', 'Expiry', 'Past unstarted session leaves Upcoming', 'PASS', 'Status transitioned to missed_session_not_started');
+  ELSE
+    PERFORM record_e2e_result('E2E-MISS-01', 'Expiry', 'Past unstarted session leaves Upcoming', 'FAIL', 'Status: ' || v_status || ', timeline: ' || v_timeline_status);
+  END IF;
 END $$;
 
 -- =============================================================================

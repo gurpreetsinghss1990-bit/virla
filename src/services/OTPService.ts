@@ -254,7 +254,8 @@ export class OTPService {
             },
             (error: any) => {
               resolve({ success: false, error: error?.message || 'The OTP is incorrect. Please try again.' });
-            }
+            },
+            reqId
           );
         } catch (err: any) {
           resolve({ success: false, error: err.message || 'Error occurred while verifying OTP' });
@@ -326,7 +327,8 @@ export class OTPService {
             },
             (error: any) => {
               resolve({ success: false, error: error?.message || 'OTP resend failure. Please try again.' });
-            }
+            },
+            reqId
           );
         } catch (err: any) {
           resolve({ success: false, error: err.message || 'Error occurred while retrying OTP' });

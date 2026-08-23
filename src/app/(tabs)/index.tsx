@@ -2,7 +2,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet, AppState, AppStateStatus } from 'react-native';
+import { Alert, Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet, AppState, AppStateStatus, Vibration } from 'react-native';
 import Svg, { Rect, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -25,6 +25,16 @@ import { useAIWellnessStore } from '../../store/aiWellnessStore';
 import { Booking } from '../../types';
 import { normalizeDate, canonicalizeTimeRange, getBookingISTDateRange, getDisplayWorkoutTitle } from '../../utils/date';
 
+function getClientGender(booking: Booking): string {
+  if (!booking?.clientId) return 'Not specified';
+  const profile = Database.getProfile(booking.clientId);
+  if (!profile || !profile.gender) return 'Not specified';
+  const g = profile.gender.toLowerCase().trim();
+  if (g === 'male') return 'Male';
+  if (g === 'female') return 'Female';
+  return 'Not specified';
+}
+
 interface RequestCardProps {
   booking: Booking;
   onAccept: (id: string) => void;
@@ -33,20 +43,73 @@ interface RequestCardProps {
   onPress: (id: string) => void;
 }
 
+function playNotificationBeep() {
+  try {
+    if (typeof window !== 'undefined') {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContext) {
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime); // A5 note
+        gain.gain.setValueAtTime(0.5, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3); // play for 0.3s
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to play synthesized notification beep:', e);
+  }
+}
+
 export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }: RequestCardProps) {
+  const [countdownNum, setCountdownNum] = useState<1 | 2 | 3 | null>(1);
   const [timeLeft, setTimeLeft] = useState(600);
+  const isTimeoutTriggeredRef = useRef(false);
+  const lastBeepedCountdown = useRef<number | null>(null);
+
+  useEffect(() => {
+    isTimeoutTriggeredRef.current = false;
+    lastBeepedCountdown.current = null;
+  }, [booking.id]);
 
   useEffect(() => {
     const calculateTimeLeft = () => {
       const nowMs = getCurrentServerTime().getTime();
       const elapsed = Math.floor((nowMs - (booking.createdAt || nowMs)) / 1000);
-      return Math.max(0, 600 - elapsed);
+      
+      let num: 1 | 2 | 3 | null = 1;
+      let remaining = 600 - elapsed;
+      
+      if (elapsed >= 1800) {
+        num = null;
+        remaining = 0;
+      } else if (elapsed >= 1200) {
+        num = 3;
+        remaining = 1800 - elapsed;
+      } else if (elapsed >= 600) {
+        num = 2;
+        remaining = 1200 - elapsed;
+      }
+      return { num, remaining, elapsed };
     };
 
     const updateTimer = () => {
-      const nextTime = calculateTimeLeft();
-      setTimeLeft(nextTime);
-      if (nextTime <= 0) {
+      const { num, remaining, elapsed } = calculateTimeLeft();
+      setCountdownNum(num);
+      setTimeLeft(remaining);
+
+      if (num !== null && lastBeepedCountdown.current !== num) {
+        lastBeepedCountdown.current = num;
+        playNotificationBeep();
+        Vibration.vibrate(500);
+      }
+
+      if (elapsed >= 1800 && !isTimeoutTriggeredRef.current) {
+        isTimeoutTriggeredRef.current = true;
         onTimeout(booking.id);
       }
     };
@@ -67,14 +130,15 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
     };
   }, [booking.id, booking.createdAt]);
 
-  const formatRemainingTime = (secs: number) => {
+  const formatRemainingTime = (secs: number, num: 1 | 2 | 3 | null) => {
+    if (num === null) return 'Expired';
     const m = Math.floor(secs / 60);
     const s = secs % 60;
-    return `${m}:${String(s).padStart(2, '0')} minutes remaining`;
+    return `COUNTDOWN ${num} - ${m}:${String(s).padStart(2, '0')}`;
   };
 
   const customerId = `VIRLA-C${booking.id.slice(-6).toUpperCase()}`;
-  const customerGender = booking.id.charCodeAt(booking.id.length - 1) % 2 === 0 ? 'Female' : 'Male';
+  const customerGender = getClientGender(booking);
 
   return (
     <TouchableOpacity
@@ -90,7 +154,7 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
         
         <View className="bg-rose-50 border border-rose-100 px-3 py-1 rounded-full flex-row items-center gap-1.5">
           <Feather name="clock" size={10} color="#E11D48" />
-          <Text className="text-[#E11D48] text-[10px] font-black">{formatRemainingTime(timeLeft)}</Text>
+          <Text className="text-[#E11D48] text-[10px] font-black">{formatRemainingTime(timeLeft, countdownNum)}</Text>
         </View>
       </View>
 
@@ -117,17 +181,87 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
 
       <View className="flex-row">
         <TouchableOpacity
-          disabled={timeLeft <= 0}
+          disabled={countdownNum === null}
           onPress={(e) => {
             e.stopPropagation();
-            if (timeLeft > 0) {
+            if (countdownNum !== null) {
               onAccept(booking.id);
             }
           }}
-          className={`flex-1 py-3.5 rounded-2xl items-center justify-center ${timeLeft <= 0 ? 'bg-zinc-300' : 'bg-[#E11D48]'}`}
+          className={`flex-1 py-3.5 rounded-2xl items-center justify-center ${countdownNum === null ? 'bg-zinc-300' : 'bg-[#E11D48]'}`}
         >
-          <Text className={`text-xs font-black uppercase ${timeLeft <= 0 ? 'text-zinc-500' : 'text-white'}`}>
-            {timeLeft <= 0 ? 'Expired' : 'Accept Request'}
+          <Text className={`text-xs font-black uppercase ${countdownNum === null ? 'text-zinc-500' : 'text-white'}`}>
+            {countdownNum === null ? 'Expired' : 'Accept Request'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+interface AcknowledgementCardProps {
+  booking: Booking;
+  onAcknowledge: (id: string) => void;
+  onPress: (id: string) => void;
+}
+
+export function AcknowledgementCard({ booking, onAcknowledge, onPress }: AcknowledgementCardProps) {
+  const customerId = `VIRLA-C${booking.id.slice(-6).toUpperCase()}`;
+  const customerGender = getClientGender(booking);
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={() => onPress(booking.id)}
+      className="bg-white border-2 border-amber-500/30 p-5 rounded-[28px] shadow-sm gap-4 mb-4"
+    >
+      <View className="flex-row justify-between items-center">
+        <View className="flex-row items-center gap-2">
+          <View className="w-2 h-2 rounded-full bg-amber-500" />
+          <Text className="text-[#101828] text-xs font-black tracking-wider">{customerId}</Text>
+        </View>
+        
+        <View className="bg-amber-50 border border-amber-100 px-3 py-1 rounded-full flex-row items-center gap-1.5">
+          <Feather name="alert-triangle" size={10} color="#D97706" />
+          <Text className="text-[#D97706] text-[10px] font-black uppercase">ACK REQUIRED</Text>
+        </View>
+      </View>
+
+      <View className="gap-2">
+        <Text className="text-[#101828] text-base font-black tracking-tight">{getDisplayWorkoutTitle(booking.workoutTitle)}</Text>
+        <Text className="text-zinc-500 text-xs font-semibold leading-relaxed">
+          {booking.date} • {booking.time} ({booking.durationMinutes || 60} mins)
+        </Text>
+        
+        <View className="flex-row gap-2 mt-1 flex-wrap">
+          <View className="bg-zinc-50 border border-zinc-150 px-2.5 py-1 rounded-lg">
+            <Text className="text-zinc-650 text-[9px] font-bold uppercase">{customerGender}</Text>
+          </View>
+          <View className="bg-zinc-50 border border-zinc-150 px-2.5 py-1 rounded-lg">
+            <Text className="text-zinc-650 text-[9px] font-bold uppercase">Solo Session</Text>
+          </View>
+          <View className="bg-zinc-50 border border-zinc-150 px-2.5 py-1 rounded-lg">
+            <Text className="text-zinc-650 text-[9px] font-bold uppercase">{booking.address ? booking.address.split(',')[0] : 'Venue'}</Text>
+          </View>
+        </View>
+
+        <Text className="text-amber-700 text-[10px] font-medium bg-amber-50/50 p-2 rounded-xl mt-1 border border-amber-100/50">
+          ⚠️ Auto-accepted by system because trainer did not manually respond within 30 minutes.
+        </Text>
+      </View>
+
+      <View className="h-[1px] bg-zinc-100 my-1" />
+
+      <View className="flex-row">
+        <TouchableOpacity
+          onPress={(e) => {
+            e.stopPropagation();
+            onAcknowledge(booking.id);
+          }}
+          className="flex-1 py-3.5 rounded-2xl items-center justify-center bg-amber-500"
+        >
+          <Text className="text-xs font-black uppercase text-white">
+            Acknowledge Request
           </Text>
         </TouchableOpacity>
       </View>
@@ -189,21 +323,67 @@ export default function HomeScreen() {
     }
   };
 
+  const executeAcceptRequest = async (id: string) => {
+    const booking = bookings.find(b => b.id === id);
+    const trainerId = booking?.trainerId || 'N/A';
+    const currentUserId = Database.getCurrentUserId() || 'N/A';
+    const currentStatus = booking?.status || 'N/A';
+
+    console.log("[TRAINER-ACCEPT-TRACE] BUTTON PRESSED: YES");
+    console.log("[TRAINER-ACCEPT-TRACE] HANDLER ENTERED: YES");
+    console.log(`[TRAINER-ACCEPT-TRACE] BOOKING ID: ${id}`);
+    console.log(`[TRAINER-ACCEPT-TRACE] TRAINER ID: ${trainerId}`);
+    console.log(`[TRAINER-ACCEPT-TRACE] AUTHENTICATED USER ID: ${currentUserId}`);
+    console.log(`[TRAINER-ACCEPT-TRACE] CURRENT BOOKING STATUS: ${currentStatus}`);
+    console.log("[TRAINER-ACCEPT-TRACE] RPC CALLED: trainer_accept_booking");
+
+    try {
+      await acceptBooking(id);
+      console.log("[TRAINER-ACCEPT-TRACE] RPC RESULT: SUCCESS");
+      console.log("[TRAINER-ACCEPT-TRACE] NEW BOOKING STATUS: trainer_accepted");
+      console.log("[TRAINER-ACCEPT-TRACE] CLIENT REFRESH: completed");
+      console.log("[TRAINER-ACCEPT-TRACE] TRAINER REFRESH: completed");
+      console.log("[TRAINER-ACCEPT-TRACE] ADMIN STATE: synchronized");
+      console.log("[TRAINER-ACCEPT-TRACE] ---------------------------------");
+      
+      if (Platform.OS === 'web') {
+        window.alert('You have accepted the session request.');
+      } else {
+        Alert.alert('Booking Accepted', 'You have accepted the session request.');
+      }
+    } catch (err: any) {
+      console.error("[TRAINER-ACCEPT-TRACE] RPC RESULT: ERROR");
+      console.error("[TRAINER-ACCEPT-TRACE] RPC error details:", err);
+      console.log("[TRAINER-ACCEPT-TRACE] ---------------------------------");
+      
+      if (Platform.OS === 'web') {
+        window.alert(err.message || 'Could not accept booking.');
+      } else {
+        Alert.alert('Accept Failed', err.message || 'Could not accept booking.');
+      }
+    }
+  };
+
   const handleAcceptRequest = (id: string) => {
-    Alert.alert(
-      'Accept Booking?',
-      'By accepting this booking you agree to complete the session. Once accepted it cannot be cancelled except through VIRLA Support.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Accept',
-          onPress: () => {
-            acceptBooking(id);
-            Alert.alert('Booking Accepted', 'You have accepted the session request.');
+    const confirmMsg = 'Accept Booking?\n\nBy accepting this booking you agree to complete the session. Once accepted it cannot be cancelled except through VIRLA Support.';
+    if (Platform.OS === 'web') {
+      const ok = window.confirm(confirmMsg);
+      if (ok) {
+        executeAcceptRequest(id);
+      }
+    } else {
+      Alert.alert(
+        'Accept Booking?',
+        'By accepting this booking you agree to complete the session. Once accepted it cannot be cancelled except through VIRLA Support.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Accept',
+            onPress: () => executeAcceptRequest(id)
           }
-        }
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const handleDeclineRequest = (id: string) => {
@@ -213,6 +393,23 @@ export default function HomeScreen() {
 
   const handleTimeoutRequest = (id: string) => {
     reassignTrainer(id, 'timeout');
+  };
+
+  const handleAcknowledgeRequest = async (id: string) => {
+    try {
+      await useBookingStore.getState().acknowledgeSession(id);
+      if (Platform.OS === 'web') {
+        window.alert('You have acknowledged the auto-accepted session.');
+      } else {
+        Alert.alert('Success', 'You have acknowledged the auto-accepted session.');
+      }
+    } catch (e: any) {
+      if (Platform.OS === 'web') {
+        window.alert(e.message || 'Acknowledgement failed.');
+      } else {
+        Alert.alert('Error', e.message || 'Acknowledgement failed.');
+      }
+    }
   };
 
   const currentCoach = coaches.find(c => c.id === user.id || c.name === user.name);
@@ -249,13 +446,9 @@ export default function HomeScreen() {
 
   const confirmedBookings = trainerBookings.filter(b => 
     b.status === 'upcoming' && 
-    [
-      'trainer_accepted', 
-      'trainer_travelling', 
-      'trainer_arrived', 
-      'session_started',
-      'completed'
-    ].includes(b.timelineStatus || '')
+    b.timelineStatus !== 'booked' &&
+    b.timelineStatus !== 'trainer_assigned' &&
+    b.timelineStatus !== 'session_closed'
   );
 
   const sortedConfirmed = sortBookingsChronologically(confirmedBookings);
@@ -1614,6 +1807,33 @@ export default function HomeScreen() {
                   {getFormattedToday()}
                 </Text>
               </View>
+
+              {/* Priority 0: Auto-Accepted Pending Acknowledgements */}
+              {(() => {
+                const pendingAcks = bookings.filter(b => 
+                  b.timelineStatus === 'trainer_accepted' && 
+                  b.trainerAcknowledgement === 'pending' &&
+                  (b.trainerId === user.id || b.trainerName === user.name || (currentCoach && b.trainerId === currentCoach.id))
+                );
+                if (pendingAcks.length === 0) return null;
+                return (
+                  <View className="gap-3 mb-6">
+                    <View className="flex-row justify-between items-center pr-1">
+                      <Text className="text-amber-600 text-[10px] font-black uppercase tracking-widest pl-1">
+                        Auto-Accepted Requests • {pendingAcks.length}
+                      </Text>
+                    </View>
+                    {pendingAcks.map(req => (
+                      <AcknowledgementCard
+                        key={req.id}
+                        booking={req}
+                        onAcknowledge={handleAcknowledgeRequest}
+                        onPress={(id) => router.push({ pathname: '/session-detail', params: { id } })}
+                      />
+                    ))}
+                  </View>
+                );
+              })()}
 
               {/* Priority 1: New Requests */}
               {(() => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Image, ScrollView, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, Image, ScrollView, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, Linking, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
@@ -15,6 +15,25 @@ import { AddPartnerModal } from '../components/AddPartnerModal';
 import * as Location from 'expo-location';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
 import { getBookingISTDateRange, getDisplayWorkoutTitle } from '../utils/date';
+
+function formatToIndianDate(dateStr: string): string {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateStr;
+}
+
+function getClientGender(booking: any): string {
+  if (!booking?.clientId) return 'Not specified';
+  const profile = Database.getProfile(booking.clientId);
+  if (!profile || !profile.gender) return 'Not specified';
+  const g = profile.gender.toLowerCase().trim();
+  if (g === 'male') return 'Male';
+  if (g === 'female') return 'Female';
+  return 'Not specified';
+}
 
 // Map coordinates path waypoints (scaled to fit beautiful SVG canvas)
 const waypoints = [
@@ -56,6 +75,26 @@ export default function SessionDetailScreen() {
   const isPendingDetails = (role === 'customer' || role === 'admin') && !isAccepted;
 
   const [loading, setLoading] = useState(true);
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [isConfirmed, setIsConfirmed] = useState(false);
+  const [assessments, setAssessments] = useState<{ bookingId: string; date: string; time: string; coachName: string; assessment: string }[]>([]);
+  const [loadingAssessments, setLoadingAssessments] = useState(false);
+
+  useEffect(() => {
+    if (role === 'trainer' && booking?.clientId) {
+      Promise.resolve().then(() => setLoadingAssessments(true));
+      Database.getClientAssessmentHistory(booking.clientId)
+        .then(data => {
+          setAssessments(data);
+        })
+        .catch(err => {
+          console.error('Error loading assessments:', err);
+        })
+        .finally(() => {
+          setLoadingAssessments(false);
+        });
+    }
+  }, [booking?.clientId, role]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -569,7 +608,7 @@ export default function SessionDetailScreen() {
 
   if (role === 'trainer' && currentStatus === 'booked') {
     const customerId = `VIRLA-C${booking.id.slice(-6).toUpperCase()}`;
-    const customerGender = booking.id.charCodeAt(booking.id.length - 1) % 2 === 0 ? 'Female' : 'Male';
+    const customerGender = getClientGender(booking);
 
     return (
       <View style={{ flex: 1, backgroundColor: '#F8F9FC', paddingTop: insets.top }}>
@@ -623,7 +662,7 @@ export default function SessionDetailScreen() {
                 <View className="w-7 h-7 rounded-full bg-rose-50 items-center justify-center">
                   <Feather name="info" size={13} color="#E11D48" />
                 </View>
-                <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Session Overview</Text>
+                <Text className="text-zinc-955 text-xs font-black uppercase tracking-wider">Session Overview</Text>
               </View>
 
               <View className="gap-3">
@@ -634,12 +673,7 @@ export default function SessionDetailScreen() {
 
                 <View className="flex-row justify-between border-b border-zinc-100 pb-2">
                   <Text className="text-zinc-400 text-[10px] font-bold uppercase">Date & Time</Text>
-                  <Text className="text-zinc-900 text-xs font-black">{booking.date} @ {booking.time}</Text>
-                </View>
-
-                <View className="flex-row justify-between border-b border-zinc-100 pb-2">
-                  <Text className="text-zinc-400 text-[10px] font-bold uppercase">Duration</Text>
-                  <Text className="text-zinc-900 text-xs font-black">{booking.durationMinutes || 60} minutes</Text>
+                  <Text className="text-zinc-900 text-xs font-black">{formatToIndianDate(booking.date)} • {booking.time}</Text>
                 </View>
 
                 <View className="flex-row justify-between border-b border-zinc-100 pb-2">
@@ -663,8 +697,8 @@ export default function SessionDetailScreen() {
                 </View>
 
                 <View className="flex-row justify-between">
-                  <Text className="text-zinc-400 text-[10px] font-bold uppercase">Session Value</Text>
-                  <Text className="text-emerald-700 text-xs font-black">₹{booking.price || 1200} ({booking.sessionType === 'COUPLE' ? '2 Credits' : '1 Credit'})</Text>
+                  <Text className="text-zinc-400 text-[10px] font-bold uppercase">Credits</Text>
+                  <Text className="text-zinc-900 text-xs font-black">{booking.sessionType === 'COUPLE' ? '2 CREDITS' : '1 CREDIT'}</Text>
                 </View>
               </View>
             </View>
@@ -689,6 +723,51 @@ export default function SessionDetailScreen() {
               <Text className="text-zinc-650 text-xs font-semibold leading-relaxed">
                 {booking.trainerNote ? booking.trainerNote : 'No preparation notes.'}
               </Text>
+            </View>
+
+            {/* Client One-Brain Assessment Card */}
+            <View 
+              className="bg-white border border-[#E5E7EB] p-5 rounded-[28px]"
+              style={{
+                shadowColor: '#101828',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.02,
+                shadowRadius: 8,
+                elevation: 1,
+              }}
+            >
+              <View className="flex-row items-center gap-2.5 mb-3">
+                <View className="w-7 h-7 rounded-full bg-indigo-50 items-center justify-center">
+                  <Feather name="brain" size={13} color="#4F46E5" />
+                </View>
+                <Text className="text-zinc-955 text-xs font-black uppercase tracking-wider">Client Assessment</Text>
+              </View>
+              {loadingAssessments ? (
+                <ActivityIndicator size="small" color="#4F46E5" className="py-2" />
+              ) : assessments.length > 0 ? (
+                <View className="gap-2.5">
+                  <Text className="text-zinc-400 text-[9px] font-black uppercase tracking-widest">
+                    Important client history:
+                  </Text>
+                  <Text className="text-zinc-700 text-xs font-semibold leading-relaxed italic">
+                    {`"${assessments[0].assessment}"`}
+                  </Text>
+                  {assessments.length > 1 && (
+                    <View className="border-t border-zinc-100 pt-2.5 mt-1">
+                      <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-widest mb-1">
+                        Previous notes:
+                      </Text>
+                      <Text className="text-zinc-500 text-[11px] font-medium leading-relaxed italic">
+                        {`"${assessments[1].assessment}"`}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              ) : (
+                <Text className="text-zinc-500 text-xs font-semibold italic">
+                  No previous assessment available.
+                </Text>
+              )}
             </View>
 
             {/* Session Policies Card */}
@@ -754,30 +833,79 @@ export default function SessionDetailScreen() {
         </ScrollView>
 
         {/* Action Buttons Panel */}
-        <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-zinc-100 p-6">
+        <View 
+          className="absolute bottom-0 left-0 right-0 bg-white border-t border-zinc-100 p-6"
+          style={{
+            zIndex: 99,
+            shadowColor: '#101828',
+            shadowOffset: { width: 0, height: -4 },
+            shadowOpacity: 0.05,
+            shadowRadius: 12,
+            elevation: 10,
+          }}
+        >
           <TouchableOpacity
+            disabled={isAccepting || isConfirmed}
             onPress={() => {
-              Alert.alert(
-                'Accept Booking?',
-                'By accepting this booking you agree to complete the session. Once accepted it cannot be cancelled except through VIRLA Support.',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Accept',
-                    onPress: async () => {
-                      try {
-                        await updateTimelineStatus(booking.id, 'trainer_accepted');
-                        Alert.alert('Booking Accepted', 'You have accepted the session request.');
-                      } catch (err: any) {
-                        Alert.alert('Accept Failed', err.message || 'Could not accept booking.');
-                      }
-                    }
+              const handleAccept = async () => {
+                setIsAccepting(true);
+                const currentUserId = Database.getCurrentUserId() || 'N/A';
+                console.log("[TRAINER-ACCEPT-TRACE] BUTTON PRESSED: YES");
+                console.log("[TRAINER-ACCEPT-TRACE] HANDLER ENTERED: YES");
+                console.log(`[TRAINER-ACCEPT-TRACE] BOOKING ID: ${booking.id}`);
+                console.log(`[TRAINER-ACCEPT-TRACE] TRAINER ID: ${booking.trainerId || 'N/A'}`);
+                console.log(`[TRAINER-ACCEPT-TRACE] AUTHENTICATED USER ID: ${currentUserId}`);
+                console.log(`[TRAINER-ACCEPT-TRACE] CURRENT BOOKING STATUS: ${currentStatus}`);
+                console.log("[TRAINER-ACCEPT-TRACE] RPC CALLED: trainer_accept_booking");
+                try {
+                  await updateTimelineStatus(booking.id, 'trainer_accepted');
+                  console.log("[TRAINER-ACCEPT-TRACE] RPC RESULT: SUCCESS");
+                  setIsConfirmed(true);
+                  console.log("[TRAINER-ACCEPT-TRACE] NEW BOOKING STATUS: trainer_accepted");
+                  console.log("[TRAINER-ACCEPT-TRACE] CLIENT REFRESH: completed");
+                  console.log("[TRAINER-ACCEPT-TRACE] TRAINER REFRESH: completed");
+                  console.log("[TRAINER-ACCEPT-TRACE] ADMIN STATE: synchronized");
+                  syncFromDB();
+                  if (Platform.OS === 'web') {
+                    window.alert('You have accepted the session request.');
+                  } else {
+                    Alert.alert('Booking Accepted', 'You have accepted the session request.');
                   }
-                ]
-              );
+                } catch (err: any) {
+                  console.error("[TRAINER-ACCEPT-TRACE] RPC RESULT: ERROR");
+                  console.error("[TRAINER-ACCEPT-TRACE] RPC error details:", err);
+                  if (Platform.OS === 'web') {
+                    window.alert(err.message || 'Could not accept booking.');
+                  } else {
+                    Alert.alert('Accept Failed', err.message || 'Could not accept booking.');
+                  }
+                  setIsAccepting(false);
+                }
+              };
+
+              const confirmMsg = 'Accept Booking?\n\nBy accepting this booking you agree to complete the session. Once accepted it cannot be cancelled except through VIRLA Support.';
+              if (Platform.OS === 'web') {
+                const ok = window.confirm(confirmMsg);
+                if (ok) {
+                  handleAccept();
+                }
+              } else {
+                Alert.alert(
+                  'Accept Booking?',
+                  'By accepting this booking you agree to complete the session. Once accepted it cannot be cancelled except through VIRLA Support.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Accept',
+                      onPress: handleAccept
+                    }
+                  ]
+                );
+              }
             }}
             className="w-full bg-[#E11D48] py-4.5 rounded-[20px] items-center justify-center"
             style={{
+              opacity: (isAccepting || isConfirmed) ? 0.6 : 1,
               shadowColor: '#E11D48',
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.1,
@@ -785,7 +913,16 @@ export default function SessionDetailScreen() {
               elevation: 2,
             }}
           >
-            <Text className="text-white text-sm font-black uppercase">Accept Booking</Text>
+            {isConfirmed ? (
+              <Text className="text-white text-sm font-black uppercase">BOOKING CONFIRMED</Text>
+            ) : isAccepting ? (
+              <View className="flex-row items-center gap-2">
+                <ActivityIndicator color="white" size="small" />
+                <Text className="text-white text-sm font-black uppercase">ACCEPTING...</Text>
+              </View>
+            ) : (
+              <Text className="text-white text-sm font-black uppercase">Accept Booking</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -908,7 +1045,7 @@ export default function SessionDetailScreen() {
             </View>
 
             {/* Section 2: Booking Summary Card */}
-            {role === 'customer' && (
+            {(role === 'customer' || role === 'trainer') && (
               <View 
                 className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4"
                 style={{
@@ -922,35 +1059,65 @@ export default function SessionDetailScreen() {
                 <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">Booking Summary</Text>
                 
                 <View className="gap-3">
-                  <View className="flex-row justify-between items-center">
+                  <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
                     <Text className="text-[#6B7280] text-xs font-semibold">Workout Type</Text>
                     <Text className="text-[#101828] text-xs font-extrabold">{getDisplayWorkoutTitle(booking.workoutTitle)}</Text>
                   </View>
-                  <View className="flex-row justify-between items-center">
+                  <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
                     <Text className="text-[#6B7280] text-xs font-semibold">Date</Text>
-                    <Text className="text-[#101828] text-xs font-extrabold">{booking.date}</Text>
+                    <Text className="text-[#101828] text-xs font-extrabold">
+                      {role === 'trainer' ? formatToIndianDate(booking.date) : booking.date}
+                    </Text>
                   </View>
-                  <View className="flex-row justify-between items-center">
+                  <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
                     <Text className="text-[#6B7280] text-xs font-semibold">Time</Text>
                     <Text className="text-[#101828] text-xs font-extrabold">{booking.time}</Text>
                   </View>
-                  <View className="flex-row justify-between items-center">
-                    <Text className="text-[#6B7280] text-xs font-semibold">Duration</Text>
-                    <Text className="text-[#101828] text-xs font-extrabold">{booking.durationMinutes || 60} Mins</Text>
-                  </View>
-                  <View className="flex-row justify-between items-center">
-                    <Text className="text-[#6B7280] text-xs font-semibold">Solo / Couple</Text>
-                    <Text className="text-[#101828] text-xs font-extrabold">{booking.sessionType === 'COUPLE' ? 'Couple Session' : 'Solo Session'}</Text>
-                  </View>
-                  <View className="flex-row justify-between items-center">
-                    <Text className="text-[#6B7280] text-xs font-semibold">Trainer Preference</Text>
+                  {role !== 'trainer' && (
+                    <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
+                      <Text className="text-[#6B7280] text-xs font-semibold">Duration</Text>
+                      <Text className="text-[#101828] text-xs font-extrabold">{booking.durationMinutes || 60} Mins</Text>
+                    </View>
+                  )}
+                  {role === 'trainer' && (
+                    <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
+                      <Text className="text-[#6B7280] text-xs font-semibold">Client Reference</Text>
+                      <Text className="text-[#101828] text-xs font-extrabold">
+                        {`VIRLA-C${booking.id.slice(-6).toUpperCase()}`}
+                      </Text>
+                    </View>
+                  )}
+                  {role === 'trainer' && (
+                    <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
+                      <Text className="text-[#6B7280] text-xs font-semibold">Gender</Text>
+                      <Text className="text-[#101828] text-xs font-extrabold">
+                        {getClientGender(booking)}
+                      </Text>
+                    </View>
+                  )}
+                  <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
+                    <Text className="text-[#6B7280] text-xs font-semibold">Type</Text>
                     <Text className="text-[#101828] text-xs font-extrabold">
-                      {booking.preferredCoachId ? 'Favorite Trainer' : 'No Preference'}
+                      {booking.sessionType === 'COUPLE' ? (role === 'trainer' ? '2-Person Session' : 'Couple Session') : (role === 'trainer' ? 'Solo Session' : 'Solo Session')}
                     </Text>
                   </View>
-                  <View className="flex-row justify-between items-center">
-                    <Text className="text-[#6B7280] text-xs font-semibold">Credits Used</Text>
-                    <Text className="text-[#101828] text-xs font-extrabold">{booking.sessionType === 'COUPLE' ? '2 Credits' : '1 Credit'}</Text>
+                  {role !== 'trainer' && (
+                    <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
+                      <Text className="text-[#6B7280] text-xs font-semibold">Trainer Preference</Text>
+                      <Text className="text-[#101828] text-xs font-extrabold">
+                        {booking.preferredCoachId ? 'Favorite Trainer' : 'No Preference'}
+                      </Text>
+                    </View>
+                  )}
+                  <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
+                    <Text className="text-[#6B7280] text-xs font-semibold">
+                      {role === 'trainer' ? 'Credits' : 'Credits Used'}
+                    </Text>
+                    <Text className="text-[#101828] text-xs font-extrabold">
+                      {booking.sessionType === 'COUPLE' 
+                        ? (role === 'trainer' ? '2 CREDITS' : '2 Credits') 
+                        : (role === 'trainer' ? '1 CREDIT' : '1 Credit')}
+                    </Text>
                   </View>
                   <View className="flex-row justify-between items-start">
                     <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">Location</Text>
@@ -959,6 +1126,77 @@ export default function SessionDetailScreen() {
                     </Text>
                   </View>
                 </View>
+              </View>
+            )}
+
+            {/* Preparation Note Card for Trainer (Accepted view) */}
+            {role === 'trainer' && (
+              <View 
+                className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm"
+                style={{
+                  shadowColor: '#101828',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.02,
+                  shadowRadius: 6,
+                  elevation: 1,
+                }}
+              >
+                <View className="flex-row items-center gap-2.5 mb-3">
+                  <View className="w-7 h-7 rounded-full bg-rose-50 items-center justify-center">
+                    <Feather name="file-text" size={13} color="#E11D48" />
+                  </View>
+                  <Text className="text-zinc-955 text-xs font-black uppercase tracking-wider">Client Preparation Note</Text>
+                </View>
+                <Text className="text-zinc-650 text-xs font-semibold leading-relaxed">
+                  {booking.trainerNote ? booking.trainerNote : 'No preparation notes.'}
+                </Text>
+              </View>
+            )}
+
+            {/* Client One-Brain Assessment Card for Trainer (Accepted view) */}
+            {role === 'trainer' && (
+              <View 
+                className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm"
+                style={{
+                  shadowColor: '#101828',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.02,
+                  shadowRadius: 6,
+                  elevation: 1,
+                }}
+              >
+                <View className="flex-row items-center gap-2.5 mb-3">
+                  <View className="w-7 h-7 rounded-full bg-indigo-50 items-center justify-center">
+                    <Feather name="brain" size={13} color="#4F46E5" />
+                  </View>
+                  <Text className="text-zinc-955 text-xs font-black uppercase tracking-wider">Client Assessment</Text>
+                </View>
+                {loadingAssessments ? (
+                  <ActivityIndicator size="small" color="#4F46E5" className="py-2" />
+                ) : assessments.length > 0 ? (
+                  <View className="gap-2.5">
+                    <Text className="text-zinc-400 text-[9px] font-black uppercase tracking-widest">
+                      Important client history:
+                    </Text>
+                    <Text className="text-zinc-700 text-xs font-semibold leading-relaxed italic">
+                      {`"${assessments[0].assessment}"`}
+                    </Text>
+                    {assessments.length > 1 && (
+                      <View className="border-t border-zinc-100 pt-2.5 mt-1">
+                        <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-widest mb-1">
+                          Previous notes:
+                        </Text>
+                        <Text className="text-zinc-500 text-[11px] font-medium leading-relaxed italic">
+                          {`"${assessments[1].assessment}"`}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                ) : (
+                  <Text className="text-zinc-500 text-xs font-semibold italic">
+                    No previous assessment available.
+                  </Text>
+                )}
               </View>
             )}
 

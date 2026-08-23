@@ -1,7 +1,7 @@
 import { supabase, setClientUserId } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Workout, Coach, Booking, NotificationItem, Invoice, TrainerEarning, ScheduleSlot, AssignmentLog, TrainerWorkoutAssignment } from '../types';
-import { normalizeDate } from '../utils/date';
+import { normalizeDate, canonicalizeTimeRange } from '../utils/date';
 import { geocodeAddress, geocodeAddressSync } from '../utils/distance';
 
 // Simple UUID generator
@@ -652,6 +652,7 @@ export function mapBooking(row: any): Booking {
     otpExpiresAt: row.otp_expires_at ? new Date(row.otp_expires_at).getTime() : undefined,
     scheduledStartAt: row.scheduled_start_at || undefined,
     scheduledEndAt: row.scheduled_end_at || undefined,
+    trainerAcknowledgement: row.trainer_acknowledgement || undefined,
     isInvalidData: !validation.isValid,
     validationError: validation.reason,
   };
@@ -2216,6 +2217,8 @@ class DatabaseClient {
 
   async refreshBookings(): Promise<void> {
     try {
+      await supabase.rpc('expire_stale_bookings');
+      await supabase.rpc('apply_auto_acceptances');
       const { data, error } = await supabase.from('bookings').select('*');
       if (data && !error) {
         this.schema.bookings = data.map(mapBooking).filter((b: Booking) => !b.isInvalidData);
@@ -2307,7 +2310,8 @@ class DatabaseClient {
       p_workout_id: workoutId,
       p_scheduled_start_at: scheduledStartAt,
       p_scheduled_end_at: scheduledEndAt,
-      p_assigned_trainer_id: assignedTrainerId
+      p_assigned_trainer_id: assignedTrainerId,
+      p_trainer_note: bookingData.trainerNote || null
     });
 
     if (error) {
@@ -2403,24 +2407,241 @@ class DatabaseClient {
     await this.refreshUserData(userId);
   }
 
-  rescheduleBooking(bookingId: string, date: string, time: string): void {
+  async rescheduleBooking(bookingId: string, date: string, time: string): Promise<void> {
+    const { data, error } = await supabase.rpc('reschedule_booking', {
+      p_booking_id: bookingId,
+      p_new_date: date,
+      p_new_time: time
+    });
+
+    if (error) {
+      console.error('[DB ERROR] reschedule_booking failed:', error);
+      throw new Error(error.message);
+    }
+
+    await this.refreshBookings();
+    
     const booking = this.schema.bookings.find(b => b.id === bookingId);
     if (booking) {
       booking.date = date;
       booking.time = time;
       booking.status = 'upcoming';
       booking.timelineStatus = 'booked';
-      
-      supabase.from('bookings').update({
-        date: booking.date,
-        time: booking.time,
-        status: booking.status,
-        timeline_status: booking.timelineStatus
-      }).eq('id', bookingId).then();
-
       this.save();
-      this.log('RescheduleBooking', `Rescheduled booking ${bookingId} to ${date} at ${time}`);
     }
+    this.log('RescheduleBooking', `Rescheduled booking ${bookingId} to ${date} at ${time}`);
+  }
+
+  generateDaySlotsHelper(dateStr: string): { id: string; time: string; isAvailable: boolean; isBooked: boolean }[] {
+    const dateParts = dateStr.split('-');
+    const year = parseInt(dateParts[0], 10);
+    const month = parseInt(dateParts[1], 10) - 1;
+    const day = parseInt(dateParts[2], 10);
+    
+    const startHour = 6;
+    const endHour = 23;
+    const durationMinutes = 60;
+    const gapMinutes = 30;
+    
+    const slots = [];
+    let current = new Date(year, month, day, startHour, 0);
+    const endLimit = new Date(year, month, day, endHour, 0);
+    
+    let slotIndex = 1;
+    while (true) {
+      const slotEnd = new Date(current.getTime() + durationMinutes * 60 * 1000);
+      if (slotEnd.getTime() > endLimit.getTime()) {
+        break;
+      }
+      
+      const formatTime = (d: Date) => {
+        let hr = d.getHours();
+        const min = String(d.getMinutes()).padStart(2, '0');
+        const ampm = hr >= 12 ? 'PM' : 'AM';
+        hr = hr % 12;
+        hr = hr ? hr : 12;
+        return `${String(hr).padStart(2, '0')}:${min} ${ampm}`;
+      };
+
+      const timeRange = `${formatTime(current)} - ${formatTime(slotEnd)}`;
+      slots.push({
+        id: `${dateStr}-s${slotIndex}`,
+        time: timeRange,
+        isAvailable: true,
+        isBooked: false,
+      });
+
+      slotIndex++;
+      current = new Date(slotEnd.getTime() + gapMinutes * 60 * 1000);
+    }
+    return slots;
+  }
+
+  getTrainerAvailableSlots(trainerId: string, dateStr: string, bookingIdToExclude?: string): { time: string; isAvailable: boolean }[] {
+    const normalizedDateStr = normalizeDate(dateStr);
+    const dateParts = normalizedDateStr.split('-');
+    if (dateParts.length < 3) return [];
+    
+    const targetYear = parseInt(dateParts[0], 10);
+    const targetMonth = parseInt(dateParts[1], 10) - 1; // 0-indexed month
+    const targetDay = parseInt(dateParts[2], 10);
+    
+    const defaultDaySlots = this.generateDaySlotsHelper(normalizedDateStr);
+    
+    const coaches = this.getCoaches();
+    const bookings = this.schema.bookings || [];
+    
+    let eligibleCoaches = [];
+    if (trainerId === 'searching') {
+      eligibleCoaches = coaches.filter(c => c.preferences?.online !== false && c.verifiedBadge !== false);
+    } else {
+      const coach = coaches.find(c => c.id === trainerId);
+      if (coach) {
+        eligibleCoaches.push(coach);
+      }
+    }
+    
+    const aggregatedSlotsMap: { [time: string]: boolean } = {};
+    
+    const parseTime = (timeStr: string) => {
+      const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!match) return 0;
+      let h = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      const ampm = match[3].toUpperCase();
+      if (ampm === 'PM' && h < 12) h += 12;
+      if (ampm === 'AM' && h === 12) h = 0;
+      return h * 60 + m;
+    };
+
+    const nowServer = getCurrentServerTime();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const nowIst = new Date(nowServer.getTime() + istOffset);
+    const istYear = nowIst.getUTCFullYear();
+    const istMonth = nowIst.getUTCMonth();
+    const istDay = nowIst.getUTCDate();
+    const istHours = nowIst.getUTCHours();
+    const istMinutes = nowIst.getUTCMinutes();
+    const nowIstFixed = new Date(Date.UTC(istYear, istMonth, istDay, istHours, istMinutes, 0));
+
+    let customerLat = 19.0176;
+    let customerLng = 72.8561;
+    let targetCategory = 'Strength';
+    
+    if (bookingIdToExclude) {
+      const targetB = bookings.find(b => b.id === bookingIdToExclude);
+      if (targetB) {
+        const t = (targetB.workoutTitle || '').toLowerCase();
+        if (t.includes('forge') || t.includes('strength')) targetCategory = 'Strength';
+        else if (t.includes('flow') || t.includes('motion')) targetCategory = 'Mind & Body';
+        else if (t.includes('rhythm') || t.includes('burn')) targetCategory = 'Cardio';
+        else if (t.includes('reset') || t.includes('studio') || t.includes('stretch')) targetCategory = 'Conditioning';
+        else if (t.includes('combat') || t.includes('boxing')) targetCategory = 'Boxing';
+      }
+    }
+
+    for (const coach of eligibleCoaches) {
+      if (coach.preferences?.online === false) continue;
+      
+      if (trainerId === 'searching') {
+        const trainerLat = coach.preferences?.operatingLatitude;
+        const trainerLng = coach.preferences?.operatingLongitude;
+        const radiusLimit = coach.preferences?.radiusKm || 15;
+        let insideRadius = false;
+        
+        if (trainerLat !== undefined && trainerLng !== undefined && trainerLat !== null && trainerLng !== null) {
+          const lat1 = trainerLat;
+          const lon1 = trainerLng;
+          const lat2 = customerLat;
+          const lon2 = customerLng;
+          const R = 6371;
+          const dLat = (lat2 - lat1) * Math.PI / 180;
+          const dLon = (lon2 - lon1) * Math.PI / 180;
+          const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) *
+                    Math.sin(dLon/2) * Math.sin(dLon/2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          const distance = R * c;
+          insideRadius = distance <= radiusLimit;
+        }
+        if (!insideRadius) continue;
+        
+        const assignments = this.getWorkoutAssignments(coach.id);
+        const isApproved = assignments.some(a => a.workoutCategory === targetCategory && a.status === 'APPROVED');
+        const acceptsAll = assignments.some(a => a.workoutCategory === 'All Workouts' && a.status === 'APPROVED');
+        if (!acceptsAll && !isApproved) continue;
+      }
+
+      const overrides = coach.preferences?.availabilityOverrides || [];
+      
+      const dailySlots = defaultDaySlots.map(slot => {
+        const override = overrides.find(o => 
+          normalizeDate(o.date) === normalizedDateStr && 
+          canonicalizeTimeRange(o.time) === canonicalizeTimeRange(slot.time)
+        );
+        const isAvailable = override ? override.isAvailable : true;
+        return {
+          ...slot,
+          isAvailable
+        };
+      }).filter(s => {
+        if (!s.isAvailable) return false;
+        
+        const startPart = s.time.split('-')[0].trim();
+        const match = startPart.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        if (match) {
+          let hour = parseInt(match[1], 10);
+          const minute = parseInt(match[2], 10);
+          const ampm = match[3].toUpperCase();
+          if (ampm === 'PM' && hour < 12) hour += 12;
+          if (ampm === 'AM' && hour === 12) hour = 0;
+          
+          const slotStartIst = new Date(Date.UTC(targetYear, targetMonth, targetDay, hour, minute, 0));
+          const visibilityStartMs = slotStartIst.getTime() - 15 * 60 * 1000;
+          if (nowIstFixed.getTime() > visibilityStartMs) {
+            return false;
+          }
+        }
+        return true;
+      });
+      
+      for (const slot of dailySlots) {
+        const hasBooking = bookings.some(b => 
+          b.id !== bookingIdToExclude &&
+          b.trainerId === coach.id &&
+          b.status === 'upcoming' &&
+          normalizeDate(b.date) === normalizedDateStr &&
+          canonicalizeTimeRange(b.time) === canonicalizeTimeRange(slot.time)
+        );
+        
+        const targetMinutes = parseTime(slot.time);
+        
+        const hasBufferConflict = bookings.some(b => {
+          if (b.id === bookingIdToExclude || b.trainerId !== coach.id || b.status !== 'upcoming' || normalizeDate(b.date) !== normalizedDateStr) return false;
+          const bMinutes = parseTime(b.time);
+          const diff = Math.abs(bMinutes - targetMinutes);
+          const duration = b.durationMinutes || 60;
+          return diff < (duration + 30);
+        });
+        
+        const slotReservations = this.schema.slot_reservations || [];
+        const isReserved = slotReservations.some(r => 
+          r.trainer_id === coach.id &&
+          normalizeDate(r.slot_date) === normalizedDateStr &&
+          canonicalizeTimeRange(r.slot_time) === canonicalizeTimeRange(slot.time) &&
+          r.client_id !== this.getCurrentUserId()
+        );
+        
+        if (!hasBooking && !hasBufferConflict && !isReserved) {
+          aggregatedSlotsMap[slot.time] = true;
+        }
+      }
+    }
+    
+    return Object.keys(aggregatedSlotsMap).map(time => ({
+      time,
+      isAvailable: true
+    })).sort((a, b) => parseTime(a.time) - parseTime(b.time));
   }
 
   async updateTimelineStatus(bookingId: string, timelineStatus: Booking['timelineStatus']): Promise<void> {
@@ -2480,6 +2701,15 @@ class DatabaseClient {
     });
     if (error) {
       console.error('[DB ERROR] reassign_booking_trainer failed:', error);
+      if (error.code === '23505' || (error.message && error.message.includes('23505'))) {
+        const booking = this.schema.bookings.find(b => b.id === bookingId);
+        console.log(`[BOOKING-LIFECYCLE] duplicate assignment detected
+bookingId: ${bookingId}
+existing assignment: ${booking ? `${booking.trainerId} (${booking.date} @ ${booking.time})` : 'Unknown'}
+requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`);
+        await this.refreshBookings();
+        return; // Resolve gracefully to stop the retry loop
+      }
       throw new Error(error.message);
     }
     await this.refreshBookings();
@@ -2541,6 +2771,26 @@ class DatabaseClient {
     }
   }
 
+  async acknowledgeAutoAccept(bookingId: string): Promise<void> {
+    const booking = this.schema.bookings.find(b => b.id === bookingId);
+    if (!booking) return;
+
+    const { error } = await supabase.rpc('acknowledge_auto_accept', {
+      p_booking_id: bookingId
+    });
+
+    if (error) {
+      console.error('[DB ERROR] acknowledge_auto_accept RPC failed:', error);
+      throw new Error(error.message);
+    }
+
+    await this.refreshBookings();
+    const userId = this.currentUserId || booking.clientId || '';
+    if (userId) {
+      await this.refreshUserData(userId);
+    }
+  }
+
   async submitTrainerReport(bookingId: string, report: NonNullable<Booking['questionnaire']>): Promise<void> {
     const booking = this.schema.bookings.find(b => b.id === bookingId);
     if (!booking) return;
@@ -2565,6 +2815,25 @@ class DatabaseClient {
     if (userId) {
       await this.refreshUserData(userId);
     }
+  }
+
+  async getClientAssessmentHistory(clientId: string): Promise<{ bookingId: string; date: string; time: string; coachName: string; assessment: string }[]> {
+    const { data, error } = await supabase.rpc('get_client_assessment_history', {
+      p_client_id: clientId
+    });
+
+    if (error) {
+      console.error('[DB ERROR] get_client_assessment_history failed:', error);
+      return [];
+    }
+
+    return (data || []).map((row: any) => ({
+      bookingId: row.booking_id,
+      date: row.session_date,
+      time: row.session_time,
+      coachName: row.coach_name,
+      assessment: row.assessment
+    }));
   }
 
   // Hydration Operations

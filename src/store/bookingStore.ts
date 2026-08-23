@@ -10,7 +10,7 @@ import { AssignmentEngine } from '../services/AssignmentEngine';
 interface BookingState {
   bookings: Booking[];
   cancelSession: (id: string) => Promise<void>;
-  rescheduleSession: (id: string, date: string, time: string) => void;
+  rescheduleSession: (id: string, date: string, time: string) => Promise<void>;
   addBooking: (booking: Omit<Booking, 'status'>) => Promise<void>;
   updateTimelineStatus: (id: string, status: Booking['timelineStatus']) => Promise<void>;
   updateBookingRating: (id: string, ratingDetails: Booking['ratingDetails']) => Promise<void>;
@@ -31,6 +31,7 @@ interface BookingState {
   triggerTrainerNoShow: (id: string) => Promise<void>;
   submitQuestionnaire: (id: string, questionnaire: NonNullable<Booking['questionnaire']>) => Promise<void>;
   reassignTrainer: (bookingId: string, action?: 'declined' | 'timeout') => Promise<void>;
+  acknowledgeSession: (id: string) => Promise<void>;
   syncFromDB: () => void;
   refreshBookings: () => Promise<void>;
 }
@@ -39,24 +40,30 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   bookings: [],
   cancelSession: async (id) => {
     const userId = Database.getCurrentUserId();
-    if (userId) {
-      const target = get().bookings.find(b => b.id === id);
-      if (target && target.status === 'upcoming') {
-        await Database.cancelBooking(userId, id);
-        get().syncFromDB();
-        useWalletStore.getState().syncFromDB();
-        useMembershipStore.getState().syncFromDB();
-        
-        useNotificationStore.getState().addNotification({
-          title: 'Booking Cancelled 🚨',
-          body: `Your session for ${target.workoutTitle} was cancelled.`,
-          icon: 'rotate-ccw'
-        });
-      }
+    if (!userId) {
+      throw new Error('User not logged in');
     }
+    const target = get().bookings.find(b => b.id === id);
+    if (!target) {
+      throw new Error('Booking not found in local store');
+    }
+    if (target.status !== 'upcoming') {
+      throw new Error(`Cannot cancel session with status: ${target.status}`);
+    }
+    await Database.cancelBooking(userId, id);
+    get().syncFromDB();
+    useWalletStore.getState().syncFromDB();
+    useMembershipStore.getState().syncFromDB();
+    useUserProfileStore.getState().syncFromDB();
+    
+    useNotificationStore.getState().addNotification({
+      title: 'Booking Cancelled 🚨',
+      body: `Your session for ${target.workoutTitle} was cancelled.`,
+      icon: 'rotate-ccw'
+    });
   },
-  rescheduleSession: (id, date, time) => {
-    Database.rescheduleBooking(id, date, time);
+  rescheduleSession: async (id, date, time) => {
+    await Database.rescheduleBooking(id, date, time);
     get().syncFromDB();
   },
   addBooking: async (booking) => {
@@ -96,14 +103,28 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     get().syncFromDB();
   },
   triggerClientNoShow: async (id) => {
-    await Database.handleNoShow(id, 'client');
-    const userId = Database.getCurrentUserId();
-    if (userId) {
-      useWalletStore.getState().syncFromDB();
-      useMembershipStore.getState().syncFromDB();
-      useUserProfileStore.getState().syncFromDB();
+    console.log("[CLIENT-NOSHOW-TRACE] TRAINER ACTION triggered CLIENT NO-SHOW");
+    console.log(`[CLIENT-NOSHOW-TRACE] bookingId: ${id}`);
+    const trainerId = Database.getCurrentUserId();
+    console.log(`[CLIENT-NOSHOW-TRACE] trainerId / AUTHORIZATION: ${trainerId}`);
+    try {
+      console.log("[CLIENT-NOSHOW-TRACE] Calling database handleNoShow (RPC)");
+      await Database.handleNoShow(id, 'client');
+      console.log("[CLIENT-NOSHOW-TRACE] RPC returned SUCCESS. BOOKING STATE updated to client_no_show.");
+      console.log("[CLIENT-NOSHOW-TRACE] CREDIT TRANSACTION processed (credits forfeited/no refund).");
+      
+      const userId = Database.getCurrentUserId();
+      if (userId) {
+        useWalletStore.getState().syncFromDB();
+        useMembershipStore.getState().syncFromDB();
+        useUserProfileStore.getState().syncFromDB();
+      }
+      get().syncFromDB();
+      console.log("[CLIENT-NOSHOW-TRACE] CLIENT REFRESH / STORE REFRESH completed successfully.");
+    } catch (err: any) {
+      console.error("[CLIENT-NOSHOW-TRACE] handleNoShow failed", err);
+      throw err;
     }
-    get().syncFromDB();
   },
   triggerTrainerNoShow: async (id) => {
     await Database.handleNoShow(id, 'trainer');
@@ -121,6 +142,10 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     if (userId) {
       useUserProfileStore.getState().syncFromDB();
     }
+    get().syncFromDB();
+  },
+  acknowledgeSession: async (id) => {
+    await Database.acknowledgeAutoAccept(id);
     get().syncFromDB();
   },
   syncFromDB: () => {

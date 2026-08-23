@@ -114,6 +114,7 @@ export interface Booking {
   validationError?: string;
   scheduledStartAt?: string;
   scheduledEndAt?: string;
+  trainerAcknowledgement?: 'pending' | 'acknowledged';
 }
 
 export interface Coach {

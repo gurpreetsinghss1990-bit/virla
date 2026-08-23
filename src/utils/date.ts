@@ -10,9 +10,10 @@ import { getCurrentServerTime, getISTDateInfo } from '../database/Database';
 export function normalizeDate(dateInput: string | Date | undefined | null): string {
   if (!dateInput) return '';
   if (dateInput instanceof Date) {
-    const y = dateInput.getFullYear();
-    const m = String(dateInput.getMonth() + 1).padStart(2, '0');
-    const d = String(dateInput.getDate()).padStart(2, '0');
+    const info = getISTDateInfo(dateInput);
+    const y = info.year;
+    const m = String(info.month).padStart(2, '0');
+    const d = String(info.day).padStart(2, '0');
     return `${y}-${m}-${d}`;
   }
   
@@ -143,9 +144,11 @@ export function getBookingISTDateRange(b: { date?: string; time?: string }) {
     jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
   };
   
-  let year = new Date().getFullYear();
-  let month = new Date().getMonth();
-  let day = new Date().getDate();
+  const istNowForInit = getCurrentServerTime();
+  const istInfoForInit = getISTDateInfo(istNowForInit);
+  let year = istInfoForInit.year;
+  let month = istInfoForInit.month - 1;
+  let day = istInfoForInit.day;
   
   if (dateStr && !dateStr.includes('Today') && !dateStr.includes('Tomorrow')) {
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())) {
@@ -199,8 +202,12 @@ export function getBookingISTDateRange(b: { date?: string; time?: string }) {
   const startInfo = parseTimePart(startPart);
   const endInfo = parseTimePart(endPart);
   
-  const start = new Date(year, month, day, startInfo.hour, startInfo.minute, 0, 0);
-  const end = new Date(year, month, day, endInfo.hour, endInfo.minute, 0, 0);
+  // Construct absolute times in UTC, then subtract 5.5 hours to align with Asia/Kolkata (IST) timezone
+  const startUTC = Date.UTC(year, month, day, startInfo.hour, startInfo.minute, 0, 0);
+  const endUTC = Date.UTC(year, month, day, endInfo.hour, endInfo.minute, 0, 0);
+  
+  const start = new Date(startUTC - 5.5 * 60 * 60 * 1000);
+  const end = new Date(endUTC - 5.5 * 60 * 60 * 1000);
   
   return { start, end };
 }

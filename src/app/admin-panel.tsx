@@ -804,8 +804,8 @@ export default function AdminPanelScreen() {
 
           {activeTab === 'acceptance' && (() => {
             const pending = bookings.filter(b => b.status === 'upcoming' && (b.timelineStatus === 'booked' || b.timelineStatus === 'trainer_assigned'));
-            const autoAccepted = bookings.filter(b => b.status === 'upcoming' && b.acceptanceMethod === 'SYSTEM_AUTO_ACCEPT');
-            const recent = bookings.filter(b => b.status === 'upcoming' && b.acceptanceMethod === 'TRAINER_MANUAL_ACCEPT');
+            const autoAccepted = bookings.filter(b => b.status === 'upcoming' && (b.acceptanceMethod === 'SYSTEM_AUTO_ACCEPT' || b.acceptanceMethod === 'auto'));
+            const recent = bookings.filter(b => b.status === 'upcoming' && (b.acceptanceMethod === 'TRAINER_MANUAL_ACCEPT' || b.acceptanceMethod === 'manual'));
 
             return (
               <View className="gap-6">
@@ -852,6 +852,51 @@ export default function AdminPanelScreen() {
                   )}
                 </View>
 
+                {/* Section 1.5: Auto-Accepted - Trainer Acknowledgement Pending */}
+                {(() => {
+                  const pendingAcks = bookings.filter(b => 
+                    b.status === 'upcoming' && 
+                    (b.acceptanceMethod === 'SYSTEM_AUTO_ACCEPT' || b.acceptanceMethod === 'auto') && 
+                    b.trainerAcknowledgement === 'pending'
+                  );
+                  if (pendingAcks.length === 0) return null;
+                  return (
+                    <View className="gap-4">
+                      <Text className="text-amber-600 text-[11px] font-black uppercase tracking-wider pl-1">
+                        ⚠️ AUTO-ACCEPTED — TRAINER ACKNOWLEDGEMENT PENDING ({pendingAcks.length})
+                      </Text>
+                      {pendingAcks.map(b => (
+                        <LuxuryCard key={b.id} className="p-5 border-amber-300 bg-amber-50/10" interactive={false}>
+                          <View className="flex-row justify-between items-start mb-3">
+                            <View className="gap-0.5">
+                              <Text className="text-[#101828] text-base font-extrabold">{b.workoutTitle}</Text>
+                              <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Booking ID: {b.id}</Text>
+                            </View>
+                            <View className="bg-amber-100 border border-amber-200 px-3 py-1 rounded-xl">
+                              <Text className="text-amber-700 text-[8px] font-bold uppercase tracking-wider">ACK PENDING</Text>
+                            </View>
+                          </View>
+                          <View className="h-[1px] bg-amber-100 my-2" />
+                          <View className="gap-1.5 mb-3.5">
+                            <Text className="text-zinc-650 text-xs font-medium">Client: <Text className="font-bold text-zinc-900">{b.clientName || 'Viral'}</Text></Text>
+                            <Text className="text-zinc-650 text-xs font-medium">Assigned Trainer: <Text className="font-bold text-zinc-900">{b.trainerName}</Text></Text>
+                            <Text className="text-zinc-650 text-xs font-medium">Booked Time: <Text className="font-bold text-zinc-900">{b.date} @ {b.time}</Text></Text>
+                            <Text className="text-zinc-650 text-xs font-medium">Auto-Accepted At: <Text className="font-bold text-zinc-900">{b.autoAcceptedAt ? new Date(b.autoAcceptedAt).toLocaleString() : 'N/A'}</Text></Text>
+                            <Text className="text-zinc-650 text-xs font-medium">Acceptance Method: <Text className="font-bold text-zinc-900">AUTO AFTER 30 MINUTES</Text></Text>
+                            <Text className="text-zinc-650 text-xs font-medium">Trainer Acknowledgement: <Text className="font-bold text-amber-700">PENDING</Text></Text>
+                          </View>
+                          <TouchableOpacity
+                            onPress={() => setSelectedAuditSession(b)}
+                            className="bg-amber-600 py-3 rounded-xl items-center justify-center"
+                          >
+                            <Text className="text-white text-xs font-black uppercase tracking-wider">View Audit & Call Trainer</Text>
+                          </TouchableOpacity>
+                        </LuxuryCard>
+                      ))}
+                    </View>
+                  );
+                })()}
+
                 {/* Section 2: Auto-Accepted Alert Priority */}
                 <View className="gap-4">
                   <Text className="text-zinc-800 text-[11px] font-black uppercase tracking-wider pl-1">Auto-Accepted Sessions ({autoAccepted.length})</Text>
@@ -876,6 +921,7 @@ export default function AdminPanelScreen() {
                           <Text className="text-rose-900/80 text-xs font-medium">Client: <Text className="font-bold text-rose-900">{b.clientName || 'Viral'}</Text></Text>
                           <Text className="text-rose-900/80 text-xs font-medium">Assigned Trainer: <Text className="font-bold text-rose-900">{b.trainerName}</Text> (No response)</Text>
                           <Text className="text-rose-900/80 text-xs font-medium">Booked Time: <Text className="font-bold text-rose-900">{b.date} @ {b.time}</Text></Text>
+                          <Text className="text-rose-900/80 text-xs font-medium">Trainer Acknowledgement: <Text className="font-bold text-rose-900">{b.trainerAcknowledgement === 'pending' ? 'PENDING' : 'COMPLETED'}</Text></Text>
                         </View>
                         <TouchableOpacity
                           onPress={() => setSelectedAuditSession(b)}
