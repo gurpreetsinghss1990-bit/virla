@@ -372,37 +372,51 @@ export default function SessionDetailScreen() {
     };
   }, [currentStatus, pulseScale]);
 
-  // Automated travel simulation
-  const startTravelSimulation = async () => {
+  // Automated travel simulation progress interval
+  const startJourneyInterval = () => {
     if (simIntervalId) clearInterval(simIntervalId);
     setJourneyProgress(0);
+    const interval = setInterval(() => {
+      setJourneyProgress(prev => {
+        const next = prev + 0.02;
+        if (next >= 1.0) {
+          clearInterval(interval);
+          setSimIntervalId(null);
+          // Automatically transition to Arrived
+          setTimeout(async () => {
+            try {
+              await updateTimelineStatus(booking.id, 'trainer_arrived');
+            } catch (e: any) {
+              Alert.alert('Error', e.message || 'Could not update to trainer_arrived.');
+            }
+          }, 800);
+          return 1.0;
+        }
+        return next;
+      });
+    }, 300); // Takes ~15s to complete journey simulation
+    setSimIntervalId(interval);
+  };
+
+  // Automated travel simulation
+  const startTravelSimulation = async () => {
     try {
       await updateTimelineStatus(booking.id, 'trainer_travelling');
-
-      const interval = setInterval(() => {
-        setJourneyProgress(prev => {
-          const next = prev + 0.02;
-          if (next >= 1.0) {
-            clearInterval(interval);
-            setSimIntervalId(null);
-            // Automatically transition to Arrived
-            setTimeout(async () => {
-              try {
-                await updateTimelineStatus(booking.id, 'trainer_arrived');
-              } catch (e: any) {
-                Alert.alert('Error', e.message || 'Could not update to trainer_arrived.');
-              }
-            }, 800);
-            return 1.0;
-          }
-          return next;
-        });
-      }, 300); // Takes ~15s to complete journey simulation
-      setSimIntervalId(interval);
+      startJourneyInterval();
     } catch (e: any) {
       Alert.alert('Travel Simulation Error', e.message || 'Could not start travel.');
     }
   };
+
+  useEffect(() => {
+    if (currentStatus === 'trainer_travelling' && !simIntervalId && journeyProgress < 1.0) {
+      const timer = setTimeout(() => {
+        startJourneyInterval();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStatus]);
 
   useEffect(() => {
     return () => {
@@ -1490,6 +1504,7 @@ export default function SessionDetailScreen() {
                           onPress={async () => {
                             try {
                               await updateTimelineStatus(booking.id, 'trainer_travelling');
+                              startJourneyInterval();
                               handleNavigateAddress();
                             } catch (err: any) {
                               Alert.alert('Error', err.message || 'Could not start travel.');
@@ -1498,7 +1513,7 @@ export default function SessionDetailScreen() {
                           className="w-full bg-[#E11D48] py-3.5 rounded-[18px] items-center justify-center flex-row gap-2 shadow-sm"
                         >
                           <Feather name="navigation" size={14} color="white" />
-                          <Text className="text-white text-xs font-black uppercase">Start Navigation</Text>
+                          <Text className="text-white text-xs font-black uppercase">Start Travel</Text>
                         </TouchableOpacity>
                       ) : (
                         <View className="bg-zinc-950 p-4 rounded-xl items-center justify-center border border-zinc-800">

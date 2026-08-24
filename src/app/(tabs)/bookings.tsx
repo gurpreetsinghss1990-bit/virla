@@ -390,7 +390,8 @@ export default function BookingsScreen() {
   const filteredBookings = bookings.filter((b) => {
     if (activeFilter === 'upcoming') {
       const serverNow = getCurrentServerTime();
-      return b.status === 'upcoming' && getBookingISTDateRange(b).start.getTime() > serverNow.getTime();
+      const isInProgress = b.timelineStatus === 'workout_started' && !b.workoutCompletedAt;
+      return b.status === 'upcoming' && (isInProgress || getBookingISTDateRange(b).start.getTime() > serverNow.getTime());
     }
     if (activeFilter === 'cancelled') {
       return b.status === 'cancelled' || b.status === 'client_no_show' || b.status === 'trainer_no_show' || b.status === 'missed_session_not_started';
@@ -400,6 +401,10 @@ export default function BookingsScreen() {
 
   if (activeFilter === 'upcoming') {
     filteredBookings.sort((a, b) => {
+      const aProgress = a.timelineStatus === 'workout_started' && !a.workoutCompletedAt;
+      const bProgress = b.timelineStatus === 'workout_started' && !b.workoutCompletedAt;
+      if (aProgress && !bProgress) return -1;
+      if (!aProgress && bProgress) return 1;
       return getBookingISTDateRange(a).start.getTime() - getBookingISTDateRange(b).start.getTime();
     });
   } else {

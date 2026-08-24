@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 
 interface BookingStatusBadgeProps {
-  status: 'upcoming' | 'completed' | 'cancelled' | 'client_no_show' | 'trainer_no_show' | 'missed_session_not_started';
+  status: 'upcoming' | 'completed' | 'cancelled' | 'client_no_show' | 'trainer_no_show' | 'missed_session_not_started' | 'in_progress';
   className?: string;
 }
 
@@ -37,6 +37,11 @@ export function BookingStatusBadge({ status, className = '' }: BookingStatusBadg
       bg: 'bg-zinc-100 border-zinc-300',
       text: 'text-zinc-500',
       label: 'Missed — Session Not Started',
+    },
+    in_progress: {
+      bg: 'bg-rose-50 border-rose-150',
+      text: 'text-rose-600',
+      label: 'In Progress',
     },
   }[status];
 

@@ -317,7 +317,13 @@ export function BookingCard({ booking }: BookingCardProps) {
             </Text>
           </View>
         </View>
-        <BookingStatusBadge status={booking.status} />
+        <BookingStatusBadge 
+          status={
+            (booking.timelineStatus === 'workout_started' && !booking.workoutCompletedAt)
+              ? 'in_progress' 
+              : booking.status
+          } 
+        />
       </View>
 
       {/* Location address row for trainers */}

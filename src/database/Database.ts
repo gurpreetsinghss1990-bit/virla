@@ -118,6 +118,9 @@ export function isSessionGenuinelyActive(b: Booking, now: Date): boolean {
   if (!['trainer_travelling', 'trainer_arrived', 'otp_verified', 'workout_started'].includes(b.timelineStatus || '')) {
     return false;
   }
+  if (b.timelineStatus === 'workout_started' && !b.workoutCompletedAt) {
+    return true;
+  }
   const range = getBookingISTDateRange(b);
   const travelUnlockTime = range.start.getTime() - 25 * 60 * 1000;
   return now.getTime() >= travelUnlockTime && now.getTime() <= range.end.getTime();
