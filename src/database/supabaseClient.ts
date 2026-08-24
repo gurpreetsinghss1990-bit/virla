@@ -13,10 +13,16 @@ const SUPABASE_ANON_KEY =
     : 'sb_publishable_qAKxXPFGSpMxz-7jZyHm0A_dIJfpVll');
 
 let clientUserId: string | null = null;
+let demoToken: string | null = null;
 
 export function setClientUserId(userId: string | null) {
   clientUserId = userId;
   console.log(`[Supabase Client] Set x-user-id header cache: ${userId}`);
+}
+
+export function setDemoToken(token: string | null) {
+  demoToken = token;
+  console.log(`[Supabase Client] Set demo Authorization token cache: ${token ? 'present' : 'absent'}`);
 }
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -33,6 +39,15 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
           headers['x-user-id'] = clientUserId;
         }
       }
+
+      if (demoToken) {
+        if (headers instanceof Headers) {
+          headers.set('Authorization', `Bearer ${demoToken}`);
+        } else {
+          headers['Authorization'] = `Bearer ${demoToken}`;
+        }
+      }
+
       return fetch(url, { ...options, headers });
     }
   }

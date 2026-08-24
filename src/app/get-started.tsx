@@ -11,8 +11,9 @@ import { useMembershipStore } from '../store/membershipStore';
 import { useWalletStore } from '../store/walletStore';
 import { useAddressStore } from '../store/addressStore';
 import { Database } from '../database/Database';
-import { supabase } from '../database/supabaseClient';
+import { supabase, setDemoToken } from '../database/supabaseClient';
 import { OTPService } from '../services/OTPService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
 export default function GetStartedScreen() {
@@ -134,18 +135,41 @@ export default function GetStartedScreen() {
       setMsg91AccessToken(verifyRes.token);
 
       // Backend secure token verification
-      console.log('[DEBUG] Token verified by MSG91 client. Requesting backend database verification...');
+      console.log('[DEBUG] Token verified. Requesting backend database verification...');
       
-      const { data, error } = await supabase.functions.invoke('verify-otp', {
-        body: { accessToken: verifyRes.token }
-      });
+      const isDemoMode = process.env.EXPO_PUBLIC_DEMO_MODE === 'true';
+      const normalizedPhone = OTPService.normalizePhone(phone);
+      const isDemoBypass = isDemoMode && (normalizedPhone === '911234567891' || normalizedPhone === '919999999999');
 
-      if (error) {
-        console.error('[OTP Error] Invocation failed:', error);
+      let responseData: any;
+      let invokeError: any;
+      if (isDemoBypass) {
+        console.log('[DEBUG] Invoking secure verify-demo-auth Edge Function...');
+        const { data, error } = await supabase.functions.invoke('verify-demo-auth', {
+          body: { phone, otp: otpCode }
+        });
+        responseData = data;
+        invokeError = error;
+        
+        // Save the GoTrue signed token
+        if (responseData && responseData.session && responseData.session.accessToken) {
+          setDemoToken(responseData.session.accessToken);
+          await AsyncStorage.setItem('@virla_demo_token', responseData.session.accessToken);
+        }
+      } else {
+        const { data, error } = await supabase.functions.invoke('verify-otp', {
+          body: { accessToken: verifyRes.token }
+        });
+        responseData = data;
+        invokeError = error;
+      }
+
+      if (invokeError) {
+        console.error('[OTP Error] Invocation failed:', invokeError);
         let errorMsg = 'Virla couldn\'t complete your sign-in right now. Please try again.';
         try {
-          if ((error as any).context) {
-            const ctxResponse = (error as any).context;
+          if ((invokeError as any).context) {
+            const ctxResponse = (invokeError as any).context;
             const cloned = ctxResponse.clone();
             const body = await cloned.json();
             if (body && body.message) {
@@ -159,7 +183,7 @@ export default function GetStartedScreen() {
       }
 
       console.log('[OTP] Function invocation completed, parsing result...');
-      const result = data;
+      const result = responseData;
 
       // SAFE DIAGNOSTIC LOGGING OF THE BACKEND RESPONSE CONTRACT
       console.log('[OTP Diagnostics] Backend response structure keys:', result ? Object.keys(result) : 'null/undefined');

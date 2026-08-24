@@ -3,6 +3,7 @@ import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Invoice } from '../types';
 import { Database } from '../database/Database';
+import { setDemoToken } from '../database/supabaseClient';
 import { useUserProfileStore } from './userProfileStore';
 import { useBookingStore } from './bookingStore';
 import { useCoachStore } from './coachStore';
@@ -153,6 +154,9 @@ export const useUserStore = create<UserState>()(
           if (userId) {
             await PushNotificationService.removeTokenFromBackend(userId).catch(console.error);
           }
+          
+          setDemoToken(null);
+          await AsyncStorage.removeItem('@virla_demo_token').catch(console.error);
           
           set({ isLoggedIn: loggedIn });
           set({ user: emptyUser, familyMembers: [], invoices: [] });

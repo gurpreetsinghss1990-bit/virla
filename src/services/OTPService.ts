@@ -153,14 +153,19 @@ export class OTPService {
   static async sendOTP(phone: string): Promise<{ success: boolean; reqId?: string; error?: string }> {
     this.ensureInitialized();
     const normalized = this.normalizePhone(phone);
-    if (typeof __DEV__ !== 'undefined' && __DEV__ && (phone === 'demo.trainer' || phone === '9123456789' || normalized === '919123456789')) {
-      console.log('[OTP Service] Dev mock sendOTP bypass for demo.trainer.');
-      return { success: true, reqId: 'mock-req-id-demo-trainer' };
+    const isDemoMode = (typeof __DEV__ !== 'undefined' && __DEV__) || process.env.EXPO_PUBLIC_DEMO_MODE === 'true';
+
+    if (isDemoMode) {
+      if (phone === 'demo.trainer' || normalized === '919999999999') {
+        console.log('[OTP Service] Demo trainer sendOTP bypass.');
+        return { success: true, reqId: 'mock-req-id-919999999999' };
+      }
+      if (normalized === '911234567891' || normalized === '911234567892') {
+        console.log('[OTP Service] Demo client/admin sendOTP bypass.');
+        return { success: true, reqId: `mock-req-id-${normalized}` };
+      }
     }
-    if (normalized === '911234567891' || normalized === '911234567892') {
-      console.log('[OTP Service] Mock sendOTP bypass triggered for:', normalized);
-      return { success: true, reqId: `mock-req-id-${normalized}` };
-    }
+
     if (normalized.length !== 12 || !normalized.startsWith('91')) {
       return { success: false, error: 'Please enter a valid 10-digit mobile number.' };
     }
@@ -219,21 +224,21 @@ export class OTPService {
     }
 
     const normalized = this.normalizePhone(phone);
-    if (typeof __DEV__ !== 'undefined' && __DEV__ && (phone === 'demo.trainer' || phone === '9123456789' || normalized === '919123456789')) {
-      if (otp === 'VirlaTrainer@123' || otp === '123456') {
-        console.log('[OTP Service] Mock verifyOTP bypass triggered for Demo Trainer.');
+    const isDemoMode = (typeof __DEV__ !== 'undefined' && __DEV__) || process.env.EXPO_PUBLIC_DEMO_MODE === 'true';
+
+    if (isDemoMode) {
+      if ((phone === 'demo.trainer' || normalized === '919999999999') && (otp === 'VirlaTrainer@123' || otp === '123456')) {
+        console.log('[OTP Service] Demo trainer verifyOTP bypass.');
         return { success: true, token: 'mock-access-token-demo.trainer' };
       }
-      return { success: false, error: 'Incorrect development password/OTP.' };
-    }
-
-    if (normalized === '911234567891' && otp === '123456') {
-      console.log('[OTP Service] Mock verifyOTP bypass triggered for Test Client.');
-      return { success: true, token: 'mock-access-token-u-testclient' };
-    }
-    if (normalized === '911234567892' && otp === '123456') {
-      console.log('[OTP Service] Mock verifyOTP bypass triggered for Test Admin.');
-      return { success: true, token: 'mock-access-token-u-testadmin' };
+      if (normalized === '911234567891' && otp === '123456') {
+        console.log('[OTP Service] Demo client verifyOTP bypass.');
+        return { success: true, token: 'mock-access-token-u-testclient' };
+      }
+      if (normalized === '911234567892' && otp === '123456') {
+        console.log('[OTP Service] Demo admin verifyOTP bypass.');
+        return { success: true, token: 'mock-access-token-u-testadmin' };
+      }
     }
 
     if (Platform.OS === 'web') {

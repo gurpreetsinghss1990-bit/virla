@@ -11,6 +11,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { useAIStore } from '../store/aiStore';
 import { useAddressStore } from '../store/addressStore';
 import { setupRealtimeSubscriptions } from './realtime';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * Perform all application initializations in parallel.
@@ -28,6 +29,16 @@ export async function bootstrapApp(): Promise<void> {
     const isLoggedIn = useUserStore.getState().isLoggedIn;
     if (isLoggedIn && storedUser && storedUser.id) {
       Database.setCurrentUserId(storedUser.id);
+      
+      try {
+        const token = await AsyncStorage.getItem('@virla_demo_token');
+        if (token) {
+          const { setDemoToken } = require('../database/supabaseClient');
+          setDemoToken(token);
+        }
+      } catch (e) {
+        console.error('Failed to restore demo token on startup:', e);
+      }
     }
 
     // 2. Load database collections from Supabase under the restored session context
