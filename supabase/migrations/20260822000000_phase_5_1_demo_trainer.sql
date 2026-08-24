@@ -23,7 +23,7 @@ BEGIN
     'Demo Trainer',
     '919999999999',
     'demo.trainer@virla.local',
-    crypt('VirlaTrainer@123', gen_salt('bf')),
+    extensions.crypt('VirlaTrainer@123', extensions.gen_salt('bf')),
     'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80',
     'trainer',
     'active',
