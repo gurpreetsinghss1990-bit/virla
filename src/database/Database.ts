@@ -1930,13 +1930,19 @@ class DatabaseClient {
     if (fields.preferences !== undefined) {
       const prefs = fields.preferences;
       updatePayload.preferences = prefs;
-      updatePayload.operating_address = prefs.operatingAddress || null;
-      updatePayload.operating_latitude = prefs.operatingLatitude !== undefined ? prefs.operatingLatitude : null;
-      updatePayload.operating_longitude = prefs.operatingLongitude !== undefined ? prefs.operatingLongitude : null;
-      updatePayload.operating_place_id = prefs.operatingPlaceId || null;
-      updatePayload.operating_location_status = prefs.operatingLocationStatus || 'pending';
       updatePayload.service_radius_km = prefs.radiusKm || 15;
       updatePayload.address_change_request = prefs.addressChangeRequest || null;
+
+      const currentUserRole = this.schema.users.find(u => u.id === this.currentUserId)?.role;
+      const isAdmin = currentUserRole === 'admin';
+
+      if (isAdmin) {
+        updatePayload.operating_address = prefs.operatingAddress || null;
+        updatePayload.operating_latitude = prefs.operatingLatitude !== undefined ? prefs.operatingLatitude : null;
+        updatePayload.operating_longitude = prefs.operatingLongitude !== undefined ? prefs.operatingLongitude : null;
+        updatePayload.operating_place_id = prefs.operatingPlaceId || null;
+        updatePayload.operating_location_status = prefs.operatingLocationStatus || 'pending';
+      }
     }
 
     let dbError;

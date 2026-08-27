@@ -7,7 +7,7 @@ RETURNS void AS $$
 DECLARE
   app_row public.trainer_applications%ROWTYPE;
   user_row public.users%ROWTYPE;
-  user_id text;
+  v_user_id text;
   certs_obj jsonb;
   phone_digits text;
   normalized_phone text;
@@ -44,17 +44,17 @@ BEGIN
   -- Locate or create user
   SELECT * INTO user_row FROM public.users WHERE phone = normalized_phone;
   IF FOUND THEN
-    user_id := user_row.id;
+    v_user_id := user_row.id;
     -- Promote user role if not already admin
     IF user_row.role <> 'admin' THEN
-      UPDATE public.users SET role = 'trainer' WHERE id = user_id;
+      UPDATE public.users SET role = 'trainer' WHERE id = v_user_id;
     END IF;
   ELSE
-    user_id := 'u-' || substring(md5(random()::text) from 1 for 9);
+    v_user_id := 'u-' || substring(md5(random()::text) from 1 for 9);
     INSERT INTO public.users (
       id, name, phone, email, password_hash, avatar, role, status, created_date, last_login, device_info, notification_prefs
     ) VALUES (
-      user_id,
+      v_user_id,
       app_row.full_name,
       normalized_phone,
       app_row.email,
@@ -76,7 +76,7 @@ BEGIN
   INSERT INTO public.trainers (
     id, name, photo, experience, rating, specialty, years_experience, specialization, languages, short_bio, completed_sessions, rating_count, about_text, availability, working_radius, bank_details, emergency_contact, level, weekly_slots_submitted, remaining_slot_changes, retainer_status, attendance_rate, punctuality_rate, availability_compliance, price, verified_badge, certifications, achievements, reviews, workout_specialties, is_favourite, preferences, gender, operating_location_status
   ) VALUES (
-    user_id,
+    v_user_id,
     app_row.full_name,
     app_row.avatar,
     app_row.years_of_experience || ' yrs exp',
@@ -134,7 +134,7 @@ BEGIN
     id, user_id, age, gender, height, weight, fitness_goal, preferred_workout, emergency_contact, medical_notes, membership_status, credits_balance, dob, fitness_level, preferred_language, city, member_since, selected_goals
   ) VALUES (
     'prof-' || substring(md5(random()::text) from 1 for 9),
-    user_id,
+    v_user_id,
     30,
     app_row.gender,
     '180 cm',
