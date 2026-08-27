@@ -3016,21 +3016,21 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       deepLink: `/session-detail?id=${booking.id}`
     });
 
-    // Write to Supabase (Atomic)
-    const [resBooking, resProfile, resTx] = await Promise.all([
-      supabase.from('bookings').update({
-        participant_count: booking.participantCount,
-        session_type: booking.sessionType,
-        partner_name: booking.partnerName,
-        partner_phone: booking.partnerPhone
-      }).eq('id', bookingId),
-      supabase.from('user_profiles').update({ credits_balance: profile.creditsBalance }).eq('user_id', userId),
-      supabase.from('credit_transactions').insert(mapInvoiceToPostgres(tx, userId))
-    ]);
+    // Write to Supabase (Atomic) via secure RPC
+    const { data: rpcRes, error: rpcErr } = await supabase.rpc('add_partner_to_booking', {
+      p_booking_id: bookingId,
+      p_partner_name: partnerName,
+      p_partner_phone: partnerPhone
+    });
 
-    if (resBooking.error) throw resBooking.error;
-    if (resProfile.error) throw resProfile.error;
-    if (resTx.error) throw resTx.error;
+    if (rpcErr) {
+      console.error('[DB ERROR] add_partner_to_booking RPC failed:', rpcErr);
+      throw new Error(rpcErr.message);
+    }
+
+    if (rpcRes && rpcRes.tx_id) {
+      tx.id = rpcRes.tx_id;
+    }
 
     return booking;
   }
