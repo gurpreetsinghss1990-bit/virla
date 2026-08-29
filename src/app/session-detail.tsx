@@ -15,6 +15,8 @@ import { AddPartnerModal } from '../components/AddPartnerModal';
 import * as Location from 'expo-location';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
 import { getBookingISTDateRange, getDisplayWorkoutTitle, formatToDDMMYYYY } from '../utils/date';
+import { locationTrackerService } from '../services/LocationTrackerService';
+import TrackingMap from '../components/TrackingMap';
 
 function formatToIndianDate(dateStr: string): string {
   return formatToDDMMYYYY(dateStr);
@@ -114,6 +116,10 @@ export default function SessionDetailScreen() {
   const [simIntervalId, setSimIntervalId] = useState<any>(null);
   const [deviceCoords, setDeviceCoords] = useState<{ latitude: number, longitude: number } | null>(null);
 
+  // Live trainer coordinates on client side
+  const [liveTrainerCoords, setLiveTrainerCoords] = useState<{ latitude: number; longitude: number; accuracy: number; heading: number | null; speed: number | null; updatedAt: string } | null>(null);
+  const [isLiveConnectionStale, setIsLiveConnectionStale] = useState(false);
+
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
 
@@ -158,6 +164,48 @@ export default function SessionDetailScreen() {
       }
     };
   }, [currentStatus]);
+
+  // Publisher (Trainer side) and Subscriber (Client side) hooks for live GPS tracking
+  useEffect(() => {
+    if (!bookingId) return;
+
+    let unsubscribe: (() => void) | null = null;
+
+    if (role === 'trainer') {
+      if (currentStatus === 'trainer_travelling') {
+        locationTrackerService.startTracking(bookingId);
+      } else {
+        locationTrackerService.stopTracking();
+      }
+    } else if (role === 'customer') {
+      if (currentStatus === 'trainer_travelling' || currentStatus === 'trainer_arrived') {
+        unsubscribe = locationTrackerService.subscribeToLocation(
+          bookingId,
+          (coords) => {
+            setLiveTrainerCoords(coords);
+            setIsLiveConnectionStale(false);
+          },
+          () => {
+            setIsLiveConnectionStale(true);
+          }
+        );
+      } else {
+        setTimeout(() => {
+          setLiveTrainerCoords(null);
+          setIsLiveConnectionStale(false);
+        }, 0);
+      }
+    }
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+      if (role === 'trainer') {
+        locationTrackerService.stopTracking();
+      }
+    };
+  }, [bookingId, currentStatus, role]);
 
   const calculateHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371; // km
@@ -1287,39 +1335,49 @@ export default function SessionDetailScreen() {
                   </View>
                 </View>
 
-                {/* SVG Visual Canvas Map */}
-                <View className="h-44 items-center justify-center relative bg-slate-950">
-                  <Svg width="300" height="180" viewBox="0 0 300 180">
-                    {/* Dark Street Layout lines */}
-                    <Path d="M 0,30 L 300,30" stroke="#1E293B" strokeWidth="2.5" />
-                    <Path d="M 0,90 L 300,90" stroke="#1E293B" strokeWidth="2.5" />
-                    <Path d="M 0,150 L 300,150" stroke="#1E293B" strokeWidth="2.5" />
-                    <Path d="M 60,0 L 60,180" stroke="#1E293B" strokeWidth="2.5" />
-                    <Path d="M 150,0 L 150,180" stroke="#1E293B" strokeWidth="2.5" />
-                    <Path d="M 240,0 L 240,180" stroke="#1E293B" strokeWidth="2.5" />
-                    
-                    {/* Landmark Details */}
-                    <Circle cx="100" cy="50" r="14" fill="#0F172A" stroke="#1E293B" strokeWidth="1" />
-                    <Path d="M 97,46 L 103,46 M 97,50 L 103,50 M 97,54 L 103,54" stroke="#475569" strokeWidth="1" />
-                    
-                    {/* Polyline Route Path */}
-                    <Path 
-                      d="M 35,145 L 80,110 L 140,120 L 200,70 L 265,45" 
-                      stroke="#4F46E5" 
-                      strokeWidth="3.5" 
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeDasharray="6 4"
+                {/* Real Live Map or SVG Map fallback */}
+                <View className="h-44 overflow-hidden relative bg-slate-950">
+                  {liveTrainerCoords ? (
+                    <TrackingMap
+                      liveTrainerCoords={liveTrainerCoords}
+                      isStale={isLiveConnectionStale}
+                      clientAddress={booking?.address}
                     />
+                  ) : (
+                    <View className="items-center justify-center h-full w-full">
+                      <Svg width="300" height="180" viewBox="0 0 300 180">
+                        {/* Dark Street Layout lines */}
+                        <Path d="M 0,30 L 300,30" stroke="#1E293B" strokeWidth="2.5" />
+                        <Path d="M 0,90 L 300,90" stroke="#1E293B" strokeWidth="2.5" />
+                        <Path d="M 0,150 L 300,150" stroke="#1E293B" strokeWidth="2.5" />
+                        <Path d="M 60,0 L 60,180" stroke="#1E293B" strokeWidth="2.5" />
+                        <Path d="M 150,0 L 150,180" stroke="#1E293B" strokeWidth="2.5" />
+                        <Path d="M 240,0 L 240,180" stroke="#1E293B" strokeWidth="2.5" />
+                        
+                        {/* Landmark Details */}
+                        <Circle cx="100" cy="50" r="14" fill="#0F172A" stroke="#1E293B" strokeWidth="1" />
+                        <Path d="M 97,46 L 103,46 M 97,50 L 103,50 M 97,54 L 103,54" stroke="#475569" strokeWidth="1" />
+                        
+                        {/* Polyline Route Path */}
+                        <Path 
+                          d="M 35,145 L 80,110 L 140,120 L 200,70 L 265,45" 
+                          stroke="#4F46E5" 
+                          strokeWidth="3.5" 
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeDasharray="6 4"
+                        />
 
-                    {/* Customer Home Pin */}
-                    <Circle cx="265" cy="45" r="7" fill="#4F46E5" />
-                    <Circle cx="265" cy="45" r="13" fill="none" stroke="#4F46E5" strokeWidth="1.5" opacity="0.45" />
-                    
-                    {/* Animated Trainer Vehicle Dot */}
-                    <Circle cx={trainerCoords.x} cy={trainerCoords.y} r="6.5" fill="#E11D48" />
-                    <Circle cx={trainerCoords.x} cy={trainerCoords.y} r="14" fill="none" stroke="#E11D48" strokeWidth="2" opacity="0.35" />
-                  </Svg>
+                        {/* Customer Home Pin */}
+                        <Circle cx="265" cy="45" r="7" fill="#4F46E5" />
+                        <Circle cx="265" cy="45" r="13" fill="none" stroke="#4F46E5" strokeWidth="1.5" opacity="0.45" />
+                        
+                        {/* Animated Trainer Vehicle Dot */}
+                        <Circle cx={trainerCoords.x} cy={trainerCoords.y} r="6.5" fill="#E11D48" />
+                        <Circle cx={trainerCoords.x} cy={trainerCoords.y} r="14" fill="none" stroke="#E11D48" strokeWidth="2" opacity="0.35" />
+                      </Svg>
+                    </View>
+                  )}
                 </View>
 
                 {/* Tracking ETA Indicators */}

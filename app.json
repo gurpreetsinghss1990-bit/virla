@@ -17,9 +17,13 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "Allow Virla to use your location to find nearby trainers and customize your experience.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow Virla to use your location to find nearby trainers and customize your experience.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow Virla to use your location to track travel and display real-time positions during active workouts, even in the background.",
+        "NSLocationAlwaysUsageDescription": "Allow Virla to use your location to track travel and display real-time positions during active workouts, even in the background.",
         "NSCameraUsageDescription": "Allow Virla to use your camera to scan QR codes for linking development servers.",
-        "NSFaceIDUsageDescription": "Allow Virla to use Face ID to authenticate you securely."
+        "NSFaceIDUsageDescription": "Allow Virla to use Face ID to authenticate you securely.",
+        "UIBackgroundModes": [
+          "location"
+        ]
       }
     },
     "android": {
