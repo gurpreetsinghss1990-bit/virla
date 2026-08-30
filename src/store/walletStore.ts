@@ -40,7 +40,7 @@ interface WalletState {
   deductCreditLateCancel: (reason: string) => void;
   addBonusCredit: (reason: string) => void;
   syncFromDB: () => Promise<void>;
-  transferCredits: (toPhone: string, amount: number) => Promise<{ success: boolean; error?: string; recipientName?: string; expiryDate?: string }>;
+  transferCredits: (toPhone: string, amount: number) => Promise<{ success: boolean; error?: string; recipientName?: string; expiryDate?: string; allocations?: any[] }>;
 }
 
 export const useWalletStore = create<WalletState>((set, get) => ({
@@ -204,7 +204,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     return { 
       success: true, 
       recipientName: data?.recipient_name,
-      expiryDate: data?.expiry_date 
+      expiryDate: data?.expiry_date,
+      allocations: data?.allocations
     };
   }
 }));

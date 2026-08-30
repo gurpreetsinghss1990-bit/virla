@@ -97,28 +97,52 @@ export default function WalletScreen() {
     }
   };
 
-  const getSelectedLotForTransfer = () => {
+  const calculateTransferBreakdown = () => {
     const amt = parseInt(transferAmount, 10);
-    if (isNaN(amt) || amt <= 0 || !creditLots || creditLots.length === 0) return null;
+    if (isNaN(amt) || amt <= 0 || !creditLots || creditLots.length === 0) return [];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     const sortedLots = [...creditLots]
-      .filter(l => l.remaining_credits > 0)
+      .filter(l => {
+        if (l.remaining_credits <= 0) return false;
+        const expDate = new Date(l.official_expiry_date);
+        expDate.setHours(0, 0, 0, 0);
+        return expDate >= today;
+      })
       .sort((a, b) => new Date(a.official_expiry_date).getTime() - new Date(b.official_expiry_date).getTime());
 
-    const eligibleLots = sortedLots.filter(l => l.remaining_credits >= amt);
+    let needed = amt;
+    const allocations: { amount: number; official_expiry_date: string }[] = [];
 
-    if (eligibleLots.length > 0) {
-      return eligibleLots[0];
+    for (const lot of sortedLots) {
+      if (needed <= 0) break;
+      if (lot.remaining_credits >= needed) {
+        allocations.push({
+          amount: needed,
+          official_expiry_date: lot.official_expiry_date
+        });
+        needed = 0;
+      } else {
+        allocations.push({
+          amount: lot.remaining_credits,
+          official_expiry_date: lot.official_expiry_date
+        });
+        needed -= lot.remaining_credits;
+      }
     }
-    return null;
+
+    if (needed > 0) return []; // Cannot satisfy
+    return allocations;
   };
 
   const getTransferredExpiryDate = () => {
-    const selectedLot = getSelectedLotForTransfer();
-    if (selectedLot) {
-      return formatToDDMMYYYY(selectedLot.official_expiry_date);
+    const breakdown = calculateTransferBreakdown();
+    if (breakdown.length === 1) {
+      return formatToDDMMYYYY(breakdown[0].official_expiry_date);
     }
-    return 'Multi-Lot (Not Supported)';
+    return 'Multi-Lot Breakdown';
   };
 
   const handleTransfer = async () => {
@@ -136,16 +160,39 @@ export default function WalletScreen() {
       return;
     }
     
-    const selectedLot = getSelectedLotForTransfer();
-    if (!selectedLot) {
-      Alert.alert(
-        'Transfer Restriction',
-        'The requested transfer amount exceeds any single active credit lot. To preserve original expiry dates, please perform separate transfers of smaller amounts.'
-      );
+    const breakdown = calculateTransferBreakdown();
+    if (breakdown.length === 0) {
+      Alert.alert('Validation Error', 'Insufficient unexpired credits available for transfer.');
       return;
     }
 
     setShowConfirmModal(true);
+  };
+
+  const renderExpirySection = () => {
+    const breakdown = calculateTransferBreakdown();
+    if (breakdown.length === 0) return null;
+
+    if (breakdown.length === 1) {
+      return (
+        <View className="flex-row justify-between items-center py-1">
+          <Text className="text-zinc-450 text-[10px] font-bold uppercase">Original Expiry</Text>
+          <Text className="text-zinc-900 text-xs font-black">{formatToDDMMYYYY(breakdown[0].official_expiry_date)}</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View className="border-t border-zinc-100 pt-3.5 gap-2">
+        <Text className="text-zinc-450 text-[9px] font-black uppercase tracking-wider mb-1">Credit Expiry Breakdown</Text>
+        {breakdown.map((item, idx) => (
+          <View key={idx} className="flex-row justify-between items-center py-0.5">
+            <Text className="text-zinc-800 text-xs font-bold">{item.amount} {item.amount === 1 ? 'Credit' : 'Credits'}</Text>
+            <Text className="text-zinc-550 text-[10px] font-bold">Expires {formatToDDMMYYYY(item.official_expiry_date)}</Text>
+          </View>
+        ))}
+      </View>
+    );
   };
 
   const handleTransferConfirm = async () => {
@@ -532,10 +579,7 @@ export default function WalletScreen() {
                 <Text className="text-zinc-450 text-[10px] font-bold uppercase">Remaining Balance</Text>
                 <Text className="text-zinc-900 text-xs font-black">{creditBalance - parseInt(transferAmount, 10)} Credits</Text>
               </View>
-              <View className="flex-row justify-between items-center py-1">
-                <Text className="text-zinc-450 text-[10px] font-bold uppercase">Original Expiry</Text>
-                <Text className="text-zinc-900 text-xs font-black">{getTransferredExpiryDate()}</Text>
-              </View>
+              {renderExpirySection()}
               {isEliteUser && (
                 <Text className="text-indigo-800 text-[8px] font-bold uppercase mt-1 leading-relaxed text-center">
                   *Transferred credits preserve premium 7-day grace extension after expiry.
