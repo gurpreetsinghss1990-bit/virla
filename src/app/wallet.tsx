@@ -322,8 +322,6 @@ export default function WalletScreen() {
                 <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-widest">★ VIRLA Wallet Card</Text>
                 <Text className="text-white text-base font-black mt-1">Universal Session Pass</Text>
               </View>
-              {/* Card NFC Wave indicator */}
-              <Feather name="rss" size={16} color="white" />
             </View>
 
             <View className="my-2">

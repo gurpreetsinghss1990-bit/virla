@@ -650,19 +650,39 @@ export default function ProfileScreen() {
               {user.role !== 'trainer' && !hasApplied && (
                 <View className="mb-6">
                   <LuxuryCard 
-                    className="p-5 bg-rose-50 border border-rose-200/50"
+                    className="p-6 bg-zinc-950 border border-zinc-800 shadow-xl"
                     onPress={() => router.push('/trainer-application')}
                   >
-                    <View className="flex-row items-center justify-between w-full">
-                      <View className="flex-1 pr-4 gap-1">
-                        <Text className="text-[#E11D48] text-[9px] font-black uppercase tracking-widest">Join our team</Text>
-                        <Text className="text-zinc-950 text-sm font-black tracking-tight">Become a VIRLA Trainer</Text>
-                        <Text className="text-[#6B7280] text-[10px] font-medium leading-relaxed mt-0.5">
-                          Earn up to ₹1,200 per session with flexible hours and dedicated client matching.
-                        </Text>
+                    <View className="gap-4">
+                      <View className="flex-row items-center justify-between">
+                        <View className="gap-0.5">
+                          <Text className="text-[#E11D48] text-[8px] font-black uppercase tracking-widest">Join our team</Text>
+                          <Text className="text-white text-base font-black tracking-tight">Become a VIRLA Trainer</Text>
+                        </View>
+                        <View className="w-8 h-8 rounded-full bg-[#E11D48] items-center justify-center shadow-md">
+                          <Feather name="arrow-right" size={14} color="white" />
+                        </View>
                       </View>
-                      <View className="w-10 h-10 rounded-full bg-[#E11D48] items-center justify-center shadow-md">
-                        <Feather name="chevron-right" size={18} color="white" />
+
+                      <Text className="text-zinc-400 text-xs font-semibold leading-relaxed">
+                        Train on your schedule. Grow your client base. Keep more of what you earn.
+                      </Text>
+
+                      <View className="h-[1px] bg-zinc-850 my-1" />
+
+                      <View className="gap-2">
+                        {[
+                          'Flexible working hours',
+                          'Virla charges only a commission',
+                          'Your session earnings go to you',
+                          'Build your professional trainer profile',
+                          'Connect with more clients'
+                        ].map((benefit, idx) => (
+                          <View key={idx} className="flex-row items-center gap-2">
+                            <Feather name="check" size={10} color="#059669" />
+                            <Text className="text-zinc-300 text-[10px] font-bold">{benefit}</Text>
+                          </View>
+                        ))}
                       </View>
                     </View>
                   </LuxuryCard>

@@ -205,13 +205,13 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
         
         <View className="flex-row gap-2 mt-1 flex-wrap">
           <View className="bg-zinc-50 border border-zinc-150 px-2.5 py-1 rounded-lg">
-            <Text className="text-zinc-650 text-[9px] font-bold uppercase">{customerGender}</Text>
+            <Text numberOfLines={1} className="text-zinc-650 text-[9px] font-bold uppercase">{customerGender}</Text>
           </View>
           <View className="bg-zinc-50 border border-zinc-150 px-2.5 py-1 rounded-lg">
-            <Text className="text-zinc-650 text-[9px] font-bold uppercase">Solo Session</Text>
+            <Text numberOfLines={1} className="text-zinc-650 text-[9px] font-bold uppercase">Solo Session</Text>
           </View>
-          <View className="bg-zinc-50 border border-zinc-150 px-2.5 py-1 rounded-lg">
-            <Text className="text-zinc-650 text-[9px] font-bold uppercase">{booking.address ? booking.address.split(',')[0] : 'Venue'}</Text>
+          <View className="bg-zinc-50 border border-zinc-150 px-2.5 py-1 rounded-lg max-w-[45%]">
+            <Text numberOfLines={1} className="text-zinc-650 text-[9px] font-bold uppercase">{booking.address ? booking.address.split(',')[0] : 'Venue'}</Text>
           </View>
         </View>
       </View>
@@ -1719,15 +1719,14 @@ export default function HomeScreen() {
                             <View className="w-[1px] flex-1 border-l border-zinc-300 border-dashed my-0.5" />
                             <View className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                           </View>
-                          {/* Text info */}
                           <View className="gap-3 flex-1">
                             <View>
-                              <Text className="text-zinc-950 text-[13px] font-semibold">{formatToDDMMYYYY(bookingData.date)}</Text>
-                              <Text className="text-zinc-400 text-[11px] font-medium mt-0.5">{bookingData.time ? bookingData.time.split(' - ')[0] : ''}</Text>
+                              <Text numberOfLines={1} className="text-zinc-950 text-[13px] font-semibold">{formatToDDMMYYYY(bookingData.date)}</Text>
+                              <Text numberOfLines={1} className="text-zinc-450 text-[11px] font-medium mt-0.5">{bookingData.time ? bookingData.time.split(' - ')[0] : ''}</Text>
                             </View>
                             <View>
-                              <Text className="text-zinc-950 text-[13px] font-semibold">Home</Text>
-                              <Text className="text-zinc-400 text-[11px] font-medium mt-0.5">Mumbai, India</Text>
+                              <Text numberOfLines={1} className="text-zinc-950 text-[13px] font-semibold">Home</Text>
+                              <Text numberOfLines={1} className="text-zinc-455 text-[11px] font-medium mt-0.5">{bookingData.address ? bookingData.address.split(',')[0] : 'Mumbai, India'}</Text>
                             </View>
                           </View>
                         </View>
@@ -2017,18 +2016,18 @@ export default function HomeScreen() {
 
                       <View className="gap-1">
                         <Text className="text-zinc-500 text-[8px] font-black uppercase">Workout: {getDisplayWorkoutTitle(nextSession.workoutTitle)}</Text>
-                        <Text className="text-white text-base font-semibold mt-1 leading-tight">
+                        <Text numberOfLines={1} className="text-white text-base font-semibold mt-1 leading-tight">
                           Client: {nextSession.clientName || 'Viral'}
                         </Text>
-                        <Text className="text-zinc-400 text-[10px] font-medium mt-1">
+                        <Text numberOfLines={1} className="text-zinc-400 text-[10px] font-medium mt-1">
                           📍 Venue: {nextSession.address ? nextSession.address.split(',')[0] : 'Home Session'}
                         </Text>
-                        <Text className="text-zinc-500 text-[9px] font-medium mt-0.5">
+                        <Text numberOfLines={1} className="text-zinc-500 text-[9px] font-medium mt-0.5">
                           ⏱ {nextSession.time} ({nextSession.durationMinutes || 60} mins)
                         </Text>
                       </View>
 
-                      <View className="flex-row gap-2">
+                      <View className="flex-row gap-2 flex-wrap">
                         <TouchableOpacity
                           onPress={() => {
                             if (SessionEngine.isTravelWindowOpen(nextSession)) {
@@ -2040,10 +2039,10 @@ export default function HomeScreen() {
                               );
                             }
                           }}
-                          className="flex-1 bg-zinc-900 border border-zinc-850 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
+                          className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-850 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
                         >
                           <Feather name="navigation" size={10} color="white" />
-                          <Text className="text-white text-[8px] font-bold uppercase">Navigate</Text>
+                          <Text numberOfLines={1} className="text-white text-[8px] font-bold uppercase">Navigate</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -2054,18 +2053,18 @@ export default function HomeScreen() {
                               Alert.alert('Call Locked', 'Calling will be available 60 minutes before the session.');
                             }
                           }}
-                          className="flex-1 bg-zinc-900 border border-zinc-850 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
+                          className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-850 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
                         >
                           <Feather name="phone" size={10} color="white" />
-                          <Text className="text-white text-[8px] font-bold uppercase">Call Client</Text>
+                          <Text numberOfLines={1} className="text-white text-[8px] font-bold uppercase">Call Client</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
                           onPress={() => router.push({ pathname: '/communication', params: { id: nextSession.id } })}
-                          className="flex-1 bg-zinc-900 border border-zinc-850 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
+                          className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-850 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
                         >
                           <Feather name="message-square" size={10} color="white" />
-                          <Text className="text-white text-[8px] font-bold uppercase">Message</Text>
+                          <Text numberOfLines={1} className="text-white text-[8px] font-bold uppercase">Message</Text>
                         </TouchableOpacity>
                       </View>
 
