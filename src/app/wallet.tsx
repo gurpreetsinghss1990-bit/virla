@@ -17,6 +17,7 @@ export default function WalletScreen() {
   const { creditBalance, lifetimePurchased, creditsUsed, ledger, transferCredits, creditLots } = useWalletStore();
   const { bookings } = useBookingStore();
   const { membership, isExpired } = useMembershipStore();
+  const role = useUserStore((state) => state.role);
 
   useFocusEffect(
     useCallback(() => {
@@ -43,15 +44,15 @@ export default function WalletScreen() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const handleVerifyRecipient = async () => {
-    const cleanPhone = transferPhone.replace(/\D/g, '');
-    if (!cleanPhone || cleanPhone.length < 10) {
+    if (!transferPhone || transferPhone.length < 10) {
       Alert.alert('Invalid Phone Number', 'Please enter a valid 10-digit mobile number.');
       return;
     }
     setRecipientStatus('searching');
     setIsInviteSent(false);
     try {
-      const { data, error } = await supabase.rpc('find_recipient_by_phone', { p_phone: cleanPhone });
+      const fullPhone = '+91' + transferPhone;
+      const { data, error } = await supabase.rpc('find_recipient_by_phone', { p_phone: fullPhone });
       if (error) {
         setRecipientStatus('idle');
         Alert.alert('Verification Error', error.message);
@@ -73,7 +74,7 @@ export default function WalletScreen() {
   };
 
   const handleInvite = async () => {
-    const cleanPhone = transferPhone.replace(/\D/g, '');
+    const fullPhone = '+91' + transferPhone;
     const userId = Database.getCurrentUserId();
     if (!userId) return;
 
@@ -81,7 +82,7 @@ export default function WalletScreen() {
       const { error } = await supabase.from('invitations').insert({
         id: 'invite-' + Date.now(),
         sender_id: userId,
-        phone: cleanPhone
+        phone: fullPhone
       });
 
       if (error && error.code !== '23505') {
@@ -90,7 +91,7 @@ export default function WalletScreen() {
       }
 
       setIsInviteSent(true);
-      Alert.alert('Invitation Logged ✉️', `Invitation to join Virla has been successfully recorded for: ${transferPhone}.`);
+      Alert.alert('Invitation Logged ✉️', `Invitation to join Virla has been successfully recorded for: +91 ${transferPhone}.`);
     } catch (err) {
       console.error('[Invite] failed:', err);
     }
@@ -127,7 +128,8 @@ export default function WalletScreen() {
   const handleTransferConfirm = async () => {
     setShowConfirmModal(false);
     const amt = parseInt(transferAmount, 10);
-    const res = await transferCredits(transferPhone.trim(), amt);
+    const fullPhone = '+91' + transferPhone;
+    const res = await transferCredits(fullPhone, amt);
     if (res.success) {
       Alert.alert('Transfer Successful 🎉', `${amt} ${amt === 1 ? 'credit' : 'credits'} transferred successfully to ${res.recipientName || recipientName}.\nExpiry: ${res.expiryDate || getTransferredExpiryDate()}`);
       setTransferPhone('');
@@ -228,6 +230,18 @@ export default function WalletScreen() {
             </View>
           )}
 
+          {role === 'trainer' && (
+            <View className="bg-indigo-50 border border-indigo-100 p-5 rounded-[28px] gap-2">
+              <View className="flex-row items-center gap-2">
+                <Feather name="info" size={16} color="#4F46E5" />
+                <Text className="text-indigo-800 text-[10px] font-black uppercase tracking-wider">TRANSFER-ONLY CREDITS</Text>
+              </View>
+              <Text className="text-indigo-700 text-[11px] font-semibold leading-relaxed">
+                As a trainer, you can receive and transfer credits, but you cannot use credits to book sessions for yourself.
+              </Text>
+            </View>
+          )}
+
           {/* Apple Wallet inspired Credit Card (Feature 3) */}
           <View className="bg-zinc-950 rounded-[32px] p-6 border border-zinc-800 shadow-xl gap-6 relative overflow-hidden">
             {/* Shimmer overlay styling */}
@@ -265,14 +279,16 @@ export default function WalletScreen() {
 
             <View className="h-[1px] bg-zinc-850 mt-2 mb-1" />
 
-            <TouchableOpacity 
-              activeOpacity={0.85}
-              onPress={() => router.push('/membership' as any)}
-              className="bg-[#E11D48] py-4 rounded-2xl items-center justify-center flex-row gap-2 shadow-md"
-            >
-              <Feather name="plus-circle" size={13} color="white" />
-              <Text className="text-white text-xs font-black uppercase tracking-wider">Recharge Wallet</Text>
-            </TouchableOpacity>
+            {role !== 'trainer' && (
+              <TouchableOpacity 
+                activeOpacity={0.85}
+                onPress={() => router.push('/membership' as any)}
+                className="bg-[#E11D48] py-4 rounded-2xl items-center justify-center flex-row gap-2 shadow-md"
+              >
+                <Feather name="plus-circle" size={13} color="white" />
+                <Text className="text-white text-xs font-black uppercase tracking-wider">Recharge Wallet</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Stats metrics rows */}
@@ -309,17 +325,24 @@ export default function WalletScreen() {
               <View>
                 <Text className="text-zinc-400 text-[8px] font-black uppercase mb-1">Recipient Phone Number</Text>
                 <View className="flex-row gap-2">
+                  <View className="bg-zinc-100 border border-zinc-200/80 px-4.5 py-3 rounded-xl justify-center">
+                    <Text className="text-zinc-600 text-xs font-black">+91</Text>
+                  </View>
                   <TextInput
-                    placeholder="e.g. +91 99999 99999"
+                    placeholder="9920827270"
                     placeholderTextColor="#9CA3AF"
                     value={transferPhone}
                     onChangeText={(txt) => {
-                      setTransferPhone(txt);
-                      setRecipientStatus('idle');
-                      setRecipientName('');
-                      setIsInviteSent(false);
+                      const cleaned = txt.replace(/\D/g, '');
+                      if (cleaned.length <= 10) {
+                        setTransferPhone(cleaned);
+                        setRecipientStatus('idle');
+                        setRecipientName('');
+                        setIsInviteSent(false);
+                      }
                     }}
-                    keyboardType="phone-pad"
+                    keyboardType="numeric"
+                    maxLength={10}
                     className="flex-1 bg-zinc-50 border border-zinc-200/80 px-4 py-3 rounded-xl text-zinc-900 text-xs font-bold"
                   />
                   <TouchableOpacity
@@ -455,7 +478,7 @@ export default function WalletScreen() {
               </View>
               <View className="flex-row justify-between items-center py-1">
                 <Text className="text-zinc-450 text-[10px] font-bold uppercase">Phone Number</Text>
-                <Text className="text-zinc-900 text-xs font-bold">{transferPhone}</Text>
+                <Text className="text-zinc-900 text-xs font-bold">+91 {transferPhone}</Text>
               </View>
               <View className="flex-row justify-between items-center py-1">
                 <Text className="text-zinc-450 text-[10px] font-bold uppercase">Transfer Amount</Text>
