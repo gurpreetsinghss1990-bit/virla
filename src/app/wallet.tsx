@@ -14,9 +14,9 @@ import { formatToDDMMYYYY } from '../utils/date';
 export default function WalletScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { creditBalance, lifetimePurchased, creditsUsed, ledger, transferCredits, clearCreditsForTesting } = useWalletStore();
+  const { creditBalance, lifetimePurchased, creditsUsed, ledger, transferCredits } = useWalletStore();
   const { bookings } = useBookingStore();
-  const { membership, toggleExpiryDate, isExpired } = useMembershipStore();
+  const { membership, isExpired } = useMembershipStore();
 
   useFocusEffect(
     useCallback(() => {
@@ -159,7 +159,7 @@ export default function WalletScreen() {
           </View>
 
           {/* Stats metrics rows */}
-          <View className="flex-row justify-between gap-y-4">
+          <View className="flex-row flex-wrap justify-between gap-y-4">
             <View className="w-[47%] bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-xs gap-1.5">
               <Text className="text-zinc-400 text-[8px] font-black uppercase">Lifetime Bought</Text>
               <Text className="text-zinc-900 text-sm font-black">{lifetimePurchased} Credits</Text>
@@ -222,71 +222,6 @@ export default function WalletScreen() {
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* QA Development Controls */}
-          {typeof __DEV__ !== 'undefined' && __DEV__ && (
-            <View className="bg-red-50/50 border border-red-100 p-5 rounded-[28px] gap-4">
-              <View className="flex-row items-center gap-2 border-b border-red-100 pb-3">
-                <Feather name="tool" size={16} color="#B91C1C" />
-                <Text className="text-red-800 text-xs font-black uppercase tracking-wider">QA Testing Panel</Text>
-              </View>
-
-              <Text className="text-red-700 text-[9px] font-semibold leading-relaxed">
-                Use these tools to verify edge-case behaviors (such as memberships expiring or running out of credits) instantly.
-              </Text>
-
-              <View className="gap-2.5">
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    toggleExpiryDate();
-                    Alert.alert('Status Updated', `Membership expiry date toggled to: ${useMembershipStore.getState().membership.renewalDate}`);
-                  }}
-                  className="bg-white border border-red-200 py-3 rounded-xl items-center justify-center flex-row gap-2"
-                >
-                  <Feather name="clock" size={12} color="#B91C1C" />
-                  <Text className="text-red-800 text-[10px] font-black uppercase">
-                    {isExpired() ? 'Set Valid (Aug 15)' : 'Set Expired (Jul 15)'}
-                  </Text>
-                </TouchableOpacity>
-
-                <View className="flex-row gap-2">
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      clearCreditsForTesting();
-                      Alert.alert('Balance Cleared', 'Your active credit balance is now 0.');
-                    }}
-                    className="flex-1 bg-white border border-red-200 py-3 rounded-xl items-center justify-center flex-row gap-2"
-                  >
-                    <Feather name="trash-2" size={12} color="#B91C1C" />
-                    <Text className="text-red-800 text-[10px] font-black uppercase">Clear Credits</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      const userId = Database.getCurrentUserId();
-                      if (userId) {
-                        const profile = Database.getProfile(userId);
-                        if (profile) {
-                          profile.creditsBalance = 50;
-                          Database.updateProfile(userId, { creditsBalance: 50 });
-                          useWalletStore.getState().syncFromDB();
-                          useMembershipStore.getState().syncFromDB();
-                        }
-                      }
-                      Alert.alert('Balance Reset', 'Your credit balance has been reset to 50.');
-                    }}
-                    className="flex-1 bg-white border border-red-200 py-3 rounded-xl items-center justify-center flex-row gap-2"
-                  >
-                    <Feather name="refresh-cw" size={12} color="#B91C1C" />
-                    <Text className="text-red-800 text-[10px] font-black uppercase">Reset to 50</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          )}
 
           {/* Credit ledger ledger logs transaction list (Feature 4) */}
           <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
