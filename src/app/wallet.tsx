@@ -97,15 +97,28 @@ export default function WalletScreen() {
     }
   };
 
-  const getTransferredExpiryDate = () => {
-    if (creditLots && creditLots.length > 0) {
-      const activeLots = creditLots.filter(l => l.remaining_credits > 0);
-      if (activeLots.length > 0) {
-        const earliestDateStr = activeLots[0].official_expiry_date;
-        return formatToDDMMYYYY(earliestDateStr);
-      }
+  const getSelectedLotForTransfer = () => {
+    const amt = parseInt(transferAmount, 10);
+    if (isNaN(amt) || amt <= 0 || !creditLots || creditLots.length === 0) return null;
+
+    const sortedLots = [...creditLots]
+      .filter(l => l.remaining_credits > 0)
+      .sort((a, b) => new Date(a.official_expiry_date).getTime() - new Date(b.official_expiry_date).getTime());
+
+    const eligibleLots = sortedLots.filter(l => l.remaining_credits >= amt);
+
+    if (eligibleLots.length > 0) {
+      return eligibleLots[0];
     }
-    return '31/12/2026';
+    return null;
+  };
+
+  const getTransferredExpiryDate = () => {
+    const selectedLot = getSelectedLotForTransfer();
+    if (selectedLot) {
+      return formatToDDMMYYYY(selectedLot.official_expiry_date);
+    }
+    return 'Multi-Lot (Not Supported)';
   };
 
   const handleTransfer = async () => {
@@ -122,6 +135,16 @@ export default function WalletScreen() {
       Alert.alert('Validation Error', `Insufficient balance. You only have ${creditBalance} credits.`);
       return;
     }
+    
+    const selectedLot = getSelectedLotForTransfer();
+    if (!selectedLot) {
+      Alert.alert(
+        'Transfer Restriction',
+        'The requested transfer amount exceeds any single active credit lot. To preserve original expiry dates, please perform separate transfers of smaller amounts.'
+      );
+      return;
+    }
+
     setShowConfirmModal(true);
   };
 
@@ -290,6 +313,27 @@ export default function WalletScreen() {
               </TouchableOpacity>
             )}
           </View>
+
+          {/* Credit Lot Expiry Summary */}
+          {creditLots && creditLots.filter(l => l.remaining_credits > 0).length > 0 && (
+            <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-3">
+              <View className="flex-row items-center gap-2 border-b border-zinc-50 pb-2">
+                <Feather name="calendar" size={14} color="#101828" />
+                <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Lot Expiry Summary</Text>
+              </View>
+              <View className="gap-2">
+                {creditLots
+                  .filter(l => l.remaining_credits > 0)
+                  .sort((a, b) => new Date(a.official_expiry_date).getTime() - new Date(b.official_expiry_date).getTime())
+                  .map((lot, idx) => (
+                    <View key={lot.id || idx} className="flex-row justify-between items-center py-0.5">
+                      <Text className="text-zinc-900 text-xs font-bold">{lot.remaining_credits} {lot.remaining_credits === 1 ? 'Credit' : 'Credits'}</Text>
+                      <Text className="text-zinc-450 text-[10px] font-bold">Expires {formatToDDMMYYYY(lot.official_expiry_date)}</Text>
+                    </View>
+                  ))}
+              </View>
+            </View>
+          )}
 
           {/* Stats metrics rows */}
           <View className="flex-row flex-wrap justify-between gap-y-4">
