@@ -1,4 +1,3 @@
-// WALLET FUNCTIONALITY LOCKED
 import { create } from 'zustand';
 import { useUserStore } from './userStore';
 import { useMembershipStore } from './membershipStore';
@@ -32,6 +31,7 @@ interface WalletState {
   creditsUsed: number;
   ledger: LedgerTransaction[];
   payments: PaymentRecord[];
+  creditLots: any[];
   
   // Actions
   purchasePlan: (planName: string, credits: number, priceText: string, totalText: string, gstText: string) => void;
@@ -39,9 +39,8 @@ interface WalletState {
   refundCredit: (reason: string) => void;
   deductCreditLateCancel: (reason: string) => void;
   addBonusCredit: (reason: string) => void;
-  syncFromDB: () => void;
-  transferCredits: (toPhone: string, amount: number) => Promise<{ success: boolean; error?: string }>;
-  clearCreditsForTesting: () => void;
+  syncFromDB: () => Promise<void>;
+  transferCredits: (toPhone: string, amount: number) => Promise<{ success: boolean; error?: string; recipientName?: string; expiryDate?: string }>;
 }
 
 export const useWalletStore = create<WalletState>((set, get) => ({
@@ -50,6 +49,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   creditsUsed: 0,
   ledger: [],
   payments: [],
+  creditLots: [],
 
   purchasePlan: async (planName, credits, priceText, totalText, gstText) => {
     const userId = Database.getCurrentUserId();
@@ -84,44 +84,72 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   addBonusCredit: (reason) => {
     console.log('[useWalletStore] addBonusCredit call ignored. Credits are authoritatively added on Supabase.');
   },
-  syncFromDB: () => {
+
+  syncFromDB: async () => {
     const userId = Database.getCurrentUserId();
     if (userId) {
       if (!Database.getIsLoaded()) {
         console.warn('[WalletStore] syncFromDB called before database finished loading. Skipping sync.');
         return;
       }
+
+      // Authoritative scheduled reminders & expiries local safety run
+      await supabase.rpc('process_credit_expiries_and_reminders');
+
+      await Database.refreshUserData(userId);
       const profile = Database.getProfile(userId);
       if (profile) {
         const ledgerList = Database.getLedgerTransactions(userId) as any[];
         const paymentList = Database.getPayments(userId) as any[];
         
+        // Fetch active credit lots
+        const { data: lots } = await supabase
+          .from('credit_lots')
+          .select('*')
+          .eq('user_id', userId)
+          .gt('remaining_credits', 0)
+          .order('official_expiry_date', { ascending: true });
+
         // Calculate credits used and purchased
         const purchased = ledgerList
-          .filter(t => t.type === 'paid' || t.type === 'refund' || t.type === 'purchase')
+          .filter(t => t.type === 'paid' || t.type === 'refund' || t.type === 'purchase' || t.type === 'transfer_received')
           .reduce((sum, curr) => sum + (curr.credits || 0), 0);
 
         const used = ledgerList
-          .filter(t => t.type === 'spend' || t.type === 'transfer' || t.type === 'penalty')
+          .filter(t => t.type === 'spend' || t.type === 'transfer_sent' || t.type === 'penalty' || t.type === 'expired')
           .reduce((sum, curr) => sum + Math.abs(curr.credits || 1), 0);
 
         set({
           creditBalance: profile.creditsBalance,
+          creditLots: lots || [],
           ledger: ledgerList.map(tx => {
-            const isAddition = tx.type === 'paid' || tx.type === 'refund' || tx.type === 'purchase';
+            const isAddition = tx.type === 'paid' || tx.type === 'refund' || tx.type === 'purchase' || tx.type === 'transfer_received';
             const changeVal = isAddition ? tx.credits : -Math.abs(tx.credits);
             
             let title = tx.type;
+            let ledgerType: any = 'booking';
+
             if (tx.type === 'paid' || tx.type === 'purchase') {
               title = `Purchased ${tx.credits} Credits`;
+              ledgerType = 'purchase';
             } else if (tx.type === 'spend') {
               title = 'Session Booking';
-            } else if (tx.type === 'transfer') {
-              title = 'Credit Transfer';
+              ledgerType = 'booking';
+            } else if (tx.type === 'transfer_sent') {
+              title = `Credits Transferred (${tx.amount})`;
+              ledgerType = 'penalty';
+            } else if (tx.type === 'transfer_received') {
+              title = `Credits Received (${tx.amount})`;
+              ledgerType = 'purchase';
             } else if (tx.type === 'refund') {
               title = 'Credit Refund';
+              ledgerType = 'refund';
             } else if (tx.type === 'penalty') {
               title = 'Cancellation Penalty';
+              ledgerType = 'penalty';
+            } else if (tx.type === 'expired') {
+              title = 'Expired Credits';
+              ledgerType = 'penalty';
             }
 
             return {
@@ -129,7 +157,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
               title: title,
               change: changeVal,
               date: tx.date,
-              type: isAddition ? 'purchase' : 'booking'
+              type: ledgerType
             };
           }),
           payments: paymentList,
@@ -142,11 +170,13 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         creditBalance: 0,
         ledger: [],
         payments: [],
+        creditLots: [],
         lifetimePurchased: 0,
         creditsUsed: 0
       });
     }
   },
+
   transferCredits: async (toPhone: string, amount: number) => {
     if (useMembershipStore.getState().isExpired()) {
       return { success: false, error: 'Cannot transfer credits: your membership has expired.' };
@@ -157,9 +187,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     const userId = Database.getCurrentUserId();
     if (!userId) return { success: false, error: 'User not logged in.' };
 
-    const cleanPhone = toPhone.replace(/\D/g, '');
     const { data, error } = await supabase.rpc('transfer_credits', {
-      p_to_phone: cleanPhone,
+      p_to_phone: toPhone,
       p_amount: amount
     });
 
@@ -169,11 +198,13 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     }
 
     await Database.refreshUserData(userId);
-    get().syncFromDB();
+    await get().syncFromDB();
     useMembershipStore.getState().syncFromDB();
-    return { success: true };
-  },
-  clearCreditsForTesting: () => {
-    console.log('[useWalletStore] clearCreditsForTesting ignored due to RLS blocks.');
+
+    return { 
+      success: true, 
+      recipientName: data?.recipient_name,
+      expiryDate: data?.expiry_date 
+    };
   }
 }));
