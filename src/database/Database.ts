@@ -1254,6 +1254,7 @@ class DatabaseClient {
       'Cardio': 'Dance Fitness',
       'Conditioning': 'Stretching',
       'Boxing': 'Boxing',
+      'Aerial Yoga': 'Aerial Yoga',
       'All Workouts': 'All Workouts'
     };
 
@@ -1563,6 +1564,24 @@ class DatabaseClient {
           rating: 4.9,
           reviews: [{ reviewerName: 'Kabir B.', rating: 5, comment: 'Brutal but incredibly satisfying workout! Punching pads is the best.' }],
           faqs: [{ question: 'Do I need boxing gloves?', answer: 'No, the trainer will bring sanitized, high-quality focus pads and gloves for you.' }]
+        },
+        {
+          id: 'w-aerial',
+          title: 'ZenFlow Aerial',
+          icon: '🧘‍♀️',
+          description: 'Defy gravity. Perform guided yoga stretches and core decompression exercises supported by a premium silk hammock to boost spinal flexibility.',
+          calories: 210,
+          duration: 55,
+          heroImage: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80',
+          category: 'Aerial Yoga',
+          benefits: ['Spinal decompression & core alignment', 'Deep upper body & shoulder flexibility', 'Build functional core strength'],
+          difficulty: 'Beginner - Medium',
+          equipment: ['Aerial hammock', 'Yoga mat'],
+          homeVisitBadge: true,
+          sessionPrice: 1500,
+          rating: 5.0,
+          reviews: [],
+          faqs: [{ question: 'How is the hammock anchored?', answer: 'The trainer will bring a premium portable suspension frame that does not damage ceiling or walls.' }]
         }
       ];
       this.schema.workouts = initialWorkouts;

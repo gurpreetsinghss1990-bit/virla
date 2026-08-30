@@ -69,6 +69,8 @@ export function geocodeAddressSync(address: string): { lat: number; lng: number 
 export interface AutocompleteSuggestion {
   placeId: string;
   description: string;
+  mainText?: string;
+  secondaryText?: string;
 }
 
 /**
@@ -117,7 +119,9 @@ export async function fetchGooglePlacesAutocomplete(
         const pred = s.placePrediction;
         return {
           placeId: pred.placeId || pred.place.replace('places/', ''),
-          description: pred.text.text
+          description: pred.text.text,
+          mainText: pred.structuredFormat?.mainText?.text || pred.text.text,
+          secondaryText: pred.structuredFormat?.secondaryText?.text || ''
         };
       });
     }
@@ -134,16 +138,30 @@ export async function fetchGooglePlacesAutocomplete(
   }
 }
 
-/**
- * Resolves coordinates and exact address details for a Google Place ID.
- */
 export async function fetchGooglePlaceDetails(placeId: string): Promise<{
   address: string;
   latitude: number;
   longitude: number;
+  placeName?: string;
+  types?: string[];
+  addressComponents?: any[];
 }> {
   if (placeId.startsWith('mock-')) {
-    return getMockPlaceDetails(placeId);
+    const mock = getMockPlaceDetails(placeId);
+    let placeName = 'Selected Location';
+    if (placeId === 'mock-juhu') placeName = 'Juhu Beach';
+    if (placeId === 'mock-bandra') placeName = 'Bandra West';
+    if (placeId === 'mock-colaba') placeName = 'Colaba';
+    if (placeId === 'mock-andheri') placeName = 'Andheri East';
+    if (placeId === 'mock-powai') placeName = 'Powai';
+    return {
+      address: mock.address,
+      latitude: mock.latitude,
+      longitude: mock.longitude,
+      placeName: placeName,
+      types: ['establishment', 'point_of_interest'],
+      addressComponents: []
+    };
   }
 
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -155,7 +173,7 @@ export async function fetchGooglePlaceDetails(placeId: string): Promise<{
   const res = await fetch(url, {
     headers: {
       'X-Goog-Api-Key': apiKey,
-      'X-Goog-FieldMask': 'id,formattedAddress,location'
+      'X-Goog-FieldMask': 'id,formattedAddress,location,displayName,types,addressComponents'
     }
   });
 
@@ -169,7 +187,10 @@ export async function fetchGooglePlaceDetails(placeId: string): Promise<{
     return {
       address: data.formattedAddress || '',
       latitude: data.location.latitude,
-      longitude: data.location.longitude
+      longitude: data.location.longitude,
+      placeName: data.displayName?.text || '',
+      types: data.types || [],
+      addressComponents: data.addressComponents || []
     };
   }
   throw new Error('No coordinates resolved for the selected place.');
@@ -181,7 +202,7 @@ export async function fetchGooglePlaceDetails(placeId: string): Promise<{
 export async function reverseGeocodeCoords(
   latitude: number,
   longitude: number
-): Promise<{ address: string; placeId?: string }> {
+): Promise<{ address: string; placeId?: string; results?: any[] }> {
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
   
   if (apiKey) {
@@ -194,7 +215,8 @@ export async function reverseGeocodeCoords(
           const result = data.results[0];
           return {
             address: result.formatted_address,
-            placeId: result.place_id
+            placeId: result.place_id,
+            results: data.results
           };
         }
       }
@@ -315,20 +337,30 @@ export async function geocodeAddress(address: string): Promise<{
 
 function getMockSuggestions(input: string): AutocompleteSuggestion[] {
   const mockPlaces = [
-    { id: 'mock-juhu', name: 'Juhu Beach, Mumbai, Maharashtra, India' },
-    { id: 'mock-bandra', name: 'Bandra West, Mumbai, Maharashtra, India' },
-    { id: 'mock-colaba', name: 'Colaba, Mumbai, Maharashtra, India' },
-    { id: 'mock-andheri', name: 'Andheri East, Mumbai, Maharashtra, India' },
-    { id: 'mock-powai', name: 'Powai, Mumbai, Maharashtra, India' }
+    { id: 'mock-juhu', name: 'Juhu Beach', address: 'Mumbai, Maharashtra, India' },
+    { id: 'mock-bandra', name: 'Bandra West', address: 'Mumbai, Maharashtra, India' },
+    { id: 'mock-colaba', name: 'Colaba', address: 'Mumbai, Maharashtra, India' },
+    { id: 'mock-andheri', name: 'Andheri East', address: 'Mumbai, Maharashtra, India' },
+    { id: 'mock-powai', name: 'Powai', address: 'Mumbai, Maharashtra, India' }
   ];
 
-  const filtered = mockPlaces.filter(p => p.name.toLowerCase().includes(input.toLowerCase()));
+  const filtered = mockPlaces.filter(p => p.name.toLowerCase().includes(input.toLowerCase()) || p.address.toLowerCase().includes(input.toLowerCase()));
   if (filtered.length > 0) {
-    return filtered.map(p => ({ placeId: p.id, description: p.name }));
+    return filtered.map(p => ({
+      placeId: p.id,
+      description: `${p.name}, ${p.address}`,
+      mainText: p.name,
+      secondaryText: p.address
+    }));
   }
 
   return [
-    { placeId: `mock-generic-${input}`, description: `${input}, Mumbai, Maharashtra, India` }
+    {
+      placeId: `mock-generic-${input}`,
+      description: `${input}, Mumbai, Maharashtra, India`,
+      mainText: input,
+      secondaryText: 'Mumbai, Maharashtra, India'
+    }
   ];
 }
 
@@ -355,6 +387,48 @@ function getMockPlaceDetails(placeId: string): { address: string; latitude: numb
     latitude: 19.0176,
     longitude: 72.8164
   };
+}
+
+/**
+ * Searches for nearby places in a circular area around the coordinates using Google Places API searchNearby.
+ */
+export async function searchNearbyPlaces(
+  latitude: number,
+  longitude: number
+): Promise<any[]> {
+  const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    return [];
+  }
+
+  try {
+    const url = 'https://places.googleapis.com/v1/places:searchNearby';
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.types,places.formattedAddress,places.location'
+      },
+      body: JSON.stringify({
+        maxResultCount: 15,
+        locationRestriction: {
+          circle: {
+            center: { latitude, longitude },
+            radius: 80.0
+          }
+        }
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return data.places || [];
+    }
+  } catch (e) {
+    console.warn('Nearby places search failed:', e);
+  }
+  return [];
 }
 
 

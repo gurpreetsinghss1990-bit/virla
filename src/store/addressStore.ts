@@ -18,6 +18,7 @@ export interface Address {
   apartment?: string;
   floor?: string;
   notes?: string;
+  placeId?: string;
 }
 
 interface AddressState {
@@ -62,7 +63,8 @@ export const useAddressStore = create<AddressState>((set, get) => ({
       lng: addr.lng || 72.8164,
       apartment: addr.apartment || '',
       floor: addr.floor || '',
-      notes: addr.notes || ''
+      notes: addr.notes || '',
+      placeId: addr.placeId || ''
     });
 
     if (!added || !added.id) {
@@ -134,7 +136,8 @@ export const useAddressStore = create<AddressState>((set, get) => ({
       lng: updated.lng,
       apartment: updated.apartment,
       floor: updated.floor,
-      notes: updated.notes
+      notes: updated.notes,
+      placeId: updated.placeId
     });
     get().syncFromDB();
   },
@@ -176,7 +179,8 @@ export const useAddressStore = create<AddressState>((set, get) => ({
         lng: addr.lng || 72.8164,
         apartment: addr.apartment || '',
         floor: addr.floor || '',
-        notes: addr.notes || ''
+        notes: addr.notes || '',
+        placeId: addr.placeId || ''
       }));
       set({
         addresses: list,

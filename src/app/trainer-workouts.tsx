@@ -13,6 +13,7 @@ const CATEGORIES = [
   { key: 'Cardio', name: 'Dance Fitness', icon: '💃' },
   { key: 'Conditioning', name: 'Stretching', icon: '🤸‍♂️' },
   { key: 'Boxing', name: 'Boxing', icon: '🥊' },
+  { key: 'Aerial Yoga', name: 'Aerial Yoga', icon: '🧘‍♀️' },
   { key: 'All Workouts', name: 'All Workouts', icon: '⭐' }
 ];
 

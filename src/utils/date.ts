@@ -219,6 +219,7 @@ export function getDisplayWorkoutTitle(title: string): string {
   if (t === 'powerforge') return 'Forge Strength';
   if (t === 'kinetix') return 'Reset Studio';
   if (t === 'fightlab') return 'Combat Core';
+  if (t === 'zenflow aerial' || t === 'aerial yoga') return 'Aerial Yoga';
   return title;
 }
 

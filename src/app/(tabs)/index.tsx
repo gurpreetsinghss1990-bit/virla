@@ -22,6 +22,7 @@ import { AddPartnerModal } from '../../components/AddPartnerModal';
 import { supabase } from '../../database/supabaseClient';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { useAIWellnessStore } from '../../store/aiWellnessStore';
+import { SessionEngine } from '../../services/SessionEngine';
 import { Booking } from '../../types';
 import { normalizeDate, canonicalizeTimeRange, getBookingISTDateRange, getDisplayWorkoutTitle, formatToDDMMYYYY } from '../../utils/date';
 
@@ -310,8 +311,8 @@ export function AcknowledgementCard({ booking, onAcknowledge, onPress }: Acknowl
 const getWorkoutEmoji = (title: string) => {
   const t = title.toLowerCase();
   if (t.includes('forge') || t.includes('strength')) return '🏋️';
-  if (t.includes('flow') || t.includes('motion')) return '🧘‍♀️';
-  if (t.includes('rhythm') || t.includes('burn')) return '💃';
+  if (t.includes('flow') || t.includes('motion') || t.includes('aerial') || t.includes('hammock')) return '🧘‍♀️';
+  if (t.includes('rhythm') || t.includes('burn') || t.includes('dance')) return '💃';
   if (t.includes('reset') || t.includes('studio') || t.includes('stretch')) return '🧘‍♂️';
   if (t.includes('combat') || t.includes('boxing')) return '🥊';
   return '🧘';
@@ -1256,8 +1257,8 @@ export default function HomeScreen() {
                   {[
                     { id: 'strength', title: 'Strength', sub: 'Build & Tone', emoji: '🏋️', colors: ['#FF7E7E', '#E11D48'] },
                     { id: 'yoga', title: 'Yoga', sub: 'Mind & Body', emoji: '🧘', colors: ['#F472B6', '#8B5CF6'] },
-                    { id: 'boxing', title: 'Boxing', sub: 'Power & Endurance', emoji: '🥊', colors: ['#FBBF24', '#F97316'] },
-                    { id: 'stretch', title: 'Stretching', sub: 'Mobility & Flex', emoji: '🙆', colors: ['#64748B', '#334155'] }
+                    { id: 'rhythm', title: 'Rhythm Dance', sub: 'Cardio & Dance', emoji: '💃', colors: ['#EC4899', '#BE185D'] },
+                    { id: 'boxing', title: 'Boxing', sub: 'Power & Endurance', emoji: '🥊', colors: ['#FBBF24', '#F97316'] }
                   ].map((item) => (
                     <TouchableOpacity
                       key={item.id}
@@ -2029,7 +2030,16 @@ export default function HomeScreen() {
 
                       <View className="flex-row gap-2">
                         <TouchableOpacity
-                          onPress={() => Alert.alert('GPS Routing Simulated', 'Opening navigation routing to venue...')}
+                          onPress={() => {
+                            if (SessionEngine.isTravelWindowOpen(nextSession)) {
+                              router.push({ pathname: '/session-detail', params: { id: nextSession.id, openMap: 'true' } });
+                            } else {
+                              Alert.alert(
+                                'Travel Window Locked ⚠️',
+                                'You can start travel and view the navigation map 25 minutes before the scheduled session.'
+                              );
+                            }
+                          }}
                           className="flex-1 bg-zinc-900 border border-zinc-850 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
                         >
                           <Feather name="navigation" size={10} color="white" />

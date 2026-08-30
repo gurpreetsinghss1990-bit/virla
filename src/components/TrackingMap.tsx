@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
+import { parseBookingAddress } from '../utils/LocationParser';
 
 interface TrackingMapProps {
   liveTrainerCoords: {
@@ -19,14 +20,14 @@ interface TrackingMapProps {
 export default function TrackingMap({ liveTrainerCoords, isStale, clientAddress }: TrackingMapProps) {
   const mapRef = useRef<MapView>(null);
 
-  // Parse client coordinates from address string: "Address (lat, lng)"
+  // Parse client coordinates from address string
   const getClientCoords = (): { latitude: number; longitude: number } | null => {
     if (!clientAddress) return null;
-    const match = clientAddress.match(/\(([-\d.]+),\s*([-\d.]+)\)/);
-    if (match) {
+    const loc = parseBookingAddress(clientAddress);
+    if (loc.lat && loc.lng && !isNaN(loc.lat) && !isNaN(loc.lng)) {
       return {
-        latitude: parseFloat(match[1]),
-        longitude: parseFloat(match[2]),
+        latitude: loc.lat,
+        longitude: loc.lng,
       };
     }
     return null;

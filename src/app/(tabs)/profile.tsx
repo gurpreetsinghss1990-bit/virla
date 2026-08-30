@@ -22,6 +22,7 @@ const CATEGORY_DISPLAY_MAP: Record<string, string> = {
   'Cardio': 'Dance Fitness',
   'Conditioning': 'Stretching',
   'Boxing': 'Boxing',
+  'Aerial Yoga': 'Aerial Yoga',
   'All Workouts': 'All Workouts'
 };
 
@@ -30,7 +31,8 @@ const DB_CATEGORIES = [
   { key: 'Mind & Body', display: 'Yoga' },
   { key: 'Cardio', display: 'Dance Fitness' },
   { key: 'Conditioning', display: 'Stretching' },
-  { key: 'Boxing', display: 'Boxing' }
+  { key: 'Boxing', display: 'Boxing' },
+  { key: 'Aerial Yoga', display: 'Aerial Yoga' }
 ];
 
 export default function ProfileScreen() {

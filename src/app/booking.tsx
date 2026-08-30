@@ -1,10 +1,10 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Alert, Image, Animated, Modal, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
 import { useMembershipStore } from '../store/membershipStore';
-import { calculateDistanceKm, geocodeAddressSync, fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords, AutocompleteSuggestion, getCurrentLocationCoords } from '../utils/distance';
+import { calculateDistanceKm, geocodeAddressSync, fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords, AutocompleteSuggestion, getCurrentLocationCoords, searchNearbyPlaces } from '../utils/distance';
 import { normalizeDate, canonicalizeTimeRange, formatToDDMMYYYY } from '../utils/date';
 import * as Location from 'expo-location';
 import { useAddressStore } from '../store/addressStore';
@@ -13,6 +13,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { useUserStore } from '../store/userStore';
 import { EmptyState, ApplePayConfirmation, BookingSuccessAnimation } from '../components';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import Svg, { Circle, Line } from 'react-native-svg';
 import { AssignmentEngine } from '../services/AssignmentEngine';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
@@ -75,6 +76,15 @@ const EXPERIENCES: Experience[] = [
     emoji: '🥊',
     duration: 60,
   },
+  {
+    id: 'exp-aerial',
+    title: 'Aerial Yoga',
+    description: 'Decompress and stretch using specialized aerial hammocks',
+    icon: 'wind',
+    gradientColors: ['#8B5CF6', '#6D28D9'],
+    emoji: '🧘‍♀️',
+    duration: 60,
+  },
 ];
 
 function getCustomerDisplayTime(timeRangeStr: string): string {
@@ -84,6 +94,246 @@ function getCustomerDisplayTime(timeRangeStr: string): string {
     return `${parts[0].trim()} — ${parts[1].trim()}`;
   }
   return normalized;
+}
+
+function splitAddress(fullAddress: string) {
+  if (!fullAddress) return { main: 'Selected Location', secondary: '' };
+  const commaIndex = fullAddress.indexOf(',');
+  if (commaIndex === -1) return { main: fullAddress, secondary: '' };
+  const main = fullAddress.substring(0, commaIndex).trim();
+  const secondary = fullAddress.substring(commaIndex + 1).trim();
+  return { main, secondary };
+}
+
+function resolveBuildingName(
+  results: any[] | undefined,
+  defaultAddress: string
+): { buildingName: string; formattedAddress: string } {
+  if (!results || results.length === 0) {
+    const parts = splitAddress(defaultAddress);
+    return { buildingName: parts.main || 'Selected Location', formattedAddress: defaultAddress };
+  }
+
+  // Priority building/premise types we want to match
+  const buildingTypes = [
+    'premise',
+    'subpremise',
+    'shopping_mall',
+    'residential_complex',
+    'apartment',
+    'society',
+    'condominium',
+    'establishment',
+    'point_of_interest'
+  ];
+
+  // Excluded business types we want to avoid choosing as building names
+  const excludedBusinessTypes = [
+    'restaurant', 'food', 'cafe', 'bar', 'clothing_store', 'store', 'beauty_salon',
+    'hair_care', 'spa', 'gym', 'health', 'atm', 'bank', 'liquor_store', 'car_repair',
+    'gas_station', 'doctor', 'pharmacy'
+  ];
+
+  for (const res of results) {
+    // Check if the overall result has any of our priority building/premise types
+    const hasBuildingType = res.types && res.types.some((t: string) => buildingTypes.includes(t));
+    if (hasBuildingType) {
+      if (res.address_components && res.address_components.length > 0) {
+        // The first component is usually the building/establishment name
+        const firstComp = res.address_components[0];
+        
+        // Ensure the component is not a street number or just digits
+        const isDigits = /^\d+$/.test(firstComp.long_name || '');
+        const isStreetNumber = firstComp.types && firstComp.types.includes('street_number');
+
+        if (!isDigits && !isStreetNumber) {
+          // Verify it's not an excluded business type
+          const isExcludedBusiness = res.types && res.types.some((t: string) => excludedBusinessTypes.includes(t));
+          
+          if (!isExcludedBusiness) {
+            return {
+              buildingName: firstComp.long_name,
+              formattedAddress: res.formatted_address || defaultAddress
+            };
+          }
+        }
+      }
+    }
+  }
+
+  // 2. Priority 3: route + street number
+  for (const res of results) {
+    if (res.types && (res.types.includes('street_address') || res.types.includes('route'))) {
+      const streetNumber = res.address_components?.find((c: any) => c.types && c.types.includes('street_number'))?.long_name;
+      const route = res.address_components?.find((c: any) => c.types && c.types.includes('route'))?.long_name;
+      if (streetNumber && route) {
+        return {
+          buildingName: `${streetNumber} ${route}`,
+          formattedAddress: res.formatted_address || defaultAddress
+        };
+      } else if (route) {
+        return {
+          buildingName: route,
+          formattedAddress: res.formatted_address || defaultAddress
+        };
+      }
+    }
+  }
+
+  // 3. Priority 4: neighbourhood / sublocality
+  for (const type of ['neighborhood', 'sublocality_level_1', 'sublocality_level_2', 'sublocality']) {
+    for (const res of results) {
+      if (res.types && res.types.includes(type)) {
+        const comp = res.address_components?.find((c: any) => c.types && c.types.includes(type));
+        if (comp && comp.long_name) {
+          return {
+            buildingName: comp.long_name,
+            formattedAddress: res.formatted_address || defaultAddress
+          };
+        }
+      }
+    }
+  }
+
+  // 4. Default fallback
+  const firstRes = results[0];
+  const mainPart = splitAddress(firstRes.formatted_address || defaultAddress).main;
+  return {
+    buildingName: mainPart || 'Selected Location',
+    formattedAddress: firstRes.formatted_address || defaultAddress
+  };
+}
+
+function rankNearbyCandidates(
+  places: any[],
+  centerLat: number,
+  centerLng: number
+): any | null {
+  if (!places || places.length === 0) return null;
+
+  const excludedTypes = [
+    'restaurant', 'food', 'cafe', 'bar', 'clothing_store', 'store', 
+    'beauty_salon', 'hair_care', 'spa', 'gym', 'health', 'atm', 'bank', 
+    'liquor_store', 'car_repair', 'gas_station', 'doctor', 'pharmacy'
+  ];
+
+  const candidates = places.map(place => {
+    const lat1 = centerLat;
+    const lon1 = centerLng;
+    const lat2 = place.location?.latitude || 0;
+    const lon2 = place.location?.longitude || 0;
+    
+    // Haversine formula
+    const R = 6371e3; // meters
+    const phi1 = lat1 * Math.PI/180;
+    const phi2 = lat2 * Math.PI/180;
+    const deltaPhi = (lat2-lat1) * Math.PI/180;
+    const deltaLambda = (lon2-lon1) * Math.PI/180;
+    const a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) +
+              Math.cos(phi1) * Math.cos(phi2) *
+              Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c; // in meters
+
+    let weight = 0;
+    const types = place.types || [];
+    
+    const name = (place.displayName?.text || '').toLowerCase();
+    const isNamedBuilding = name.includes('society') || 
+                            name.includes('building') || 
+                            name.includes('apartment') || 
+                            name.includes('residences') ||
+                            name.includes('chambers') || 
+                            name.includes('complex') || 
+                            name.includes('park') || 
+                            name.includes('tower') || 
+                            name.includes('heights') || 
+                            name.includes('villa') || 
+                            name.includes('residency') || 
+                            name.includes('manor') || 
+                            name.includes('estate') ||
+                            name.includes('mall') ||
+                            name.includes('plaza') ||
+                            name.includes('court') ||
+                            name.includes('house') ||
+                            name.includes('gardens') ||
+                            name.includes('arcade') ||
+                            name.includes('square') ||
+                            name.includes('center') ||
+                            name.includes('centre');
+
+    if (types.includes('premise') || types.includes('subpremise')) {
+      weight += 100;
+    } else if (types.includes('residential') || types.includes('housing')) {
+      weight += 80;
+    } else if (isNamedBuilding) {
+      weight += 60;
+    } else if (types.includes('establishment') || types.includes('point_of_interest')) {
+      weight += 30;
+    }
+
+    const hasExcludedType = types.some((t: string) => excludedTypes.includes(t));
+    if (hasExcludedType) {
+      weight -= 80;
+    }
+
+    const finalScore = weight - distance;
+
+    return {
+      place,
+      distance,
+      isNamedBuilding,
+      finalScore
+    };
+  });
+
+  candidates.sort((a, b) => b.finalScore - a.finalScore);
+
+  const best = candidates[0];
+  if (best && best.finalScore > 10) {
+    return best.place;
+  }
+  return null;
+}
+
+async function resolveExactLocation(
+  latitude: number,
+  longitude: number,
+  geocodedAddress: string,
+  geocodedResults: any[] | undefined
+): Promise<{ buildingName: string; formattedAddress: string }> {
+  const geoResolved = resolveBuildingName(geocodedResults, geocodedAddress);
+  
+  const isGeneric = geoResolved.buildingName === 'Selected Location' ||
+                    /^\d/.test(geoResolved.buildingName) ||
+                    geoResolved.buildingName.includes('°') ||
+                    geoResolved.buildingName.toLowerCase() === 'andheri west' ||
+                    geoResolved.buildingName.toLowerCase() === 'mumbai suburban' ||
+                    geoResolved.buildingName.toLowerCase() === 'mumbai' ||
+                    geoResolved.buildingName.toLowerCase() === 'maharashtra' ||
+                    geoResolved.buildingName.toLowerCase() === 'juhu' ||
+                    geoResolved.buildingName.toLowerCase() === 'bandra west' ||
+                    geoResolved.buildingName.toLowerCase() === 'bandra' ||
+                    geoResolved.buildingName.toLowerCase() === 'colaba' ||
+                    geoResolved.buildingName.toLowerCase() === 'powai' ||
+                    /\b(road|rd|lane|nagar|gali|marg|street|st)\b/i.test(geoResolved.buildingName);
+
+  if (isGeneric) {
+    try {
+      const nearbyPlaces = await searchNearbyPlaces(latitude, longitude);
+      const bestCandidate = rankNearbyCandidates(nearbyPlaces, latitude, longitude);
+      if (bestCandidate) {
+        return {
+          buildingName: bestCandidate.displayName?.text || geoResolved.buildingName,
+          formattedAddress: bestCandidate.formattedAddress || geoResolved.formattedAddress
+        };
+      }
+    } catch (e) {
+      console.warn('Failed resolving nearby places for center pin:', e);
+    }
+  }
+
+  return geoResolved;
 }
 
 export default function BookingScreen() {
@@ -112,6 +362,12 @@ export default function BookingScreen() {
 
     if (searchString) {
       if (
+        searchString.includes('aerial') ||
+        searchString.includes('hammock') ||
+        searchString.includes('exp-aerial')
+      ) {
+        return EXPERIENCES[5];
+      } else if (
         searchString.includes('yoga') || 
         searchString.includes('flow') || 
         searchString.includes('pilates') || 
@@ -170,10 +426,12 @@ export default function BookingScreen() {
   const [googleSuggestions, setGoogleSuggestions] = useState<Array<AutocompleteSuggestion>>([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [sessionToken, setSessionToken] = useState(() => Math.random().toString(36).substring(2, 15) + Date.now().toString());
+  const [hasConfirmedSearchSelection, setHasConfirmedSearchSelection] = useState(false);
+  const [isPinSelectionAuthoritative, setIsPinSelectionAuthoritative] = useState(true);
 
   // Debounced search query autocomplete for workout location selector
   useEffect(() => {
-    if (searchQuery.trim().length < 3) {
+    if (searchQuery.trim().length < 3 || hasConfirmedSearchSelection) {
       setGoogleSuggestions([]);
       return;
     }
@@ -199,24 +457,83 @@ export default function BookingScreen() {
       active = false;
       clearTimeout(delay);
     };
-  }, [searchQuery, sessionToken]);
+  }, [searchQuery, sessionToken, hasConfirmedSearchSelection]);
   const [etaText, setEtaText] = useState('~12 mins travel');
   const [distanceText, setDistanceText] = useState('3.2 km');
   const [isLocationOutsideCoverage, setIsLocationOutsideCoverage] = useState(false);
   const [successBookingId, setSuccessBookingId] = useState('');
 
   // Redesigned Step 3 location modal/flow states
-  const [isMapModalVisible, setIsMapModalVisible] = useState(false);
   const [isAddAddressModalVisible, setIsAddAddressModalVisible] = useState(false);
-  const [addAddressStep, setAddAddressStep] = useState<1 | 2 | 3>(1);
-  
+  const [addAddressStep, setAddAddressStep] = useState<1 | 2>(1); // Stage 1 (Map/Search), Stage 2 (Details)
+  const [placeId, setPlaceId] = useState('');
+  const [resolvedPlaceName, setResolvedPlaceName] = useState('Selected Location');
+  const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
+  const [isMapConfirmed, setIsMapConfirmed] = useState(false);
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const mapRef = useRef<MapView>(null);
+  const reverseGeocodeTimerRef = useRef<any>(null);
+  const geocodeRequestCounterRef = useRef(0);
+
   // New address form fields
   const [newHouseNo, setNewHouseNo] = useState('');
   const [newBuildingName, setNewBuildingName] = useState('');
   const [newFloor, setNewFloor] = useState('');
+  const [newTower, setNewTower] = useState('');
   const [newLandmark, setNewLandmark] = useState('');
+  const [newArrivalInstructions, setNewArrivalInstructions] = useState('');
   const [newAddressLabelType, setNewAddressLabelType] = useState<'Home' | 'Office' | 'Gym' | 'Custom'>('Home');
   const [newCustomLabel, setNewCustomLabel] = useState('');
+
+  const openAddressModal = () => {
+    geocodeRequestCounterRef.current++;
+    if (reverseGeocodeTimerRef.current) {
+      clearTimeout(reverseGeocodeTimerRef.current);
+    }
+    setIsReverseGeocoding(false);
+
+    setNewHouseNo('');
+    setNewBuildingName('');
+    setNewFloor('');
+    setNewLandmark('');
+    setNewTower('');
+    setNewAddressLabelType('Home');
+    setNewCustomLabel('');
+    setSearchQuery('');
+    setPlaceId('');
+    setResolvedPlaceName('Selected Location');
+    setHasConfirmedSearchSelection(false);
+    setIsPinSelectionAuthoritative(true);
+    
+    const lat = activeCoords.lat !== 0 ? activeCoords.lat : 19.0176;
+    const lng = activeCoords.lng !== 0 ? activeCoords.lng : 72.8164;
+    setActiveCoords({ lat, lng });
+
+    setTimeout(() => {
+      mapRef.current?.animateToRegion({
+        latitude: lat,
+        longitude: lng,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005,
+      }, 300);
+    }, 300);
+
+    setAddAddressStep(1);
+    setIsAddAddressModalVisible(true);
+  };
+
+  const handleSearchTextChange = (text: string) => {
+    setSearchQuery(text);
+    setHasConfirmedSearchSelection(false);
+    setIsPinSelectionAuthoritative(false);
+    setPlaceId('');
+    if (text.trim().length < 3) {
+      setGoogleSuggestions([]);
+      setShowSearchDropdown(false);
+    } else {
+      setShowSearchDropdown(true);
+    }
+  };
 
   const formatISTDate = (date: Date): string => {
     const info = getISTDateInfo(date);
@@ -783,16 +1100,50 @@ export default function BookingScreen() {
     setShowSearchDropdown(false);
     try {
       const details = await fetchGooglePlaceDetails(suggestion.placeId);
+      
+      // Increment request counter and clear timers to prevent map pan geocodes from overwriting
+      geocodeRequestCounterRef.current++;
+      if (reverseGeocodeTimerRef.current) {
+        clearTimeout(reverseGeocodeTimerRef.current);
+      }
+      setIsReverseGeocoding(false);
+
       setActiveCoords({ lat: details.latitude, lng: details.longitude });
       setSearchQuery(details.address);
-      setNewBuildingName(details.address);
+      setPlaceId(suggestion.placeId || '');
+      setHasConfirmedSearchSelection(true);
+      setIsPinSelectionAuthoritative(false);
+      
+      let finalBuildingName = details.placeName || splitAddress(details.address).main;
+      const isGenericName = !finalBuildingName || 
+                            finalBuildingName === 'Selected Location' ||
+                            /^\d/.test(finalBuildingName) ||
+                            finalBuildingName.includes('°') ||
+                            ['andheri west', 'mumbai suburban', 'mumbai', 'maharashtra', 'juhu', 'bandra west', 'bandra', 'colaba', 'powai'].includes(finalBuildingName.toLowerCase()) ||
+                            /\b(road|rd|lane|nagar|gali|marg|street|st)\b/i.test(finalBuildingName);
+      
+      if (isGenericName) {
+        const resolved = await resolveExactLocation(details.latitude, details.longitude, details.address, undefined);
+        finalBuildingName = resolved.buildingName;
+      }
+      
+      setResolvedPlaceName(finalBuildingName);
+      setIsMapConfirmed(false);
+      setGpsAccuracy(null);
       
       const centerMumbai = { lat: 19.0176, lng: 72.8164 };
       const dist = calculateDistanceKm(details.latitude, details.longitude, centerMumbai.lat, centerMumbai.lng);
       setDistanceText(`${dist.toFixed(1)} km`);
       setEtaText(`~${Math.round(dist * 2.5 + 5)} mins`);
       setIsLocationOutsideCoverage(dist > 30);
-      setAddAddressStep(2);
+
+      // Animate map to coordinates
+      mapRef.current?.animateToRegion({
+        latitude: details.latitude,
+        longitude: details.longitude,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005
+      }, 800);
     } catch (e: any) {
       Alert.alert('Error', e.message || 'Failed to load details.');
     } finally {
@@ -803,20 +1154,49 @@ export default function BookingScreen() {
   const handleUseCurrentGps = async () => {
     setIsSearchingLocation(true);
     try {
-      const coords = await getCurrentLocationCoords();
-      const { latitude, longitude } = coords;
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        throw new Error('Location permission was denied. Please allow location access in settings or enter your address manually.');
+      }
+      
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced
+      });
+      const { latitude, longitude, accuracy } = loc.coords;
+      setGpsAccuracy(accuracy || null);
+
       const res = await reverseGeocodeCoords(latitude, longitude);
+
+      // Increment request counter and clear timers to prevent map pan geocodes from overwriting
+      geocodeRequestCounterRef.current++;
+      if (reverseGeocodeTimerRef.current) {
+        clearTimeout(reverseGeocodeTimerRef.current);
+      }
+      setIsReverseGeocoding(false);
 
       setActiveCoords({ lat: latitude, lng: longitude });
       setSearchQuery(res.address);
-      setNewBuildingName(res.address);
+      setPlaceId(res.placeId || '');
+      setHasConfirmedSearchSelection(false);
+      setIsPinSelectionAuthoritative(true);
+      
+      const resolved = await resolveExactLocation(latitude, longitude, res.address, res.results);
+      setResolvedPlaceName(resolved.buildingName);
+      setIsMapConfirmed(false);
       
       const centerMumbai = { lat: 19.0176, lng: 72.8164 };
       const dist = calculateDistanceKm(latitude, longitude, centerMumbai.lat, centerMumbai.lng);
       setDistanceText(`${dist.toFixed(1)} km`);
       setEtaText(`~${Math.round(dist * 2.5 + 5)} mins`);
       setIsLocationOutsideCoverage(dist > 30);
-      setAddAddressStep(2);
+
+      // Animate map to current location coordinates
+      mapRef.current?.animateToRegion({
+        latitude,
+        longitude,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005
+      }, 800);
     } catch (e: any) {
       Alert.alert('Error', e.message || 'Failed to resolve current location.');
     } finally {
@@ -835,6 +1215,7 @@ export default function BookingScreen() {
           case 'exp-rhythm': return 'RhythmX';
           case 'exp-reset': return 'KinetiX';
           case 'exp-combat': return 'FightLab';
+          case 'exp-aerial': return 'ZenFlow Aerial';
           default: return 'PowerForge';
         }
       })(),
@@ -843,7 +1224,18 @@ export default function BookingScreen() {
       address: (() => {
         const addr = addresses.find(a => a.id === selectedAddressId);
         if (!addr) return 'Selected Location';
-        return addr.addressLine + (addr.lat && addr.lng ? ` (${addr.lat}, ${addr.lng})` : '');
+        const jsonPayload = {
+          addressLine: addr.addressLine || '',
+          lat: addr.lat,
+          lng: addr.lng,
+          place_id: addr.placeId || '',
+          buildingName: addr.building || '',
+          flatNumber: addr.apartment || '',
+          floor: addr.floor || '',
+          landmark: addr.landmark || '',
+          arrivalInstructions: addr.notes || ''
+        };
+        return JSON.stringify(jsonPayload);
       })(),
       timelineStatus: 'booked' as const,
       status: 'upcoming' as const,
@@ -904,6 +1296,12 @@ export default function BookingScreen() {
     if (searchString) {
       let matchedExp = EXPERIENCES[0];
       if (
+        searchString.includes('aerial') ||
+        searchString.includes('hammock') ||
+        searchString.includes('w-aerial')
+      ) {
+        matchedExp = EXPERIENCES[5];
+      } else if (
         searchString.includes('yoga') || 
         searchString.includes('flow') || 
         searchString.includes('pilates') || 
@@ -1188,9 +1586,19 @@ export default function BookingScreen() {
     if (selectedExperience.id === 'exp-rhythm') specFilter = 'Dance';
     if (selectedExperience.id === 'exp-reset') specFilter = 'Mobility';
     if (selectedExperience.id === 'exp-combat') specFilter = 'Boxing';
+    if (selectedExperience.id === 'exp-aerial') specFilter = 'Aerial Yoga';
 
     let specialtyPool = pool.filter(c => c.specialty.includes(specFilter) || c.workoutSpecialties?.some(s => s.includes(specFilter)));
-    if (specialtyPool.length === 0) specialtyPool = pool;
+    if (specialtyPool.length === 0) {
+      if (selectedExperience.id === 'exp-aerial') {
+        Alert.alert('No Trainers Available ⚠️', 'No certified Aerial Yoga trainers are currently available in your area.');
+        setStep(2);
+        setMatchedCoach(undefined as any);
+        setMatchDone(false);
+        return;
+      }
+      specialtyPool = pool;
+    }
 
     // Pick specific coach
     let finalCoach = specialtyPool[0];
@@ -1215,7 +1623,18 @@ export default function BookingScreen() {
     const targetAddress = (() => {
       const addr = addresses.find(a => a.id === selectedAddressId);
       if (!addr) return 'Selected Location';
-      return addr.addressLine + (addr.lat && addr.lng ? ` (${addr.lat}, ${addr.lng})` : '');
+      const jsonPayload = {
+        addressLine: addr.addressLine || '',
+        lat: addr.lat,
+        lng: addr.lng,
+        place_id: addr.placeId || '',
+        buildingName: addr.building || '',
+        flatNumber: addr.apartment || '',
+        floor: addr.floor || '',
+        landmark: addr.landmark || '',
+        arrivalInstructions: addr.notes || ''
+      };
+      return JSON.stringify(jsonPayload);
     })();
     const activeCoach = matchedCoach || coaches[0];
 
@@ -1239,6 +1658,7 @@ export default function BookingScreen() {
           case 'exp-rhythm': return 'RhythmX';
           case 'exp-reset': return 'KinetiX';
           case 'exp-combat': return 'FightLab';
+          case 'exp-aerial': return 'ZenFlow Aerial';
           default: return 'PowerForge';
         }
       })(),
@@ -1401,6 +1821,8 @@ export default function BookingScreen() {
         return 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?auto=format&fit=crop&w=800&q=80';
       case 'exp-combat':
         return 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?auto=format&fit=crop&w=800&q=80';
+      case 'exp-aerial':
+        return 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80';
       default:
         return 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80';
     }
@@ -1735,17 +2157,7 @@ export default function BookingScreen() {
                     {/* Add New Address Trigger */}
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      onPress={() => {
-                        setAddAddressStep(1);
-                        setNewHouseNo('');
-                        setNewBuildingName('');
-                        setNewFloor('');
-                        setNewLandmark('');
-                        setNewAddressLabelType('Home');
-                        setNewCustomLabel('');
-                        setSearchQuery('');
-                        setIsAddAddressModalVisible(true);
-                      }}
+                      onPress={() => openAddressModal()}
                       className="p-5 rounded-[24px] border border-dashed border-[#CBD5E1] bg-[#F8FAFC] flex-row items-center justify-center gap-2"
                     >
                       <Feather name="plus" size={16} color="#475569" />
@@ -1801,399 +2213,298 @@ export default function BookingScreen() {
                     )
                   ) : null}
 
-                  {/* Optional View on Map link */}
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => setIsMapModalVisible(true)}
-                    className="flex-row items-center justify-center gap-1.5 py-1.5"
-                  >
-                    <Feather name="map-pin" size={14} color="#E11D48" />
-                    <Text className="text-[#E11D48] text-xs font-black uppercase tracking-wider">View on Map</Text>
-                  </TouchableOpacity>
-
-                  {/* FULL-SCREEN VIEW ON MAP MODAL */}
-                  <Modal
-                    visible={isMapModalVisible}
-                    animationType="slide"
-                    onRequestClose={() => setIsMapModalVisible(false)}
-                  >
-                    <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
-                      {/* Header */}
-                      <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
-                        <TouchableOpacity onPress={() => setIsMapModalVisible(false)} className="w-8 h-8 items-center justify-center">
-                          <Ionicons name="arrow-back" size={20} color="#101828" />
-                        </TouchableOpacity>
-                        <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
-                          Confirm Location
-                        </Text>
-                      </View>
-
-                      <View style={{ flex: 1, position: 'relative' }}>
-                        {/* Simulated Map View */}
-                        <View style={{ flex: 1, backgroundColor: '#E0F2FE', position: 'relative', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
-                          <Svg width="100%" height="100%" className="absolute">
-                            <Line x1="15%" y1="0%" x2="15%" y2="100%" stroke="#BAE6FD" strokeWidth={1} strokeDasharray="6 6" />
-                            <Line x1="50%" y1="0%" x2="50%" y2="100%" stroke="#BAE6FD" strokeWidth={2} />
-                            <Line x1="85%" y1="0%" x2="85%" y2="100%" stroke="#BAE6FD" strokeWidth={1} strokeDasharray="6 6" />
-                            <Line x1="0%" y1="25%" x2="100%" y2="25%" stroke="#BAE6FD" strokeWidth={1} strokeDasharray="6 6" />
-                            <Line x1="0%" y1="60%" x2="100%" y2="60%" stroke="#BAE6FD" strokeWidth={2} />
-                            <Line x1="0%" y1="85%" x2="100%" y2="85%" stroke="#BAE6FD" strokeWidth={1} strokeDasharray="6 6" />
-
-                            <Circle cx="180" cy="200" r="140" stroke="#3B82F6" strokeWidth={1} fill="#93C5FD" fillOpacity="0.05" strokeDasharray="4 4" />
-                          </Svg>
-
-                          <Text style={{ position: 'absolute', left: 30, top: 40, color: '#93C5FD', fontSize: 10, fontWeight: 'bold' }}>JUHU BEACH</Text>
-                          <Text style={{ position: 'absolute', left: 30, top: 230, color: '#93C5FD', fontSize: 10, fontWeight: 'bold' }}>BANDRA ROAD</Text>
-                          <Text style={{ position: 'absolute', left: 280, top: 170, color: '#93C5FD', fontSize: 10, fontWeight: 'bold' }}>WORLI NAKA</Text>
-
-                          <View 
-                            className={`w-12 h-12 rounded-full ${
-                              isLocationOutsideCoverage ? 'bg-red-500' : 'bg-indigo-600'
-                            } border-4 border-white items-center justify-center relative z-20`}
-                            style={{
-                              shadowColor: '#000',
-                              shadowOffset: { width: 0, height: 6 },
-                              shadowOpacity: 0.35,
-                              shadowRadius: 10,
-                              elevation: 6,
-                            }}
-                          >
-                            <Feather name={isLocationOutsideCoverage ? 'alert-triangle' : 'map-pin'} size={18} color="white" />
-                          </View>
-                          <Text className="text-[10px] font-bold text-zinc-500 bg-white/90 border border-zinc-200 px-3 py-1 rounded-full absolute bottom-24 z-20">
-                            {isLocationOutsideCoverage ? '⛔ Outside Coverage Area' : '📍 Target Pin Position'}
-                          </Text>
-                        </View>
-
-                        {/* Search overlay */}
-                        <View className="absolute top-4 left-6 right-6 z-35">
-                          <View 
-                            className="flex-row items-center bg-white border border-[#E5E7EB] px-4 py-2 rounded-2xl"
-                            style={{
-                              shadowColor: '#101828',
-                              shadowOffset: { width: 0, height: 4 },
-                              shadowOpacity: 0.08,
-                              shadowRadius: 12,
-                              elevation: 4,
-                            }}
-                          >
-                            <Feather name="search" size={16} color="#6B7280" />
-                            <TextInput
-                              placeholder="Search custom address..."
-                              placeholderTextColor="#9CA3AF"
-                              value={searchQuery}
-                              onChangeText={(t) => {
-                                setSearchQuery(t);
-                                setShowSearchDropdown(true);
-                              }}
-                              className="flex-1 text-xs font-semibold text-zinc-900 ml-2.5 py-1.5"
-                            />
-                            {searchQuery.length > 0 && (
-                              <TouchableOpacity onPress={() => { setSearchQuery(''); setShowSearchDropdown(false); }}>
-                                <Feather name="x" size={14} color="#6B7280" />
-                              </TouchableOpacity>
-                            )}
-                          </View>
-
-                          {showSearchDropdown && searchQuery.length > 0 && (
-                            <View 
-                              className="absolute top-14 left-0 right-0 bg-white border border-zinc-200 rounded-xl z-50 max-h-48 overflow-hidden"
-                              style={{
-                                shadowColor: '#101828',
-                                shadowOffset: { width: 0, height: 6 },
-                                shadowOpacity: 0.1,
-                                shadowRadius: 12,
-                                elevation: 6,
-                              }}
-                            >
-                              {[
-                                { name: 'Bandra West, Mumbai', desc: 'Active VIRLA service zone', out: false, coords: { lat: 19.0596, lng: 72.8295 }, eta: '~12 mins', dist: '3.2 km' },
-                                { name: 'Juhu Scheme, Mumbai', desc: 'Active VIRLA service zone', out: false, coords: { lat: 19.1076, lng: 72.8264 }, eta: '~18 mins', dist: '6.5 km' },
-                                { name: 'Worli Naka, Mumbai', desc: 'Active VIRLA service zone', out: false, coords: { lat: 18.9986, lng: 72.8174 }, eta: '~20 mins', dist: '8.4 km' },
-                                { name: 'Pune Central Station', desc: 'Outside active service zone', out: true, coords: { lat: 18.5204, lng: 73.8567 }, eta: 'N/A', dist: '150 km' },
-                                { name: 'Connaught Place, Delhi', desc: 'Outside active service zone', out: true, coords: { lat: 28.6304, lng: 77.2177 }, eta: 'N/A', dist: '1400 km' }
-                              ]
-                                .filter(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                                .map((item, idx) => (
-                                  <TouchableOpacity
-                                    key={idx}
-                                    onPress={() => {
-                                      if (networkFailure) {
-                                        Alert.alert('Network Error', 'Network Connection Timeout. Please check your internet connection.');
-                                        return;
-                                      }
-                                      setSearchQuery(item.name);
-                                      setShowSearchDropdown(false);
-                                      setIsLocationOutsideCoverage(item.out);
-                                      setEtaText(item.eta);
-                                      setDistanceText(item.dist);
-                                      setActiveCoords(item.coords);
-
-                                      if (item.out) {
-                                        Alert.alert('Outside Coverage Area', 'This address lies outside the active VIRLA service zone.');
-                                      } else {
-                                        addAddress({
-                                          label: 'Custom' as any,
-                                          building: item.name,
-                                          street: '',
-                                          landmark: '',
-                                          city: 'Mumbai',
-                                          pinCode: '',
-                                          isDefault: false,
-                                          lat: item.coords.lat,
-                                          lng: item.coords.lng,
-                                          apartment: '',
-                                          floor: '',
-                                          notes: ''
-                                        });
-                                      }
-                                    }}
-                                    className="p-3.5 border-b border-zinc-100 flex-row justify-between items-center bg-white"
-                                  >
-                                    <View className="flex-1 pr-2">
-                                      <Text className="text-zinc-900 text-xs font-bold">{item.name}</Text>
-                                      <Text className="text-zinc-400 text-[8px] font-semibold">{item.desc}</Text>
-                                    </View>
-                                    <Feather name="arrow-up-left" size={14} color="#9CA3AF" />
-                                  </TouchableOpacity>
-                                ))
-                              }
-                            </View>
-                          )}
-                        </View>
-
-                        {/* GPS Action button */}
-                        <TouchableOpacity
-                          activeOpacity={0.8}
-                          onPress={() => {
-                            if (gpsSignalFailure) {
-                              Alert.alert('GPS Signal Failure', 'Weak GPS Signal: Satellites not reachable. Try moving outside or confirm address.');
-                              return;
-                            }
-                            setGpsPermission('granted');
-                            setIsLocationOutsideCoverage(false);
-                            setEtaText('~18 mins travel');
-                            setDistanceText('6.5 km');
-                            setActiveCoords({ lat: 19.1076, lng: 72.8264 });
-                            addAddress({
-                              label: 'Custom' as any,
-                              building: 'Juhu Beach, Mumbai, Maharashtra 400049',
-                              street: '',
-                              landmark: '',
-                              city: 'Mumbai',
-                              pinCode: '400049',
-                              isDefault: false,
-                              lat: 19.1076,
-                              lng: 72.8264,
-                              apartment: '',
-                              floor: '',
-                              notes: ''
-                            });
-                            Alert.alert('GPS Located', 'Positioned at Juhu Scheme. Set as active selection.');
-                          }}
-                          className="absolute bottom-28 right-6 w-11 h-11 bg-white border border-[#E5E7EB] rounded-full items-center justify-center"
-                          style={{
-                            shadowColor: '#101828',
-                            shadowOffset: { width: 0, height: 4 },
-                            shadowOpacity: 0.08,
-                            shadowRadius: 10,
-                            elevation: 4,
-                          }}
-                        >
-                          <Feather name="navigation" size={18} color="#3B82F6" />
-                        </TouchableOpacity>
-
-                        {/* Footer Confirmation */}
-                        <View className="p-6 bg-white border-t border-[#E5E7EB] gap-3">
-                          <View className="flex-row justify-between items-center px-1">
-                            <Text className="text-zinc-500 text-[10px] font-black uppercase">Active Coordinates</Text>
-                            <Text className="text-zinc-900 text-xs font-extrabold">{activeCoords.lat.toFixed(4)}° N, {activeCoords.lng.toFixed(4)}° E</Text>
-                          </View>
-                          <TouchableOpacity
-                            activeOpacity={0.8}
-                            onPress={() => setIsMapModalVisible(false)}
-                            className="w-full h-14 bg-zinc-950 rounded-2xl items-center justify-center shadow-md"
-                          >
-                            <Text className="text-white text-xs font-black uppercase tracking-wider">Confirm location</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    </SafeAreaView>
-                  </Modal>
-
-                  {/* FULL-SCREEN ADD NEW ADDRESS FLOW */}
                   <Modal
                     visible={isAddAddressModalVisible}
                     animationType="slide"
                     onRequestClose={() => setIsAddAddressModalVisible(false)}
                   >
                     <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
-                      {/* Header */}
-                      <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
-                        <TouchableOpacity 
-                          onPress={() => {
-                            if (addAddressStep > 1) {
-                              setAddAddressStep((prev) => (prev - 1) as any);
-                            } else {
-                              setIsAddAddressModalVisible(false);
-                            }
-                          }} 
-                          className="w-8 h-8 items-center justify-center"
-                        >
-                          <Ionicons name="arrow-back" size={20} color="#101828" />
-                        </TouchableOpacity>
-                        <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
-                          Add New Address
-                        </Text>
-                      </View>
-
-                      {/* Wizard Progress Line */}
-                      <View className="bg-white border-b border-zinc-150 py-3 flex-row justify-around px-6">
-                        {[
-                          { num: 1, label: 'Search' },
-                          { num: 2, label: 'Confirm' },
-                          { num: 3, label: 'Details' }
-                        ].map((s) => {
-                          const isActive = addAddressStep === s.num;
-                          const isPast = addAddressStep > s.num;
-                          return (
-                            <View key={s.num} className="flex-row items-center gap-1.5">
-                              <View className={`w-5 h-5 rounded-full items-center justify-center ${
-                                isActive ? 'bg-[#E11D48]' : isPast ? 'bg-zinc-800' : 'bg-zinc-200'
-                              }`}>
-                                {isPast ? (
-                                  <Feather name="check" size={10} color="white" />
-                                ) : (
-                                  <Text className="text-white text-[10px] font-black">{s.num}</Text>
-                                )}
-                              </View>
-                              <Text className={`text-[10px] font-black uppercase tracking-wider ${
-                                isActive ? 'text-[#E11D48]' : 'text-zinc-500'
-                              }`}>{s.label}</Text>
-                            </View>
-                          );
-                        })}
-                      </View>
+                      {/* Conditional Header for Stage 2 only */}
+                      {addAddressStep === 2 && (
+                        <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
+                          <TouchableOpacity 
+                            onPress={() => setAddAddressStep(1)} 
+                            className="w-8 h-8 items-center justify-center rounded-full bg-zinc-50"
+                          >
+                            <Ionicons name="arrow-back" size={18} color="#101828" />
+                          </TouchableOpacity>
+                          <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
+                            Enter address details
+                          </Text>
+                        </View>
+                      )}
 
                       <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
-                        {/* STEP 1: SEARCH OR GPS */}
+                        {/* STAGE 1: MAP + SEARCH */}
                         {addAddressStep === 1 && (
-                          <View className="p-6 gap-6 flex-1">
-                            <View>
-                              <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Step 1 of 3</Text>
-                              <Text className="text-[#101828] text-xl font-black tracking-tight mt-1">Locate Your Address</Text>
-                            </View>
+                          <View style={{ flex: 1, position: 'relative' }}>
+                            <MapView
+                              ref={mapRef}
+                              provider={PROVIDER_DEFAULT}
+                              style={{ flex: 1 }}
+                              initialRegion={{
+                                latitude: activeCoords.lat,
+                                longitude: activeCoords.lng,
+                                latitudeDelta: 0.005,
+                                longitudeDelta: 0.005,
+                              }}
+                              onRegionChangeComplete={(region) => {
+                                // Prevent geocoding cycle if region hasn't moved meaningfully
+                                const latDiff = Math.abs(region.latitude - activeCoords.lat);
+                                const lngDiff = Math.abs(region.longitude - activeCoords.lng);
+                                if (latDiff > 0.00005 || lngDiff > 0.00005) {
+                                  if (reverseGeocodeTimerRef.current) {
+                                    clearTimeout(reverseGeocodeTimerRef.current);
+                                  }
+                                  setIsReverseGeocoding(true);
+                                  const requestId = ++geocodeRequestCounterRef.current;
+                                  
+                                  reverseGeocodeTimerRef.current = setTimeout(async () => {
+                                    try {
+                                      const res = await reverseGeocodeCoords(region.latitude, region.longitude);
+                                      if (requestId !== geocodeRequestCounterRef.current) {
+                                        return;
+                                      }
+                                      
+                                      setActiveCoords({ lat: region.latitude, lng: region.longitude });
+                                      setSearchQuery(res.address);
+                                      setPlaceId(res.placeId || '');
+                                      setHasConfirmedSearchSelection(false);
+                                      setIsPinSelectionAuthoritative(true);
+                                      
+                                      const resolved = await resolveExactLocation(region.latitude, region.longitude, res.address, res.results);
+                                      setResolvedPlaceName(resolved.buildingName);
+                                      
+                                      const centerMumbai = { lat: 19.0176, lng: 72.8164 };
+                                      const dist = calculateDistanceKm(region.latitude, region.longitude, centerMumbai.lat, centerMumbai.lng);
+                                      setDistanceText(`${dist.toFixed(1)} km`);
+                                      setEtaText(`~${Math.round(dist * 2.5 + 5)} mins`);
+                                      setIsLocationOutsideCoverage(dist > 30);
+                                    } catch (e) {
+                                      console.warn('Map settle geocode failure:', e);
+                                    } finally {
+                                      if (requestId === geocodeRequestCounterRef.current) {
+                                        setIsReverseGeocoding(false);
+                                      }
+                                    }
+                                  }, 800);
+                                }
+                              }}
+                            />
 
-                            {/* GPS current location button */}
-                            <TouchableOpacity
-                              activeOpacity={0.8}
-                              onPress={handleUseCurrentGps}
-                              className="w-full h-14 bg-indigo-50 border border-indigo-150 rounded-2xl items-center justify-center flex-row gap-2.5"
+                            {/* Static Central pin overlay */}
+                            <View 
+                              pointerEvents="none" 
+                              style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                marginLeft: -24,
+                                marginTop: -48,
+                                width: 48,
+                                height: 48,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                zIndex: 10,
+                              }}
                             >
-                              <Feather name="navigation" size={16} color="#4F46E5" />
-                              <Text className="text-[#4F46E5] text-xs font-bold uppercase tracking-wider">🛰️ Use Current GPS Location</Text>
-                            </TouchableOpacity>
-
-                            <View className="flex-row items-center gap-3">
-                              <View className="flex-1 h-[1px] bg-zinc-200" />
-                              <Text className="text-zinc-400 text-[9px] font-black uppercase">OR SEARCH</Text>
-                              <View className="flex-1 h-[1px] bg-zinc-200" />
+                              <View 
+                                className={`w-12 h-12 rounded-full ${
+                                  isLocationOutsideCoverage ? 'bg-red-500' : 'bg-[#E11D48]'
+                                } border-4 border-white items-center justify-center shadow-lg`}
+                              >
+                                <Feather name={isLocationOutsideCoverage ? 'alert-triangle' : 'map-pin'} size={20} color="white" />
+                              </View>
                             </View>
 
-                            {/* Search query bar */}
-                            <View className="gap-2 relative z-30">
-                              <View className="flex-row items-center bg-white border border-[#E5E7EB] px-4 py-1.5 rounded-2xl">
-                                <Feather name="search" size={16} color="#6B7280" />
+                            {/* Floating Header Card at Top */}
+                            <View 
+                              style={{
+                                position: 'absolute',
+                                top: 12,
+                                left: 16,
+                                right: 16,
+                                backgroundColor: 'white',
+                                borderRadius: 20,
+                                padding: 14,
+                                zIndex: 50,
+                                borderWidth: 1,
+                                borderColor: '#E5E7EB',
+                                shadowColor: '#101828',
+                                shadowOffset: { width: 0, height: 4 },
+                                shadowOpacity: 0.08,
+                                shadowRadius: 10,
+                                elevation: 4,
+                              }}
+                            >
+                              {/* Back button and title */}
+                              <View className="flex-row items-center mb-3">
+                                <TouchableOpacity 
+                                  onPress={() => setIsAddAddressModalVisible(false)} 
+                                  className="w-8 h-8 items-center justify-center rounded-full bg-zinc-50"
+                                >
+                                  <Ionicons name="arrow-back" size={18} color="#101828" />
+                                </TouchableOpacity>
+                                <Text className="flex-1 text-center text-[#101828] text-xs font-black uppercase tracking-wider mr-8">
+                                  Select delivery location
+                                </Text>
+                              </View>
+
+                              {/* Search Input field */}
+                              <View className="flex-row items-center bg-zinc-50 border border-[#E5E7EB] px-3.5 py-1.5 rounded-xl">
+                                <Feather name="search" size={14} color="#6B7280" />
                                 <TextInput
-                                  placeholder="Type locality (e.g. Bandra, Juhu...)"
+                                  placeholder="Search society, street, building or area..."
                                   placeholderTextColor="#9CA3AF"
                                   value={searchQuery}
-                                  onChangeText={(t) => {
-                                    setSearchQuery(t);
-                                    setShowSearchDropdown(true);
-                                  }}
-                                  className="flex-1 text-xs font-semibold text-zinc-900 ml-2.5 py-1.5"
+                                  onChangeText={(t) => handleSearchTextChange(t)}
+                                  className="flex-1 text-xs font-semibold text-zinc-900 ml-2 py-0.5"
                                 />
+                                {searchQuery.trim().length > 0 && (
+                                  <TouchableOpacity onPress={() => handleSearchTextChange('')}>
+                                    <Feather name="x" size={14} color="#9CA3AF" />
+                                  </TouchableOpacity>
+                                )}
                               </View>
 
                               {/* Dropdown list of suggestions */}
                               {showSearchDropdown && googleSuggestions.length > 0 && (
-                                <View 
-                                  className="absolute top-14 left-0 right-0 bg-white border border-zinc-200 rounded-xl z-50 max-h-56 overflow-hidden"
-                                  style={{
-                                    shadowColor: '#101828',
-                                    shadowOffset: { width: 0, height: 6 },
-                                    shadowOpacity: 0.1,
-                                    shadowRadius: 12,
-                                    elevation: 6,
-                                  }}
-                                >
+                                <View className="bg-white border-t border-zinc-100 mt-2 max-h-48 overflow-y-scroll">
                                   {googleSuggestions.map((item, idx) => (
                                     <TouchableOpacity
                                       key={idx}
                                       onPress={() => handleSelectGoogleSuggestion(item)}
-                                      className="p-4 border-b border-zinc-100 flex-row justify-between items-center bg-white"
+                                      className="py-3 border-b border-zinc-100 flex-row justify-between items-center bg-white"
                                     >
-                                      <View className="flex-1 pr-2">
-                                        <Text className="text-zinc-900 text-xs font-bold">{item.description}</Text>
-                                        <Text className="text-zinc-400 text-[8px] font-semibold">Real Google Place</Text>
+                                      <View className="flex-1 pr-2 gap-0.5">
+                                        <Text className="text-zinc-900 text-xs font-bold">
+                                          {item.mainText || item.description}
+                                        </Text>
+                                        {!!item.secondaryText && (
+                                          <Text className="text-zinc-500 text-[10px] font-semibold">
+                                            {item.secondaryText}
+                                          </Text>
+                                        )}
                                       </View>
-                                      <Feather name="arrow-up-left" size={14} color="#9CA3AF" />
+                                      <Feather name="arrow-up-left" size={12} color="#9CA3AF" />
                                     </TouchableOpacity>
                                   ))}
                                 </View>
                               )}
                             </View>
-                          </View>
-                        )}
 
-                        {/* STEP 2: PIN CONFIRMATION */}
-                        {addAddressStep === 2 && (
-                          <View style={{ flex: 1, position: 'relative' }}>
-                            {/* SVG simulated map */}
-                            <View style={{ flex: 1, backgroundColor: '#E0F2FE', position: 'relative', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
-                              <Svg width="100%" height="100%" className="absolute">
-                                <Line x1="15%" y1="0%" x2="15%" y2="100%" stroke="#BAE6FD" strokeWidth={1} strokeDasharray="6 6" />
-                                <Line x1="50%" y1="0%" x2="50%" y2="100%" stroke="#BAE6FD" strokeWidth={2} />
-                                <Line x1="0%" y1="30%" x2="100%" y2="30%" stroke="#BAE6FD" strokeWidth={2} />
-                                <Line x1="0%" y1="75%" x2="100%" y2="75%" stroke="#BAE6FD" strokeWidth={1} strokeDasharray="6 6" />
-                              </Svg>
+                            {/* Floating Current Location Button */}
+                            <TouchableOpacity
+                              activeOpacity={0.8}
+                              onPress={handleUseCurrentGps}
+                              style={{
+                                position: 'absolute',
+                                bottom: 220,
+                                right: 16,
+                                width: 44,
+                                height: 44,
+                                borderRadius: 22,
+                                backgroundColor: 'white',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderWidth: 1,
+                                borderColor: '#E5E7EB',
+                                shadowColor: '#101828',
+                                shadowOffset: { width: 0, height: 4 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 8,
+                                elevation: 4,
+                                zIndex: 30,
+                              }}
+                            >
+                              <Feather name="navigation" size={18} color="#4F46E5" />
+                            </TouchableOpacity>
 
-                              <View 
-                                className={`w-14 h-14 rounded-full ${
-                                  isLocationOutsideCoverage ? 'bg-red-500' : 'bg-[#E11D48]'
-                                } border-4 border-white items-center justify-center`}
-                                style={{
-                                  shadowColor: '#000',
-                                  shadowOffset: { width: 0, height: 6 },
-                                  shadowOpacity: 0.35,
-                                  shadowRadius: 10,
-                                  elevation: 6,
-                                }}
-                              >
-                                <Feather name={isLocationOutsideCoverage ? 'alert-triangle' : 'map-pin'} size={20} color="white" />
+                            {/* Bottom Sheet Address Panel */}
+                            <View 
+                              style={{
+                                position: 'absolute',
+                                bottom: 16,
+                                left: 16,
+                                right: 16,
+                                backgroundColor: 'white',
+                                borderRadius: 24,
+                                padding: 16,
+                                borderWidth: 1,
+                                borderColor: '#E5E7EB',
+                                shadowColor: '#101828',
+                                shadowOffset: { width: 0, height: 6 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 16,
+                                elevation: 6,
+                                zIndex: 30,
+                              }}
+                            >
+                              <Text className="text-zinc-950 text-[10px] font-black uppercase tracking-wider text-center mb-3">
+                                Resolved location
+                              </Text>
+
+                              <View className="bg-zinc-50 border border-zinc-150 p-4 rounded-xl mb-4 flex-row items-start gap-3">
+                                <View className="w-8 h-8 rounded-full bg-rose-50 items-center justify-center mt-0.5">
+                                  <Feather name="map-pin" size={14} color="#E11D48" />
+                                </View>
+                                <View className="flex-1">
+                                  <Text className="text-zinc-900 text-xs font-black mb-0.5 uppercase tracking-tight">
+                                    {isReverseGeocoding
+                                      ? 'Locating target entrance...'
+                                      : ((!hasConfirmedSearchSelection && !isPinSelectionAuthoritative) ? 'Selected location' : resolvedPlaceName)}
+                                  </Text>
+                                  <Text className="text-zinc-500 text-[10px] font-semibold leading-relaxed">
+                                    {isReverseGeocoding
+                                      ? 'Fetching address details...'
+                                      : ((!hasConfirmedSearchSelection && !isPinSelectionAuthoritative) ? 'Select a location from search or move the pin on the map' : searchQuery || 'Select your location on map')}
+                                  </Text>
+
+                                  {gpsAccuracy !== null && !isReverseGeocoding && (
+                                    <Text className="text-indigo-600 text-[9px] font-bold mt-1.5">
+                                      🛰️ Accuracy: {gpsAccuracy <= 15 ? `High (~${gpsAccuracy.toFixed(0)}m)` : `Medium (~${gpsAccuracy.toFixed(0)}m)`}
+                                    </Text>
+                                  )}
+                                </View>
                               </View>
 
-                              <View className="absolute bottom-28 bg-white border border-zinc-200 px-4 py-2.5 rounded-2xl items-center justify-center max-w-[85%]">
-                                <Text className="text-zinc-900 text-xs font-black uppercase">Confirm Pin Location</Text>
-                                <Text className="text-[#6B7280] text-[10px] font-semibold text-center mt-1 leading-relaxed">{searchQuery}</Text>
-                              </View>
-                            </View>
+                              {isLocationOutsideCoverage && (
+                                <View className="bg-rose-50 border border-rose-100 p-3 rounded-xl mb-4">
+                                  <Text className="text-[#E11D48] text-[9px] font-bold uppercase text-center">Outside Service Area (Mumbai Only)</Text>
+                                </View>
+                              )}
 
-                            <View className="p-6 bg-white border-t border-[#E5E7EB]">
                               <TouchableOpacity
                                 activeOpacity={0.8}
-                                onPress={() => setAddAddressStep(3)}
-                                className="w-full h-14 bg-zinc-950 rounded-2xl items-center justify-center shadow-md"
+                                disabled={isReverseGeocoding || (!hasConfirmedSearchSelection && !isPinSelectionAuthoritative)}
+                                onPress={() => {
+                                  setIsMapConfirmed(true);
+                                  if (resolvedPlaceName && 
+                                      resolvedPlaceName !== 'Selected Location' && 
+                                      !/^\d/.test(resolvedPlaceName) && 
+                                      !resolvedPlaceName.includes('°')) {
+                                    setNewBuildingName(resolvedPlaceName);
+                                  } else {
+                                    setNewBuildingName('');
+                                  }
+                                  setAddAddressStep(2);
+                                }}
+                                className={`w-full h-12 rounded-xl items-center justify-center flex-row gap-2 ${
+                                  (isReverseGeocoding || (!hasConfirmedSearchSelection && !isPinSelectionAuthoritative)) ? 'bg-zinc-200' : 'bg-zinc-950'
+                                }`}
                               >
-                                <Text className="text-white text-xs font-black uppercase tracking-wider">Confirm Location Pin</Text>
+                                {isReverseGeocoding ? (
+                                  <ActivityIndicator size="small" color="#6B7280" />
+                                ) : (
+                                  <Text className="text-white text-xs font-black uppercase tracking-wider">Confirm Location</Text>
+                                )}
                               </TouchableOpacity>
                             </View>
                           </View>
                         )}
 
-                        {/* STEP 3: DETAILS FORM */}
-                        {addAddressStep === 3 && (
+                        {/* STAGE 2: ADDRESS DETAILS FORM */}
+                        {addAddressStep === 2 && (
                           <KeyboardAvoidingView
                             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                             style={{ flex: 1 }}
@@ -2203,149 +2514,225 @@ export default function BookingScreen() {
                               contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
                               className="flex-1"
                             >
-                            <View className="gap-6">
-                              <View>
-                                <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Step 3 of 3</Text>
-                                <Text className="text-[#101828] text-xl font-black tracking-tight mt-1">Enter Address Details</Text>
-                              </View>
-
-                              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[24px] gap-4">
-                                <View className="flex-row items-center gap-2">
-                                  <Feather name="map-pin" size={14} color="#6B7280" />
-                                  <Text className="text-zinc-900 text-xs font-bold uppercase">{newBuildingName || 'Selected Locality'}</Text>
+                              <View className="gap-6">
+                                {/* Map Preview reference */}
+                                <View className="bg-white border border-[#E5E7EB] p-4 rounded-[24px] gap-3">
+                                  <Text className="text-zinc-400 text-[9px] font-black uppercase tracking-wider pl-1">Confirmed Location</Text>
+                                  <View className="bg-zinc-50 border border-zinc-150 p-4 rounded-xl flex-row items-start gap-3">
+                                    <View className="w-8 h-8 rounded-full bg-rose-50 items-center justify-center mt-0.5">
+                                      <Feather name="map-pin" size={14} color="#E11D48" />
+                                    </View>
+                                    <View className="flex-1">
+                                      <Text className="text-zinc-900 text-xs font-black mb-0.5 uppercase tracking-tight">
+                                        {resolvedPlaceName}
+                                      </Text>
+                                      <Text className="text-zinc-500 text-[10px] font-semibold leading-relaxed">
+                                        {searchQuery}
+                                      </Text>
+                                    </View>
+                                  </View>
                                 </View>
 
-                                <View className="gap-3.5">
-                                  <TextInput
-                                    value={newHouseNo}
-                                    onChangeText={setNewHouseNo}
-                                    placeholder="Flat / House No (e.g. Flat 501)"
-                                    placeholderTextColor="#9CA3AF"
-                                    className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
-                                  />
-                                  <TextInput
-                                    value={newBuildingName}
-                                    onChangeText={setNewBuildingName}
-                                    placeholder="Building / Society Name (e.g. Oberoi Springs)"
-                                    placeholderTextColor="#9CA3AF"
-                                    className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
-                                  />
-                                  <TextInput
-                                    value={newFloor}
-                                    onChangeText={setNewFloor}
-                                    placeholder="Floor / Wing (e.g. 5th Floor, A Wing)"
-                                    placeholderTextColor="#9CA3AF"
-                                    className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
-                                  />
-                                  <TextInput
-                                    value={newLandmark}
-                                    onChangeText={setNewLandmark}
-                                    placeholder="Landmark (e.g. Next to Citi Mall)"
-                                    placeholderTextColor="#9CA3AF"
-                                    className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
-                                  />
+                                {/* Form Input details */}
+                                <View className="bg-white border border-[#E5E7EB] p-5 rounded-[24px] gap-4">
+                                  <View className="gap-3.5">
+                                    <View>
+                                      <Text className="text-zinc-700 text-[10px] font-bold uppercase mb-1.5 pl-1">Flat / House No. *</Text>
+                                      <TextInput
+                                        value={newHouseNo}
+                                        onChangeText={setNewHouseNo}
+                                        placeholder="Enter flat or house number"
+                                        placeholderTextColor="#9CA3AF"
+                                        className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
+                                      />
+                                    </View>
+
+                                    <View>
+                                      <Text className="text-zinc-700 text-[10px] font-bold uppercase mb-1.5 pl-1">Building / Society Name *</Text>
+                                      <TextInput
+                                        value={newBuildingName}
+                                        onChangeText={setNewBuildingName}
+                                        placeholder="Enter building or society name"
+                                        placeholderTextColor="#9CA3AF"
+                                        className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
+                                      />
+                                    </View>
+
+                                    <View className="flex-row justify-between">
+                                      <View style={{ width: '48%' }}>
+                                        <Text className="text-zinc-700 text-[10px] font-bold uppercase mb-1.5 pl-1">Floor</Text>
+                                        <TextInput
+                                          value={newFloor}
+                                          onChangeText={setNewFloor}
+                                          placeholder="e.g. 5th Floor"
+                                          placeholderTextColor="#9CA3AF"
+                                          className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
+                                        />
+                                      </View>
+                                      <View style={{ width: '48%' }}>
+                                        <Text className="text-zinc-700 text-[10px] font-bold uppercase mb-1.5 pl-1">Tower</Text>
+                                        <TextInput
+                                          value={newTower}
+                                          onChangeText={setNewTower}
+                                          placeholder="e.g. Tower A"
+                                          placeholderTextColor="#9CA3AF"
+                                          className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
+                                        />
+                                      </View>
+                                    </View>
+
+                                    <View>
+                                      <Text className="text-zinc-700 text-[10px] font-bold uppercase mb-1.5 pl-1">Landmark</Text>
+                                      <TextInput
+                                        value={newLandmark}
+                                        onChangeText={setNewLandmark}
+                                        placeholder="e.g. Opposite Citi Mall"
+                                        placeholderTextColor="#9CA3AF"
+                                        className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
+                                      />
+                                    </View>
+
+                                    <View>
+                                      <Text className="text-zinc-700 text-[10px] font-bold uppercase mb-1.5 pl-1">Arrival instructions</Text>
+                                      <TextInput
+                                        value={newArrivalInstructions}
+                                        onChangeText={setNewArrivalInstructions}
+                                        placeholder="e.g. Call me when you reach the gate"
+                                        placeholderTextColor="#9CA3AF"
+                                        className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
+                                      />
+                                    </View>
+                                  </View>
                                 </View>
-                              </View>
 
-                              {/* Label selection */}
-                              <View className="gap-2.5">
-                                <Text className="text-[#101828] text-xs font-black uppercase tracking-wider pl-1">Save As</Text>
-                                <View className="flex-row justify-between">
-                                  {[
-                                    { id: 'Home', emoji: '🏠' },
-                                    { id: 'Office', emoji: '🏢' },
-                                    { id: 'Gym', emoji: '🏋️' },
-                                    { id: 'Custom', emoji: '📍' }
-                                  ].map((item) => {
-                                    const isSel = newAddressLabelType === item.id;
-                                    return (
-                                      <TouchableOpacity
-                                        key={item.id}
-                                        activeOpacity={0.8}
-                                        onPress={() => setNewAddressLabelType(item.id as any)}
-                                        className={`w-[22%] py-3.5 rounded-xl border items-center justify-center flex-row gap-1 ${
-                                          isSel ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-[#E5E7EB]'
-                                        }`}
-                                      >
-                                        <Text className="text-xs">{item.emoji}</Text>
-                                        <Text className={`text-[9px] font-black uppercase ${isSel ? 'text-white' : 'text-zinc-800'}`}>{item.id}</Text>
-                                      </TouchableOpacity>
-                                    );
-                                  })}
+                                {/* Save As selector */}
+                                <View className="gap-2.5">
+                                  <Text className="text-[#101828] text-xs font-black uppercase tracking-wider pl-1">Save As</Text>
+                                  <View className="flex-row justify-between">
+                                    {[
+                                      { id: 'Home', emoji: '🏠' },
+                                      { id: 'Office', emoji: '🏢' },
+                                      { id: 'Gym', emoji: '🏋️' },
+                                      { id: 'Custom', emoji: '📍' }
+                                    ].map((item) => {
+                                      const isSel = newAddressLabelType === item.id;
+                                      return (
+                                        <TouchableOpacity
+                                          key={item.id}
+                                          activeOpacity={0.8}
+                                          onPress={() => setNewAddressLabelType(item.id as any)}
+                                          className={`w-[22%] py-3.5 rounded-xl border items-center justify-center flex-row gap-1 ${
+                                            isSel ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-[#E5E7EB]'
+                                          }`}
+                                        >
+                                          <Text className="text-xs">{item.emoji}</Text>
+                                          <Text className={`text-[9px] font-black uppercase ${isSel ? 'text-white' : 'text-zinc-800'}`}>{item.id}</Text>
+                                        </TouchableOpacity>
+                                      );
+                                    })}
+                                  </View>
+
+                                  {newAddressLabelType === 'Custom' && (
+                                    <TextInput
+                                      value={newCustomLabel}
+                                      onChangeText={setNewCustomLabel}
+                                      placeholder="Custom label (e.g. Parents, Guest)"
+                                      placeholderTextColor="#9CA3AF"
+                                      className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50 mt-2"
+                                    />
+                                  )}
                                 </View>
 
-                                {newAddressLabelType === 'Custom' && (
-                                  <TextInput
-                                    value={newCustomLabel}
-                                    onChangeText={setNewCustomLabel}
-                                    placeholder="Custom label (e.g. Parents, Guest)"
-                                    placeholderTextColor="#9CA3AF"
-                                    className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50 mt-2"
-                                  />
-                                )}
+                                {/* Receiver details card */}
+                                <View className="bg-white border border-[#E5E7EB] p-5 rounded-[24px] gap-3">
+                                  <Text className="text-[#101828] text-xs font-black uppercase tracking-wider pl-1">
+                                    Receiver details for this address
+                                  </Text>
+                                  <View className="bg-zinc-50 border border-zinc-150 p-4 rounded-xl gap-2">
+                                    <View className="flex-row justify-between items-center">
+                                      <Text className="text-zinc-500 text-[10px] font-bold uppercase">Name</Text>
+                                      <Text className="text-zinc-800 text-xs font-black">{user.name}</Text>
+                                    </View>
+                                    <View className="flex-row justify-between items-center border-t border-zinc-100 pt-2 mt-1">
+                                      <Text className="text-zinc-500 text-[10px] font-bold uppercase">Phone</Text>
+                                      <Text className="text-zinc-800 text-xs font-black">
+                                        {Database.schema.users.find(u => u.id === user?.id)?.phone || 'No phone number'}
+                                      </Text>
+                                    </View>
+                                  </View>
+                                  <Text className="text-zinc-400 text-[9px] font-semibold pl-1">
+                                    To edit receiver details, update profile settings.
+                                  </Text>
+                                </View>
+
+                                {/* Save Button */}
+                                <TouchableOpacity
+                                  activeOpacity={0.8}
+                                  disabled={!newHouseNo.trim() || !newBuildingName.trim()}
+                                  onPress={async () => {
+                                    if (!activeCoords.lat || !activeCoords.lng || activeCoords.lat === 0 || activeCoords.lng === 0) {
+                                      Alert.alert('Validation Error', 'Verified location coordinates are missing. Please confirm your location on the map.');
+                                      return;
+                                    }
+                                    if (activeCoords.lat < -90 || activeCoords.lat > 90 || activeCoords.lng < -180 || activeCoords.lng > 180) {
+                                      Alert.alert('Validation Error', 'Invalid location coordinates detected. Please confirm your location on the map again.');
+                                      return;
+                                    }
+                                    if (!isMapConfirmed) {
+                                      Alert.alert('Validation Error', 'Please confirm your location pin on the map.');
+                                      return;
+                                    }
+                                    if (!newHouseNo.trim() || !newBuildingName.trim()) {
+                                      Alert.alert('Validation Error', 'Please enter Flat/House No and Building Name.');
+                                      return;
+                                    }
+
+                                    const finalLabel = newAddressLabelType === 'Custom'
+                                      ? (newCustomLabel.trim() || 'Custom') as any
+                                      : newAddressLabelType;
+
+                                    // Prepend house number and combine building name and tower
+                                    const displayBuilding = newTower.trim() 
+                                      ? `${newBuildingName.trim()} (${newTower.trim()})` 
+                                      : newBuildingName.trim();
+                                    const fullBuilding = `${newHouseNo.trim()}, ${displayBuilding}`;
+                                    
+                                    // Combine floor and geocoded street info
+                                    const fullStreet = [newFloor.trim() ? `${newFloor.trim()}` : '', searchQuery.trim()].filter(Boolean).join(', ');
+
+                                    try {
+                                      const added = await addAddress({
+                                        label: finalLabel,
+                                        building: fullBuilding,
+                                        street: fullStreet,
+                                        landmark: newLandmark.trim(),
+                                        city: 'Mumbai',
+                                        pinCode: '',
+                                        isDefault: false,
+                                        lat: activeCoords.lat,
+                                        lng: activeCoords.lng,
+                                        apartment: newHouseNo.trim(),
+                                        floor: newFloor.trim(),
+                                        notes: newArrivalInstructions.trim(),
+                                        placeId: placeId || undefined
+                                      });
+
+                                      setSelectedAddressId(added.id);
+                                      setIsAddAddressModalVisible(false);
+                                      Alert.alert('Address Saved 🏠', 'Your training venue has been successfully saved with exact GPS coordinates.');
+                                    } catch (err: any) {
+                                      console.error('[DIAGNOSTIC] Saving address failed:', err);
+                                      Alert.alert('Save Failed', `Database error: ${err?.message || 'Could not persist location.'}`);
+                                    }
+                                  }}
+                                  className={`w-full h-14 rounded-2xl items-center justify-center mt-2 ${
+                                    (!newHouseNo.trim() || !newBuildingName.trim()) ? 'bg-zinc-300' : 'bg-zinc-950'
+                                  }`}
+                                >
+                                  <Text className="text-white text-xs font-black uppercase tracking-wider">Save Address</Text>
+                                </TouchableOpacity>
                               </View>
-
-                              {/* Save Address Button */}
-                              <TouchableOpacity
-                                activeOpacity={0.8}
-                                onPress={async () => {
-                                  if (!newHouseNo.trim() || !newBuildingName.trim()) {
-                                    Alert.alert('Missing Info', 'Please enter Flat/House No and Building Name.');
-                                    return;
-                                  }
-
-                                  if (isLocationOutsideCoverage) {
-                                    Alert.alert('Outside Area', 'Sorry, VIRLA currently only serves Mumbai. Address cannot be verified for coverage.');
-                                    return;
-                                  }
-
-                                  console.log('[DIAGNOSTIC] Save button pressed. Inputs:', {
-                                    newHouseNo,
-                                    newBuildingName,
-                                    newFloor,
-                                    newLandmark,
-                                    newAddressLabelType,
-                                    newCustomLabel,
-                                    activeCoords
-                                  });
-                                  const finalLabel = newAddressLabelType === 'Custom'
-                                    ? (newCustomLabel.trim() || 'Custom') as any
-                                    : newAddressLabelType;
-
-                                  const fullBuilding = `${newHouseNo.trim()}, ${newBuildingName.trim()}`;
-                                  const fullStreet = [newFloor.trim() ? `${newFloor.trim()}` : '', newLandmark.trim()].filter(Boolean).join(', ');
-
-                                  try {
-                                    const added = await addAddress({
-                                      label: finalLabel,
-                                      building: fullBuilding,
-                                      street: fullStreet,
-                                      landmark: newLandmark.trim(),
-                                      city: 'Mumbai',
-                                      pinCode: '',
-                                      isDefault: false,
-                                      lat: activeCoords.lat,
-                                      lng: activeCoords.lng,
-                                      apartment: '',
-                                      floor: newFloor.trim(),
-                                      notes: ''
-                                    });
-
-                                    console.log('[DIAGNOSTIC] Save completed and verified in DB:', added);
-                                    setSelectedAddressId(added.id);
-                                    setIsAddAddressModalVisible(false);
-                                    Alert.alert('Address Saved', 'New training venue has been saved and selected.');
-                                  } catch (err: any) {
-                                    console.error('[DIAGNOSTIC] Saving address failed:', err);
-                                    Alert.alert('Save Failed', `Database error: ${err?.message || 'Could not persist location.'}`);
-                                  }
-                                }}
-                                className="w-full h-14 bg-[#E11D48] rounded-2xl items-center justify-center mt-2"
-                              >
-                                <Text className="text-white text-xs font-black uppercase tracking-wider">Save Training Location</Text>
-                              </TouchableOpacity>
-                            </View>
-                          </ScrollView>
+                            </ScrollView>
                           </KeyboardAvoidingView>
                         )}
                       </View>

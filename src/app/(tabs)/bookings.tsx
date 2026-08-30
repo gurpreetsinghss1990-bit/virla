@@ -302,7 +302,7 @@ export default function BookingsScreen() {
 
   const handleEditTimeSlot = (time: string) => {
     if (!coach) return;
-    const availableCategories = ['Strength', 'Mind & Body', 'Cardio', 'Conditioning', 'Boxing', 'Any Workout'];
+    const availableCategories = ['Strength', 'Mind & Body', 'Cardio', 'Conditioning', 'Boxing', 'Aerial Yoga', 'Any Workout'];
     Alert.alert(
       'Select Category Restriction',
       'Set the allowed workout category for this slot:',

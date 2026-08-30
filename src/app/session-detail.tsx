@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Image, ScrollView, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, Linking, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, Image, ScrollView, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, Linking, ActivityIndicator, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
@@ -17,6 +17,8 @@ import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Data
 import { getBookingISTDateRange, getDisplayWorkoutTitle, formatToDDMMYYYY } from '../utils/date';
 import { locationTrackerService } from '../services/LocationTrackerService';
 import TrackingMap from '../components/TrackingMap';
+import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+import { parseBookingAddress } from '../utils/LocationParser';
 
 function formatToIndianDate(dateStr: string): string {
   return formatToDDMMYYYY(dateStr);
@@ -74,8 +76,10 @@ export default function SessionDetailScreen() {
   const { role } = useUserStore();
   const { syncFromDB: syncProfile } = useUserProfileStore();
   const [showPartnerModal, setShowPartnerModal] = useState(false);
+  const [isNavigationMapVisible, setIsNavigationMapVisible] = useState(false);
 
   const booking = bookings.find((b) => b.id === bookingId) || bookings[0];
+  const parsedAddress = useMemo(() => parseBookingAddress(booking?.address), [booking?.address]);
 
   // Fallback status alignment for 12-stage timeline
   const currentStatus = booking?.timelineStatus || 'booked';
@@ -110,6 +114,19 @@ export default function SessionDetailScreen() {
     }, 800);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (params.openMap === 'true' && booking) {
+      if (SessionEngine.isTravelWindowOpen(booking)) {
+        setTimeout(() => setIsNavigationMapVisible(true), 0);
+      } else {
+        Alert.alert(
+          'Travel Window Locked ⚠️',
+          'You can start travel and view the navigation map 25 minutes before the scheduled session.'
+        );
+      }
+    }
+  }, [params.openMap, booking]);
 
   // Tracking simulator state variables
   const [journeyProgress, setJourneyProgress] = useState(0); // 0.0 to 1.0
@@ -614,31 +631,28 @@ export default function SessionDetailScreen() {
     );
   };
 
-  const handleNavigateAddress = () => {
-    if (!booking.address || booking.address.trim() === '') {
-      Alert.alert('Destination Missing ⚠️', 'This booking does not contain a valid service address.');
-      return;
-    }
-    const match = booking.address.match(/\(([-\d.]+),\s*([-\d.]+)\)/);
-    let url = '';
-    if (match) {
-      const lat = match[1];
-      const lng = match[2];
-      url = Platform.select({
-        ios: `maps://?daddr=${lat},${lng}&dirflg=d`,
-        android: `google.navigation:q=${lat},${lng}`
-      }) || `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-    } else {
-      const query = encodeURIComponent(booking.address);
-      url = Platform.select({
-        ios: `maps://?q=${query}`,
-        android: `geo:0,0?q=${query}`
-      }) || `https://maps.google.com/?q=${query}`;
-    }
+  const handleOpenSystemMaps = () => {
+    if (!parsedAddress || !parsedAddress.lat || !parsedAddress.lng) return;
+    const url = Platform.select({
+      ios: `maps://?daddr=${parsedAddress.lat},${parsedAddress.lng}&dirflg=d`,
+      android: `google.navigation:q=${parsedAddress.lat},${parsedAddress.lng}`
+    }) || `https://www.google.com/maps/dir/?api=1&destination=${parsedAddress.lat},${parsedAddress.lng}`;
     
     Linking.openURL(url).catch(() => {
       Alert.alert('Navigation Error', 'Could not open map navigation services.');
     });
+  };
+
+  const handleNavigateAddress = () => {
+    if (!parsedAddress || !parsedAddress.lat || !parsedAddress.lng || isNaN(parsedAddress.lat) || isNaN(parsedAddress.lng) || (parsedAddress.lat === 0 && parsedAddress.lng === 0)) {
+      Alert.alert(
+        'Navigation Lock ⚠️',
+        'No exact GPS coordinates are available for this booking. Turn-by-turn navigation cannot start because the customer has not confirmed a verified map location.'
+      );
+      return;
+    }
+
+    setIsNavigationMapVisible(true);
   };
 
   const getCalculatedDistance = () => {
@@ -647,16 +661,12 @@ export default function SessionDetailScreen() {
       return baseDistance;
     }
 
-    const match = booking.address.match(/\(([-\d.]+),\s*([-\d.]+)\)/);
-    if (match) {
-      const clientLat = parseFloat(match[1]);
-      const clientLng = parseFloat(match[2]);
-
+    if (parsedAddress && parsedAddress.lat && parsedAddress.lng && !isNaN(parsedAddress.lat) && !isNaN(parsedAddress.lng)) {
       const realDist = calculateHaversineDistance(
         deviceCoords.latitude,
         deviceCoords.longitude,
-        clientLat,
-        clientLng
+        parsedAddress.lat,
+        parsedAddress.lng
       );
 
       // Scale distance if simulator is active (moving state)
@@ -762,7 +772,9 @@ export default function SessionDetailScreen() {
 
                 <View className="flex-row justify-between border-b border-zinc-100 pb-2">
                   <Text className="text-zinc-400 text-[10px] font-bold uppercase">Approximate Location</Text>
-                  <Text className="text-zinc-900 text-xs font-black">{booking.address ? booking.address.split(',')[0] : 'Selected Locality'}</Text>
+                  <Text className="text-zinc-900 text-xs font-black">
+                    {parsedAddress.buildingName || (parsedAddress.addressLine ? parsedAddress.addressLine.split(',')[0] : 'Selected Locality')}
+                  </Text>
                 </View>
 
                 <View className="flex-row justify-between">
@@ -1191,7 +1203,9 @@ export default function SessionDetailScreen() {
                   <View className="flex-row justify-between items-start">
                     <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">Location</Text>
                     <Text className="text-[#101828] text-xs font-extrabold max-w-[65%] text-right leading-relaxed">
-                      {booking.address || 'Selected Location'}
+                      {parsedAddress.flatNumber
+                        ? `${parsedAddress.flatNumber}, ${parsedAddress.buildingName}\n${parsedAddress.addressLine}`
+                        : parsedAddress.addressLine || 'Selected Location'}
                     </Text>
                   </View>
                 </View>
@@ -1335,49 +1349,13 @@ export default function SessionDetailScreen() {
                   </View>
                 </View>
 
-                {/* Real Live Map or SVG Map fallback */}
+                {/* Real Live Map */}
                 <View className="h-44 overflow-hidden relative bg-slate-950">
-                  {liveTrainerCoords ? (
-                    <TrackingMap
-                      liveTrainerCoords={liveTrainerCoords}
-                      isStale={isLiveConnectionStale}
-                      clientAddress={booking?.address}
-                    />
-                  ) : (
-                    <View className="items-center justify-center h-full w-full">
-                      <Svg width="300" height="180" viewBox="0 0 300 180">
-                        {/* Dark Street Layout lines */}
-                        <Path d="M 0,30 L 300,30" stroke="#1E293B" strokeWidth="2.5" />
-                        <Path d="M 0,90 L 300,90" stroke="#1E293B" strokeWidth="2.5" />
-                        <Path d="M 0,150 L 300,150" stroke="#1E293B" strokeWidth="2.5" />
-                        <Path d="M 60,0 L 60,180" stroke="#1E293B" strokeWidth="2.5" />
-                        <Path d="M 150,0 L 150,180" stroke="#1E293B" strokeWidth="2.5" />
-                        <Path d="M 240,0 L 240,180" stroke="#1E293B" strokeWidth="2.5" />
-                        
-                        {/* Landmark Details */}
-                        <Circle cx="100" cy="50" r="14" fill="#0F172A" stroke="#1E293B" strokeWidth="1" />
-                        <Path d="M 97,46 L 103,46 M 97,50 L 103,50 M 97,54 L 103,54" stroke="#475569" strokeWidth="1" />
-                        
-                        {/* Polyline Route Path */}
-                        <Path 
-                          d="M 35,145 L 80,110 L 140,120 L 200,70 L 265,45" 
-                          stroke="#4F46E5" 
-                          strokeWidth="3.5" 
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeDasharray="6 4"
-                        />
-
-                        {/* Customer Home Pin */}
-                        <Circle cx="265" cy="45" r="7" fill="#4F46E5" />
-                        <Circle cx="265" cy="45" r="13" fill="none" stroke="#4F46E5" strokeWidth="1.5" opacity="0.45" />
-                        
-                        {/* Animated Trainer Vehicle Dot */}
-                        <Circle cx={trainerCoords.x} cy={trainerCoords.y} r="6.5" fill="#E11D48" />
-                        <Circle cx={trainerCoords.x} cy={trainerCoords.y} r="14" fill="none" stroke="#E11D48" strokeWidth="2" opacity="0.35" />
-                      </Svg>
-                    </View>
-                  )}
+                  <TrackingMap
+                    liveTrainerCoords={liveTrainerCoords}
+                    isStale={isLiveConnectionStale}
+                    clientAddress={booking?.address}
+                  />
                 </View>
 
                 {/* Tracking ETA Indicators */}
@@ -1990,6 +1968,88 @@ export default function SessionDetailScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Full-Screen Navigate Map Modal */}
+      <Modal
+        visible={isNavigationMapVisible}
+        animationType="slide"
+        onRequestClose={() => setIsNavigationMapVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: '#0F172A' }}>
+          {/* Header */}
+          <View className="h-16 flex-row items-center px-6 border-b border-zinc-800 bg-slate-900 justify-between">
+            <TouchableOpacity 
+              onPress={() => setIsNavigationMapVisible(false)} 
+              className="w-10 h-10 items-center justify-center rounded-full bg-slate-800"
+            >
+              <Ionicons name="arrow-back" size={20} color="white" />
+            </TouchableOpacity>
+            <Text className="text-white text-sm font-black uppercase tracking-wider">
+              Navigation Map
+            </Text>
+            <View style={{ width: 40 }} />
+          </View>
+
+          {/* Map View */}
+          <View style={{ flex: 1, position: 'relative' }}>
+            {parsedAddress && parsedAddress.lat && parsedAddress.lng ? (
+              <MapView
+                provider={PROVIDER_DEFAULT}
+                style={{ flex: 1 }}
+                initialRegion={{
+                  latitude: parsedAddress.lat,
+                  longitude: parsedAddress.lng,
+                  latitudeDelta: 0.01,
+                  longitudeDelta: 0.01,
+                }}
+                showsUserLocation={true}
+                showsMyLocationButton={true}
+                showsCompass={true}
+              >
+                <Marker
+                  coordinate={{
+                    latitude: parsedAddress.lat,
+                    longitude: parsedAddress.lng,
+                  }}
+                  title="Workout Venue"
+                  description={parsedAddress.addressLine || "Destination"}
+                >
+                  <View className="w-10 h-10 items-center justify-center bg-rose-500 rounded-full border-2 border-white shadow-md">
+                    <Ionicons name="location" size={20} color="white" />
+                  </View>
+                </Marker>
+              </MapView>
+            ) : (
+              <View className="flex-1 items-center justify-center bg-slate-950">
+                <ActivityIndicator size="large" color="#E11D48" />
+                <Text className="text-zinc-400 text-xs font-semibold mt-2">Loading coordinates...</Text>
+              </View>
+            )}
+
+            {/* Bottom Floating Card */}
+            <View className="absolute bottom-6 left-6 right-6 bg-slate-900/95 border border-zinc-800 p-5 rounded-[24px] gap-4 shadow-2xl">
+              <View className="gap-1">
+                <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-widest">Destination</Text>
+                <Text className="text-white text-sm font-black mt-1">
+                  {parsedAddress.buildingName || 'Workout Venue'}
+                </Text>
+                <Text className="text-zinc-400 text-[10px] font-medium leading-relaxed">
+                  {parsedAddress.addressLine || 'Coordinates: ' + parsedAddress.lat + ', ' + parsedAddress.lng}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleOpenSystemMaps}
+                className="w-full h-12 bg-[#E11D48] rounded-2xl items-center justify-center flex-row gap-2 shadow-md"
+              >
+                <Feather name="navigation" size={14} color="white" />
+                <Text className="text-white text-xs font-black uppercase tracking-wider">Open in Google/Apple Maps</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
