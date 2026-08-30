@@ -20,7 +20,9 @@ ALTER TABLE public.credit_lots ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Enable select for own lots" ON public.credit_lots;
 CREATE POLICY "Enable select for own lots" ON public.credit_lots
-    FOR SELECT TO authenticated USING (auth.uid()::text = user_id);
+    FOR SELECT TO authenticated, anon USING (
+      user_id = COALESCE(nullif(current_setting('request.jwt.claim.sub', true), ''), (current_setting('request.headers', true)::jsonb->>'x-user-id'))
+    );
 
 -- 2. Create Expiry Notifications Sent Log Table
 CREATE TABLE IF NOT EXISTS public.expiry_notifications_sent (
@@ -60,11 +62,13 @@ ALTER TABLE public.invitations ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Enable read for all authenticated users" ON public.invitations;
 CREATE POLICY "Enable read for all authenticated users" ON public.invitations
-    FOR SELECT TO authenticated USING (true);
+    FOR SELECT TO authenticated, anon USING (true);
 
 DROP POLICY IF EXISTS "Enable insert for sender" ON public.invitations;
 CREATE POLICY "Enable insert for sender" ON public.invitations
-    FOR INSERT TO authenticated WITH CHECK (auth.uid()::text = sender_id);
+    FOR INSERT TO authenticated, anon WITH CHECK (
+      sender_id = COALESCE(nullif(current_setting('request.jwt.claim.sub', true), ''), (current_setting('request.headers', true)::jsonb->>'x-user-id'))
+    );
 
 
 -- 5. Trigger Function to auto-allocate or consume credit lots on transaction records
@@ -184,15 +188,7 @@ BEGIN
   -- Normalize phone to digits
   v_clean_phone := regexp_replace(p_phone, '\D', '', 'g');
 
-  v_sender_id := auth.uid()::text;
-  IF v_sender_id IS NULL OR v_sender_id = '' THEN
-    BEGIN
-      v_sender_id := current_setting('request.headers', true)::jsonb->>'x-user-id';
-    EXCEPTION WHEN OTHERS THEN
-      v_sender_id := NULL;
-    END;
-  END IF;
-
+  v_sender_id := COALESCE(nullif(current_setting('request.jwt.claim.sub', true), ''), (current_setting('request.headers', true)::jsonb->>'x-user-id'));
   IF v_sender_id IS NULL OR v_sender_id = '' THEN
      RAISE EXCEPTION 'Unauthorized';
   END IF;
@@ -238,15 +234,7 @@ DECLARE
   v_orig_lot_id text;
 BEGIN
   -- Resolve sender
-  v_from_client_id := auth.uid()::text;
-  IF v_from_client_id IS NULL OR v_from_client_id = '' THEN
-    BEGIN
-      v_from_client_id := current_setting('request.headers', true)::jsonb->>'x-user-id';
-    EXCEPTION WHEN OTHERS THEN
-      v_from_client_id := NULL;
-    END;
-  END IF;
-
+  v_from_client_id := COALESCE(nullif(current_setting('request.jwt.claim.sub', true), ''), (current_setting('request.headers', true)::jsonb->>'x-user-id'));
   IF v_from_client_id IS NULL OR v_from_client_id = '' THEN
      RAISE EXCEPTION 'Unauthorized';
   END IF;
@@ -485,9 +473,9 @@ END;
 $$;
 
 -- Grant accesses to authenticated users
-GRANT EXECUTE ON FUNCTION public.find_recipient_by_phone(text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.transfer_credits(text, integer) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.process_credit_expiries_and_reminders() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.find_recipient_by_phone(text) TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.transfer_credits(text, integer) TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.process_credit_expiries_and_reminders() TO authenticated, anon;
 
 
 -- 9. REGISTER CRON SCHEDULER
