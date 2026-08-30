@@ -262,7 +262,7 @@ export default function WalletScreen() {
                 <Text className="text-red-700 text-xs font-medium mt-0.5">Please recharge to reactivate session check-ins.</Text>
               </View>
             </View>
-          ) : creditBalance === 0 ? (
+          ) : role !== 'trainer' && creditBalance === 0 ? (
             <View className="bg-rose-50 border border-rose-100 p-4.5 rounded-[24px] flex-row items-center gap-3">
               <Feather name="alert-circle" size={16} color="#E11D48" />
               <View className="flex-1">
@@ -270,7 +270,7 @@ export default function WalletScreen() {
                 <Text className="text-rose-700 text-xs font-medium mt-0.5">Recharge your wallet to book wellness sessions.</Text>
               </View>
             </View>
-          ) : creditBalance <= 2 ? (
+          ) : role !== 'trainer' && creditBalance <= 2 ? (
             <View className="bg-amber-50 border border-amber-100 p-4.5 rounded-[24px] flex-row items-center gap-3">
               <Feather name="zap" size={16} color="#D97706" />
               <View className="flex-1">

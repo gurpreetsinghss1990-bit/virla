@@ -1223,6 +1223,7 @@ class DatabaseClient {
       this.log('LoadDatabase', 'Successfully synchronized local cache from Supabase');
       
       this.save();
+      await this.syncLocalDataToSupabase();
     } catch (err) {
       console.log('[DEBUG-DB] Database.load() error caught. Falling back. Error:', err);
       console.error('[DB ERROR] Failed to load database from Supabase, trying AsyncStorage fallback:', err);
@@ -1241,6 +1242,79 @@ class DatabaseClient {
       this.syncCoachesWithAssignments();
       this.isLoaded = true;
       this.loadSource = 'cache';
+      await this.syncLocalDataToSupabase();
+    }
+  }
+
+  async syncLocalDataToSupabase(): Promise<void> {
+    const userId = this.getCurrentUserId();
+    if (!userId) return;
+    
+    // 1. Sync disputes
+    if (this.schema.client_disputes && this.schema.client_disputes.length > 0) {
+      console.log(`[DB Sync] Syncing ${this.schema.client_disputes.length} local disputes to Supabase...`);
+      for (const d of this.schema.client_disputes) {
+        try {
+          const { data, error } = await supabase
+            .from('disputes')
+            .select('id')
+            .eq('description', d.description)
+            .eq('category', d.category)
+            .eq('trainer_id', d.trainerId || userId);
+            
+          if (!error && (!data || data.length === 0)) {
+            await supabase.from('disputes').insert({
+              trainer_id: d.trainerId || userId,
+              booking_id: d.bookingId || null,
+              category: d.category,
+              description: d.description,
+              status: d.status?.toUpperCase() || 'OPEN'
+            });
+          }
+        } catch (err: any) {
+          console.error('[DB Sync] Error syncing dispute:', err.message);
+        }
+      }
+      this.schema.client_disputes = [];
+      this.save();
+    }
+
+    // 2. Sync kit requests
+    if (this.schema.kit_requests && this.schema.kit_requests.length > 0) {
+      console.log(`[DB Sync] Syncing ${this.schema.kit_requests.length} local kit requests to Supabase...`);
+      for (const k of this.schema.kit_requests) {
+        try {
+          const { data, error } = await supabase
+            .from('kit_orders')
+            .select('id')
+            .eq('trainer_id', k.trainerId || userId)
+            .eq('items', k.items);
+            
+          if (!error && (!data || data.length === 0)) {
+            let normalizedItems: { [key: string]: number } = {};
+            if (Array.isArray(k.items)) {
+              k.items.forEach((item: string) => {
+                normalizedItems[item] = 1;
+              });
+            } else if (typeof k.items === 'object' && k.items !== null) {
+              normalizedItems = k.items;
+            } else {
+              normalizedItems = { 'T-shirt': 1 };
+            }
+
+            await supabase.from('kit_orders').insert({
+              trainer_id: k.trainerId || userId,
+              items: normalizedItems,
+              tshirt_size: k.size || k.tshirt_size || null,
+              status: k.status?.toUpperCase() || 'SUBMITTED'
+            });
+          }
+        } catch (err: any) {
+          console.error('[DB Sync] Error syncing kit request:', err.message);
+        }
+      }
+      this.schema.kit_requests = [];
+      this.save();
     }
   }
 
@@ -2917,42 +2991,105 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
   }
 
   // Disputes & Kit requests
-  getClientDisputes(userId: string): any[] {
-    return (this.schema.client_disputes || []).filter(d => d.trainerId === userId);
-  }
-
-  addClientDispute(userId: string, dispute: any): void {
-    if (!this.schema.client_disputes) {
-      this.schema.client_disputes = [];
+  async fetchClientDisputes(userId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('disputes')
+      .select('*')
+      .eq('trainer_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.error('[DB ERROR] fetchClientDisputes failed:', error);
+      return [];
     }
-    const newDispute = {
-      id: generateUUID('disp'),
-      trainerId: userId,
-      status: 'pending',
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-      ...dispute
-    };
-    this.schema.client_disputes.unshift(newDispute);
-    this.save();
+    return data || [];
   }
 
-  getKitRequests(userId: string): any[] {
-    return (this.schema.kit_requests || []).filter(r => r.trainerId === userId);
-  }
-
-  addKitRequest(userId: string, request: any): void {
-    if (!this.schema.kit_requests) {
-      this.schema.kit_requests = [];
+  async addClientDispute(userId: string, dispute: any): Promise<void> {
+    const { error } = await supabase
+      .from('disputes')
+      .insert({
+        trainer_id: userId,
+        booking_id: dispute.bookingId || null,
+        category: dispute.category,
+        description: dispute.description
+      });
+    if (error) {
+      console.error('[DB ERROR] addClientDispute failed:', error);
+      throw error;
     }
-    const newRequest = {
-      id: generateUUID('kit'),
-      trainerId: userId,
-      status: 'requested', // requested -> approved -> dispatched -> delivered
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-      ...request
-    };
-    this.schema.kit_requests.unshift(newRequest);
-    this.save();
+  }
+
+  async fetchKitRequests(userId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('kit_orders')
+      .select('*')
+      .eq('trainer_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.error('[DB ERROR] fetchKitRequests failed:', error);
+      return [];
+    }
+    return data || [];
+  }
+
+  async addKitRequest(userId: string, request: any): Promise<void> {
+    const { error } = await supabase
+      .from('kit_orders')
+      .insert({
+        trainer_id: userId,
+        items: request.items,
+        tshirt_size: request.size || null
+      });
+    if (error) {
+      console.error('[DB ERROR] addKitRequest failed:', error);
+      throw error;
+    }
+  }
+
+  async fetchAllDisputes(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('disputes')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.error('[DB ERROR] fetchAllDisputes failed:', error);
+      return [];
+    }
+    return data || [];
+  }
+
+  async updateDisputeStatus(disputeId: string, status: string): Promise<void> {
+    const { error } = await supabase
+      .from('disputes')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', disputeId);
+    if (error) {
+      console.error('[DB ERROR] updateDisputeStatus failed:', error);
+      throw error;
+    }
+  }
+
+  async fetchAllKitOrders(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('kit_orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.error('[DB ERROR] fetchAllKitOrders failed:', error);
+      return [];
+    }
+    return data || [];
+  }
+
+  async updateKitOrderStatus(orderId: string, status: string): Promise<void> {
+    const { error } = await supabase
+      .from('kit_orders')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', orderId);
+    if (error) {
+      console.error('[DB ERROR] updateKitOrderStatus failed:', error);
+      throw error;
+    }
   }
 
   async addPartnerToBooking(bookingId: string, partnerName: string, partnerPhone: string): Promise<Booking> {
@@ -3625,6 +3762,57 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       await this.save();
       this.syncCoachesWithAssignments();
       this.log('RejectWorkoutAssignment', `Admin ${adminId} rejected ${assignment.workoutCategory} request for trainer ${assignment.trainerId}. Reason: ${reason}`);
+    }
+  }
+
+  async fetchTrainerVerificationDocs(trainerId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('trainer_verification_documents')
+      .select('*')
+      .eq('trainer_id', trainerId)
+      .order('uploaded_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch verification documents: ${error.message}`);
+    }
+    return data || [];
+  }
+
+  async createTrainerVerificationDoc(data: {
+    id: string;
+    trainer_id: string;
+    storage_path: string;
+    file_type: string;
+    verification_status: string;
+    extracted_name?: string;
+    confidence?: number;
+    match_result?: string;
+    trainer_attested?: boolean;
+  }): Promise<any> {
+    const { data: inserted, error } = await supabase
+      .from('trainer_verification_documents')
+      .insert(data)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to create verification document record: ${error.message}`);
+    }
+    return inserted;
+  }
+
+  async updateTrainerVerificationDoc(docId: string, status: string, attested: boolean): Promise<void> {
+    const { error } = await supabase
+      .from('trainer_verification_documents')
+      .update({
+        verification_status: status,
+        trainer_attested: attested,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', docId);
+
+    if (error) {
+      throw new Error(`Failed to update verification document: ${error.message}`);
     }
   }
 }

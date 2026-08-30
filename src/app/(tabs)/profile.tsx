@@ -14,7 +14,7 @@ import { LuxuryCard } from '../../components/LuxuryCard';
 import * as Location from 'expo-location';
 import { formatToDDMMYYYY } from '../../utils/date';
 
-type TrainerSectionType = 'profile' | 'workout' | 'operating' | 'availability' | 'banking' | 'support' | 'safety' | 'kit';
+type TrainerSectionType = 'profile' | 'workout' | 'operating' | 'availability' | 'banking' | 'support' | 'safety' | 'kit' | 'wallet';
 
 const CATEGORY_DISPLAY_MAP: Record<string, string> = {
   'Strength': 'Strength Training',
@@ -43,7 +43,7 @@ export default function ProfileScreen() {
   const { user, role, setRole, setLoggedIn } = useUserStore();
   const { membership } = useMembershipStore();
   const { totalEarnings, earningsList } = useCoachStore();
-  const { ledger } = useWalletStore();
+  const { ledger, creditBalance, creditLots, syncFromDB: syncWallet } = useWalletStore();
   const profile = useUserProfileStore();
 
   const handleLogout = () => {
@@ -235,15 +235,17 @@ export default function ProfileScreen() {
 
   // Kit Request States
   const [showKitForm, setShowKitForm] = useState(false);
-  const [kitSize, setKitSize] = useState<'S' | 'M' | 'L' | 'XL' | 'XXL'>('M');
-  const [kitItems, setKitItems] = useState<{ [item: string]: boolean }>({ 'T-shirt': true, 'Towel': false, 'Duffel Bag': false });
+  const [selectedTshirtSize, setSelectedTshirtSize] = useState<'S' | 'M' | 'L' | 'XL' | 'XXL' | null>(null);
+  const [kitQuantities, setKitQuantities] = useState<{ [item: string]: number }>({ 'T-shirt': 0, 'Towel': 0, 'Duffel Bag': 0, 'Water Bottle': 0 });
   const [kitRequestsList, setKitRequestsList] = useState<any[]>([]);
 
   // Reload disputes and kit requests on user load
-  const reloadDynamicLists = () => {
+  const reloadDynamicLists = async () => {
     if (coach) {
-      setDisputesList(Database.getClientDisputes(coach.id));
-      setKitRequestsList(Database.getKitRequests(coach.id));
+      const disputes = await Database.fetchClientDisputes(coach.id);
+      setDisputesList(disputes);
+      const kits = await Database.fetchKitRequests(coach.id);
+      setKitRequestsList(kits);
     }
   };
 
@@ -260,6 +262,8 @@ export default function ProfileScreen() {
         useUserStore.getState().syncFromDB();
         useUserProfileStore.getState().syncFromDB();
         useCoachStore.getState().syncFromDB();
+        useWalletStore.getState().syncFromDB();
+        useMembershipStore.getState().syncFromDB();
         reloadDynamicLists();
         const latestCoach = Database.schema.coaches.find((c: any) => c.name === user.name || c.id === user.id);
         if (latestCoach) {
@@ -447,34 +451,60 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleDisputeSubmit = () => {
+  const handleDisputeSubmit = async () => {
     if (!coach || !disputeDescription) return;
-    Database.addClientDispute(coach.id, {
-      category: disputeCategory,
-      description: disputeDescription,
-      bookingId: disputeBookingId
-    });
-    setDisputeDescription('');
-    setDisputeBookingId('');
-    setShowDisputeForm(false);
-    reloadDynamicLists();
-    Alert.alert('Ticket Submitted', 'Our support team will review this case and reply within 24 hours.');
+    try {
+      await Database.addClientDispute(coach.id, {
+        category: disputeCategory,
+        description: disputeDescription,
+        bookingId: disputeBookingId
+      });
+      setDisputeDescription('');
+      setDisputeBookingId('');
+      setShowDisputeForm(false);
+      await reloadDynamicLists();
+      Alert.alert('Ticket Submitted', 'Our support team will review this case and reply within 24 hours.');
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to submit dispute ticket.');
+    }
   };
 
-  const handleKitSubmit = () => {
+  const handleKitSubmit = async () => {
     if (!coach) return;
-    const requestedItems = Object.keys(kitItems).filter(k => kitItems[k]);
-    if (requestedItems.length === 0) {
-      Alert.alert('Item Selection', 'Please check at least one kit item.');
+    const itemsList: { [item: string]: number } = {};
+    let totalQty = 0;
+    
+    Object.keys(kitQuantities).forEach(item => {
+      const qty = kitQuantities[item];
+      if (qty > 0) {
+        itemsList[item] = qty;
+        totalQty += qty;
+      }
+    });
+
+    if (totalQty === 0) {
+      Alert.alert('Item Selection', 'Please select a quantity greater than 0 for at least one item.');
       return;
     }
-    Database.addKitRequest(coach.id, {
-      items: requestedItems,
-      size: kitSize
-    });
-    setShowKitForm(false);
-    reloadDynamicLists();
-    Alert.alert('Kit Requested', 'Brand kit accessories request submitted successfully.');
+
+    if (kitQuantities['T-shirt'] > 0 && !selectedTshirtSize) {
+      Alert.alert('Size Required', 'Please select a T-shirt size.');
+      return;
+    }
+
+    try {
+      await Database.addKitRequest(coach.id, {
+        items: itemsList,
+        size: kitQuantities['T-shirt'] > 0 ? selectedTshirtSize : null
+      });
+      setShowKitForm(false);
+      setKitQuantities({ 'T-shirt': 0, 'Towel': 0, 'Duffel Bag': 0, 'Water Bottle': 0 });
+      setSelectedTshirtSize(null);
+      await reloadDynamicLists();
+      Alert.alert('Kit Requested', 'Brand kit request submitted successfully.');
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to submit kit request.');
+    }
   };
 
   const renderPassQRCode = () => (
@@ -1378,10 +1408,13 @@ export default function ProfileScreen() {
                               <TouchableOpacity
                                 key={cat}
                                 onPress={() => setDisputeCategory(cat as any)}
-                                className={`px-2.5 py-1.5 border rounded-lg ${
-                                  disputeCategory === cat ? 'bg-indigo-650 border-indigo-650' : 'bg-white border-zinc-200'
+                                className={`px-3 py-1.5 border rounded-lg flex-row items-center gap-1.5 ${
+                                  disputeCategory === cat ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-zinc-200'
                                 }`}
                               >
+                                {disputeCategory === cat && (
+                                  <Feather name="check" size={10} color="white" />
+                                )}
                                 <Text className={`text-[8px] font-black uppercase ${disputeCategory === cat ? 'text-white' : 'text-zinc-650'}`}>
                                   {cat.replace('_', ' ')}
                                 </Text>
@@ -1490,46 +1523,58 @@ export default function ProfileScreen() {
                         </TouchableOpacity>
                       )}
                     </View>
-
                     {showKitForm && (
                       <View className="bg-zinc-50 border border-zinc-150 p-4 rounded-xl gap-3.5 mt-1">
-                        <Text className="text-zinc-950 text-xs font-black uppercase">Select branding items</Text>
+                        <Text className="text-zinc-955 text-xs font-black uppercase">Select quantities</Text>
                         
-                        <View className="gap-1.5">
-                          {['T-shirt', 'Towel', 'Duffel Bag', 'Water Bottle'].map((item) => {
-                            const isChecked = kitItems[item];
-                            return (
-                              <TouchableOpacity
-                                key={item}
-                                onPress={() => setKitItems({ ...kitItems, [item]: !isChecked })}
-                                className="flex-row items-center gap-2.5 py-1"
-                              >
-                                <View className={`w-4 h-4 rounded border justify-center items-center ${
-                                  isChecked ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-zinc-300'
-                                }`}>
-                                  {isChecked && <Feather name="check" size={10} color="white" />}
-                                </View>
-                                <Text className="text-zinc-750 text-xs font-bold">{item}</Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </View>
+                        <View className="gap-3.5">
+                          {['T-shirt', 'Towel', 'Duffel Bag', 'Water Bottle'].map((item) => (
+                            <View key={item} className="flex-row items-center justify-between border-b border-zinc-100 pb-2">
+                              <Text className="text-zinc-750 text-xs font-bold">{item}</Text>
+                              <View className="flex-row items-center gap-3">
+                                <TouchableOpacity 
+                                  onPress={() => {
+                                    const current = kitQuantities[item] || 0;
+                                    if (current > 0) {
+                                      setKitQuantities({ ...kitQuantities, [item]: current - 1 });
+                                    }
+                                  }}
+                                  className="w-6 h-6 bg-zinc-100 border border-zinc-200 rounded-lg justify-center items-center"
+                                >
+                                  <Feather name="minus" size={10} color="#374151" />
+                                </TouchableOpacity>
+                                <Text className="text-zinc-950 text-xs font-black w-6 text-center">{kitQuantities[item] || 0}</Text>
+                                <TouchableOpacity 
+                                  onPress={() => {
+                                    const current = kitQuantities[item] || 0;
+                                    setKitQuantities({ ...kitQuantities, [item]: current + 1 });
+                                  }}
+                                  className="w-6 h-6 bg-zinc-100 border border-zinc-200 rounded-lg justify-center items-center"
+                                >
+                                  <Feather name="plus" size={10} color="#374151" />
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                          ))}
 
-                        <View className="gap-1">
-                          <Text className="text-zinc-500 text-[8px] font-black uppercase">T-Shirt size (if ordering)</Text>
-                          <View className="flex-row gap-2 mt-1">
-                            {(['S', 'M', 'L', 'XL', 'XXL'] as const).map((sz) => (
-                              <TouchableOpacity
-                                key={sz}
-                                onPress={() => setKitSize(sz)}
-                                className={`flex-1 py-1.5 border rounded-lg items-center ${
-                                  kitSize === sz ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-zinc-200'
-                                }`}
-                              >
-                                <Text className={`text-[10px] font-bold ${kitSize === sz ? 'text-white' : 'text-zinc-500'}`}>{sz}</Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
+                          {kitQuantities['T-shirt'] > 0 && (
+                            <View className="gap-2 mt-1 bg-rose-50/40 border border-rose-100/60 p-3 rounded-xl">
+                              <Text className="text-[#E11D48] text-[8px] font-black uppercase tracking-wider">Select T-Shirt Size (*one size per order)</Text>
+                              <View className="flex-row gap-1.5 mt-1">
+                                {(['S', 'M', 'L', 'XL', 'XXL'] as const).map((sz) => (
+                                  <TouchableOpacity
+                                    key={sz}
+                                    onPress={() => setSelectedTshirtSize(sz)}
+                                    className={`flex-1 py-1.5 border rounded-lg items-center ${
+                                      selectedTshirtSize === sz ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-zinc-200'
+                                    }`}
+                                  >
+                                    <Text className={`text-[9px] font-black ${selectedTshirtSize === sz ? 'text-white' : 'text-zinc-500'}`}>{sz}</Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            </View>
+                          )}
                         </View>
 
                         <View className="flex-row gap-2 mt-2">
@@ -1547,19 +1592,40 @@ export default function ProfileScreen() {
                     <View className="border-t border-zinc-100 pt-3">
                       <Text className="text-zinc-900 text-xs font-black uppercase mb-3">Partner Kits History</Text>
                       {kitRequestsList.length > 0 ? (
-                        <View className="gap-3.5 bg-zinc-50 p-4 border border-zinc-150 rounded-2xl">
+                        <View className="gap-3.5">
                           {kitRequestsList.map((item) => (
-                            <View key={item.id} className="py-2 border-b border-zinc-200/50 last:border-b-0 gap-1">
+                            <View key={item.id} className="bg-zinc-50 border border-zinc-150 p-4 rounded-xl gap-2">
                               <View className="flex-row justify-between items-center">
-                                <Text className="text-zinc-955 text-xs font-black uppercase">Order ID: {item.id.toUpperCase()}</Text>
-                                <View className="bg-indigo-50 border border-indigo-150 px-2 py-0.5 rounded-full">
-                                  <Text className="text-indigo-700 text-[7px] font-black uppercase">
+                                <Text className="text-zinc-955 text-[10px] font-black uppercase">Order ID: {item.order_id || item.id}</Text>
+                                <View className={`px-2 py-0.5 rounded-md ${
+                                  item.status === 'SUBMITTED' ? 'bg-rose-50 border border-rose-100' :
+                                  item.status === 'UNDER REVIEW' ? 'bg-amber-50 border border-amber-100' :
+                                  item.status === 'APPROVED' || item.status === 'DELIVERED' ? 'bg-emerald-50 border border-emerald-100' :
+                                  'bg-zinc-100 border border-zinc-200'
+                                }`}>
+                                  <Text className={`text-[8px] font-black uppercase ${
+                                    item.status === 'SUBMITTED' ? 'text-rose-600' :
+                                    item.status === 'UNDER REVIEW' ? 'text-amber-600' :
+                                    item.status === 'APPROVED' || item.status === 'DELIVERED' ? 'text-emerald-600' :
+                                    'text-zinc-650'
+                                  }`}>
                                     {item.status}
                                   </Text>
                                 </View>
                               </View>
-                              <Text className="text-zinc-700 text-xs font-semibold">Items: {item.items.join(', ')} (Size: {item.size})</Text>
-                              <Text className="text-zinc-450 text-[8px] font-semibold mt-1">Requested: {formatToDDMMYYYY(item.date)}</Text>
+                              <View className="border-t border-zinc-150 pt-2 mt-1">
+                                <Text className="text-zinc-450 text-[8px] font-black uppercase mb-1">Items & Quantities</Text>
+                                <Text className="text-zinc-800 text-xs font-semibold leading-relaxed">
+                                  {typeof item.items === 'object' && item.items !== null
+                                    ? Object.keys(item.items).map(k => `${k} × ${item.items[k]}`).join(', ')
+                                    : Array.isArray(item.items) ? item.items.join(', ') : JSON.stringify(item.items)}
+                                  {item.tshirt_size ? ` (Size: ${item.tshirt_size})` : ''}
+                                </Text>
+                              </View>
+                              <View className="flex-row justify-between mt-1">
+                                <Text className="text-zinc-450 text-[9px] font-bold uppercase">Requested Date</Text>
+                                <Text className="text-zinc-800 text-[9px] font-extrabold">{formatToDDMMYYYY(item.created_at)}</Text>
+                              </View>
                             </View>
                           ))}
                         </View>
@@ -1567,6 +1633,43 @@ export default function ProfileScreen() {
                         <Text className="text-zinc-400 text-[10px] text-center py-4 bg-zinc-50 border border-zinc-150 rounded-2xl">No partner brand kit requests logged.</Text>
                       )}
                     </View>
+                  </View>
+                </AccordionCard>
+
+                {/* 9. Compact Expandable Credit Wallet Accordion */}
+                <AccordionCard
+                  title="Credit Wallet"
+                  icon="credit-card"
+                  rightText={`${creditBalance} Credits`}
+                  expanded={expandedSection === 'wallet'}
+                  onToggle={() => setExpandedSection(expandedSection === 'wallet' ? null : 'wallet')}
+                >
+                  <View className="gap-3.5">
+                    <View className="flex-row justify-between items-center py-2 border-b border-zinc-100">
+                      <Text className="text-zinc-550 text-xs font-bold">Available Balance</Text>
+                      <Text className="text-zinc-950 text-base font-black">{creditBalance} Credits</Text>
+                    </View>
+
+                    <View className="gap-2.5 mt-2">
+                      <Text className="text-zinc-950 text-[10px] font-black uppercase tracking-wider">Credit Lot Breakdown</Text>
+                      {creditLots && creditLots.filter(l => l.remaining_credits > 0).length > 0 ? (
+                        creditLots.filter(l => l.remaining_credits > 0).map((l, index) => (
+                          <View key={l.id || index} className="flex-row justify-between items-center bg-zinc-50 border border-zinc-150 p-3 rounded-xl">
+                            <Text className="text-zinc-700 text-xs font-bold">{l.remaining_credits} Credits</Text>
+                            <Text className="text-zinc-500 text-[10px] font-semibold">Expires {formatToDDMMYYYY(l.official_expiry_date)}</Text>
+                          </View>
+                        ))
+                      ) : (
+                        <Text className="text-zinc-400 text-[10px] italic">No active credit lots available.</Text>
+                      )}
+                    </View>
+
+                    <TouchableOpacity
+                      onPress={() => router.push('/wallet' as any)}
+                      className="bg-indigo-600 py-3 rounded-xl items-center justify-center mt-4 shadow-sm"
+                    >
+                      <Text className="text-white text-xs font-black uppercase tracking-wider">Open Wallet Options</Text>
+                    </TouchableOpacity>
                   </View>
                 </AccordionCard>
 
@@ -1589,7 +1692,6 @@ export default function ProfileScreen() {
     </SafeAreaViewWrapper>
   );
 }
-
 // Collapsible helper Card Component
 interface AccordionCardProps {
   title: string;
@@ -1597,9 +1699,10 @@ interface AccordionCardProps {
   expanded: boolean;
   onToggle: () => void;
   children: React.ReactNode;
+  rightText?: string;
 }
 
-function AccordionCard({ title, icon, expanded, onToggle, children }: AccordionCardProps) {
+function AccordionCard({ title, icon, expanded, onToggle, children, rightText }: AccordionCardProps) {
   return (
     <View 
       className="bg-white border border-[#E5E7EB] rounded-[28px] overflow-hidden"
@@ -1616,13 +1719,18 @@ function AccordionCard({ title, icon, expanded, onToggle, children }: AccordionC
         onPress={onToggle}
         className="p-5 flex-row justify-between items-center w-full bg-white"
       >
-        <View className="flex-row items-center gap-3.5">
+        <View className="flex-row items-center gap-3.5 flex-1">
           <View className="w-8 h-8 rounded-xl bg-indigo-50 justify-center items-center">
             <Feather name={icon as any} size={15} color="#4F46E5" />
           </View>
-          <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">{title}</Text>
+          <Text className="text-zinc-955 text-xs font-black uppercase tracking-wider">{title}</Text>
         </View>
-        <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color="#6B7280" />
+        <View className="flex-row items-center gap-2">
+          {rightText && (
+            <Text className="text-zinc-450 text-xs font-black tracking-wide">{rightText}</Text>
+          )}
+          <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color="#6B7280" />
+        </View>
       </TouchableOpacity>
       
       {expanded && (

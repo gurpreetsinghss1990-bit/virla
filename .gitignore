@@ -47,3 +47,5 @@ example
 # caches
 .npm_cache/
 
+
+deploy_out.log

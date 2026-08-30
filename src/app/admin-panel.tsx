@@ -17,8 +17,12 @@ export default function AdminPanelScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isAdminAuthorized, setIsAdminAuthorized] = useState<boolean | null>(null);
   
-  // Tab controller state
-  const [activeTab, setActiveTab] = useState<'applications' | 'live' | 'locations' | 'acceptance'>('applications');
+  const [activeTab, setActiveTab] = useState<'applications' | 'live' | 'locations' | 'acceptance' | 'disputes' | 'kits'>('applications');
+  const [disputes, setDisputes] = useState<any[]>([]);
+  const [kitOrders, setKitOrders] = useState<any[]>([]);
+  const [verificationDocs, setVerificationDocs] = useState<{[appId: string]: any}>({});
+  const [hasLoadError, setHasLoadError] = useState<boolean>(false);
+  const [isLoadingDisputesAndKits, setIsLoadingDisputesAndKits] = useState<boolean>(false);
 
   // Filters for trainer locations
   const [radiusFilter, setRadiusFilter] = useState<'all' | '10' | '15'>('all');
@@ -61,10 +65,60 @@ export default function AdminPanelScreen() {
         const data = await Database.fetchAllTrainerApplications();
         setApplications(data);
         setCoaches(Database.getCoaches());
+
+        const docsMap: {[appId: string]: any} = {};
+        await Promise.all(
+          data.map(async (app) => {
+            try {
+              const docs = await Database.fetchTrainerVerificationDocs(app.id);
+              if (docs.length > 0) {
+                docsMap[app.id] = docs[0];
+              }
+            } catch (e) {
+              console.error('[AdminPanel] Error fetching verification docs:', e);
+            }
+          })
+        );
+        setVerificationDocs(docsMap);
+
+        await loadDisputesAndKits();
       } catch (err: any) {
         Alert.alert('Error', err.message);
       } finally {
         setIsLoading(false);
+      }
+    };
+
+    const handleViewDocument = async (storagePath: string) => {
+      try {
+        const { data, error } = await supabase.storage
+          .from('trainer-verification')
+          .createSignedUrl(storagePath, 60);
+        if (error) throw error;
+        if (data?.signedUrl) {
+          const { Linking } = require('react-native');
+          Linking.openURL(data.signedUrl);
+        } else {
+          Alert.alert('Error', 'Could not generate signed URL.');
+        }
+      } catch (err: any) {
+        Alert.alert('Failed to view document', err.message || err);
+      }
+    };
+
+    const loadDisputesAndKits = async () => {
+      setIsLoadingDisputesAndKits(true);
+      setHasLoadError(false);
+      try {
+        const dispData = await Database.fetchAllDisputes();
+        setDisputes(dispData);
+        const kitData = await Database.fetchAllKitOrders();
+        setKitOrders(kitData);
+      } catch (err: any) {
+        console.error('[Admin] loadDisputesAndKits error:', err.message);
+        setHasLoadError(true);
+      } finally {
+        setIsLoadingDisputesAndKits(false);
       }
     };
 
@@ -116,9 +170,10 @@ export default function AdminPanelScreen() {
     if (isAdminAuthorized === true) {
       Promise.resolve().then(() => {
         loadApplications();
+        loadDisputesAndKits();
       });
     }
-  }, [isAdminAuthorized]);
+  }, [isAdminAuthorized, activeTab]);
 
   const handleApproveApp = async (appId: string) => {
     try {
@@ -219,37 +274,61 @@ export default function AdminPanelScreen() {
         </View>
 
         {/* Navigation Tabs Header */}
-        <View className="flex-row bg-white border-b border-zinc-150 p-2 gap-1.5 flex-wrap">
-          <TouchableOpacity
-            onPress={() => setActiveTab('applications')}
-            className={`flex-1 py-3 rounded-xl items-center justify-center min-w-[70px] ${activeTab === 'applications' ? 'bg-zinc-950' : 'bg-transparent'}`}
+        <View className="bg-white border-b border-zinc-150 p-1">
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={{ paddingHorizontal: 8, paddingVertical: 6, gap: 8 }}
           >
-            <Text className={`text-[7px] font-black uppercase tracking-wider text-center ${activeTab === 'applications' ? 'text-white' : 'text-zinc-400'}`}>Onboarding</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push('/admin-workout-approvals')}
-            className="flex-1 py-3 rounded-xl items-center justify-center bg-transparent border border-zinc-150 min-w-[70px]"
-          >
-            <Text className="text-[7px] font-black uppercase tracking-wider text-center text-zinc-500 font-extrabold">Workouts</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActiveTab('locations')}
-            className={`flex-1 py-3 rounded-xl items-center justify-center min-w-[70px] ${activeTab === 'locations' ? 'bg-zinc-950' : 'bg-transparent'}`}
-          >
-            <Text className={`text-[7px] font-black uppercase tracking-wider text-center ${activeTab === 'locations' ? 'text-white' : 'text-zinc-400'}`}>Locations</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActiveTab('live')}
-            className={`flex-1 py-3 rounded-xl items-center justify-center min-w-[70px] ${activeTab === 'live' ? 'bg-zinc-950' : 'bg-transparent'}`}
-          >
-            <Text className={`text-[7px] font-black uppercase tracking-wider text-center ${activeTab === 'live' ? 'text-white' : 'text-zinc-400'}`}>Live Console</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActiveTab('acceptance')}
-            className={`flex-1 py-3 rounded-xl items-center justify-center min-w-[70px] ${activeTab === 'acceptance' ? 'bg-zinc-950' : 'bg-transparent'}`}
-          >
-            <Text className={`text-[7px] font-black uppercase tracking-wider text-center ${activeTab === 'acceptance' ? 'text-white' : 'text-zinc-400'}`}>Acceptance</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setActiveTab('applications')}
+              className={`px-4 py-2 rounded-xl items-center justify-center ${activeTab === 'applications' ? 'bg-zinc-950' : 'bg-zinc-50 border border-zinc-200/50'}`}
+            >
+              <Text className={`text-[9px] font-black uppercase tracking-wider ${activeTab === 'applications' ? 'text-white' : 'text-zinc-500'}`}>Onboarding</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              onPress={() => router.push('/admin-workout-approvals')}
+              className="px-4 py-2 rounded-xl items-center justify-center bg-zinc-50 border border-zinc-200/50"
+            >
+              <Text className="text-[9px] font-black uppercase tracking-wider text-zinc-500 font-extrabold">Workouts</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              onPress={() => setActiveTab('locations')}
+              className={`px-4 py-2 rounded-xl items-center justify-center ${activeTab === 'locations' ? 'bg-zinc-950' : 'bg-zinc-50 border border-zinc-200/50'}`}
+            >
+              <Text className={`text-[9px] font-black uppercase tracking-wider ${activeTab === 'locations' ? 'text-white' : 'text-zinc-500'}`}>Locations</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              onPress={() => setActiveTab('live')}
+              className={`px-4 py-2 rounded-xl items-center justify-center ${activeTab === 'live' ? 'bg-zinc-950' : 'bg-zinc-50 border border-zinc-200/50'}`}
+            >
+              <Text className={`text-[9px] font-black uppercase tracking-wider ${activeTab === 'live' ? 'text-white' : 'text-zinc-500'}`}>Live Console</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              onPress={() => setActiveTab('acceptance')}
+              className={`px-4 py-2 rounded-xl items-center justify-center ${activeTab === 'acceptance' ? 'bg-zinc-950' : 'bg-zinc-50 border border-zinc-200/50'}`}
+            >
+              <Text className={`text-[9px] font-black uppercase tracking-wider ${activeTab === 'acceptance' ? 'text-white' : 'text-zinc-500'}`}>Acceptance</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              onPress={() => setActiveTab('disputes')}
+              className={`px-4 py-2 rounded-xl items-center justify-center ${activeTab === 'disputes' ? 'bg-zinc-950' : 'bg-zinc-50 border border-zinc-200/50'}`}
+            >
+              <Text className={`text-[9px] font-black uppercase tracking-wider ${activeTab === 'disputes' ? 'text-white' : 'text-zinc-500'}`}>Disputes</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              onPress={() => setActiveTab('kits')}
+              className={`px-4 py-2 rounded-xl items-center justify-center ${activeTab === 'kits' ? 'bg-zinc-950' : 'bg-zinc-50 border border-zinc-200/50'}`}
+            >
+              <Text className={`text-[9px] font-black uppercase tracking-wider ${activeTab === 'kits' ? 'text-white' : 'text-zinc-500'}`}>Kits</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 60 }}>
@@ -338,6 +417,51 @@ export default function AdminPanelScreen() {
                                 <Text className="text-[#101828] text-[9px] font-medium" numberOfLines={1}>Attached</Text>
                               </View>
                             </View>
+
+                            {/* Aadhaar and AI verification section */}
+                            {verificationDocs[app.id] ? (
+                              <View className="mt-3 bg-zinc-50 p-3 rounded-lg border border-zinc-150 gap-2">
+                                <View className="flex-row justify-between items-center">
+                                  <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">Aadhaar AI Verification</Text>
+                                  <View className={`px-2 py-0.5 rounded-full ${
+                                    verificationDocs[app.id].verification_status === 'VERIFIED' 
+                                      ? 'bg-green-50 border border-green-200' 
+                                      : verificationDocs[app.id].verification_status === 'NAME_MISMATCH' 
+                                      ? 'bg-rose-50 border border-rose-200' 
+                                      : 'bg-amber-50 border border-amber-200'
+                                  }`}>
+                                    <Text className={`text-[7px] font-black uppercase ${
+                                      verificationDocs[app.id].verification_status === 'VERIFIED' 
+                                        ? 'text-green-600' 
+                                        : verificationDocs[app.id].verification_status === 'NAME_MISMATCH' 
+                                        ? 'text-rose-600' 
+                                        : 'text-amber-600'
+                                    }`}>
+                                      {verificationDocs[app.id].verification_status}
+                                    </Text>
+                                  </View>
+                                </View>
+
+                                <View className="gap-1 mt-1">
+                                  <Text className="text-[10px] text-zinc-600 font-medium">Account Name: <Text className="font-bold text-zinc-800">{app.fullName}</Text></Text>
+                                  <Text className="text-[10px] text-zinc-600 font-medium">Extracted ID Name: <Text className="font-bold text-zinc-800">{verificationDocs[app.id].extracted_name || 'N/A'}</Text></Text>
+                                  <Text className="text-[10px] text-zinc-600 font-medium">AI Confidence: <Text className="font-bold text-zinc-800">{verificationDocs[app.id].confidence ? `${Math.round(parseFloat(verificationDocs[app.id].confidence) * 100)}%` : 'N/A'}</Text></Text>
+                                  <Text className="text-[10px] text-zinc-600 font-medium">Trainer Attested: <Text className="font-bold text-zinc-800">{verificationDocs[app.id].trainer_attested ? 'YES (Both names belong to me)' : 'NO'}</Text></Text>
+                                </View>
+
+                                <TouchableOpacity
+                                  onPress={() => handleViewDocument(verificationDocs[app.id].storage_path)}
+                                  className="mt-2 py-2 bg-zinc-800 rounded-lg items-center justify-center flex-row gap-1"
+                                >
+                                  <Feather name="eye" size={12} color="#FFF" />
+                                  <Text className="text-white text-[8px] font-black uppercase tracking-widest">View Document</Text>
+                                </TouchableOpacity>
+                              </View>
+                            ) : (
+                              <View className="mt-3 bg-zinc-50 p-3 rounded-lg border border-zinc-100 items-center justify-center">
+                                <Text className="text-zinc-400 text-[9px] font-medium">No Aadhaar ID submitted for AI verification</Text>
+                              </View>
+                            )}
                           </View>
 
                           {app.status !== 'approved' && (
@@ -970,6 +1094,224 @@ export default function AdminPanelScreen() {
               </View>
             );
           })()}
+
+          {activeTab === 'disputes' && (
+            <View className="gap-6">
+              <View className="flex-row justify-between items-center">
+                <Text className="text-zinc-900 text-xl font-black tracking-tight uppercase">Dispute Management</Text>
+                <TouchableOpacity 
+                  onPress={loadDisputesAndKits} 
+                  className="bg-indigo-50 border border-indigo-150 px-3 py-1.5 rounded-xl flex-row items-center gap-1.5"
+                >
+                  <Feather name="refresh-cw" size={10} color="#4F46E5" />
+                  <Text className="text-indigo-650 text-[10px] font-black uppercase">Sync</Text>
+                </TouchableOpacity>
+              </View>
+
+              {isLoadingDisputesAndKits ? (
+                <Text className="text-zinc-500 text-xs text-center py-8 bg-zinc-50 border border-zinc-150 rounded-[28px] overflow-hidden">Loading disputes...</Text>
+              ) : hasLoadError ? (
+                <Text className="text-red-500 text-xs text-center py-8 bg-red-50 border border-red-200 rounded-[28px] overflow-hidden">Unable to load disputes. Please try again.</Text>
+              ) : disputes.length > 0 ? (
+                <View className="gap-4">
+                  {disputes.map((d) => (
+                    <LuxuryCard key={d.id} className="gap-3.5">
+                      <View className="flex-row justify-between items-center border-b border-zinc-100 pb-2">
+                        <View>
+                          <Text className="text-zinc-955 text-xs font-black uppercase">{d.ticket_id || d.id}</Text>
+                          <Text className="text-zinc-450 text-[8px] font-black uppercase mt-0.5">Category: {d.category.replace('_', ' ')}</Text>
+                        </View>
+                        <View className={`px-2.5 py-1 rounded-md ${
+                          d.status === 'OPEN' ? 'bg-rose-50 border border-rose-100' :
+                          d.status === 'IN REVIEW' ? 'bg-amber-50 border border-amber-100' :
+                          'bg-emerald-50 border border-emerald-100'
+                        }`}>
+                          <Text className={`text-[8px] font-black uppercase ${
+                            d.status === 'OPEN' ? 'text-rose-600' :
+                            d.status === 'IN REVIEW' ? 'text-amber-600' :
+                            'text-emerald-600'
+                          }`}>{d.status}</Text>
+                        </View>
+                      </View>
+
+                      <View className="gap-2 bg-zinc-50 border border-zinc-150/50 p-3 rounded-2xl">
+                        <View className="flex-row justify-between">
+                          <Text className="text-zinc-455 text-[9px] font-bold uppercase">Trainer</Text>
+                          <Text className="text-zinc-900 text-[10px] font-black">{d.trainer_name} ({d.trainer_phone})</Text>
+                        </View>
+                        {d.client_name ? (
+                          <View className="flex-row justify-between">
+                            <Text className="text-zinc-450 text-[9px] font-bold uppercase">Client</Text>
+                            <Text className="text-zinc-900 text-[10px] font-black">{d.client_name} ({d.client_phone})</Text>
+                          </View>
+                        ) : null}
+                        {d.booking_id ? (
+                          <View className="flex-row justify-between">
+                            <Text className="text-zinc-455 text-[9px] font-bold uppercase">Booking ID</Text>
+                            <Text className="text-zinc-900 text-[10px] font-extrabold">{d.booking_id}</Text>
+                          </View>
+                        ) : null}
+                        <View className="flex-row justify-between">
+                          <Text className="text-zinc-450 text-[9px] font-bold uppercase">Date Created</Text>
+                          <Text className="text-zinc-900 text-[10px] font-black">{new Date(d.created_at).toLocaleString()}</Text>
+                        </View>
+                      </View>
+
+                      <View className="gap-1 mt-1">
+                        <Text className="text-zinc-500 text-[8px] font-black uppercase">Trainer Description</Text>
+                        <Text className="text-zinc-800 text-xs font-semibold leading-relaxed">{d.description}</Text>
+                      </View>
+
+                      {/* Status Update Actions */}
+                      <View className="border-t border-zinc-100 pt-3 mt-1.5 gap-2">
+                        <Text className="text-zinc-450 text-[8px] font-black uppercase">Update Status</Text>
+                        <View className="flex-row gap-1.5 flex-wrap">
+                          {['OPEN', 'IN REVIEW', 'RESOLVED', 'CLOSED'].map((st) => (
+                            <TouchableOpacity
+                              key={st}
+                              onPress={async () => {
+                                try {
+                                  await Database.updateDisputeStatus(d.id, st);
+                                  Alert.alert('Status Updated', `Ticket status set to ${st}`);
+                                  loadDisputesAndKits();
+                                } catch (err: any) {
+                                  Alert.alert('Error', err.message);
+                                }
+                              }}
+                              className={`flex-1 py-2 border rounded-xl items-center ${
+                                d.status === st ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-zinc-200'
+                              }`}
+                            >
+                              <Text className={`text-[8px] font-black ${d.status === st ? 'text-white' : 'text-zinc-650'}`}>{st}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                    </LuxuryCard>
+                  ))}
+                </View>
+              ) : (
+                <Text className="text-zinc-450 text-xs text-center py-8 bg-white border border-[#E5E7EB] rounded-[28px] overflow-hidden">No dispute tickets logged in system.</Text>
+              )}
+            </View>
+          )}
+
+          {activeTab === 'kits' && (
+            <View className="gap-6">
+              <View className="flex-row justify-between items-center">
+                <Text className="text-zinc-900 text-xl font-black tracking-tight uppercase">Kit Order Requests</Text>
+                <TouchableOpacity 
+                  onPress={loadDisputesAndKits} 
+                  className="bg-indigo-50 border border-indigo-150 px-3 py-1.5 rounded-xl flex-row items-center gap-1.5"
+                >
+                  <Feather name="refresh-cw" size={10} color="#4F46E5" />
+                  <Text className="text-indigo-650 text-[10px] font-black uppercase">Sync</Text>
+                </TouchableOpacity>
+              </View>
+
+              {isLoadingDisputesAndKits ? (
+                <Text className="text-zinc-500 text-xs text-center py-8 bg-zinc-50 border border-zinc-150 rounded-[28px] overflow-hidden">Loading kit orders...</Text>
+              ) : hasLoadError ? (
+                <Text className="text-red-500 text-xs text-center py-8 bg-red-50 border border-red-200 rounded-[28px] overflow-hidden">Unable to load kit orders. Please try again.</Text>
+              ) : kitOrders.length > 0 ? (
+                <View className="gap-4">
+                  {kitOrders.map((k) => (
+                    <LuxuryCard key={k.id} className="p-5 gap-3.5">
+                      <View className="flex-row justify-between items-start border-b border-zinc-100 pb-3 flex-wrap gap-2">
+                        <View className="flex-1 min-w-[120px]">
+                          <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Order ID</Text>
+                          <Text className="text-zinc-955 text-xs font-black uppercase mt-0.5" numberOfLines={2}>
+                            {k.order_id || k.id}
+                          </Text>
+                          <Text className="text-zinc-450 text-[8px] font-black uppercase mt-1">Trainer: {k.trainer_name}</Text>
+                        </View>
+                        <View className={`px-2.5 py-1 rounded-md align-self-start ${
+                          k.status === 'SUBMITTED' ? 'bg-rose-50 border border-rose-100' :
+                          k.status === 'UNDER REVIEW' ? 'bg-amber-50 border border-amber-100' :
+                          k.status === 'APPROVED' || k.status === 'DELIVERED' ? 'bg-emerald-50 border border-emerald-100' :
+                          'bg-zinc-100 border border-zinc-200'
+                        }`}>
+                          <Text className={`text-[8px] font-black uppercase ${
+                            k.status === 'SUBMITTED' ? 'text-rose-600' :
+                            k.status === 'UNDER REVIEW' ? 'text-amber-600' :
+                            k.status === 'APPROVED' || k.status === 'DELIVERED' ? 'text-emerald-600' :
+                            'text-zinc-650'
+                          }`}>{k.status}</Text>
+                        </View>
+                      </View>
+
+                      <View className="gap-2 bg-zinc-50 border border-zinc-150/50 p-3.5 rounded-2xl">
+                        <View className="flex-row justify-between py-1.5 border-b border-zinc-200/40 last:border-b-0 gap-4">
+                          <Text className="text-zinc-455 text-[9px] font-bold uppercase min-w-[90px] flex-shrink-0">Trainer Phone</Text>
+                          <Text className="text-zinc-900 text-[10px] font-black text-right flex-1 flex-wrap">{k.trainer_phone}</Text>
+                        </View>
+                        <View className="flex-row justify-between py-1.5 border-b border-zinc-200/40 last:border-b-0 gap-4">
+                          <Text className="text-zinc-455 text-[9px] font-bold uppercase min-w-[90px] flex-shrink-0">Date Requested</Text>
+                          <Text className="text-zinc-900 text-[10px] font-black text-right flex-1 flex-wrap">
+                            {new Date(k.created_at).toLocaleString()}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View className="gap-1 bg-indigo-50/30 border border-indigo-100/50 p-3.5 rounded-2xl">
+                        <Text className="text-indigo-800 text-[8px] font-black uppercase mb-1">Items Requested</Text>
+                        <View className="gap-1">
+                          {typeof k.items === 'object' && k.items !== null ? (
+                            Object.keys(k.items).map((i: string) => (
+                              <Text key={i} className="text-zinc-800 text-xs font-semibold leading-relaxed">
+                                • {i} × {k.items[i]}
+                              </Text>
+                            ))
+                          ) : Array.isArray(k.items) ? (
+                            k.items.map((i: any, idx: number) => (
+                              <Text key={idx} className="text-zinc-800 text-xs font-semibold leading-relaxed">
+                                • {i}
+                              </Text>
+                            ))
+                          ) : (
+                            <Text className="text-zinc-800 text-xs font-semibold leading-relaxed">{JSON.stringify(k.items)}</Text>
+                          )}
+                          {k.tshirt_size && (
+                            <View className="mt-1 bg-indigo-100/40 px-2 py-0.5 rounded-md align-self-start">
+                              <Text className="text-indigo-700 text-[9px] font-black uppercase">Size: {k.tshirt_size}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+
+                      {/* Status Update Actions */}
+                      <View className="border-t border-zinc-100 pt-3 mt-1.5 gap-2">
+                        <Text className="text-zinc-455 text-[8px] font-black uppercase">Update Order Status</Text>
+                        <View className="flex-row flex-wrap gap-1.5">
+                          {['SUBMITTED', 'UNDER REVIEW', 'APPROVED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'].map((st) => (
+                            <TouchableOpacity
+                              key={st}
+                              onPress={async () => {
+                                try {
+                                  await Database.updateKitOrderStatus(k.id, st);
+                                  Alert.alert('Status Updated', `Order status set to ${st}`);
+                                  loadDisputesAndKits();
+                                } catch (err: any) {
+                                  Alert.alert('Error', err.message);
+                                }
+                              }}
+                              className={`px-3 py-1.5 border rounded-xl items-center justify-center ${
+                                k.status === st ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-zinc-200'
+                              }`}
+                            >
+                              <Text className={`text-[9px] font-black ${k.status === st ? 'text-white' : 'text-zinc-650'}`}>{st}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                    </LuxuryCard>
+                  ))}
+                </View>
+              ) : (
+                <Text className="text-zinc-450 text-xs text-center py-8 bg-white border border-[#E5E7EB] rounded-[28px] overflow-hidden">No brand kit requests logged in system.</Text>
+              )}
+            </View>
+          )}
 
         </ScrollView>
       </View>

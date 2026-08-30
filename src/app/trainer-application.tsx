@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Switch, StyleSheet, Platform, KeyboardAvoidingView, NativeModules } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Switch, StyleSheet, Platform, KeyboardAvoidingView, NativeModules, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -7,6 +7,9 @@ import { Database, TrainerApplication } from '../database/Database';
 import { LuxuryCard } from '../components/LuxuryCard';
 import { useUserProfileStore } from '../store/userProfileStore';
 import { supabase } from '../database/supabaseClient';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 const getNativePickerModules = () => {
   const g = globalThis as any;
   const expoModules = g.expo?.modules || g.ExpoModules || {};
@@ -119,6 +122,20 @@ export default function TrainerApplicationScreen() {
   const [adminNotes, setAdminNotes] = useState('');
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
 
+  // Real ID Verification states
+  const [showPickerModal, setShowPickerModal] = useState(false);
+  const [activeUploadType, setActiveUploadType] = useState<'aadhaar' | 'pan' | 'selfie' | 'certs' | null>(null);
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
+  const [previewName, setPreviewName] = useState<string | null>(null);
+  const [previewType, setPreviewType] = useState<'image' | 'pdf' | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  
+  const [verifyingStatus, setVerifyingStatus] = useState<'IDLE' | 'UPLOADING' | 'PROCESSING' | 'VERIFIED' | 'NAME_MISMATCH' | 'MANUAL_REVIEW'>('IDLE');
+  const [extractedIdName, setExtractedIdName] = useState('');
+  const [ocrConfidence, setOcrConfidence] = useState<number | null>(null);
+  const [activeDocId, setActiveDocId] = useState<string | null>(null);
+  const [trainerAttested, setTrainerAttested] = useState(false);
+
   // Load existing application if present
   useEffect(() => {
     const loadApplication = async () => {
@@ -185,6 +202,20 @@ export default function TrainerApplicationScreen() {
               setEmergencyName(emergency.name || '');
               setEmergencyPhone(emergency.phone || '');
             } catch (e) {}
+
+            try {
+              const docs = await Database.fetchTrainerVerificationDocs(app.id);
+              if (docs.length > 0) {
+                const latestDoc = docs[0];
+                setActiveDocId(latestDoc.id);
+                setVerifyingStatus(latestDoc.verification_status);
+                setExtractedIdName(latestDoc.extracted_name || '');
+                setOcrConfidence(latestDoc.confidence ? parseFloat(latestDoc.confidence) : null);
+                setTrainerAttested(latestDoc.trainer_attested || false);
+              }
+            } catch (err) {
+              console.error('[TrainerApp] Failed to load verification documents:', err);
+            }
           }
         } catch (err) {
           console.error('[TrainerApp] Failed to load application:', err);
@@ -219,271 +250,159 @@ export default function TrainerApplicationScreen() {
   };
 
   const uploadFile = async (docType: 'aadhaar' | 'pan' | 'selfie' | 'certs') => {
+    setActiveUploadType(docType);
+    setShowPickerModal(true);
+  };
+
+  const pickDocument = async (source: 'camera' | 'library' | 'file') => {
     try {
-      if (Platform.OS === 'web') {
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.accept = docType === 'selfie' ? 'image/*' : 'image/*,application/pdf';
-        
-        fileInput.onchange = async (e: any) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          
-          if (file.size > 10 * 1024 * 1024) {
-            Alert.alert('File Too Large', 'Maximum file size is 10 MB');
-            return;
-          }
-          await performUpload(docType, file.name, file);
-        };
-        fileInput.click();
-      } else {
-        const nativeMods = getNativePickerModules();
-        if (!nativeMods.isSupported) {
-          Alert.alert(
-            'Simulation Mode',
-            'Your development client does not contain the native picking modules. You can upload a simulated document to verify the upload flow and TLS health.',
-            [
-              {
-                text: 'Upload Simulated PDF',
-                onPress: async () => {
-                  const simulatedPDF = new Uint8Array([80, 68, 70, 45, 49, 46, 52]).buffer;
-                  await performUpload(docType, `${docType}_simulated.pdf`, simulatedPDF);
-                }
-              },
-              {
-                text: 'Upload Simulated Image',
-                onPress: async () => {
-                  const simulatedImage = new Uint8Array([255, 216, 255, 224, 0, 16, 74, 70, 73, 70]).buffer;
-                  await performUpload(docType, `${docType}_simulated.jpg`, simulatedImage);
-                }
-              },
-              { text: 'Cancel', style: 'cancel' }
-            ]
-          );
+      setShowPickerModal(false);
+      let result: any = null;
+
+      if (source === 'camera') {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Denied', 'Camera permission is required to take photos.');
           return;
         }
-
-        const { DocumentPicker, ImagePicker } = nativeMods;
-
-        if (docType === 'selfie') {
-          // Selfie/profile image
-          Alert.alert(
-            'Upload Selfie',
-            'Take a photo or choose from photo library',
-            [
-              {
-                text: 'Take Photo',
-                onPress: async () => {
-                  try {
-                    const permission = await ImagePicker.requestCameraPermissionsAsync();
-                    if (!permission.granted) {
-                      Alert.alert('Permission Denied', 'Camera permission is required to take a photo.');
-                      return;
-                    }
-                    const result = await ImagePicker.launchCameraAsync({
-                      allowsEditing: true,
-                      aspect: [1, 1],
-                      quality: 0.8,
-                    });
-                    if (result.canceled || !result.assets?.[0]) return;
-                    await handlePickedFile(docType, result.assets[0].uri, result.assets[0].fileName || 'selfie.jpg');
-                  } catch (e: any) {
-                    console.error('[Picker Error] Camera error:', e);
-                    Alert.alert('Camera Error', e.message || 'Failed to capture photo');
-                  }
-                }
-              },
-              {
-                text: 'Choose from Photo Library',
-                onPress: async () => {
-                  try {
-                    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                    if (!permission.granted) {
-                      Alert.alert('Permission Denied', 'Photo library permission is required.');
-                      return;
-                    }
-                    const result = await ImagePicker.launchImageLibraryAsync({
-                      allowsEditing: true,
-                      aspect: [1, 1],
-                      quality: 0.8,
-                    });
-                    if (result.canceled || !result.assets?.[0]) return;
-                    await handlePickedFile(docType, result.assets[0].uri, result.assets[0].fileName || 'selfie.jpg');
-                  } catch (e: any) {
-                    console.error('[Picker Error] Library error:', e);
-                    Alert.alert('Library Error', e.message || 'Failed to pick image');
-                  }
-                }
-              },
-              { text: 'Cancel', style: 'cancel' }
-            ]
-          );
-        } else {
-          // Other documents allow PDF or Image
-          Alert.alert(
-            'Upload Document',
-            'Select document file, choose image, or take photo',
-            [
-              {
-                text: 'Pick Document (PDF/Image)',
-                onPress: async () => {
-                  try {
-                    const result = await DocumentPicker.getDocumentAsync({
-                      type: ['application/pdf', 'image/*'],
-                      copyToCacheDirectory: true,
-                    });
-                    if (result.canceled || !result.assets?.[0]) return;
-                    await handlePickedFile(docType, result.assets[0].uri, result.assets[0].name);
-                  } catch (e: any) {
-                    console.error('[Picker Error] Document picker error:', e);
-                    Alert.alert('Picker Error', e.message || 'Failed to select document');
-                  }
-                }
-              },
-              {
-                text: 'Choose from Photo Library',
-                onPress: async () => {
-                  try {
-                    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                    if (!permission.granted) {
-                      Alert.alert('Permission Denied', 'Photo library permission is required.');
-                      return;
-                    }
-                    const result = await ImagePicker.launchImageLibraryAsync({
-                      allowsEditing: true,
-                      quality: 0.8,
-                    });
-                    if (result.canceled || !result.assets?.[0]) return;
-                    await handlePickedFile(docType, result.assets[0].uri, result.assets[0].fileName || `${docType}.jpg`);
-                  } catch (e: any) {
-                    console.error('[Picker Error] Library error:', e);
-                    Alert.alert('Library Error', e.message || 'Failed to pick image');
-                  }
-                }
-              },
-              {
-                text: 'Take Photo',
-                onPress: async () => {
-                  try {
-                    const permission = await ImagePicker.requestCameraPermissionsAsync();
-                    if (!permission.granted) {
-                      Alert.alert('Permission Denied', 'Camera permission is required to take a photo.');
-                      return;
-                    }
-                    const result = await ImagePicker.launchCameraAsync({
-                      allowsEditing: true,
-                      quality: 0.8,
-                    });
-                    if (result.canceled || !result.assets?.[0]) return;
-                    await handlePickedFile(docType, result.assets[0].uri, result.assets[0].fileName || `${docType}.jpg`);
-                  } catch (e: any) {
-                    console.error('[Picker Error] Camera error:', e);
-                    Alert.alert('Camera Error', e.message || 'Failed to capture photo');
-                  }
-                }
-              },
-              { text: 'Cancel', style: 'cancel' }
-            ]
-          );
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          quality: 0.8,
+        });
+      } else if (source === 'library') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Denied', 'Photo library permission is required to select photos.');
+          return;
         }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          quality: 0.8,
+        });
+      } else if (source === 'file') {
+        result = await DocumentPicker.getDocumentAsync({
+          type: activeUploadType === 'aadhaar' ? ['application/pdf', 'image/*'] : '*/*',
+          copyToCacheDirectory: true,
+        });
       }
+
+      if (!result || result.canceled) return;
+
+      const asset = result.assets?.[0];
+      if (!asset) return;
+
+      setPreviewUri(asset.uri);
+      setPreviewName(asset.name || (activeUploadType === 'selfie' ? 'selfie.jpg' : 'document.jpg'));
+      setPreviewType(asset.mimeType?.includes('pdf') || asset.uri.endsWith('.pdf') ? 'pdf' : 'image');
+      setShowPreview(true);
     } catch (err: any) {
-      Alert.alert('Selection Error', err.message || 'Failed to select file');
+      console.error('[TrainerApp] Document picking failed:', err);
+      Alert.alert('Error', 'Unable to pick document. Please try again.');
     }
   };
 
-  const handlePickedFile = async (docType: 'aadhaar' | 'pan' | 'selfie' | 'certs', uri: string, name: string) => {
-    try {
-      const nativeMods = getNativePickerModules();
-      if (!nativeMods.isSupported || !nativeMods.FileSystem) {
-        throw new Error('FileSystem module is not available');
-      }
-      const { FileSystem } = nativeMods;
+  const confirmAndUpload = async () => {
+    if (!previewUri || !activeUploadType) return;
+    setShowPreview(false);
+    
+    const docType = activeUploadType;
+    const uri = previewUri;
+    const name = previewName || `${docType}_document`;
+    const isPdf = previewType === 'pdf';
+    const ext = name.split('.').pop() || (isPdf ? 'pdf' : 'jpg');
 
-      const fileInfo = await FileSystem.getInfoAsync(uri);
-      if (!fileInfo.exists) {
-        Alert.alert('File Error', 'Selected file does not exist locally.');
-        return;
-      }
-      if (fileInfo.size > 10 * 1024 * 1024) {
-        Alert.alert('File Too Large', 'Maximum file size is 10 MB');
-        return;
-      }
-      
+    try {
       setUploadingDoc(docType);
-      if (docType === 'aadhaar') setAadhaarUploadStatus('UPLOADING');
-      else if (docType === 'pan') setPanUploadStatus('UPLOADING');
+      if (docType === 'aadhaar') {
+        setAadhaarUploadStatus('UPLOADING');
+        setVerifyingStatus('UPLOADING');
+      } else if (docType === 'pan') setPanUploadStatus('UPLOADING');
       else if (docType === 'selfie') setSelfieUploadStatus('UPLOADING');
       else if (docType === 'certs') setCertsUploadStatus('UPLOADING');
 
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      
-      const binaryString = atob(base64);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      const arrayBuffer = bytes.buffer;
-
-      await performUpload(docType, name, arrayBuffer);
-    } catch (err: any) {
-      console.error(`[DEBUG ERROR] File processing failed for ${docType}:`, err);
-      if (docType === 'aadhaar') setAadhaarUploadStatus('FAILED');
-      else if (docType === 'pan') setPanUploadStatus('FAILED');
-      else if (docType === 'selfie') setSelfieUploadStatus('FAILED');
-      else if (docType === 'certs') setCertsUploadStatus('FAILED');
-      setUploadingDoc(null);
-      
-      Alert.alert(
-        'Upload failed',
-        `Unable to securely upload this document. Please check your internet connection and try again.\n\nTechnical Error: ${err.message || err}`,
-        [
-          { text: 'Retry Upload', onPress: () => uploadFile(docType) },
-          { text: 'Cancel', style: 'cancel' }
-        ]
-      );
-    }
-  };
-
-  const performUpload = async (docType: 'aadhaar' | 'pan' | 'selfie' | 'certs', fileName: string, fileBody: any) => {
-    setUploadingDoc(docType);
-    if (docType === 'aadhaar') setAadhaarUploadStatus('UPLOADING');
-    else if (docType === 'pan') setPanUploadStatus('UPLOADING');
-    else if (docType === 'selfie') setSelfieUploadStatus('UPLOADING');
-    else if (docType === 'certs') setCertsUploadStatus('UPLOADING');
-
-    try {
-      const ext = fileName.split('.').pop() || 'pdf';
-      // eslint-disable-next-line react-hooks/purity
-      const cleanFileName = `${Date.now()}_${docType}.${ext}`;
-      const filePath = `trainer-docs/${cleanFileName}`;
-      
-      await supabase.storage.createBucket('trainer-documents', { public: true }).catch(() => {});
-      
-      const { data, error } = await supabase.storage
-        .from('trainer-documents')
-        .upload(filePath, fileBody, {
-          upsert: true,
-          contentType: ext === 'pdf' ? 'application/pdf' : `image/${ext}`
+      let arrayBuffer: ArrayBuffer;
+      if (Platform.OS === 'web') {
+        const response = await fetch(uri);
+        arrayBuffer = await response.arrayBuffer();
+      } else {
+        const base64 = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
         });
-        
-      if (error) {
-        throw new Error(error.message);
+        const binaryString = atob(base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        arrayBuffer = bytes.buffer;
       }
+
+      const trainerId = Database.getCurrentUserId();
+      if (!trainerId) throw new Error('Trainer ID not found');
       
-      const { data: publicUrlData } = supabase.storage
-        .from('trainer-documents')
-        .getPublicUrl(filePath);
-        
-      const fileUrl = publicUrlData.publicUrl;
-      console.log(`[DEBUG] Document uploaded successfully. URL: ${fileUrl}`);
+      const docId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      const cleanFileName = `${docId}.${ext}`;
       
+      const bucketName = docType === 'aadhaar' ? 'trainer-verification' : 'trainer-documents';
+      const filePath = docType === 'aadhaar' ? `${trainerId}/${cleanFileName}` : `trainer-docs/${cleanFileName}`;
+      const contentType = isPdf ? 'application/pdf' : `image/${ext}`;
+
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .upload(filePath, arrayBuffer, {
+          upsert: true,
+          contentType,
+        });
+
+      if (error) throw new Error(error.message);
+
+      let fileUrl = '';
+      if (docType !== 'aadhaar') {
+        const { data: publicUrlData } = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(filePath);
+        fileUrl = publicUrlData.publicUrl;
+      } else {
+        fileUrl = filePath; 
+      }
+
+      console.log(`[TrainerApp] Upload successful. Path: ${filePath}`);
+
       if (docType === 'aadhaar') {
         setDocumentAadhaar(fileUrl);
-        setAadhaarStatus('pending_verification');
         setAadhaarUploadStatus('UPLOADED');
+        setVerifyingStatus('PROCESSING');
+        
+        await Database.createTrainerVerificationDoc({
+          id: docId,
+          trainer_id: trainerId,
+          storage_path: filePath,
+          file_type: contentType,
+          verification_status: 'PROCESSING',
+        });
+        setActiveDocId(docId);
+
+        try {
+          const { data: fnResult, error: fnError } = await supabase.functions.invoke('process-id', {
+            body: { documentId: docId },
+          });
+
+          if (fnError) throw fnError;
+
+          const docs = await Database.fetchTrainerVerificationDocs(trainerId);
+          if (docs.length > 0) {
+            const updated = docs[0];
+            setVerifyingStatus(updated.verification_status);
+            setExtractedIdName(updated.extracted_name || '');
+            setOcrConfidence(updated.confidence ? parseFloat(updated.confidence) : null);
+            setTrainerAttested(updated.trainer_attested || false);
+          }
+        } catch (err: any) {
+          console.error('[TrainerApp] AI Verification failed:', err);
+          await Database.updateTrainerVerificationDoc(docId, 'MANUAL_REVIEW', false);
+          setVerifyingStatus('MANUAL_REVIEW');
+          setTrainerAttested(false);
+          Alert.alert('AI Processing Delay', 'AI verification is taking longer than expected. Your document has been submitted for manual admin review.');
+        }
       } else if (docType === 'pan') {
         setDocumentPan(fileUrl);
         setPanStatus('pending_verification');
@@ -496,26 +415,58 @@ export default function TrainerApplicationScreen() {
         setDocumentCertifications(fileUrl);
         setCertsUploadStatus('UPLOADED');
       }
-      
-      Alert.alert('Upload Successful', `✓ ${docType.toUpperCase()} document uploaded successfully.`);
+
+      if (docType !== 'aadhaar') {
+        Alert.alert('Upload Successful', `✓ ${docType.toUpperCase()} document uploaded successfully.`);
+      }
     } catch (err: any) {
-      console.error(`[DEBUG ERROR] File upload failed for ${docType}:`, err);
-      if (docType === 'aadhaar') setAadhaarUploadStatus('FAILED');
-      else if (docType === 'pan') setPanUploadStatus('FAILED');
+      console.error(`[TrainerApp] Upload failed for ${docType}:`, err);
+      if (docType === 'aadhaar') {
+        setAadhaarUploadStatus('FAILED');
+        setVerifyingStatus('IDLE');
+      } else if (docType === 'pan') setPanUploadStatus('FAILED');
       else if (docType === 'selfie') setSelfieUploadStatus('FAILED');
       else if (docType === 'certs') setCertsUploadStatus('FAILED');
-      
+
       Alert.alert(
         'Upload failed',
-        `Unable to securely upload this document. Please check your internet connection and try again.\n\nTechnical Error: ${err.message || err}`,
+        `Unable to securely upload this document: ${err.message || err}`,
         [
-          { text: 'Retry Upload', onPress: () => uploadFile(docType) },
+          { text: 'Try Again', onPress: () => uploadFile(docType) },
           { text: 'Cancel', style: 'cancel' }
         ]
       );
     } finally {
       setUploadingDoc(null);
+      setPreviewUri(null);
+      setPreviewName(null);
+      setPreviewType(null);
     }
+  };
+
+  const handleAttestNames = async () => {
+    if (!activeDocId) return;
+    try {
+      setVerifyingStatus('PROCESSING');
+      await Database.updateTrainerVerificationDoc(activeDocId, 'MANUAL_REVIEW', true);
+      setVerifyingStatus('MANUAL_REVIEW');
+      setTrainerAttested(true);
+      Alert.alert('Attestation Received', 'Your attestation has been recorded. The admin will verify both names manually.');
+    } catch (err: any) {
+      Alert.alert('Error', 'Failed to submit attestation.');
+      setVerifyingStatus('NAME_MISMATCH');
+    }
+  };
+
+  const handleUploadDifferentId = () => {
+    setDocumentAadhaar('');
+    setAadhaarUploadStatus('NOT_UPLOADED');
+    setVerifyingStatus('IDLE');
+    setExtractedIdName('');
+    setOcrConfidence(null);
+    setActiveDocId(null);
+    setTrainerAttested(false);
+    uploadFile('aadhaar');
   };
 
   const handleNext = () => {
@@ -1323,6 +1274,90 @@ export default function TrainerApplicationScreen() {
                     </TouchableOpacity>
                   </View>
 
+                  {/* Aadhaar AI Verification status display */}
+                  {verifyingStatus !== 'IDLE' && verifyingStatus !== 'UPLOADING' && (
+                    <View className="bg-zinc-50 p-4 rounded-xl border border-zinc-150 gap-3">
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-zinc-500 text-[8.5px] font-black uppercase tracking-wider text-start">Aadhaar AI Status</Text>
+                        <View className={`px-2 py-0.5 rounded-full ${
+                          verifyingStatus === 'VERIFIED' 
+                            ? 'bg-green-50 border border-green-200' 
+                            : verifyingStatus === 'NAME_MISMATCH' 
+                            ? 'bg-rose-50 border border-rose-200' 
+                            : verifyingStatus === 'PROCESSING'
+                            ? 'bg-blue-50 border border-blue-200'
+                            : 'bg-amber-50 border border-amber-200'
+                        }`}>
+                          <Text className={`text-[7.5px] font-black uppercase ${
+                            verifyingStatus === 'VERIFIED' 
+                              ? 'text-green-600' 
+                              : verifyingStatus === 'NAME_MISMATCH' 
+                              ? 'text-rose-600' 
+                              : verifyingStatus === 'PROCESSING'
+                              ? 'text-blue-600'
+                              : 'text-amber-600'
+                          }`}>
+                            {verifyingStatus === 'PROCESSING' ? 'Processing...' : verifyingStatus}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {verifyingStatus === 'PROCESSING' && (
+                        <View className="flex-row items-center gap-2 py-1">
+                          <ActivityIndicator size="small" color="#E11D48" />
+                          <Text className="text-zinc-600 text-xs font-medium text-start">Reading name on document and verifying...</Text>
+                        </View>
+                      )}
+
+                      {verifyingStatus === 'VERIFIED' && (
+                        <View className="gap-1">
+                          <Text className="text-[#101828] text-xs font-semibold text-start">✓ Name Matched Account Successfully</Text>
+                          <Text className="text-zinc-500 text-[10px] text-start">Your identity documents are automatically verified.</Text>
+                        </View>
+                      )}
+
+                      {verifyingStatus === 'NAME_MISMATCH' && (
+                        <View className="gap-3">
+                          <Text className="text-rose-600 text-xs font-bold text-start">⚠️ Name Mismatch Detected</Text>
+                          <View className="bg-white p-3 rounded-lg border border-rose-100 gap-1.5">
+                            <Text className="text-[11px] text-zinc-600 text-start">Virla Account Name: <Text className="font-bold text-zinc-800">{fullName}</Text></Text>
+                            <Text className="text-[11px] text-zinc-600 text-start">Name extracted from ID: <Text className="font-bold text-zinc-800">{extractedIdName || 'Unreadable'}</Text></Text>
+                            {ocrConfidence !== null && (
+                              <Text className="text-[10px] text-zinc-400 text-start">Match confidence: {Math.round(ocrConfidence * 100)}%</Text>
+                            )}
+                          </View>
+                          
+                          <View className="flex-row gap-2 mt-1">
+                            <TouchableOpacity
+                              onPress={handleUploadDifferentId}
+                              className="flex-1 py-3 bg-zinc-800 rounded-xl items-center justify-center"
+                            >
+                              <Text className="text-white text-[8px] font-black uppercase tracking-wider text-center">Upload Different ID</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              onPress={handleAttestNames}
+                              className="flex-1 py-3 bg-[#E11D48] rounded-xl items-center justify-center"
+                            >
+                              <Text className="text-white text-[8px] font-black uppercase tracking-wider text-center">Both Names Belong to Me</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
+
+                      {verifyingStatus === 'MANUAL_REVIEW' && (
+                        <View className="gap-1">
+                          <Text className="text-amber-600 text-xs font-semibold text-start">ℹ️ Under Manual Review</Text>
+                          <Text className="text-zinc-500 text-[10px] text-start">
+                            {trainerAttested 
+                              ? 'Submitted for manual review (Attested: Both names belong to you).' 
+                              : 'Submitted for manual review (AI uncertainty / low confidence).'}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+
                   {/* PAN Upload */}
                   <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
                     <View className="flex-1 pr-3">
@@ -1439,6 +1474,89 @@ export default function TrainerApplicationScreen() {
         )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Custom Picker Selection Overlay */}
+      {showPickerModal && (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, justifyContent: 'flex-end' }]}>
+          <TouchableOpacity activeOpacity={1} onPress={() => setShowPickerModal(false)} style={{ flex: 1 }} />
+          <View className="bg-white p-6 rounded-t-3xl gap-4">
+            <Text className="text-[#101828] text-sm font-black uppercase tracking-wider text-center">Select Document Source</Text>
+            
+            <View className="gap-2">
+              <TouchableOpacity
+                onPress={() => pickDocument('camera')}
+                className="py-3.5 bg-zinc-50 rounded-xl border border-zinc-150 flex-row justify-center items-center gap-2"
+              >
+                <Feather name="camera" size={16} color="#101828" />
+                <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Take Photo (Camera)</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => pickDocument('library')}
+                className="py-3.5 bg-zinc-50 rounded-xl border border-zinc-150 flex-row justify-center items-center gap-2"
+              >
+                <Feather name="image" size={16} color="#101828" />
+                <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Choose from Gallery (Library)</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => pickDocument('file')}
+                className="py-3.5 bg-zinc-50 rounded-xl border border-zinc-150 flex-row justify-center items-center gap-2"
+              >
+                <Feather name="file" size={16} color="#101828" />
+                <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Choose File (PDF/Docs)</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setShowPickerModal(false)}
+                className="py-3.5 bg-zinc-100 rounded-xl items-center mt-2"
+              >
+                <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Preview and Confirmation Overlay */}
+      {showPreview && previewUri && (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 10000, justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+          <View className="bg-white rounded-2xl w-full p-5 gap-4">
+            <Text className="text-[#101828] text-xs font-black uppercase tracking-widest text-center">Document Preview</Text>
+            
+            <View className="h-[250px] bg-zinc-50 border border-zinc-200 rounded-xl overflow-hidden justify-center items-center">
+              {previewType === 'image' ? (
+                <Image source={{ uri: previewUri }} style={{ width: '100%', height: '100%', resizeMode: 'contain' }} />
+              ) : (
+                <View className="items-center justify-center gap-2">
+                  <Feather name="file-text" size={48} color="#E11D48" />
+                  <Text className="text-zinc-800 text-xs font-bold px-4 text-center" numberOfLines={2}>{previewName}</Text>
+                  <Text className="text-zinc-400 text-[10px] font-medium">PDF Document</Text>
+                </View>
+              )}
+            </View>
+
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={() => {
+                  setShowPreview(false);
+                  uploadFile(activeUploadType!);
+                }}
+                className="flex-1 py-3 bg-zinc-100 rounded-xl items-center justify-center"
+              >
+                <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">Retake / Change</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={confirmAndUpload}
+                className="flex-1 py-3 bg-[#E11D48] rounded-xl items-center justify-center"
+              >
+                <Text className="text-white text-xs font-black uppercase tracking-wider">Confirm & Upload</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </SafeAreaViewWrapper>
   );
 }
