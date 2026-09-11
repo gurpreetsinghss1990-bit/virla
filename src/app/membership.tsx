@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, Alert, Animated, Platform } f
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useWalletStore } from '../store/walletStore';
+import { useUserStore } from '../store/userStore';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -181,7 +182,11 @@ export default function MembershipScreen() {
     setCheckoutActive(true);
   };
 
-  // Simulated Apple Pay Confirm Swipe
+  const userEmail = useUserStore((state) => state.user?.email);
+
+
+
+  // Simulated Sandbox/Apple Pay Confirm Swipe
   const handleConfirmPay = () => {
     setIsProcessing(true);
     progressAnim.setValue(0);
@@ -447,6 +452,14 @@ export default function MembershipScreen() {
             {/* Modal Drag handle indicator */}
             <View className="w-10 h-1 bg-zinc-200 rounded-full align-self-center mx-auto" />
 
+            {/* Red Box Notice for Demo Payment */}
+            <View className="bg-red-50 border border-red-200 p-3.5 rounded-2xl flex-row items-center gap-3">
+              <Feather name="info" size={16} color="#DC2626" />
+              <Text className="text-red-700 text-xs font-bold leading-tight flex-1">
+                This is just a demo payment simulation. Real payment gateway will integrate after the production approval.
+              </Text>
+            </View>
+
             {!isProcessing && !isSuccess && (
               <>
                 {showDemoPayment ? (
@@ -607,20 +620,20 @@ export default function MembershipScreen() {
                       </View>
                     </View>
 
-                    {/* Purchase confirmation button */}
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      disabled={isProcessing}
-                      onPress={() => {
-                        setShowDemoPayment(true);
-                      }}
-                      className={`h-14 rounded-2xl items-center justify-center mt-2 shadow-md ${isProcessing ? 'bg-zinc-800' : 'bg-zinc-950'}`}
-                      style={{ height: 56 }}
-                    >
-                      <Text className="text-white text-xs font-black uppercase tracking-wider">
-                        {isProcessing ? 'Purchasing...' : 'Purchase Now'}
-                      </Text>
-                    </TouchableOpacity>
+                    {/* Purchase confirmation buttons */}
+                    <View className="gap-3 mt-2">
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        disabled={isProcessing}
+                        onPress={() => setShowDemoPayment(true)}
+                        className="h-12 bg-zinc-100 border border-zinc-200 rounded-2xl items-center justify-center"
+                        style={{ height: 48 }}
+                      >
+                        <Text className="text-zinc-600 text-[10px] font-black uppercase tracking-wider">
+                          Use Test Simulator (Demo)
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 )}
               </>
@@ -667,9 +680,10 @@ export default function MembershipScreen() {
                       closeDetails();
                       router.replace('/wallet');
                     }}
-                    className="w-full bg-[#101828] py-4.5 rounded-2xl items-center justify-center"
+                    className="w-full bg-[#101828] h-14 rounded-2xl items-center justify-center shadow-md"
+                    style={{ height: 54 }}
                   >
-                    <Text className="text-white text-xs font-black uppercase tracking-wider">View Wallet</Text>
+                    <Text className="text-white text-sm font-black uppercase tracking-wider">View Wallet</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -677,9 +691,10 @@ export default function MembershipScreen() {
                     onPress={() => {
                       closeDetails();
                     }}
-                    className="w-full bg-zinc-100 border border-zinc-200 py-4.5 rounded-2xl items-center justify-center"
+                    className="w-full bg-zinc-100 border border-zinc-200 h-14 rounded-2xl items-center justify-center"
+                    style={{ height: 54 }}
                   >
-                    <Text className="text-zinc-700 text-xs font-black uppercase tracking-wider">Done</Text>
+                    <Text className="text-zinc-700 text-sm font-black uppercase tracking-wider">Done</Text>
                   </TouchableOpacity>
                 </View>
               </View>

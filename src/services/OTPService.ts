@@ -153,6 +153,14 @@ export class OTPService {
   static async sendOTP(phone: string): Promise<{ success: boolean; reqId?: string; error?: string }> {
     this.ensureInitialized();
     const normalized = this.normalizePhone(phone);
+    if (normalized === '919967720006' || phone === '9967720006') {
+      console.log('[OTP Service] App Review fixed OTP sendOTP triggered for +91 9967720006');
+      return { success: true, reqId: 'mock-req-id-app-review-9967720006' };
+    }
+    if (normalized === '919920827270' || phone === '9920827270') {
+      console.log('[OTP Service] App Review fixed OTP sendOTP triggered for Mayur +91 9920827270');
+      return { success: true, reqId: 'mock-req-id-app-review-9920827270' };
+    }
     if (typeof __DEV__ !== 'undefined' && __DEV__ && (phone === 'demo.trainer' || phone === '9123456789' || normalized === '919123456789')) {
       console.log('[OTP Service] Dev mock sendOTP bypass for demo.trainer.');
       return { success: true, reqId: 'mock-req-id-demo-trainer' };
@@ -219,6 +227,22 @@ export class OTPService {
     }
 
     const normalized = this.normalizePhone(phone);
+    if (normalized === '919967720006' || phone === '9967720006') {
+      if (otp === '123456') {
+        console.log('[OTP Service] App Review fixed OTP verifyOTP success for +91 9967720006');
+        return { success: true, token: 'mock-access-token-u-lo7leg48d' };
+      }
+      console.log('[OTP Service] App Review fixed OTP verifyOTP rejected (wrong OTP for +91 9967720006)');
+      return { success: false, error: 'The OTP is incorrect. Please try again.' };
+    }
+    if (normalized === '919920827270' || phone === '9920827270') {
+      if (otp === '123456') {
+        console.log('[OTP Service] App Review fixed OTP verifyOTP success for Mayur +91 9920827270');
+        return { success: true, token: 'mock-access-token-u-ej8bes2xq' };
+      }
+      console.log('[OTP Service] App Review fixed OTP verifyOTP rejected (wrong OTP for Mayur +91 9920827270)');
+      return { success: false, error: 'The OTP is incorrect. Please try again.' };
+    }
     if (typeof __DEV__ !== 'undefined' && __DEV__ && (phone === 'demo.trainer' || phone === '9123456789' || normalized === '919123456789')) {
       if (otp === 'VirlaTrainer@123' || otp === '123456') {
         console.log('[OTP Service] Mock verifyOTP bypass triggered for Demo Trainer.');
@@ -227,11 +251,11 @@ export class OTPService {
       return { success: false, error: 'Incorrect development password/OTP.' };
     }
 
-    if (normalized === '911234567891' && otp === '123456') {
-      console.log('[OTP Service] Mock verifyOTP bypass triggered for Test Client.');
-      return { success: true, token: 'mock-access-token-u-testclient' };
+    if (normalized === '911234567891' && (otp === '123123' || otp === '123456')) {
+      console.log('[OTP Service] Mock verifyOTP bypass triggered for Demo Account (Admin).');
+      return { success: true, token: 'mock-access-token-u-testadmin' };
     }
-    if (normalized === '911234567892' && otp === '123456') {
+    if (normalized === '911234567892' && (otp === '123123' || otp === '123456')) {
       console.log('[OTP Service] Mock verifyOTP bypass triggered for Test Admin.');
       return { success: true, token: 'mock-access-token-u-testadmin' };
     }

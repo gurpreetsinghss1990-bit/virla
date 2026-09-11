@@ -4,6 +4,8 @@ export interface User {
   email: string;
   avatar: string;
   location: string;
+  phone?: string;
+  isWildcardUser?: boolean;
   // Sprint 6 addition
   role?: 'customer' | 'trainer' | 'admin';
   registrationStatus?: string;
@@ -23,7 +25,7 @@ export interface Workout {
   description: string;
   calories: number;
   duration: number;
-  
+
   // Sprint 3 additions
   heroImage?: string;
   category?: string;
@@ -58,7 +60,7 @@ export interface Booking {
     relation: string;
     notes?: string;
   };
-  
+
   // Sprint 5 additions
   timelineStatus?: 'booked' | 'trainer_assigned' | 'trainer_accepted' | 'trainer_preparing' | 'trainer_travelling' | 'trainer_arrived' | 'otp_verified' | 'workout_started' | 'workout_completed' | 'trainer_report_submitted' | 'customer_review_pending' | 'session_closed';
   acceptanceNotificationCount?: number;
@@ -121,12 +123,13 @@ export interface Coach {
   id: string;
   name: string;
   photo: string;
+  avatar?: string;
   experience: string;
   rating: number;
   specialty: string;
   bio?: string;
   gender?: string;
-  
+
   // Sprint 3 additions
   yearsExperience?: number;
   specialization?: string;

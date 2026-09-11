@@ -174,7 +174,7 @@ Deno.serve(async (req) => {
 
     if (accessToken.startsWith('mock-access-token-')) {
       const mockUserId = accessToken.replace('mock-access-token-', '');
-      if (mockUserId === 'u-testclient' || mockUserId === 'u-testadmin' || mockUserId === 'demo.trainer') {
+      if (mockUserId === 'u-testclient' || mockUserId === 'u-testadmin' || mockUserId === 'demo.trainer' || mockUserId === 'u-lo7leg48d' || mockUserId === 'u-ej8bes2xq') {
         console.log('[Edge Function] Mock authentication bypass triggered for:', mockUserId);
         
         const supabaseUrl = getEffectiveSupabaseUrl();

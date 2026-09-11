@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, Alert, Platform, KeyboardAvoidingView, ScrollView, TouchableWithoutFeedback, Keyboard, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, TextInput, Alert, Platform, KeyboardAvoidingView, ScrollView, TouchableWithoutFeedback, Keyboard, ActivityIndicator, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Svg, { Circle, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
@@ -33,6 +33,10 @@ export default function GetStartedScreen() {
   const [resendCountdown, setResendCountdown] = useState(0);
   const [resendCount, setResendCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isOtpSuccessAnimating, setIsOtpSuccessAnimating] = useState(false);
+  const [authenticatedUserName, setAuthenticatedUserName] = useState('');
+  const spinAnim = useRef(new Animated.Value(0)).current;
+  const otpInputRef = useRef<TextInput>(null);
 
   // New user onboarding setup states
   const [newUserIdToRegister, setNewUserIdToRegister] = useState<string | null>(null);
@@ -178,22 +182,28 @@ export default function GetStartedScreen() {
       if (result && result.success === true && result.user) {
         const userObj = result.user;
         const regStatus = userObj.registrationStatus || 'name_pending';
+        setAuthenticatedUserName(userObj.name || '');
 
         if (regStatus === 'complete') {
-          console.log('[DEBUG] Existing complete user detected. Proceeding to finalize session...');
+          console.log('[DEBUG] Existing complete user detected. Triggering success animation...');
           await finalizeUserSession(userObj);
-          Alert.alert('Welcome', `Successfully authenticated as ${userObj.name}!`);
-          router.replace('/(tabs)');
+          
+          // Trigger 6 boxes -> circle -> 3x spin -> dumbbell success animation
+          setIsOtpSuccessAnimating(true);
+          Animated.timing(spinAnim, {
+            toValue: 1,
+            duration: 1200,
+            useNativeDriver: true,
+          }).start(() => {
+            router.replace('/(tabs)');
+          });
         } else {
           console.log(`[DEBUG] Incomplete registration detected (status: ${regStatus}). Set up resume...`);
           setTempUserObj(userObj);
           setNewUserIdToRegister(userObj.id || "");
-
-          // Initialize/persist user session immediately for incomplete state so closures resume from setup
           await finalizeUserSession(userObj);
 
           const profile = Database.getProfile(userObj.id);
-
           if (regStatus === 'name_pending' || !userObj.name || userObj.name === 'Complete your profile') {
             setSetupStep(0);
           } else if (!profile?.gender) {
@@ -363,6 +373,9 @@ export default function GetStartedScreen() {
         setReqId(res.reqId);
         setOtpSent(true);
         setResendCountdown(10); // Start 10s resend timer
+        setTimeout(() => {
+          otpInputRef.current?.focus();
+        }, 300);
         Alert.alert('OTP Sent', 'OTP has been sent to your mobile number.');
       } else {
         let friendlyMsg = 'We couldn\'t send the OTP. Please try again.';
@@ -696,65 +709,217 @@ export default function GetStartedScreen() {
                 </View>
               </View>
             ) : (
-              /* Mobile Login/Register Form */
+              /* Mobile Login/Register Form - Reference Exact Implementation */
               <View 
-                className="bg-white p-6 rounded-[28px] border border-zinc-150 gap-4 my-6"
+                className="bg-[#0F0F12] p-6 rounded-[36px] border border-white/10 gap-5 my-4 items-center"
                 style={{
-                  elevation: 1,
-                  shadowColor: '#101828',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.05,
-                  shadowRadius: 2,
+                  elevation: 12,
+                  shadowColor: '#000000',
+                  shadowOffset: { width: 0, height: 12 },
+                  shadowOpacity: 0.4,
+                  shadowRadius: 24,
                 }}
               >
-                <View className="flex-row gap-2 w-full items-center">
-                  <View className="flex-1 flex-row items-center bg-zinc-50 border border-zinc-150 rounded-xl px-4">
-                    <Text className="text-zinc-500 font-extrabold text-sm mr-2">+91</Text>
-                    <TextInput
-                      placeholder="98765 43210"
-                      placeholderTextColor="#9CA3AF"
-                      keyboardType="phone-pad"
-                      value={formattedPhone}
-                      onChangeText={handlePhoneChange}
-                      editable={!isLoading}
-                      className="flex-1 py-4 text-zinc-900 text-sm font-semibold"
-                    />
+                {/* Mobile Number Entry Field */}
+                <View className="gap-2 w-full">
+                  <Text className="text-xs font-bold uppercase tracking-widest text-zinc-400">
+                    Mobile Number
+                  </Text>
+                  <View className="flex-row gap-2 w-full items-center">
+                    <View className="flex-1 flex-row items-center bg-[#1A1A1E] border border-white/10 rounded-2xl px-4 py-1">
+                      <Text className="text-[#E11D48] font-black text-base mr-2">+91</Text>
+                      <TextInput
+                        placeholder="98765 43210"
+                        placeholderTextColor="#666666"
+                        keyboardType="phone-pad"
+                        value={formattedPhone}
+                        onChangeText={handlePhoneChange}
+                        editable={!isLoading}
+                        className="flex-1 py-3.5 text-white text-base font-semibold"
+                      />
+                    </View>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={isLoading ? () => {} : handleSendOtp}
+                      disabled={isLoading || resendCountdown > 0}
+                      className={`px-4 py-3.5 rounded-2xl justify-center items-center ${isLoading || resendCountdown > 0 ? 'bg-zinc-800' : 'bg-[#E11D48]'}`}
+                    >
+                      <Text className="text-white text-xs font-extrabold uppercase tracking-wider">
+                        {otpSent ? (resendCountdown > 0 ? `Resend (${resendCountdown}s)` : 'Resend') : 'Send OTP'}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={isLoading ? () => {} : handleSendOtp}
-                    disabled={isLoading || resendCountdown > 0}
-                    className={`px-4 py-4 rounded-xl justify-center items-center ${isLoading || resendCountdown > 0 ? 'bg-zinc-400' : 'bg-[#101828]'}`}
-                  >
-                    <Text className="text-white text-xs font-bold uppercase tracking-wider">
-                      {otpSent ? (resendCountdown > 0 ? `Resend (${resendCountdown}s)` : 'Resend') : 'Send OTP'}
-                    </Text>
-                  </TouchableOpacity>
                 </View>
 
+                {/* 6-Digit Animated OTP Entry & Success Sequence Component */}
                 {otpSent && (
-                  <TextInput
-                    placeholder="Enter 6-Digit OTP Code"
-                    placeholderTextColor="#9CA3AF"
-                    keyboardType="number-pad"
-                    value={otpCode}
-                    onChangeText={setOtpCode}
-                    editable={!isLoading}
-                    className="w-full bg-zinc-50 border border-zinc-150 p-4 rounded-xl text-zinc-900 text-sm font-semibold"
-                  />
+                  <View className="w-full items-center gap-4 my-2">
+                    <View className="flex-row justify-between items-center w-full px-1">
+                      <Text className="text-xs font-bold uppercase tracking-widest text-zinc-400">
+                        Verify 6-Digit Code
+                      </Text>
+                      <Text className="text-[11px] font-semibold text-zinc-500">
+                        Sent to +91 {phone}
+                      </Text>
+                    </View>
+
+                    {/* Container for 6 Animated Rotated Digit Cards */}
+                    <TouchableWithoutFeedback onPress={() => otpInputRef.current?.focus()}>
+                      <View className="relative w-full py-2 items-center justify-center min-h-[140px]">
+                        {/* Hidden Native TextInput for 6-digit Keyboard Entry & Autofill */}
+                        <TextInput
+                          ref={otpInputRef}
+                          placeholder=""
+                          placeholderTextColor="transparent"
+                          keyboardType="number-pad"
+                          textContentType="oneTimeCode"
+                          autoComplete="one-time-code"
+                          maxLength={6}
+                          value={otpCode}
+                          onChangeText={setOtpCode}
+                          editable={!isLoading && !isOtpSuccessAnimating}
+                          className="absolute w-full h-full opacity-0 z-50"
+                          autoFocus
+                        />
+
+                        {!isOtpSuccessAnimating ? (
+                          /* Visual State 1: 6 Individual Rotated Digit Boxes */
+                          <View className="flex-row justify-between w-full px-1 z-10 pointer-events-none">
+                            {Array.from({ length: 6 }).map((_, idx) => {
+                              const digit = otpCode[idx] || '';
+                              const isFocusedIndex = otpCode.length === idx || (idx === 5 && otpCode.length === 6);
+                              const rotations = ['-6deg', '8deg', '-4deg', '6deg', '-8deg', '5deg'];
+                              const rot = rotations[idx % rotations.length];
+
+                              return (
+                                <View
+                                  key={idx}
+                                  className={`w-11 h-14 rounded-2xl items-center justify-center border ${
+                                    digit
+                                      ? 'bg-[#1F1F24] border-[#E11D48]'
+                                      : isFocusedIndex
+                                      ? 'bg-[#1F1F24] border-[#E11D48]'
+                                      : 'bg-[#141417] border-white/20'
+                                  }`}
+                                  style={{
+                                    transform: [{ rotate: rot }, { scale: isFocusedIndex ? 1.08 : 1 }],
+                                    shadowColor: (digit || isFocusedIndex) ? '#E11D48' : '#000',
+                                    shadowOffset: { width: 0, height: (digit || isFocusedIndex) ? 4 : 2 },
+                                    shadowOpacity: (digit || isFocusedIndex) ? 0.5 : 0.2,
+                                    shadowRadius: (digit || isFocusedIndex) ? 8 : 4,
+                                    elevation: (digit || isFocusedIndex) ? 8 : 2,
+                                  }}
+                                >
+                                  <Text className="text-white text-xl font-black">
+                                    {digit}
+                                  </Text>
+                                </View>
+                              );
+                            })}
+                          </View>
+                        ) : (
+                        /* Visual State 2: Post-Verification Success Animation (Circle Spin 2-3x -> Dumbbell -> Welcome) */
+                        <View className="items-center justify-center gap-3 py-2 z-20">
+                          {/* Animated Rotating Circle or Transformed Dumbbell */}
+                          <View className="relative items-center justify-center">
+                            {/* Step A: 2-3 Rapid Rotations Spinning Circle */}
+                            <Animated.View
+                              style={{
+                                transform: [
+                                  {
+                                    rotate: spinAnim.interpolate({
+                                      inputRange: [0, 1],
+                                      outputRange: ['0deg', '1080deg'], // 3 full 360deg spins
+                                    }),
+                                  },
+                                ],
+                              }}
+                            >
+                              <View 
+                                className="w-14 h-14 rounded-full border-2 border-[#E11D48] items-center justify-center bg-[#1F1F24]"
+                                style={{
+                                  shadowColor: '#E11D48',
+                                  shadowOffset: { width: 0, height: 0 },
+                                  shadowOpacity: 0.8,
+                                  shadowRadius: 12,
+                                  elevation: 10,
+                                }}
+                              >
+                                <View className="w-3 h-3 rounded-full bg-white" />
+                              </View>
+                            </Animated.View>
+
+                            {/* Step B: Vector Dumbbell Overlaid on Completion */}
+                            <Animated.View
+                              className="absolute items-center justify-center"
+                              style={{
+                                opacity: spinAnim.interpolate({
+                                  inputRange: [0, 0.7, 1],
+                                  outputRange: [0, 0, 1],
+                                }),
+                                transform: [
+                                  {
+                                    scale: spinAnim.interpolate({
+                                      inputRange: [0, 0.7, 1],
+                                      outputRange: [0.5, 0.7, 1],
+                                    }),
+                                  },
+                                ],
+                              }}
+                            >
+                              <View className="flex-row items-center justify-center bg-[#0F0F12] p-3 rounded-2xl border border-[#E11D48] shadow-lg">
+                                <Svg width="40" height="22" viewBox="0 0 42 24" fill="none">
+                                  <Path d="M 2 2 L 6 2 L 6 22 L 2 22 Z" fill="#E11D48" />
+                                  <Path d="M 8 5 L 12 5 L 12 19 L 8 19 Z" fill="#FFFFFF" />
+                                  <Path d="M 12 10 L 30 10 L 30 14 L 12 14 Z" fill="#E11D48" />
+                                  <Path d="M 30 5 L 34 5 L 34 19 L 30 19 Z" fill="#FFFFFF" />
+                                  <Path d="M 36 2 L 40 2 L 40 22 L 36 22 Z" fill="#E11D48" />
+                                </Svg>
+                              </View>
+                            </Animated.View>
+                          </View>
+
+                          <View className="items-center">
+                            <Text className="text-[#E11D48] text-xs font-black uppercase tracking-widest">
+                              VERIFIED • VIRLA ACTIVATED
+                            </Text>
+                            <Text className="text-white text-base font-bold mt-0.5">
+                              {authenticatedUserName
+                                ? `Welcome, ${authenticatedUserName.split(' ')[0]}`
+                                : 'Welcome to VIRLA'}
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+                      </View>
+                    </TouchableWithoutFeedback>
+                  </View>
                 )}
 
                 {isLoading && (
                   <View className="items-center justify-center py-2">
-                    <ActivityIndicator size="small" color="#4F46E5" />
+                    <ActivityIndicator size="small" color="#E11D48" />
                   </View>
                 )}
 
-                <View className="mt-2 gap-3.5">
-                  <PrimaryButton
-                    title={isLoading ? 'Processing...' : 'Verify & Log In'}
+                <View className="mt-2 w-full">
+                  <TouchableOpacity
+                    activeOpacity={0.85}
                     onPress={isLoading ? () => {} : handleMobileSubmit}
-                  />
+                    disabled={isLoading}
+                    className="w-full bg-[#E11D48] py-4 rounded-2xl items-center justify-center shadow-lg"
+                    style={{
+                      shadowColor: '#E11D48',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.35,
+                      shadowRadius: 10,
+                      elevation: 6,
+                    }}
+                  >
+                    <Text className="text-white text-sm font-black uppercase tracking-wider">
+                      {isLoading ? 'Processing...' : 'Verify & Log In'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             )}

@@ -10,6 +10,7 @@ import { supabase } from '../database/supabaseClient';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
+import { File } from 'expo-file-system';
 const getNativePickerModules = () => {
   const g = globalThis as any;
   const expoModules = g.expo?.modules || g.ExpoModules || {};
@@ -325,15 +326,14 @@ export default function TrainerApplicationScreen() {
         const response = await fetch(uri);
         arrayBuffer = await response.arrayBuffer();
       } else {
-        const base64 = await FileSystem.readAsStringAsync(uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        const binaryString = atob(base64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+        try {
+          const file = new File(uri);
+          arrayBuffer = await file.arrayBuffer();
+        } catch (e) {
+          console.log('[TrainerApp] File.arrayBuffer fallback via fetch:', e);
+          const response = await fetch(uri);
+          arrayBuffer = await response.arrayBuffer();
         }
-        arrayBuffer = bytes.buffer;
       }
 
       const trainerId = Database.getCurrentUserId();

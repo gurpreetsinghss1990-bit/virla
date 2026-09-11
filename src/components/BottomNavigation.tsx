@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Animated, Dimensions, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { useUserStore } from '../store/userStore';
 
@@ -16,9 +16,13 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
 
   // Filter out messages from the visible routes
   const visibleRoutes = state.routes.filter((route: any) => route.name !== 'messages');
-  const numVisibleTabs = visibleRoutes.length;
-  // Calculate width for 5 spaces (4 visible tabs + 1 custom middle button)
-  const tabWidth = role === 'trainer' ? TAB_BAR_WIDTH / numVisibleTabs : TAB_BAR_WIDTH / (numVisibleTabs + 1);
+  const numVisibleTabs = visibleRoutes.length; // 4
+  const isTrainer = role === 'trainer';
+
+  // For client: 5 slots (4 tabs + central '+' slot)
+  // For trainer: 4 slots (4 tabs evenly distributed)
+  const totalSlots = isTrainer ? numVisibleTabs : numVisibleTabs + 1;
+  const tabWidth = TAB_BAR_WIDTH / totalSlots;
 
   // Find the index of the active route among the visible routes
   const currentRouteName = state.routes[state.index].name;
@@ -31,15 +35,15 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
     if (visibleActiveIndex === -1) {
       return;
     }
-    // Skip index 2 (the "+" button) when sliding indicator if not a trainer
-    const multiplier = role !== 'trainer' && visibleActiveIndex >= 2 ? visibleActiveIndex + 1 : visibleActiveIndex;
+    // For client, skip slot 2 (the "+" button); for trainer, direct index mapping (0, 1, 2, 3)
+    const multiplier = (!isTrainer && visibleActiveIndex >= 2) ? visibleActiveIndex + 1 : visibleActiveIndex;
     Animated.spring(slideAnim, {
       toValue: multiplier * tabWidth,
       useNativeDriver: true,
       tension: 68,
       friction: 10,
     }).start();
-  }, [visibleActiveIndex, tabWidth, slideAnim, role]);
+  }, [visibleActiveIndex, tabWidth, slideAnim, isTrainer]);
 
   const getIcon = (routeName: string, isFocused: boolean) => {
     let iconName: any = 'home';
@@ -59,10 +63,10 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
     }
 
     return (
-      <Feather 
-        name={iconName} 
-        size={20} 
-        color={isFocused ? '#E11D48' : '#9CA3AF'} 
+      <Feather
+        name={iconName}
+        size={20}
+        color={isFocused ? '#E11D48' : '#9CA3AF'}
       />
     );
   };
@@ -83,7 +87,7 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
   };
 
   return (
-    <View 
+    <View
       className="absolute bottom-6 left-6 right-6 border rounded-[32px] flex-row items-center py-3.5 px-1.5"
       style={[
         styles.navBar,
@@ -125,25 +129,27 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
             key={route.key}
             activeOpacity={0.8}
             onPress={onPress}
-            className="items-center justify-center flex-1 py-1 z-10 relative"
+            className="items-center justify-center flex-1 py-1 z-10 relative px-0.5"
             style={{ minHeight: 44 }} // Apple HIG touch target
           >
             {/* Icon Wrapper */}
             <View className="w-8 h-8 items-center justify-center mb-0.5 relative">
               {getIcon(route.name, isFocused)}
             </View>
-            <Text 
-              className={`text-[8.5px] font-bold uppercase tracking-wider ${
-                isFocused ? 'text-[#E11D48]' : 'text-zinc-400'
-              }`}
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
+              className={`text-[8.5px] font-bold uppercase tracking-tight text-center ${isFocused ? 'text-[#E11D48]' : 'text-zinc-400'
+                }`}
             >
               {getLabel(route.name)}
             </Text>
           </TouchableOpacity>
         );
 
-        if (index === 2 && role !== 'trainer') {
-          // Render central "+" button then the tab
+        if (index === 2 && !isTrainer) {
+          // Render central '+' slot only for non-trainer roles
           return (
             <React.Fragment key="group-center">
               <View className="items-center justify-center flex-1 py-1 z-20 relative" style={{ minHeight: 44 }}>
