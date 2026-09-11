@@ -6,12 +6,12 @@ INSERT INTO public.users (
   id, name, phone, email, password_hash, avatar, role, status, created_date, last_login, device_info, notification_prefs, registration_status
 ) VALUES (
   'u-testclient',
-  'Test Client',
+  'Demo Account',
   '911234567891',
-  'client1234567891@virla.in',
+  'demo.account@virla.in',
   'secure-hash-1450575459-6',
   'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-  'customer',
+  'admin',
   'active',
   to_char(now(), 'DD/MM/YYYY'),
   '',
@@ -50,6 +50,37 @@ INSERT INTO public.user_profiles (
 ) ON CONFLICT (user_id) DO UPDATE SET
   credits_balance = EXCLUDED.credits_balance,
   membership_status = EXCLUDED.membership_status;
+
+-- Trainer record for Wildcard Test Account (u-testclient)
+INSERT INTO public.trainers (
+  id, name, photo, experience, rating, specialty, years_experience, specialization, languages, short_bio, price, verified_badge, certifications, achievements, level, completed_sessions, rating_count, operating_address, operating_latitude, operating_longitude, operating_location_status, preferences, gender
+) VALUES (
+  'u-testclient',
+  'Demo Account',
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+  '5 years',
+  4.9,
+  'Master Trainer',
+  5,
+  'Strength Training, Cardio, Yoga, Stretching, Boxing',
+  ARRAY['English', 'Hindi'],
+  'Wildcard Master Trainer Account for testing client, trainer, and admin modules.',
+  1200,
+  true,
+  ARRAY['ACE Certified Personal Trainer', 'VIRLA Master Coach'],
+  ARRAY['Top Trainer Award'],
+  'Elite',
+  25,
+  15,
+  'Juhu Beach, Mumbai, Maharashtra, India',
+  19.1013,
+  72.8258,
+  'verified',
+  '{"online": true, "radiusKm": 15, "categories": ["Strength", "Cardio", "Mind & Body", "Conditioning", "Boxing"], "maxDailySessions": 5, "operatingLocationStatus": "verified"}'::jsonb,
+  'male'
+) ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  specialization = EXCLUDED.specialization;
 
 
 -- Create Test Admin (admin role)

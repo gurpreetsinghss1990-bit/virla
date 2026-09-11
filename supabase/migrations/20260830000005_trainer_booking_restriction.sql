@@ -37,9 +37,9 @@ BEGIN
     RAISE EXCEPTION 'Trainer accounts cannot use credits to book sessions for themselves.';
   END IF;
 
-  -- Verify caller role is customer
-  IF NOT EXISTS (SELECT 1 FROM public.users WHERE id = v_client_id AND role = 'customer') THEN
-    RAISE EXCEPTION 'Only customers can create bookings.';
+  -- Verify caller role is customer or admin
+  IF NOT EXISTS (SELECT 1 FROM public.users WHERE id = v_client_id AND role IN ('customer', 'admin')) THEN
+    RAISE EXCEPTION 'Only customers and admins can create bookings.';
   END IF;
 
   -- Slot Double booking & Buffer check (30 minutes travel buffer before/after)

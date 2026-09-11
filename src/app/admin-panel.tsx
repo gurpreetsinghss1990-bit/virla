@@ -208,10 +208,16 @@ export default function AdminPanelScreen() {
   const pendingAppsCount = applications.filter(a => a.status === 'pending' || a.status === 'info_requested').length;
 
   // Live session analytics metrics calculation
-  const liveSessions = bookings.filter(b => b.status === 'upcoming' && b.timelineStatus && b.timelineStatus !== 'booked' && b.timelineStatus !== 'session_closed');
+  const liveSessions = bookings.filter(b => {
+    const ts = (b.timelineStatus || '').toLowerCase();
+    return b.status === 'upcoming' && ts !== '' && ts !== 'booked' && ts !== 'session_closed';
+  });
   
   // A session is considered delayed if it's assigned/accepted but hasn't advanced to travelling/arrived yet
-  const delayedSessions = bookings.filter(b => b.status === 'upcoming' && (b.timelineStatus === 'trainer_assigned' || b.timelineStatus === 'trainer_accepted'));
+  const delayedSessions = bookings.filter(b => {
+    const ts = (b.timelineStatus || '').toLowerCase();
+    return b.status === 'upcoming' && (ts === 'trainer_assigned' || ts === 'trainer_accepted');
+  });
   
   const completedSessionsCount = bookings.filter(b => b.status === 'completed').length;
   const cancelledSessionsCount = bookings.filter(b => b.status === 'cancelled' || b.status === 'client_no_show' || b.status === 'trainer_no_show').length;
@@ -714,16 +720,21 @@ export default function AdminPanelScreen() {
                 const serverNow = getCurrentServerTime();
                 const todayIstStr = getISTDateInfo(serverNow).dateString;
 
+                const isUnaccepted = (timelineStatus?: string) => {
+                  const ts = (timelineStatus || '').toLowerCase();
+                  return ts === 'booked' || ts === 'trainer_assigned';
+                };
+
                 const todayBooked = bookings.filter(b => {
                   if (b.status !== 'upcoming') return false;
-                  if (b.timelineStatus === 'booked' || b.timelineStatus === 'trainer_assigned') return false;
+                  if (isUnaccepted(b.timelineStatus)) return false;
                   const range = getBookingISTDateRange(b);
                   return getISTDateInfo(range.start).dateString === todayIstStr;
                 });
 
                 const upcomingBooked = bookings.filter(b => {
                   if (b.status !== 'upcoming') return false;
-                  if (b.timelineStatus === 'booked' || b.timelineStatus === 'trainer_assigned') return false;
+                  if (isUnaccepted(b.timelineStatus)) return false;
                   const range = getBookingISTDateRange(b);
                   return getISTDateInfo(range.start).dateString > todayIstStr;
                 });
@@ -925,9 +936,19 @@ export default function AdminPanelScreen() {
           )}
 
           {activeTab === 'acceptance' && (() => {
-            const pending = bookings.filter(b => b.status === 'upcoming' && (b.timelineStatus === 'booked' || b.timelineStatus === 'trainer_assigned'));
-            const autoAccepted = bookings.filter(b => b.status === 'upcoming' && (b.acceptanceMethod === 'SYSTEM_AUTO_ACCEPT' || b.acceptanceMethod === 'auto'));
-            const recent = bookings.filter(b => b.status === 'upcoming' && (b.acceptanceMethod === 'TRAINER_MANUAL_ACCEPT' || b.acceptanceMethod === 'manual'));
+            const pending = bookings.filter(b => {
+              const ts = (b.timelineStatus || '').toLowerCase();
+              return b.status === 'upcoming' && (ts === 'booked' || ts === 'trainer_assigned');
+            });
+            const autoAccepted = bookings.filter(b => {
+              const method = (b.acceptanceMethod || '').toLowerCase();
+              return b.status === 'upcoming' && (method === 'system_auto_accept' || method === 'auto');
+            });
+            const recent = bookings.filter(b => {
+              const method = (b.acceptanceMethod || '').toLowerCase();
+              const ts = (b.timelineStatus || '').toLowerCase();
+              return b.status === 'upcoming' && (method === 'trainer_manual_accept' || method === 'manual' || ts === 'trainer_accepted');
+            });
 
             return (
               <View className="gap-6">
@@ -954,7 +975,7 @@ export default function AdminPanelScreen() {
                             <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Booking ID: {b.id}</Text>
                           </View>
                           <View className="bg-amber-50 border border-amber-100 px-3 py-1 rounded-xl">
-                            <Text className="text-amber-600 text-[8px] font-bold uppercase tracking-wider">Pending Confirmation</Text>
+                            <Text className="text-amber-600 text-[8px] font-bold uppercase tracking-wider">Waiting for trainer to accept</Text>
                           </View>
                         </View>
                         <View className="h-[1px] bg-zinc-100 my-2" />

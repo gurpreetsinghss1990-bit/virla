@@ -49,7 +49,7 @@ export class AssignmentEngine {
       const isApproved = coach.verifiedBadge !== false;
       if (!isApproved) continue;
 
-      // Eligibility Rule 4: No overlapping bookings or active sessions (respecting 30-minute operational buffer)
+      // Eligibility Rule 4: No overlapping bookings or active sessions (respecting 15-minute operational buffer)
       const hasOverlap = bookings.some(b => {
         if (b.trainerId !== coach.id) return false; // Match by trainer ID
         if (b.status === 'cancelled') return false;
@@ -62,7 +62,7 @@ export class AssignmentEngine {
         const bookingMinutes = this.parseTimeToMinutes(booking.time);
         const diff = Math.abs(bookingMinutes - bMinutes);
         const duration = b.durationMinutes || 60;
-        return diff < (duration + 30);
+        return diff < (duration + 15);
       });
       if (hasOverlap) continue;
 

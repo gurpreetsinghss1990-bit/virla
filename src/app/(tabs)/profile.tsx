@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, Animated, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, InteractionManager } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/userStore';
 import { useMembershipStore } from '../../store/membershipStore';
 import { useCoachStore } from '../../store/coachStore';
@@ -35,12 +35,42 @@ const DB_CATEGORIES = [
   { key: 'Aerial Yoga', display: 'Aerial Yoga' }
 ];
 
+const isWildcardTestAccount = (u: any, profileMobile?: string) => {
+  if (!u) return false;
+  if (u.isWildcardUser) return true;
+  const phone = u.phone || profileMobile || '';
+  const id = u.id || '';
+  const email = u.email || '';
+  return (
+    phone.includes('1234567891') ||
+    id.startsWith('u-testclient') ||
+    (id.includes('test') && !id.includes('admin')) ||
+    (email.includes('test') && !email.includes('admin'))
+  );
+};
+
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   
   // Stores
   const { user, role, setRole, setLoggedIn } = useUserStore();
+  const [activeRole, setActiveRole] = useState<'customer' | 'trainer' | 'admin'>(role || 'customer');
+
+  useEffect(() => {
+    if (role) {
+      setActiveRole(role as 'customer' | 'trainer' | 'admin');
+    }
+  }, [role]);
+
+  const handleRoleChange = useCallback((newRole: 'customer' | 'trainer' | 'admin') => {
+    setActiveRole(newRole);
+    InteractionManager.runAfterInteractions(() => {
+      setTimeout(() => {
+        setRole(newRole);
+      }, 100);
+    });
+  }, [setRole]);
   const { membership } = useMembershipStore();
   const { totalEarnings, earningsList } = useCoachStore();
   const { ledger, creditBalance, creditLots, syncFromDB: syncWallet } = useWalletStore();
@@ -175,7 +205,9 @@ export default function ProfileScreen() {
   };
 
   // Trainer local states & parsing
-  const coach = Database.schema.coaches.find((c: any) => c.name === user.name || c.id === user.id) || null;
+  const isTestAccount = isWildcardTestAccount(user, profile?.mobile);
+  const coach = Database.schema?.coaches?.find((c: any) => c.name === user?.name || c.id === user?.id) || 
+    (isTestAccount ? (Database.schema?.coaches?.find((c: any) => c.id === 'demo.trainer' || c.id === 'u-testclient' || c.id === 'u-testadmin') || Database.schema?.coaches?.[0] || null) : null);
   let parsedBankDetails = { accountName: '', bankName: '', accountNumber: '', ifsc: '', upiId: '' };
   try {
     if (coach && coach.bankDetails) {
@@ -185,8 +217,8 @@ export default function ProfileScreen() {
 
   const [isEditingTrainer, setIsEditingTrainer] = useState(false);
   const [trainerBio, setTrainerBio] = useState(coach?.shortBio || '');
-  const [trainerName, setTrainerName] = useState(coach?.name || user.name);
-  const [trainerEmail, setTrainerEmail] = useState(user.email || '');
+  const [trainerName, setTrainerName] = useState(coach?.name || user?.name || '');
+  const [trainerEmail, setTrainerEmail] = useState(user?.email || '');
   const [trainerGender, setTrainerGender] = useState(coach?.gender || 'Male');
   const [bankAccName, setBankAccName] = useState(parsedBankDetails.accountName || '');
   const [bankNameStr, setBankNameStr] = useState(parsedBankDetails.bankName || '');
@@ -272,14 +304,14 @@ export default function ProfileScreen() {
           setTrainerBio(latestCoach.shortBio || '');
         }
       });
-    }, [coach?.id])
+    }, [])
   );
 
   useEffect(() => {
-    setTimeout(() => {
+    if (coach?.id) {
       reloadDynamicLists();
-    }, 0);
-  }, [coach?.id]);
+    }
+  }, []);
 
   useEffect(() => {
     if (showAddressForm) {
@@ -510,7 +542,7 @@ export default function ProfileScreen() {
   const renderPassQRCode = () => (
     <View className="bg-white p-1.5 rounded-xl">
       <View className="w-12 h-12 border border-zinc-200 justify-center items-center">
-        <Feather name="qr-code" size={32} color="#101828" />
+        <Ionicons name="qr-code-outline" size={28} color="#101828" />
       </View>
     </View>
   );
@@ -523,38 +555,10 @@ export default function ProfileScreen() {
           className="flex-1 bg-[#F7F8FC]"
           contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 140 }}
         >
-          {/* Top Account Role Selector */}
-          {(user.role === 'admin' && coach) && (
-            <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1.5 rounded-2xl mb-6">
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => setRole('customer')}
-                className={`flex-1 py-3.5 rounded-xl items-center justify-center ${
-                  role === 'customer' ? 'bg-[#101828] shadow-sm' : ''
-                }`}
-              >
-                <Text className={`text-[10px] font-black uppercase tracking-wider ${role === 'customer' ? 'text-white' : 'text-[#6B7280]'}`}>
-                  Client Account
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => setRole('trainer')}
-                className={`flex-1 py-3.5 rounded-xl items-center justify-center ${
-                  role === 'trainer' ? 'bg-[#101828] shadow-sm' : ''
-                }`}
-              >
-                <Text className={`text-[10px] font-black uppercase tracking-wider ${role === 'trainer' ? 'text-white' : 'text-[#6B7280]'}`}>
-                  Trainer Account
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
           {/* =============================================================== */}
           {/* ======================= CLIENT PROFILE ======================== */}
           {/* =============================================================== */}
-          {(role === 'customer' || role === 'admin') && (
+          {activeRole !== 'trainer' && (
             <>
               {/* Client Profile Header */}
               <View className="items-center mb-4">
@@ -568,6 +572,20 @@ export default function ProfileScreen() {
                   <Feather name="award" size={10} color="#F5B942" />
                   <Text className="text-[#F5B942] text-[8px] font-black uppercase tracking-wider">Elite Member</Text>
                 </View>
+
+                {/* Go to Trainer Mode Button for Wildcard Accounts */}
+                {user?.role !== 'admin' && (user?.role === 'trainer' || isWildcardTestAccount(user, profile?.mobile)) && (
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => handleRoleChange('trainer')}
+                    className="mt-3 bg-[#101828] border border-zinc-800 px-4 py-2 rounded-xl flex-row items-center gap-2 shadow-sm"
+                  >
+                    <Feather name="repeat" size={12} color="#F5B942" />
+                    <Text className="text-white text-xs font-black uppercase tracking-wider">
+                      Go to Trainer Mode
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
               {/* Apple Wallet Membership Credit Card */}
@@ -677,7 +695,30 @@ export default function ProfileScreen() {
               </View>
 
               {/* Become a Trainer Option */}
-              {user.role !== 'trainer' && !hasApplied && (
+              {/* Admin Control Panel direct entry button */}
+              {(user?.role === 'admin' || isWildcardTestAccount(user, profile.mobile)) && (
+                <View className="mb-6">
+                  <LuxuryCard 
+                    className="p-5 bg-indigo-950 border border-indigo-800 shadow-xl"
+                    onPress={() => router.push('/admin-panel' as any)}
+                  >
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-row items-center gap-3">
+                        <View className="w-10 h-10 rounded-2xl bg-indigo-600 items-center justify-center">
+                          <Feather name="shield" size={18} color="white" />
+                        </View>
+                        <View className="gap-0.5">
+                          <Text className="text-indigo-300 text-[8px] font-black uppercase tracking-widest">Administrator Access</Text>
+                          <Text className="text-white text-base font-black tracking-tight">Open Admin Control Panel</Text>
+                        </View>
+                      </View>
+                      <Feather name="chevron-right" size={18} color="#A5B4FC" />
+                    </View>
+                  </LuxuryCard>
+                </View>
+              )}
+
+              {user?.role !== 'trainer' && !hasApplied && (
                 <View className="mb-6">
                   <LuxuryCard 
                     className="p-6 bg-zinc-950 border border-zinc-800 shadow-xl"
@@ -719,7 +760,7 @@ export default function ProfileScreen() {
                 </View>
               )}
 
-              {user.role !== 'trainer' && hasApplied && userApplication && (
+              {user?.role !== 'trainer' && hasApplied && userApplication && (
                 <View className="mb-6">
                   <LuxuryCard 
                     className={`p-5 border ${
@@ -788,21 +829,35 @@ export default function ProfileScreen() {
           {/* =============================================================== */}
           {/* ======================= TRAINER PROFILE ======================= */}
           {/* =============================================================== */}
-          {role === 'trainer' && coach && (
+          {activeRole === 'trainer' && (
             <>
               {/* Trainer Profile Header Summary Card */}
               <View className="items-center mb-6">
                 <Image
-                  source={{ uri: user.avatar || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }}
+                  source={{ uri: coach?.avatar || user?.avatar || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }}
                   className="w-20 h-20 rounded-full border-2 border-[#E11D48] mb-3 shadow-lg"
                 />
-                <Text className="text-[#101828] text-2xl font-black tracking-tight">{user.name}</Text>
+                <Text className="text-[#101828] text-2xl font-black tracking-tight">{coach?.name || user?.name || 'User'}</Text>
                 <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">
-                  {coach.level || 'Associate'} • {coach.specialty || 'General Training'}
+                  {coach?.level || 'Associate'} • {coach?.specialty || 'General Training'}
                 </Text>
                 <Text className="text-[#E11D48] text-[9px] font-black uppercase tracking-widest mt-2 border border-[#E11D48]/35 px-3 py-1 rounded-full bg-[#E11D48]/5">
-                  Trainer ID: VIRLA-PRO-{coach.id.slice(-6).toUpperCase()}
+                  Trainer ID: VIRLA-PRO-{(coach?.id || 'PRO-DEMO').slice(-6).toUpperCase()}
                 </Text>
+
+                {/* Go to Client Mode Button */}
+                {isWildcardTestAccount(user, profile?.mobile) && (
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => handleRoleChange('customer')}
+                    className="mt-3 bg-zinc-900 border border-zinc-700 px-4 py-2 rounded-xl flex-row items-center gap-2 shadow-sm"
+                  >
+                    <Feather name="repeat" size={12} color="#E11D48" />
+                    <Text className="text-white text-xs font-black uppercase tracking-wider">
+                      Go to Client Mode
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
               {/* Accordion Categories List Wrapper */}
@@ -877,7 +932,7 @@ export default function ProfileScreen() {
                   onToggle={() => setExpandedSection(expandedSection === 'workout' ? null : 'workout')}
                 >
                   {(() => {
-                    const assignments = Database.getWorkoutAssignments(coach.id);
+                    const assignments = coach?.id ? Database.getWorkoutAssignments(coach.id) : [];
                     const approvedCats = assignments
                       .filter(a => a.status === 'APPROVED')
                       .map(a => ({ id: a.id, name: CATEGORY_DISPLAY_MAP[a.workoutCategory] || a.workoutCategory }));
@@ -945,7 +1000,7 @@ export default function ProfileScreen() {
                         <View className="py-1 border-b border-zinc-50 pb-2">
                           <Text className="text-zinc-400 text-xs font-semibold">Specialization Specialty Target</Text>
                           <Text className="text-zinc-950 text-xs font-black mt-1 leading-normal">
-                            {coach.specialization || 'Strength & Conditioning'}
+                            {coach?.specialization || 'Strength & Conditioning'}
                           </Text>
                         </View>
 
@@ -1024,7 +1079,7 @@ export default function ProfileScreen() {
                     <View className="py-1 border-b border-zinc-50 pb-2">
                       <Text className="text-zinc-400 text-xs font-semibold">Operating Base Location</Text>
                       <Text className="text-zinc-950 text-xs font-black mt-1 leading-normal">
-                        {coach.preferences?.operatingAddress || 'Operating Base Not Configured'}
+                        {coach?.preferences?.operatingAddress || 'Operating Base Not Configured'}
                       </Text>
                       <Text className="text-zinc-450 text-[8px] font-semibold mt-1">
                         📍 Permanent check-in dispatch address
@@ -1034,46 +1089,46 @@ export default function ProfileScreen() {
                     <View className="flex-row justify-between py-1 border-b border-zinc-50 pb-2">
                       <Text className="text-zinc-400 text-xs font-semibold">Service Radius</Text>
                       <Text className="text-zinc-950 text-xs font-black">
-                        {coach.preferences?.radiusKm ? `${coach.preferences.radiusKm} km` : '15 km'}
+                        {coach?.preferences?.radiusKm ? `${coach.preferences.radiusKm} km` : '15 km'}
                       </Text>
                     </View>
 
                     <View className="flex-row justify-between py-1 border-b border-zinc-50 pb-2">
                       <Text className="text-zinc-400 text-xs font-semibold">Operating Verification status</Text>
                       <View className={`px-2 py-0.5 rounded-full ${
-                        coach.preferences?.operatingLocationStatus === 'verified' 
+                        coach?.preferences?.operatingLocationStatus === 'verified' 
                           ? 'bg-green-50 border border-green-150' 
-                          : coach.preferences?.operatingLocationStatus === 'rejected'
+                          : coach?.preferences?.operatingLocationStatus === 'rejected'
                           ? 'bg-rose-50 border border-rose-150'
                           : 'bg-amber-50 border border-amber-150'
                       }`}>
                         <Text className={`text-[8px] font-black uppercase ${
-                          coach.preferences?.operatingLocationStatus === 'verified'
+                          coach?.preferences?.operatingLocationStatus === 'verified'
                             ? 'text-green-600'
-                            : coach.preferences?.operatingLocationStatus === 'rejected'
+                            : coach?.preferences?.operatingLocationStatus === 'rejected'
                             ? 'text-rose-600'
                             : 'text-amber-600'
                         }`}>
-                          {coach.preferences?.operatingLocationStatus === 'verified' ? 'Verified' : coach.preferences?.operatingLocationStatus === 'rejected' ? 'Rejected' : 'Pending Review'}
+                          {coach?.preferences?.operatingLocationStatus === 'verified' ? 'Verified' : coach?.preferences?.operatingLocationStatus === 'rejected' ? 'Rejected' : 'Pending Review'}
                         </Text>
                       </View>
                     </View>
 
-                    {coach.preferences?.addressChangeRequest && (
+                    {coach?.preferences?.addressChangeRequest && (
                       <View className="bg-amber-50 border border-amber-250 p-3 rounded-xl gap-1">
                         <Text className="text-amber-800 text-[9px] font-black uppercase tracking-wider">Pending Change Request</Text>
                         <Text className="text-zinc-900 text-xs font-black">
-                          Change to: {coach.preferences.addressChangeRequest.requestedAddress} ({coach.preferences.addressChangeRequest.requestedRadius} km)
+                          Change to: {coach?.preferences?.addressChangeRequest?.requestedAddress} ({coach?.preferences?.addressChangeRequest?.requestedRadius} km)
                         </Text>
                         <Text className="text-zinc-400 text-[8px] font-semibold mt-0.5">Submitted, waiting for verification approval.</Text>
                       </View>
                     )}
 
-                    {!coach.preferences?.addressChangeRequest && !showAddressForm && (
+                    {!coach?.preferences?.addressChangeRequest && !showAddressForm && (
                       <TouchableOpacity
                         onPress={() => {
-                          setAddressInput(coach.preferences?.operatingAddress || '');
-                          setRadiusInput((coach.preferences?.radiusKm as 10 | 15) || 15);
+                          setAddressInput(coach?.preferences?.operatingAddress || '');
+                          setRadiusInput((coach?.preferences?.radiusKm as 10 | 15) || 15);
                           setShowAddressForm(true);
                         }}
                         className="bg-indigo-50 border border-indigo-200/50 p-3 rounded-xl flex-row justify-center items-center mt-2"
