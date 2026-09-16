@@ -14,10 +14,43 @@ import { Database } from '../database/Database';
 import { supabase } from '../database/supabaseClient';
 import { OTPService } from '../services/OTPService';
 import Constants from 'expo-constants';
+import * as WebBrowser from 'expo-web-browser';
+import { LegalWebViewModal } from '../components/LegalWebViewModal';
 
 export default function GetStartedScreen() {
   const insets = useSafeAreaInsets();
   const { setLoggedIn, setCompletedOnboarding, setRole, updateProfile } = useUserStore();
+
+  const [legalModalVisible, setLegalModalVisible] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<'terms' | 'privacy'>('terms');
+
+  const handleOpenTerms = () => {
+    setLegalModalTab('terms');
+    setLegalModalVisible(true);
+  };
+
+  const handleOpenPrivacy = () => {
+    setLegalModalTab('privacy');
+    setLegalModalVisible(true);
+  };
+
+  const handleOpenWeb = async (url: string) => {
+    try {
+      await WebBrowser.openBrowserAsync(url, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+        toolbarColor: '#FFFFFF',
+        controlsColor: '#E11D48',
+        showTitle: true,
+        enableBarCollapsing: false,
+        showInRecents: false,
+        createTask: false,
+        dismissButtonStyle: 'close',
+      });
+    } catch (err) {
+      console.error('Failed to open in-app webview:', err);
+      router.push('/legal-center');
+    }
+  };
 
   const [showMobileForm, setShowMobileForm] = useState(true);
   const [name, setName] = useState('');
@@ -36,6 +69,8 @@ export default function GetStartedScreen() {
   const [isOtpSuccessAnimating, setIsOtpSuccessAnimating] = useState(false);
   const [authenticatedUserName, setAuthenticatedUserName] = useState('');
   const spinAnim = useRef(new Animated.Value(0)).current;
+  const logoPulseAnim = useRef(new Animated.Value(0)).current;
+  const bgAuraAnim = useRef(new Animated.Value(0)).current;
   const otpInputRef = useRef<TextInput>(null);
 
   // New user onboarding setup states
@@ -98,6 +133,51 @@ export default function GetStartedScreen() {
       }
     };
     checkResumeState();
+  }, []);
+
+  // Ambient background and VIRLA logo breathing animation
+  useEffect(() => {
+    const isNative = Platform.OS !== 'web';
+
+    const bgLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bgAuraAnim, {
+          toValue: 1,
+          duration: 4000,
+          useNativeDriver: isNative,
+        }),
+        Animated.timing(bgAuraAnim, {
+          toValue: 0,
+          duration: 4000,
+          useNativeDriver: isNative,
+        }),
+      ])
+    );
+
+    const logoLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(logoPulseAnim, {
+          toValue: 1,
+          duration: 2400,
+          useNativeDriver: isNative,
+        }),
+        Animated.timing(logoPulseAnim, {
+          toValue: 0,
+          duration: 2400,
+          useNativeDriver: isNative,
+        }),
+      ])
+    );
+
+    bgLoop.start();
+    logoLoop.start();
+
+    return () => {
+      bgLoop.stop();
+      logoLoop.stop();
+      bgAuraAnim.stopAnimation();
+      logoPulseAnim.stopAnimation();
+    };
   }, []);
 
   // Track retry countdown
@@ -540,6 +620,24 @@ export default function GetStartedScreen() {
     }
   };
 
+  const bgScale = bgAuraAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.06],
+  });
+  const bgOpacity = bgAuraAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.82, 1],
+  });
+
+  const logoScale = logoPulseAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [1, 1.035, 1],
+  });
+  const logoOpacity = logoPulseAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.93, 1, 0.93],
+  });
+
   return (
     <TouchableWithoutFeedback onPress={Platform.OS === 'web' ? undefined : Keyboard.dismiss}>
       <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 16) }}>
@@ -547,21 +645,43 @@ export default function GetStartedScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="flex-1"
         >
-          {/* Background Luxury Glowing Aura */}
-          <View className="absolute top-0 left-0 right-0 h-[45%] overflow-hidden" pointerEvents="none">
-            <Svg width="100%" height="100%" viewBox="0 0 360 300" fill="none">
+          {/* Background Luxury Glowing Aura (Full Screen Ambient Pulse) */}
+          <Animated.View 
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              overflow: 'hidden',
+              opacity: bgOpacity,
+              transform: [{ scale: bgScale }],
+            }} 
+            pointerEvents="none"
+          >
+            <Svg width="100%" height="100%" viewBox="0 0 360 800" fill="none" preserveAspectRatio="xMidYMid slice">
               <Defs>
-                <LinearGradient id="auraGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <Stop offset="0%" stopColor="#4F46E5" stopOpacity="0.12" />
-                  <Stop offset="50%" stopColor="#6D5EF7" stopOpacity="0.06" />
+                <LinearGradient id="auraGradTop" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <Stop offset="0%" stopColor="#4F46E5" stopOpacity="0.14" />
+                  <Stop offset="50%" stopColor="#6D5EF7" stopOpacity="0.07" />
                   <Stop offset="100%" stopColor="#F5B942" stopOpacity="0.0" />
                 </LinearGradient>
+                <LinearGradient id="auraGradBottom" x1="100%" y1="100%" x2="0%" y2="0%">
+                  <Stop offset="0%" stopColor="#E11D48" stopOpacity="0.09" />
+                  <Stop offset="45%" stopColor="#6D5EF7" stopOpacity="0.05" />
+                  <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.0" />
+                </LinearGradient>
               </Defs>
-              <Circle cx={180} cy={60} r={220} fill="url(#auraGrad)" />
+              {/* Top ambient orb */}
+              <Circle cx={180} cy={70} r={230} fill="url(#auraGradTop)" />
               <Path d="M0 180 Q180 120 360 180" stroke="white" strokeWidth={2} opacity={0.3} />
               <Path d="M0 210 Q180 160 360 210" stroke="white" strokeWidth={1} opacity={0.15} />
+
+              {/* Mid/Bottom ambient glowing orbs covering full background */}
+              <Circle cx={310} cy={520} r={190} fill="url(#auraGradBottom)" />
+              <Circle cx={50} cy={720} r={210} fill="url(#auraGradTop)" opacity={0.7} />
             </Svg>
-          </View>
+          </Animated.View>
 
           <ScrollView
             showsVerticalScrollIndicator={false}
@@ -569,9 +689,16 @@ export default function GetStartedScreen() {
             contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 24 }}
             className="flex-1 z-10"
           >
-            {/* Top Header Logo */}
+            {/* Top Header Logo with Animated Breathing Glow */}
             <View className="items-center mt-6">
-              <AppLogo size="large" />
+              <Animated.View
+                style={{
+                  transform: [{ scale: logoScale }],
+                  opacity: logoOpacity,
+                }}
+              >
+                <AppLogo size="large" />
+              </Animated.View>
               <Heading className="mt-8 mb-2">
                 {newUserIdToRegister !== null
                   ? (setupStep === 0 ? 'Welcome!' : `Welcome back, ${tempUserObj?.name && tempUserObj.name !== 'Complete your profile' ? tempUserObj.name.split(' ')[0] : 'User'}!`)
@@ -929,13 +1056,30 @@ export default function GetStartedScreen() {
             <View className="px-4">
               <Text className="text-[12px] text-zinc-400 text-center leading-relaxed">
                 By continuing, you agree to VIRLA&apos;s{'\n'}
-                <Text className="text-zinc-500 font-extrabold underline">Terms of Service</Text>
+                <Text
+                  onPress={handleOpenTerms}
+                  className="text-zinc-500 font-extrabold underline active:opacity-60"
+                >
+                  Terms of Service
+                </Text>
                 {'  '}&{'  '}
-                <Text className="text-zinc-500 font-extrabold underline">Privacy Policy</Text>
+                <Text
+                  onPress={handleOpenPrivacy}
+                  className="text-zinc-500 font-extrabold underline active:opacity-60"
+                >
+                  Privacy Policy
+                </Text>
               </Text>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
+
+        {/* In-App Zepto-Style Legal WebView Modal */}
+        <LegalWebViewModal
+          visible={legalModalVisible}
+          initialTab={legalModalTab}
+          onClose={() => setLegalModalVisible(false)}
+        />
       </View>
     </TouchableWithoutFeedback>
   );

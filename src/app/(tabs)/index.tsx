@@ -19,6 +19,8 @@ import { useWorkoutStore } from '../../store/workoutStore';
 import { useWalletStore } from '../../store/walletStore';
 import { Database, getCurrentServerTime, getISTDateInfo, isSessionGenuinelyActive } from '../../database/Database';
 import { AddPartnerModal } from '../../components/AddPartnerModal';
+import { CommunicationCenterModal } from '../../components/CommunicationCenterModal';
+import { TrainerStatusModal } from '../../components/TrainerStatusModal';
 import { supabase } from '../../database/supabaseClient';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { useAIWellnessStore } from '../../store/aiWellnessStore';
@@ -329,6 +331,9 @@ export default function HomeScreen() {
 
   const [partnerModalVisible, setPartnerModalVisible] = useState(false);
   const [activePartnerBookingId, setActivePartnerBookingId] = useState('');
+  const [communicationModalVisible, setCommunicationModalVisible] = useState(false);
+  const [trainerStatusModalVisible, setTrainerStatusModalVisible] = useState(false);
+  const [pendingStatusTarget, setPendingStatusTarget] = useState<'online' | 'offline'>('offline');
 
   const handleHiddenAdminAccess = async () => {
     const userId = Database.getCurrentUserId();
@@ -676,38 +681,30 @@ export default function HomeScreen() {
   const toggleOnlineStatus = () => {
     if (!currentCoach) return;
     const nextOnline = !(currentCoach.preferences?.online);
+    const target = nextOnline ? 'online' : 'offline';
+    setPendingStatusTarget(target);
+    setTrainerStatusModalVisible(true);
+  };
 
-    const performToggle = () => {
-      const nextStatus = nextOnline ? 'online' : 'offline';
-      setTrainerOnlineStatus(nextStatus);
+  const handleConfirmTrainerStatus = () => {
+    if (!currentCoach) return;
+    const isNextOnline = pendingStatusTarget === 'online';
+    setTrainerOnlineStatus(pendingStatusTarget);
 
-      Database.updateTrainerOnlineStatus(currentCoach.id, nextOnline);
-      useCoachStore.getState().syncFromDB();
+    Database.updateTrainerOnlineStatus(currentCoach.id, isNextOnline);
+    useCoachStore.getState().syncFromDB();
 
-      // Immediately revoke pending requests assigned to this coach when going offline
-      if (!nextOnline) {
-        const pendingRequests = bookings.filter(b => 
-          (b.trainerId === currentCoach.id || b.trainerName === currentCoach.name) && 
-          b.timelineStatus === 'booked'
-        );
-        for (const req of pendingRequests) {
-          reassignTrainer(req.id, 'timeout');
-        }
-      }
-    };
-
-    if (!nextOnline) {
-      Alert.alert(
-        'Go Offline?',
-        'Going offline may prevent you from receiving new session requests.\n\nYour already confirmed bookings will remain subject to VIRLA\'s existing booking rules.',
-        [
-          { text: 'CANCEL', style: 'cancel' },
-          { text: 'GO OFFLINE', style: 'destructive', onPress: performToggle }
-        ]
+    // Immediately revoke pending requests assigned to this coach when going offline
+    if (!isNextOnline) {
+      const pendingRequests = bookings.filter(b => 
+        (b.trainerId === currentCoach.id || b.trainerName === currentCoach.name) && 
+        b.timelineStatus === 'booked'
       );
-    } else {
-      performToggle();
+      for (const req of pendingRequests) {
+        reassignTrainer(req.id, 'timeout');
+      }
     }
+    setTrainerStatusModalVisible(false);
   };
 
   const getMinutesToSession = (job: Booking): number => {
@@ -967,26 +964,9 @@ export default function HomeScreen() {
   };
 
   const handleCommunicationCenter = () => {
-    Alert.alert(
-      'Communication Center',
-      'Select a destination to open:',
-      [
-        {
-          text: 'Notifications Center',
-          onPress: () => router.push('/notifications' as any),
-        },
-        {
-          text: 'Messages (Chats)',
-          onPress: () => router.push('/(tabs)/messages' as any),
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ],
-      { cancelable: true }
-    );
+    setCommunicationModalVisible(true);
   };
+
 
   const handleTrainerJobClick = (bookingId: string, currentTimeline: string) => {
     if (currentTimeline === 'confirmed') {
@@ -1084,30 +1064,69 @@ export default function HomeScreen() {
         <View className="flex-1 bg-[#FCF5F5]">
           {activeBooking && (role === 'customer' || role === 'admin') && (
             <TouchableOpacity
-              activeOpacity={0.9}
+              activeOpacity={0.88}
               onPress={() => router.push({ pathname: '/session-detail' as any, params: { id: activeBooking.id } })}
-              className="mx-6 mt-3 mb-1 p-3.5 bg-indigo-950 border border-indigo-900 rounded-2xl flex-row items-center justify-between shadow-md"
+              className="mx-6 mt-3 mb-2 bg-zinc-950 border border-zinc-800 rounded-[22px] flex-row items-center justify-between p-4 shadow-lg"
+              style={{
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.18,
+                shadowRadius: 10,
+                elevation: 4,
+              }}
             >
-              <View className="flex-row items-center gap-3 flex-1">
-                <View className="w-2 h-2 rounded-full bg-rose-500" />
+              <View className="flex-row items-center gap-3.5 flex-1 pr-2">
+                {/* Glowing Live Radar Dot */}
+                <View className="w-8 h-8 rounded-full items-center justify-center" style={{ backgroundColor: 'rgba(225, 29, 72, 0.15)' }}>
+                  <View 
+                    className="w-3 h-3 rounded-full bg-[#E11D48]"
+                    style={{
+                      shadowColor: '#E11D48',
+                      shadowOffset: { width: 0, height: 0 },
+                      shadowOpacity: 0.9,
+                      shadowRadius: 6,
+                      elevation: 3,
+                    }}
+                  />
+                </View>
+
                 <View className="flex-1">
-                  <Text className="text-indigo-250 text-[8px] font-black uppercase tracking-wider">Live Concierge Update</Text>
-                  <Text className="text-white text-[11px] font-extrabold mt-0.5" numberOfLines={1}>
-                    {activeBooking.timelineStatus === 'booked' && 'Your session is booked & confirmed. Trainer details will be shared soon.'}
-                    {activeBooking.timelineStatus === 'trainer_assigned' && 'Your session is booked & confirmed. Trainer details will be shared soon.'}
+                  <View className="flex-row items-center gap-2">
+                    <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">
+                      Live Concierge Update
+                    </Text>
+                    <View 
+                      className="px-2 py-0.5 rounded-full"
+                      style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)' }}
+                    >
+                      <Text className="text-emerald-300 text-[9px] font-extrabold uppercase tracking-wider">
+                        Active
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text className="text-white text-[13px] font-bold mt-1 leading-5" numberOfLines={2}>
+                    {activeBooking.timelineStatus === 'booked' && 'Your session is booked & confirmed. Coach details will be shared soon.'}
+                    {activeBooking.timelineStatus === 'trainer_assigned' && 'Your session is booked & confirmed. Coach details will be shared soon.'}
                     {activeBooking.timelineStatus === 'trainer_accepted' && `Coach ${activeBooking.trainerName} accepted your booking`}
                     {activeBooking.timelineStatus === 'trainer_preparing' && `Coach ${activeBooking.trainerName} is preparing your session gear`}
                     {activeBooking.timelineStatus === 'trainer_travelling' && `Coach ${activeBooking.trainerName} is on the way`}
                     {activeBooking.timelineStatus === 'trainer_arrived' && `Coach ${activeBooking.trainerName} has arrived at your gate!`}
-                    {activeBooking.timelineStatus === 'otp_verified' && `Check-in Verified. Starting workout.`}
-                    {activeBooking.timelineStatus === 'workout_started' && `Workout in progress (active session)`}
-                    {activeBooking.timelineStatus === 'workout_completed' && `Workout complete! Submit rating feedback.`}
-                    {activeBooking.timelineStatus === 'trainer_report_submitted' && `Report submitted. Rate your session.`}
-                    {activeBooking.timelineStatus === 'customer_review_pending' && `Rating review pending.`}
+                    {activeBooking.timelineStatus === 'otp_verified' && 'Check-in Verified. Starting workout.'}
+                    {activeBooking.timelineStatus === 'workout_started' && 'Workout in progress (active session)'}
+                    {activeBooking.timelineStatus === 'workout_completed' && 'Workout complete! Tap to submit feedback.'}
+                    {activeBooking.timelineStatus === 'trainer_report_submitted' && 'Session report submitted. Rate your workout.'}
+                    {activeBooking.timelineStatus === 'customer_review_pending' && 'Rating review pending. Share your experience.'}
                   </Text>
                 </View>
               </View>
-              <Feather name="chevron-right" size={14} color="#A5B4FC" />
+
+              <View 
+                className="w-8 h-8 rounded-full items-center justify-center"
+                style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+              >
+                <Feather name="chevron-right" size={16} color="#FFFFFF" />
+              </View>
             </TouchableOpacity>
           )}
 
@@ -2319,6 +2338,25 @@ export default function HomeScreen() {
           setPartnerModalVisible(false);
           useBookingStore.getState().syncFromDB();
         }}
+      />
+      <CommunicationCenterModal
+        visible={communicationModalVisible}
+        onClose={() => setCommunicationModalVisible(false)}
+        unreadCount={unreadCount}
+        onSelectNotifications={() => {
+          setCommunicationModalVisible(false);
+          router.push('/notifications' as any);
+        }}
+        onSelectMessages={() => {
+          setCommunicationModalVisible(false);
+          router.push('/(tabs)/messages' as any);
+        }}
+      />
+      <TrainerStatusModal
+        visible={trainerStatusModalVisible}
+        targetStatus={pendingStatusTarget}
+        onClose={() => setTrainerStatusModalVisible(false)}
+        onConfirm={handleConfirmTrainerStatus}
       />
     </SafeAreaViewWrapper>
   );

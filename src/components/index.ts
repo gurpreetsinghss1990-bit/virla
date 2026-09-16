@@ -25,3 +25,7 @@ export * from './ApplePayConfirmation';
 export * from './SkeletonLoader';
 export * from './LuxuryCard';
 export * from './BookingSuccessAnimation';
+export * from './CommunicationCenterModal';
+export * from './TrainerStatusModal';
+export * from './SignOutConfirmationModal';
+export * from './LegalWebViewModal';

@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUserStore } from '../store/userStore';
 
 const { width: windowWidth } = Dimensions.get('window');
@@ -12,7 +13,11 @@ const TAB_BAR_WIDTH = windowWidth - CONTAINER_MARGIN - CONTAINER_PADDING;
 
 export function BottomNavigation({ state, descriptors, navigation }: any) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { role } = useUserStore();
+
+  // Prevent collision with Android 3-button navigation bar (~48dp) or iOS home indicator (~34dp)
+  const bottomOffset = Math.max(insets.bottom + 8, 24);
 
   // Filter out messages from the visible routes
   const visibleRoutes = state.routes.filter((route: any) => route.name !== 'messages');
@@ -88,12 +93,13 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
 
   return (
     <View
-      className="absolute bottom-6 left-6 right-6 border rounded-[32px] flex-row items-center py-3.5 px-1.5"
+      className="absolute left-6 right-6 border rounded-[32px] flex-row items-center py-3 px-1.5"
       style={[
         styles.navBar,
         {
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          borderColor: 'rgba(255, 255, 255, 0.8)',
+          bottom: bottomOffset,
+          backgroundColor: '#FFFFFF',
+          borderColor: '#F1F5F9',
         }
       ]}
     >
@@ -130,7 +136,7 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
             activeOpacity={0.8}
             onPress={onPress}
             className="items-center justify-center flex-1 py-1 z-10 relative px-0.5"
-            style={{ minHeight: 44 }} // Apple HIG touch target
+            style={{ minHeight: 44, zIndex: 10 }} // Apple HIG touch target
           >
             {/* Icon Wrapper */}
             <View className="w-8 h-8 items-center justify-center mb-0.5 relative">
@@ -158,7 +164,6 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
                   onPress={() => router.push('/booking' as any)}
                   className="w-12 h-12 rounded-full bg-[#E11D48] items-center justify-center"
                   style={{
-                    marginTop: -18,
                     minHeight: 48,
                     minWidth: 48,
                     shadowColor: '#E11D48',
@@ -184,22 +189,22 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
 
 const styles = StyleSheet.create({
   navBar: {
-    shadowColor: '#101828',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 8,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 12,
   },
   activePill: {
     position: 'absolute',
     left: 6,
-    top: '50%',
-    marginTop: -21, // half of height 42
-    height: 42,
-    backgroundColor: 'rgba(225, 29, 72, 0.06)', // Soft rose brand tint
-    borderRadius: 21,
+    top: 6,
+    bottom: 6,
+    backgroundColor: '#FFF1F2', // Rose-50 solid brand pill
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(225, 29, 72, 0.1)',
+    borderColor: '#FFE4E6', // Rose-100 soft border
+    zIndex: 0,
   }
 });
 

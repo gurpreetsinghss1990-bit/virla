@@ -395,6 +395,37 @@ export default function SessionDetailScreen() {
     'session_closed'
   ];
 
+  const getStageMeta = (stage: string) => {
+    switch (stage) {
+      case 'booked':
+        return { title: 'Booking Confirmed', desc: 'Appointment locked in system', icon: 'check-circle' as const };
+      case 'trainer_assigned':
+        return { title: 'Coach Matched', desc: 'Top specialist dedicated to session', icon: 'user' as const };
+      case 'trainer_accepted':
+        return { title: 'Coach Accepted', desc: 'Trainer confirmed your workout request', icon: 'shield' as const };
+      case 'trainer_preparing':
+        return { title: 'Equipment Prepared', desc: 'Sanitized training gear packed', icon: 'package' as const };
+      case 'trainer_travelling':
+        return { title: 'Coach En Route', desc: 'Travelling to your destination', icon: 'navigation' as const };
+      case 'trainer_arrived':
+        return { title: 'Coach Arrived', desc: 'Waiting outside gate for check-in', icon: 'map-pin' as const };
+      case 'otp_verified':
+        return { title: 'Identity Verified', desc: 'Secure security check-in complete', icon: 'key' as const };
+      case 'workout_started':
+        return { title: 'Active Workout', desc: 'Warmup & conditioning underway', icon: 'activity' as const };
+      case 'workout_completed':
+        return { title: 'Workout Finished', desc: 'Session goals achieved', icon: 'award' as const };
+      case 'trainer_report_submitted':
+        return { title: 'Coach Summary Filed', desc: 'Trainer logged workout stats', icon: 'file-text' as const };
+      case 'customer_review_pending':
+        return { title: 'Client Feedback', desc: 'Rate your trainer & experience', icon: 'star' as const };
+      case 'session_closed':
+        return { title: 'Pass Completed', desc: 'All records archived successfully', icon: 'check' as const };
+      default:
+        return { title: stage.replace(/_/g, ' '), desc: '', icon: 'circle' as const };
+    }
+  };
+
   // Interpolate coordinates along the polyline path
   const trainerCoords = useMemo(() => {
     if (currentStatus !== 'trainer_travelling') {
@@ -1017,196 +1048,215 @@ export default function SessionDetailScreen() {
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
           <Ionicons name="arrow-back" size={20} color="#101828" />
         </TouchableOpacity>
-        <Text className="text-[#101828] text-xs font-black uppercase tracking-widest">
+        <Text className="text-[#101828] text-base font-extrabold uppercase tracking-wider">
           {role === 'trainer' ? 'Coach Console' : 'Premium Concierge Pass'}
         </Text>
-        <TouchableOpacity onPress={handleSOS} className="bg-red-50 px-3.5 py-1.5 rounded-full border border-red-100">
-          <Text className="text-red-600 text-[8px] font-black uppercase tracking-wider">SOS Support</Text>
+        <TouchableOpacity onPress={handleSOS} className="bg-red-50 px-3.5 py-1.5 rounded-full border border-red-200">
+          <Text className="text-red-600 text-xs font-bold uppercase tracking-wider">SOS Support</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Developer Push Simulator (Floating Top Tray) */}
-      <View className="bg-zinc-950 p-3.5 border-b border-zinc-800 gap-2">
-        <Text className="text-amber-500 text-[8px] font-black uppercase tracking-wider pl-2.5">Developer Push Simulator</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-2 pl-2">
-          {currentStatus === 'trainer_assigned' && role === 'trainer' && (
+      {/* Developer Push Simulator (Only for trainer during development) */}
+      {__DEV__ && role === 'trainer' && (
+        <View className="bg-zinc-950 p-3.5 border-b border-zinc-800 gap-2">
+          <Text className="text-amber-500 text-xs font-bold uppercase tracking-wider pl-2.5">Developer Push Simulator</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-2 pl-2">
+            {currentStatus === 'trainer_assigned' && role === 'trainer' && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={async () => {
+                  try {
+                    await updateTimelineStatus(booking.id, 'trainer_accepted');
+                  } catch (e: any) {
+                    Alert.alert('Simulation Error', e.message);
+                  }
+                }}
+                className="px-3.5 py-1.5 bg-indigo-600 rounded-xl"
+              >
+                <Text className="text-white text-xs font-bold uppercase">Simulate Accept</Text>
+              </TouchableOpacity>
+            )}
+
+            {currentStatus === 'trainer_accepted' && role === 'trainer' && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={async () => {
+                  try {
+                    await updateTimelineStatus(booking.id, 'trainer_preparing');
+                  } catch (e: any) {
+                    Alert.alert('Simulation Error', e.message);
+                  }
+                }}
+                className="px-3.5 py-1.5 bg-indigo-600 rounded-xl"
+              >
+                <Text className="text-white text-xs font-bold uppercase">Simulate Prep Gear</Text>
+              </TouchableOpacity>
+            )}
+
+            {currentStatus === 'trainer_preparing' && role === 'trainer' && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={startTravelSimulation}
+                className="px-3.5 py-1.5 bg-green-600 rounded-xl"
+              >
+                <Text className="text-white text-xs font-bold uppercase">Simulate Start Journey</Text>
+              </TouchableOpacity>
+            )}
+
+            {currentStatus === 'trainer_travelling' && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={async () => {
+                  if (simIntervalId) clearInterval(simIntervalId);
+                  setJourneyProgress(1.0);
+                  try {
+                    await updateTimelineStatus(booking.id, 'trainer_arrived');
+                  } catch (e: any) {
+                    Alert.alert('Simulation Error', e.message);
+                  }
+                }}
+                className="px-3.5 py-1.5 bg-green-600 rounded-xl"
+              >
+                <Text className="text-white text-xs font-bold uppercase">Skip to Arrived</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={async () => {
-                try {
-                  await updateTimelineStatus(booking.id, 'trainer_accepted');
-                } catch (e: any) {
-                  Alert.alert('Simulation Error', e.message);
-                }
-              }}
-              className="px-3.5 py-1.5 bg-indigo-600 rounded-xl"
+              onPress={() => triggerClientNoShow(booking.id)}
+              className="px-3.5 py-1.5 bg-rose-600 rounded-xl"
             >
-              <Text className="text-white text-[7px] font-black uppercase">Simulate Accept</Text>
+              <Text className="text-white text-xs font-bold uppercase">Client No-Show</Text>
             </TouchableOpacity>
-          )}
 
-          {currentStatus === 'trainer_accepted' && role === 'trainer' && (
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={async () => {
-                try {
-                  await updateTimelineStatus(booking.id, 'trainer_preparing');
-                } catch (e: any) {
-                  Alert.alert('Simulation Error', e.message);
-                }
-              }}
-              className="px-3.5 py-1.5 bg-indigo-600 rounded-xl"
+              onPress={() => triggerTrainerNoShow(booking.id)}
+              className="px-3.5 py-1.5 bg-rose-600 rounded-xl"
             >
-              <Text className="text-white text-[7px] font-black uppercase">Simulate Prep Gear</Text>
+              <Text className="text-white text-xs font-bold uppercase">Trainer No-Show</Text>
             </TouchableOpacity>
-          )}
-
-          {currentStatus === 'trainer_preparing' && role === 'trainer' && (
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={startTravelSimulation}
-              className="px-3.5 py-1.5 bg-green-600 rounded-xl"
-            >
-              <Text className="text-white text-[7px] font-black uppercase">Simulate Start Journey</Text>
-            </TouchableOpacity>
-          )}
-
-          {currentStatus === 'trainer_travelling' && (
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={async () => {
-                if (simIntervalId) clearInterval(simIntervalId);
-                setJourneyProgress(1.0);
-                try {
-                  await updateTimelineStatus(booking.id, 'trainer_arrived');
-                } catch (e: any) {
-                  Alert.alert('Simulation Error', e.message);
-                }
-              }}
-              className="px-3.5 py-1.5 bg-green-600 rounded-xl"
-            >
-              <Text className="text-white text-[7px] font-black uppercase">Skip to Arrived</Text>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => triggerClientNoShow(booking.id)}
-            className="px-3.5 py-1.5 bg-rose-600 rounded-xl"
-          >
-            <Text className="text-white text-[7px] font-black uppercase">Client No-Show</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => triggerTrainerNoShow(booking.id)}
-            className="px-3.5 py-1.5 bg-rose-600 rounded-xl"
-          >
-            <Text className="text-white text-[7px] font-black uppercase">Trainer No-Show</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
+          </ScrollView>
+        </View>
+      )}
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
         <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-5" contentContainerStyle={{ paddingBottom: 100 }}>
           <View className="gap-5">
 
             {/* Stage Banner Overlay */}
-            <View className="bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-sm flex-row items-center gap-3">
-              <View className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-              <View className="flex-1">
-                <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Active Concierge Status</Text>
-                <Text className="text-[#101828] text-sm font-black mt-0.5">{getStatusText(currentStatus)}</Text>
-                {role === 'customer' && !isAccepted && (
-                  <Text className="text-zinc-500 text-[10px] font-medium mt-1 leading-normal">
-                    Your session has been successfully booked. Trainer details will be shared soon.
-                  </Text>
-                )}
+            <View className="bg-zinc-950 border border-zinc-800 p-5 rounded-[26px] shadow-md gap-2.5">
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center gap-2.5">
+                  <View className="w-2.5 h-2.5 rounded-full bg-[#E11D48]" />
+                  <Text className="text-rose-400 text-xs font-black uppercase tracking-wider">Live Concierge Status</Text>
+                </View>
+                <View className="bg-zinc-900 border border-zinc-800 px-2.5 py-0.5 rounded-full">
+                  <Text className="text-emerald-400 text-[10px] font-extrabold uppercase tracking-wider">Live Active</Text>
+                </View>
               </View>
+              <Text className="text-white text-xl font-black tracking-tight">{getStatusText(currentStatus)}</Text>
+              {role === 'customer' && !isAccepted && (
+                <Text className="text-zinc-400 text-xs font-medium leading-5">
+                  Your session has been successfully booked. Sit back while we finalize and confirm your elite coach.
+                </Text>
+              )}
             </View>
 
             {/* Section 2: Booking Summary Card */}
             {(role === 'customer' || role === 'trainer') && (
               <View 
-                className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4"
+                className="bg-white border border-zinc-200/90 p-5 rounded-[28px] shadow-sm gap-4"
                 style={{
                   shadowColor: '#101828',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.02,
-                  shadowRadius: 6,
-                  elevation: 1,
+                  shadowOffset: { width: 0, height: 3 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 8,
+                  elevation: 2,
                 }}
               >
-                <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">Booking Summary</Text>
-                
-                <View className="gap-3">
-                  <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
-                    <Text className="text-[#6B7280] text-xs font-semibold">Workout Type</Text>
-                    <Text className="text-[#101828] text-xs font-extrabold">{getDisplayWorkoutTitle(booking.workoutTitle)}</Text>
+                <View className="flex-row items-center justify-between pb-1 border-b border-zinc-100">
+                  <Text className="text-zinc-950 text-sm font-black uppercase tracking-wider">Session Overview</Text>
+                  <View className="bg-zinc-100 px-2.5 py-0.5 rounded-full">
+                    <Text className="text-zinc-600 text-[10px] font-black uppercase tracking-wider">Verified Booking</Text>
                   </View>
-                  <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
-                    <Text className="text-[#6B7280] text-xs font-semibold">Date</Text>
-                    <Text className="text-[#101828] text-xs font-extrabold">
+                </View>
+                
+                <View className="gap-3.5">
+                  <View className="flex-row justify-between items-center border-b border-zinc-100/80 pb-2.5">
+                    <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Workout Type</Text>
+                    <Text className="text-zinc-950 text-sm font-black">{getDisplayWorkoutTitle(booking.workoutTitle)}</Text>
+                  </View>
+                  <View className="flex-row justify-between items-center border-b border-zinc-100/80 pb-2.5">
+                    <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Date</Text>
+                    <Text className="text-zinc-950 text-sm font-black">
                       {formatToDDMMYYYY(booking.date)}
                     </Text>
                   </View>
-                  <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
-                    <Text className="text-[#6B7280] text-xs font-semibold">Time</Text>
-                    <Text className="text-[#101828] text-xs font-extrabold">{booking.time}</Text>
+                  <View className="flex-row justify-between items-center border-b border-zinc-100/80 pb-2.5">
+                    <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Time</Text>
+                    <Text className="text-zinc-950 text-sm font-black">{booking.time}</Text>
                   </View>
                   {role !== 'trainer' && (
-                    <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
-                      <Text className="text-[#6B7280] text-xs font-semibold">Duration</Text>
-                      <Text className="text-[#101828] text-xs font-extrabold">{booking.durationMinutes || 60} Mins</Text>
+                    <View className="flex-row justify-between items-center border-b border-zinc-100/80 pb-2.5">
+                      <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Duration</Text>
+                      <Text className="text-zinc-950 text-sm font-black">{booking.durationMinutes || 60} Mins</Text>
                     </View>
                   )}
                   {role === 'trainer' && (
-                    <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
-                      <Text className="text-[#6B7280] text-xs font-semibold">Client Reference</Text>
-                      <Text className="text-[#101828] text-xs font-extrabold">
+                    <View className="flex-row justify-between items-center border-b border-zinc-100/80 pb-2.5">
+                      <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Client Reference</Text>
+                      <Text className="text-zinc-950 text-sm font-black font-mono">
                         {`VIRLA-C${booking.id.slice(-6).toUpperCase()}`}
                       </Text>
                     </View>
                   )}
                   {role === 'trainer' && (
-                    <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
-                      <Text className="text-[#6B7280] text-xs font-semibold">Gender</Text>
-                      <Text className="text-[#101828] text-xs font-extrabold">
+                    <View className="flex-row justify-between items-center border-b border-zinc-100/80 pb-2.5">
+                      <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Gender</Text>
+                      <Text className="text-zinc-950 text-sm font-black">
                         {getClientGender(booking)}
                       </Text>
                     </View>
                   )}
-                  <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
-                    <Text className="text-[#6B7280] text-xs font-semibold">Type</Text>
-                    <Text className="text-[#101828] text-xs font-extrabold">
+                  <View className="flex-row justify-between items-center border-b border-zinc-100/80 pb-2.5">
+                    <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Session Format</Text>
+                    <Text className="text-zinc-950 text-sm font-black">
                       {booking.sessionType === 'COUPLE' ? (role === 'trainer' ? '2-Person Session' : 'Couple Session') : (role === 'trainer' ? 'Solo Session' : 'Solo Session')}
                     </Text>
                   </View>
                   {role !== 'trainer' && (
-                    <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
-                      <Text className="text-[#6B7280] text-xs font-semibold">Trainer Preference</Text>
-                      <Text className="text-[#101828] text-xs font-extrabold">
-                        {booking.preferredCoachId ? 'Favorite Trainer' : 'No Preference'}
+                    <View className="flex-row justify-between items-center border-b border-zinc-100/80 pb-2.5">
+                      <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Coach Match</Text>
+                      <Text className="text-zinc-950 text-sm font-black">
+                        {booking.preferredCoachId ? 'Favorite Trainer' : 'Virla Top Match'}
                       </Text>
                     </View>
                   )}
-                  <View className="flex-row justify-between items-center border-b border-zinc-50 pb-2">
-                    <Text className="text-[#6B7280] text-xs font-semibold">
+                  <View className="flex-row justify-between items-center border-b border-zinc-100/80 pb-2.5">
+                    <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">
                       {role === 'trainer' ? 'Credits' : 'Credits Used'}
                     </Text>
-                    <Text className="text-[#101828] text-xs font-extrabold">
-                      {booking.sessionType === 'COUPLE' 
-                        ? (role === 'trainer' ? '2 CREDITS' : '2 Credits') 
-                        : (role === 'trainer' ? '1 CREDIT' : '1 Credit')}
-                    </Text>
+                    <View className="bg-zinc-100 px-2.5 py-0.5 rounded-md border border-zinc-200">
+                      <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">
+                        {booking.sessionType === 'COUPLE' 
+                          ? (role === 'trainer' ? '2 CREDITS' : '2 Credits') 
+                          : (role === 'trainer' ? '1 CREDIT' : '1 Credit')}
+                      </Text>
+                    </View>
                   </View>
-                  <View className="flex-row justify-between items-start">
-                    <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">Location</Text>
-                    <Text className="text-[#101828] text-xs font-extrabold max-w-[65%] text-right leading-relaxed">
-                      {parsedAddress.flatNumber
-                        ? `${parsedAddress.flatNumber}, ${parsedAddress.buildingName}\n${parsedAddress.addressLine}`
-                        : parsedAddress.addressLine || 'Selected Location'}
-                    </Text>
+                  <View className="flex-row justify-between items-start pt-0.5">
+                    <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider mt-0.5">Location</Text>
+                    <View className="max-w-[65%] items-end">
+                      {parsedAddress.flatNumber || parsedAddress.buildingName ? (
+                        <Text className="text-zinc-950 text-sm font-black text-right">
+                          {[parsedAddress.flatNumber, parsedAddress.buildingName].filter(Boolean).join(', ')}
+                        </Text>
+                      ) : null}
+                      <Text className="text-zinc-600 text-xs font-medium text-right leading-relaxed mt-0.5">
+                        {parsedAddress.addressLine || 'Selected Location'}
+                      </Text>
+                    </View>
                   </View>
                 </View>
               </View>
@@ -1215,22 +1265,22 @@ export default function SessionDetailScreen() {
             {/* Preparation Note Card for Trainer (Accepted view) */}
             {role === 'trainer' && (
               <View 
-                className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm"
+                className="bg-white border border-zinc-200/80 p-5 rounded-[28px] shadow-sm"
                 style={{
                   shadowColor: '#101828',
                   shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.02,
+                  shadowOpacity: 0.04,
                   shadowRadius: 6,
                   elevation: 1,
                 }}
               >
                 <View className="flex-row items-center gap-2.5 mb-3">
                   <View className="w-7 h-7 rounded-full bg-rose-50 items-center justify-center">
-                    <Feather name="file-text" size={13} color="#E11D48" />
+                    <Feather name="file-text" size={14} color="#E11D48" />
                   </View>
-                  <Text className="text-zinc-955 text-xs font-black uppercase tracking-wider">Client Preparation Note</Text>
+                  <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">Client Preparation Note</Text>
                 </View>
-                <Text className="text-zinc-650 text-xs font-semibold leading-relaxed">
+                <Text className="text-zinc-700 text-sm font-medium leading-relaxed">
                   {booking.trainerNote ? booking.trainerNote : 'No preparation notes.'}
                 </Text>
               </View>
@@ -1239,44 +1289,44 @@ export default function SessionDetailScreen() {
             {/* Client One-Brain Assessment Card for Trainer (Accepted view) */}
             {role === 'trainer' && (
               <View 
-                className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm"
+                className="bg-white border border-zinc-200/80 p-5 rounded-[28px] shadow-sm"
                 style={{
                   shadowColor: '#101828',
                   shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.02,
+                  shadowOpacity: 0.04,
                   shadowRadius: 6,
                   elevation: 1,
                 }}
               >
                 <View className="flex-row items-center gap-2.5 mb-3">
                   <View className="w-7 h-7 rounded-full bg-indigo-50 items-center justify-center">
-                    <Feather name="brain" size={13} color="#4F46E5" />
+                    <Feather name="brain" size={14} color="#4F46E5" />
                   </View>
-                  <Text className="text-zinc-955 text-xs font-black uppercase tracking-wider">Client Assessment</Text>
+                  <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">Client Assessment</Text>
                 </View>
                 {loadingAssessments ? (
                   <ActivityIndicator size="small" color="#4F46E5" className="py-2" />
                 ) : assessments.length > 0 ? (
                   <View className="gap-2.5">
-                    <Text className="text-zinc-400 text-[9px] font-black uppercase tracking-widest">
+                    <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">
                       Important client history:
                     </Text>
-                    <Text className="text-zinc-700 text-xs font-semibold leading-relaxed italic">
+                    <Text className="text-zinc-800 text-sm font-semibold leading-relaxed italic">
                       {`"${assessments[0].assessment}"`}
                     </Text>
                     {assessments.length > 1 && (
                       <View className="border-t border-zinc-100 pt-2.5 mt-1">
-                        <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-widest mb-1">
+                        <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-1">
                           Previous notes:
                         </Text>
-                        <Text className="text-zinc-500 text-[11px] font-medium leading-relaxed italic">
+                        <Text className="text-zinc-600 text-xs font-medium leading-relaxed italic">
                           {`"${assessments[1].assessment}"`}
                         </Text>
                       </View>
                     )}
                   </View>
                 ) : (
-                  <Text className="text-zinc-500 text-xs font-semibold italic">
+                  <Text className="text-zinc-500 text-sm font-medium italic">
                     No previous assessment available.
                   </Text>
                 )}
@@ -1287,12 +1337,12 @@ export default function SessionDetailScreen() {
             {role === 'customer' && booking.sessionType === 'SINGLE' && booking.status === 'upcoming' && currentStatus !== 'otp_verified' && currentStatus !== 'workout_started' && currentStatus !== 'workout_completed' && currentStatus !== 'session_closed' && (
               <View className="bg-rose-50/50 border border-rose-100 p-5 rounded-[28px] shadow-sm gap-3 mt-4">
                 <View className="flex-row items-center gap-3">
-                  <View className="w-9 h-9 rounded-full bg-rose-100 items-center justify-center">
-                    <Feather name="users" size={16} color="#E11D48" />
+                  <View className="w-10 h-10 rounded-full bg-rose-100 items-center justify-center">
+                    <Feather name="users" size={18} color="#E11D48" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Train with a friend?</Text>
-                    <Text className="text-zinc-500 text-[10px] font-medium mt-0.5 leading-relaxed">
+                    <Text className="text-zinc-950 text-sm font-bold tracking-tight">Train with a friend?</Text>
+                    <Text className="text-zinc-600 text-xs font-medium mt-0.5 leading-relaxed">
                       Convert this to a 2-person session. Uses 1 additional credit.
                     </Text>
                   </View>
@@ -1302,7 +1352,7 @@ export default function SessionDetailScreen() {
                   onPress={() => setShowPartnerModal(true)}
                   className="w-full bg-[#E11D48] py-3.5 rounded-xl items-center justify-center mt-1"
                 >
-                  <Text className="text-white text-xs font-black uppercase tracking-wider">+ Add Partner</Text>
+                  <Text className="text-white text-sm font-bold uppercase tracking-wider">+ Add Partner</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -1311,13 +1361,13 @@ export default function SessionDetailScreen() {
             {role === 'customer' && booking.sessionType === 'COUPLE' && booking.partnerName && (
               <View className="bg-emerald-50/50 border border-emerald-100 p-5 rounded-[28px] shadow-sm gap-3 mt-4">
                 <View className="flex-row items-center gap-3">
-                  <View className="w-9 h-9 rounded-full bg-emerald-100 items-center justify-center">
-                    <Feather name="users" size={16} color="#10B981" />
+                  <View className="w-10 h-10 rounded-full bg-emerald-100 items-center justify-center">
+                    <Feather name="users" size={18} color="#10B981" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">2-Person Session</Text>
-                    <Text className="text-zinc-500 text-[10px] font-medium mt-0.5 leading-relaxed">
-                      Partner: <Text className="font-extrabold text-zinc-800">{booking.partnerName}</Text> (+91 {booking.partnerPhone})
+                    <Text className="text-zinc-950 text-sm font-bold tracking-tight">2-Person Session</Text>
+                    <Text className="text-zinc-600 text-xs font-medium mt-0.5 leading-relaxed">
+                      Partner: <Text className="font-bold text-zinc-900">{booking.partnerName}</Text> (+91 {booking.partnerPhone})
                     </Text>
                   </View>
                 </View>
@@ -1337,15 +1387,15 @@ export default function SessionDetailScreen() {
             {/* Module 2: Premium Animated SVG Live Map */}
             {(currentStatus === 'trainer_travelling' || currentStatus === 'trainer_arrived') && (
               <View className="bg-slate-950 border border-slate-900 rounded-[28px] overflow-hidden shadow-md">
-                <View className="p-4.5 border-b border-slate-900 flex-row justify-between items-center bg-slate-900/40">
+                <View className="p-4 border-b border-slate-900 flex-row justify-between items-center bg-slate-900/40">
                   <View>
-                    <Text className="text-slate-400 text-[8px] font-black uppercase tracking-wider">Live Tracking Feed</Text>
-                    <Text className="text-white text-xs font-bold mt-0.5">
+                    <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider">Live Tracking Feed</Text>
+                    <Text className="text-white text-sm font-bold mt-0.5">
                       {currentStatus === 'trainer_travelling' ? 'Coach on the way' : 'Coach arrived at your gate'}
                     </Text>
                   </View>
-                  <View className="bg-[#E11D48]/15 px-2.5 py-1 rounded-full border border-[#E11D48]/20">
-                    <Text className="text-[#E11D48] text-[8px] font-black uppercase tracking-wider">LIVE GPS</Text>
+                  <View className="bg-[#E11D48]/15 px-3 py-1 rounded-full border border-[#E11D48]/20">
+                    <Text className="text-[#E11D48] text-xs font-bold uppercase tracking-wider">LIVE GPS</Text>
                   </View>
                 </View>
 
@@ -1362,11 +1412,11 @@ export default function SessionDetailScreen() {
                 {currentStatus === 'trainer_travelling' && (
                   <View className="flex-row divide-x divide-slate-900 border-t border-slate-900 bg-slate-900/20">
                     <View className="flex-1 p-4 items-center">
-                      <Text className="text-slate-500 text-[8px] font-black uppercase tracking-wider">Distance Remaining</Text>
+                      <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider">Distance Remaining</Text>
                       <Text className="text-white text-base font-black mt-0.5">{remainingDistance} km</Text>
                     </View>
                     <View className="flex-1 p-4 items-center">
-                      <Text className="text-slate-500 text-[8px] font-black uppercase tracking-wider">Estimated Arrival</Text>
+                      <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider">Estimated Arrival</Text>
                       <Text className="text-white text-base font-black mt-0.5">~{remainingEta} mins</Text>
                     </View>
                   </View>
@@ -1375,8 +1425,8 @@ export default function SessionDetailScreen() {
                 {/* Arrived Pin Information */}
                 {currentStatus === 'trainer_arrived' && (
                   <View className="p-4 items-center justify-center bg-emerald-950/20 border-t border-emerald-900/30">
-                    <Text className="text-emerald-400 text-[8px] font-black uppercase tracking-wider">📍 VENUE LOCATION</Text>
-                    <Text className="text-white text-xs font-bold mt-0.5">Coach is waiting outside the gate</Text>
+                    <Text className="text-emerald-400 text-xs font-bold uppercase tracking-wider">📍 VENUE LOCATION</Text>
+                    <Text className="text-white text-sm font-bold mt-0.5">Coach is waiting outside the gate</Text>
                   </View>
                 )}
               </View>
@@ -1385,33 +1435,33 @@ export default function SessionDetailScreen() {
             {/* Module 4: Premium Coach Profile Card */}
             {!isPendingDetails && (
               <View 
-                className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4"
+                className="bg-white border border-zinc-200/80 p-5 rounded-[28px] shadow-sm gap-4"
                 style={{
                   shadowColor: '#101828',
                   shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.02,
+                  shadowOpacity: 0.04,
                   shadowRadius: 8,
                   elevation: 2,
                 }}
               >
                 <View className="flex-row gap-4 items-start">
-                  <Image source={{ uri: booking.trainerPhoto }} className="w-14 h-14 rounded-full border border-zinc-150" />
+                  <Image source={{ uri: booking.trainerPhoto }} className="w-14 h-14 rounded-full border border-zinc-200" />
                   <View className="flex-1">
                     <View className="flex-row items-center gap-1.5 flex-wrap">
-                      <Text className="text-zinc-950 text-base font-black">Coach {booking.trainerName}</Text>
-                      <View className="bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 flex-row items-center gap-0.5">
-                        <Feather name="check-circle" size={8} color="#059669" />
-                        <Text className="text-emerald-700 text-[6px] font-black uppercase">Verified Pro</Text>
+                      <Text className="text-zinc-950 text-base font-extrabold">Coach {booking.trainerName}</Text>
+                      <View className="bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100 flex-row items-center gap-1">
+                        <Feather name="check-circle" size={10} color="#059669" />
+                        <Text className="text-emerald-700 text-xs font-bold uppercase">Verified Pro</Text>
                       </View>
                     </View>
-                    <Text className="text-zinc-400 text-[9px] font-black uppercase tracking-wider mt-0.5">
+                    <Text className="text-zinc-500 text-xs font-semibold mt-0.5">
                       {booking.trainerLevel || 'Certified'} Coach • {getDisplayWorkoutTitle(booking.workoutTitle)} Specialist
                     </Text>
                     
                     <View className="flex-row items-center gap-1.5 mt-2 flex-wrap">
-                      <Text className="text-zinc-700 text-[10px] font-semibold bg-zinc-50 border border-zinc-100 px-2 py-0.5 rounded-md">⭐ {booking.trainerRating || 4.9}</Text>
-                      <Text className="text-zinc-700 text-[10px] font-semibold bg-zinc-50 border border-zinc-100 px-2 py-0.5 rounded-md">💼 {booking.trainerCompletedSessions || 154}+ sessions</Text>
-                      <Text className="text-zinc-700 text-[10px] font-semibold bg-zinc-50 border border-zinc-100 px-2 py-0.5 rounded-md">🎯 6+ Years Exp</Text>
+                      <Text className="text-zinc-800 text-xs font-semibold bg-zinc-100/90 border border-zinc-200/60 px-2.5 py-1 rounded-lg">⭐ {booking.trainerRating || 4.9}</Text>
+                      <Text className="text-zinc-800 text-xs font-semibold bg-zinc-100/90 border border-zinc-200/60 px-2.5 py-1 rounded-lg">💼 {booking.trainerCompletedSessions || 154}+ sessions</Text>
+                      <Text className="text-zinc-800 text-xs font-semibold bg-zinc-100/90 border border-zinc-200/60 px-2.5 py-1 rounded-lg">🎯 6+ Years Exp</Text>
                     </View>
                   </View>
                 </View>
@@ -1421,20 +1471,20 @@ export default function SessionDetailScreen() {
                 {/* More Details Layout grid */}
                 <View className="flex-row flex-wrap justify-between gap-y-3.5 px-1">
                   <View className="w-[48%]">
-                    <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Specialties</Text>
-                    <Text className="text-zinc-800 text-[10px] font-bold mt-0.5">{booking.trainerSpeciality || 'Mobility & Core strength'}</Text>
+                    <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Specialties</Text>
+                    <Text className="text-zinc-800 text-xs font-bold mt-1">{booking.trainerSpeciality || 'Mobility & Core strength'}</Text>
                   </View>
                   <View className="w-[48%]">
-                    <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Languages Spoken</Text>
-                    <Text className="text-zinc-800 text-[10px] font-bold mt-0.5">{(booking.trainerLanguages || ['English', 'Hindi', 'Punjabi']).join(', ')}</Text>
+                    <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Languages Spoken</Text>
+                    <Text className="text-zinc-800 text-xs font-bold mt-1">{(booking.trainerLanguages || ['English', 'Hindi', 'Punjabi']).join(', ')}</Text>
                   </View>
                   <View className="w-[48%]">
-                    <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Response Rate</Text>
-                    <Text className="text-zinc-800 text-[10px] font-bold mt-0.5">98% (Quick responder)</Text>
+                    <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Response Rate</Text>
+                    <Text className="text-zinc-800 text-xs font-bold mt-1">98% (Quick responder)</Text>
                   </View>
                   <View className="w-[48%]">
-                    <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Punctuality Score</Text>
-                    <Text className="text-zinc-800 text-[10px] font-bold mt-0.5">99.4% (Always on time)</Text>
+                    <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Punctuality Score</Text>
+                    <Text className="text-zinc-800 text-xs font-bold mt-1">99.4% (Always on time)</Text>
                   </View>
                 </View>
               </View>
@@ -1442,17 +1492,22 @@ export default function SessionDetailScreen() {
 
             {/* Section 6: Secure Communication Module */}
             {role === 'customer' && (
-              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
-                <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">Secure Communication</Text>
+              <View className="gap-3.5 pl-1">
+                <View className="flex-row items-center justify-between pr-2">
+                  <Text className="text-zinc-950 text-sm font-black uppercase tracking-wider">Direct Coach Line</Text>
+                  <View className="bg-zinc-100 px-2.5 py-0.5 rounded-full border border-zinc-200/80">
+                    <Text className="text-zinc-700 text-[10px] font-extrabold uppercase tracking-wider">Encrypted</Text>
+                  </View>
+                </View>
                 
                 <View className="flex-row gap-3">
                   {/* Secure Message */}
                   <TouchableOpacity 
                     onPress={!isAccepted ? () => Alert.alert('Security Lock', 'Waiting for Trainer Acceptance. Secure communications will unlock after a coach confirms.') : handleMessage} 
-                    className="flex-1 bg-zinc-950 py-3.5 rounded-2xl items-center justify-center flex-row gap-2"
+                    className="flex-1 bg-zinc-950 py-4 rounded-2xl items-center justify-center flex-row gap-2.5 shadow-sm border border-zinc-900"
                   >
-                    <Feather name="message-square" size={14} color="white" />
-                    <Text className="text-white text-xs font-bold">Secure Message</Text>
+                    <Feather name="message-square" size={16} color="white" />
+                    <Text className="text-white text-sm font-black tracking-wide">Message Coach</Text>
                   </TouchableOpacity>
 
                   {/* Secure Call */}
@@ -1460,25 +1515,25 @@ export default function SessionDetailScreen() {
                     <TouchableOpacity 
                       onPress={!isAccepted ? () => Alert.alert('Security Lock', 'Waiting for Trainer Acceptance. Secure communications will unlock after a coach confirms.') : (getMinutesToSession() <= 60 ? handleCall : undefined)} 
                       activeOpacity={!isAccepted ? 0.8 : (getMinutesToSession() <= 60 ? 0.8 : 1)}
-                      className={`py-3.5 rounded-2xl items-center justify-center flex-row gap-2 ${
-                        (isAccepted && getMinutesToSession() <= 60) ? 'bg-zinc-950' : 'bg-zinc-100 border border-zinc-200 opacity-60'
+                      className={`py-4 rounded-2xl items-center justify-center flex-row gap-2.5 shadow-sm ${
+                        (isAccepted && getMinutesToSession() <= 60) ? 'bg-zinc-950 border border-zinc-900' : 'bg-zinc-100 border border-zinc-200 opacity-60'
                       }`}
                     >
-                      <Feather name="phone" size={14} color={(isAccepted && getMinutesToSession() <= 60) ? 'white' : '#9CA3AF'} />
-                      <Text className={`text-xs font-bold ${(isAccepted && getMinutesToSession() <= 60) ? 'text-white' : 'text-[#9CA3AF]'}`}>Secure Call</Text>
+                      <Feather name="phone" size={16} color={(isAccepted && getMinutesToSession() <= 60) ? 'white' : '#6B7280'} />
+                      <Text className={`text-sm font-black tracking-wide ${(isAccepted && getMinutesToSession() <= 60) ? 'text-white' : 'text-zinc-500'}`}>Direct Call</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
 
                 {/* Helper text if Call is disabled */}
                 {isAccepted && getMinutesToSession() > 60 && (
-                  <Text className="text-zinc-500 text-[8px] font-semibold text-center mt-0.5 leading-none">
-                    Calling will be available 60 minutes before your session.
+                  <Text className="text-zinc-600 text-xs font-semibold text-center mt-1 leading-relaxed">
+                    Direct calling unlocks 60 minutes before your scheduled session.
                   </Text>
                 )}
                 {!isAccepted && (
-                  <Text className="text-zinc-500 text-[8px] font-semibold text-center mt-0.5 leading-none">
-                    Waiting for trainer to accept request.
+                  <Text className="text-zinc-600 text-xs font-semibold text-center mt-1 leading-relaxed">
+                    Direct communications unlock as soon as your coach accepts the session.
                   </Text>
                 )}
               </View>
@@ -1486,40 +1541,40 @@ export default function SessionDetailScreen() {
 
             {/* Original Module 5 for Trainers */}
             {role !== 'customer' && (
-              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+              <View className="gap-4 pl-1">
                 <View className="flex-row justify-between items-center">
-                  <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">Concierge Controls</Text>
+                  <Text className="text-zinc-950 text-sm font-extrabold uppercase tracking-wider">Concierge Controls</Text>
                 </View>
                 
                 <View className="flex-row justify-between">
                   <TouchableOpacity 
                     onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Communication channel opens 5 hours prior to session.') : handleCall} 
-                    className="w-[30%] bg-zinc-900 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5"
+                    className="w-[30%] bg-zinc-950 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5 shadow-sm"
                   >
-                    <Feather name="phone" size={12} color="white" />
-                    <Text className="text-white text-[8px] font-black uppercase">Call Client</Text>
+                    <Feather name="phone" size={14} color="white" />
+                    <Text className="text-white text-xs font-bold uppercase">Call Client</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity 
                     onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Communication channel opens 5 hours prior to session.') : handleMessage} 
-                    className="w-[30%] bg-zinc-900 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5"
+                    className="w-[30%] bg-zinc-950 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5 shadow-sm"
                   >
-                    <Feather name="message-square" size={12} color="white" />
-                    <Text className="text-white text-[8px] font-black uppercase">Chat Board</Text>
+                    <Feather name="message-square" size={14} color="white" />
+                    <Text className="text-white text-xs font-bold uppercase">Chat Board</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity 
                     onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Live tracking GPS details lock opens 5 hours prior.') : handleShareLocation} 
-                    className="w-[30%] bg-zinc-900 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5"
+                    className="w-[30%] bg-zinc-950 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5 shadow-sm"
                   >
-                    <Feather name="map-pin" size={12} color="white" />
-                    <Text className="text-white text-[8px] font-black uppercase">Share GPS</Text>
+                    <Feather name="map-pin" size={14} color="white" />
+                    <Text className="text-white text-xs font-bold uppercase">Share GPS</Text>
                   </TouchableOpacity>
                 </View>
 
                 {/* Dynamic Concierge Action Buttons */}
                 {role === 'trainer' && (
-                  <View className="border-t border-zinc-100 pt-3.5 mt-1 gap-3">
+                  <View className="gap-3 mt-1">
                     {(currentStatus === 'trainer_accepted' || currentStatus === 'trainer_preparing') && (
                       SessionEngine.isTravelWindowOpen(booking) ? (
                         <TouchableOpacity
@@ -1538,8 +1593,8 @@ export default function SessionDetailScreen() {
                         </TouchableOpacity>
                       ) : (
                         <View className="bg-zinc-950 p-4 rounded-xl items-center justify-center border border-zinc-800">
-                          <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Travel Window Locked</Text>
-                          <Text className="text-zinc-500 text-[8px] font-medium text-center mt-1 leading-normal">
+                          <Text className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Travel Window Locked</Text>
+                          <Text className="text-zinc-500 text-xs font-medium text-center mt-1 leading-normal">
                             You can start travel 25 minutes before the scheduled session.
                           </Text>
                         </View>
@@ -1927,38 +1982,94 @@ export default function SessionDetailScreen() {
             )}
 
             {/* 12-Stage Booking Timeline tracker */}
-            <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
-              <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">Live Tracking timeline</Text>
+            <View className="gap-4 pl-1">
+              <View className="flex-row items-center justify-between pr-2">
+                <View>
+                  <Text className="text-zinc-950 text-base font-black uppercase tracking-wider">Live Concierge Milestones</Text>
+                  <Text className="text-zinc-600 text-xs font-semibold mt-0.5">Real-time status of your appointment</Text>
+                </View>
+                <View className="bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/80 flex-row items-center gap-1.5">
+                  <View className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <Text className="text-emerald-700 text-[10px] font-black uppercase tracking-wider">Live Sync</Text>
+                </View>
+              </View>
               
-              <View className="gap-3.5 pl-2">
+              <View className="gap-0 pl-1 mt-1">
                 {stagesList.map((item, idx) => {
-                  const isActive = currentStatus === item;
-                  const isCompleted = stagesList.indexOf(currentStatus) >= idx;
-                  
+                  const isCurrent = currentStatus === item;
+                  const isCompleted = stagesList.indexOf(currentStatus) > idx;
+                  const isLast = idx === stagesList.length - 1;
+                  const meta = getStageMeta(item);
+
                   return (
-                    <View key={item} className="flex-row items-center gap-3.5">
+                    <View key={item} className="flex-row items-start gap-3.5">
+                      {/* Left icon node and vertical line */}
                       <View className="items-center">
                         <Animated.View
                           style={{
-                            transform: [{ scale: isActive ? pulseScale : 1 }]
+                            transform: [{ scale: isCurrent ? pulseScale : 1 }]
                           }}
-                          className={`w-4 h-4 rounded-full items-center justify-center border ${
+                          className={`w-7 h-7 rounded-full items-center justify-center border-2 ${
                             isCompleted 
-                              ? 'bg-green-500 border-green-500' 
-                              : isActive 
-                              ? 'bg-[#E11D48] border-[#E11D48]' 
+                              ? 'bg-emerald-500 border-emerald-500 shadow-sm' 
+                              : isCurrent 
+                              ? 'bg-[#E11D48] border-rose-300 shadow-md' 
                               : 'border-zinc-300 bg-white'
                           }`}
                         >
-                          {isCompleted && <Feather name="check" size={8} color="white" />}
+                          {isCompleted ? (
+                            <Feather name="check" size={13} color="white" />
+                          ) : isCurrent ? (
+                            <Feather name={meta.icon as any} size={13} color="white" />
+                          ) : (
+                            <Text className="text-zinc-500 text-[10px] font-black">{idx + 1}</Text>
+                          )}
                         </Animated.View>
+
+                        {/* Connector line */}
+                        {!isLast && (
+                          <View 
+                            className={`w-[2px] my-1 ${
+                              isCompleted ? 'bg-emerald-500' : isCurrent ? 'bg-rose-200' : 'bg-zinc-200'
+                            }`}
+                            style={{ height: 28 }}
+                          />
+                        )}
                       </View>
 
-                      <Text className={`text-[10px] font-black capitalize ${
-                        isCompleted ? 'text-zinc-950' : isActive ? 'text-[#E11D48] font-extrabold' : 'text-zinc-400'
-                      }`}>
-                        {item.replace(/_/g, ' ')}
-                      </Text>
+                      {/* Content details */}
+                      <View className="flex-1 pt-0.5 pb-2">
+                        <View className="flex-row items-center justify-between pr-1">
+                          <Text className={`text-sm tracking-tight ${
+                            isCurrent 
+                              ? 'font-black text-[#E11D48]' 
+                              : isCompleted 
+                              ? 'font-bold text-zinc-900' 
+                              : 'font-semibold text-zinc-600'
+                          }`}>
+                            {meta.title}
+                          </Text>
+
+                          {isCurrent && (
+                            <View className="bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                              <Text className="text-rose-600 text-[10px] font-black uppercase tracking-wider">Active</Text>
+                            </View>
+                          )}
+                          {isCompleted && (
+                            <Text className="text-emerald-700 text-xs font-bold">Done</Text>
+                          )}
+                        </View>
+
+                        <Text className={`text-xs mt-0.5 leading-normal ${
+                          isCurrent 
+                            ? 'text-rose-700/90 font-medium' 
+                            : isCompleted 
+                            ? 'text-zinc-600 font-medium' 
+                            : 'text-zinc-500 font-normal'
+                        }`}>
+                          {meta.desc}
+                        </Text>
+                      </View>
                     </View>
                   );
                 })}
