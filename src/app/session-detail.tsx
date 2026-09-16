@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Image, ScrollView, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, Linking, ActivityIndicator, Modal } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
@@ -1042,18 +1043,50 @@ export default function SessionDetailScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8F9FC', paddingTop: insets.top }}>
-      {/* Header */}
-      <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
-        <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#101828" />
-        </TouchableOpacity>
-        <Text className="text-[#101828] text-base font-extrabold uppercase tracking-wider">
-          {role === 'trainer' ? 'Coach Console' : 'Premium Concierge Pass'}
-        </Text>
-        <TouchableOpacity onPress={handleSOS} className="bg-red-50 px-3.5 py-1.5 rounded-full border border-red-200">
-          <Text className="text-red-600 text-xs font-bold uppercase tracking-wider">SOS Support</Text>
-        </TouchableOpacity>
+    <View style={{ flex: 1, backgroundColor: '#F8F9FC' }}>
+      <StatusBar style="dark" />
+      {/* Header extending to the very top */}
+      <View 
+        style={{ paddingTop: insets.top }} 
+        className="bg-white border-b border-zinc-100 shadow-xs"
+      >
+        <View className="h-14 flex-row items-center px-5 justify-between">
+          <TouchableOpacity 
+            onPress={() => router.back()} 
+            activeOpacity={0.7}
+            className="w-9 h-9 items-center justify-center rounded-full bg-zinc-100/80 border border-zinc-200/60"
+          >
+            <Ionicons name="arrow-back" size={18} color="#09090B" />
+          </TouchableOpacity>
+
+          {/* Premium Editorial Header Title */}
+          <View className="items-center flex-1 mx-2">
+            <View className="flex-row items-center gap-1.5">
+              <View className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
+              <Text 
+                style={{ letterSpacing: 2.2 }}
+                className="text-zinc-500 text-[9.5px] font-bold uppercase"
+              >
+                VIRLA CONCIERGE
+              </Text>
+            </View>
+            <Text 
+              numberOfLines={1}
+              className="text-zinc-950 text-base font-extrabold tracking-tight mt-0.5"
+            >
+              {role === 'trainer' ? 'Coach Console' : 'Premium Concierge Pass'}
+            </Text>
+          </View>
+
+          <TouchableOpacity 
+            onPress={handleSOS} 
+            activeOpacity={0.8}
+            className="bg-rose-50 px-3 py-1.5 rounded-full border border-rose-200/90 flex-row items-center gap-1.5"
+          >
+            <View className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+            <Text className="text-rose-700 text-xs font-black uppercase tracking-wider">SOS</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Developer Push Simulator (Only for trainer during development) */}

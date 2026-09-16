@@ -6,6 +6,7 @@ import { useUserProfileStore } from '../store/userProfileStore';
 import { useUserStore } from '../store/userStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { SignOutConfirmationModal } from '../components/SignOutConfirmationModal';
+import { ScreenHeader } from '../components/ScreenHeader';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -28,17 +29,8 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
-      {/* Header */}
-      <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
-        <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#101828" />
-        </TouchableOpacity>
-        <Text className="text-[#101828] text-sm font-black uppercase tracking-wider">
-          System Settings
-        </Text>
-        <View className="w-8" />
-      </View>
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+      <ScreenHeader title="System Settings" category="VIRLA SETTINGS" />
 
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 60 }}>
         <View className="gap-6">

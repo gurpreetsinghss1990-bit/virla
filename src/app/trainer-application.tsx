@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Switch, StyleSheet, Platform, KeyboardAvoidingView, NativeModules, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +7,9 @@ import { Database, TrainerApplication } from '../database/Database';
 import { LuxuryCard } from '../components/LuxuryCard';
 import { useUserProfileStore } from '../store/userProfileStore';
 import { supabase } from '../database/supabaseClient';
+import { PARTNER_POLICY_SECTIONS, PARTNER_POLICIES_DOCUMENT_INFO } from '../constants/partnerPolicies';
+import { PARTNER_TERMS_SECTIONS, PARTNER_TERMS_DOCUMENT_INFO } from '../constants/partnerTerms';
+import { PARTNER_EARNINGS_SECTIONS, PARTNER_EARNINGS_DOCUMENT_INFO, PARTNER_EARNINGS_IMPORTANT_NOTICE } from '../constants/partnerEarnings';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
@@ -60,15 +63,10 @@ export default function TrainerApplicationScreen() {
 
   // Policies Pre-Application Flow
   const [hasAcceptedPolicies, setHasAcceptedPolicies] = useState(false);
-  const [policyPage, setPolicyPage] = useState<1 | 2>(1);
-  const [hasScrolledToBottomPage1, setHasScrolledToBottomPage1] = useState(false);
-  const [hasScrolledToBottomPage2, setHasScrolledToBottomPage2] = useState(false);
-
-  // Policy checkboxes
-  const [checkEarningsPolicy, setCheckEarningsPolicy] = useState(false);
-  const [checkTermsPolicy, setCheckTermsPolicy] = useState(false);
-  const [checkReviewUnderstanding, setCheckReviewUnderstanding] = useState(false);
-  const [checkFollowRules, setCheckFollowRules] = useState(false);
+  const [policyPage, setPolicyPage] = useState<1 | 2 | 3>(1);
+  const [viewingPoliciesOnly, setViewingPoliciesOnly] = useState(false);
+  const [checkEarningsAcceptance, setCheckEarningsAcceptance] = useState(false);
+  const policyScrollViewRef = useRef<ScrollView>(null);
 
   // Captured audit information
   const [acceptedAgreementTimestamp, setAcceptedAgreementTimestamp] = useState('');
@@ -148,7 +146,6 @@ export default function TrainerApplicationScreen() {
           if (app) {
             setAppId(app.id);
             setAppStatus(app.status);
-            setHasAcceptedPolicies(true); // Bypass policies for loaded applications
             setFullName(app.fullName || '');
             setPhone(app.phone || '');
             setEmail(app.email || '');
@@ -234,21 +231,7 @@ export default function TrainerApplicationScreen() {
     }
   };
 
-  const handleScrollPage1 = (event: any) => {
-    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-    const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 30;
-    if (isCloseToBottom) {
-      setHasScrolledToBottomPage1(true);
-    }
-  };
 
-  const handleScrollPage2 = (event: any) => {
-    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-    const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 30;
-    if (isCloseToBottom) {
-      setHasScrolledToBottomPage2(true);
-    }
-  };
 
   const uploadFile = async (docType: 'aadhaar' | 'pan' | 'selfie' | 'certs') => {
     setActiveUploadType(docType);
@@ -566,349 +549,299 @@ export default function TrainerApplicationScreen() {
     }
   };
 
-  // Render Pre-Application Agreement Pages
-  if (appStatus === 'draft' && !hasAcceptedPolicies) {
+  // Render Pre-Application Agreement Pages (Step 1 & Step 2: Policies & Terms)
+  if (!hasAcceptedPolicies || viewingPoliciesOnly) {
     return (
-      <SafeAreaViewWrapper>
-        {/* Header */}
-        <View className="h-16 flex-row items-center px-6 justify-between bg-white border-b border-zinc-150">
+      <SafeAreaViewWrapper bg="#FFFFFF">
+        {/* Header - Full Bleed */}
+        <View className="h-12 flex-row items-center px-4 justify-between bg-white">
           <TouchableOpacity 
             activeOpacity={0.8} 
             onPress={() => {
-              if (policyPage === 2) {
+              if (policyPage === 3) {
+                setPolicyPage(2);
+                policyScrollViewRef.current?.scrollTo({ y: 0, animated: true });
+              } else if (policyPage === 2) {
                 setPolicyPage(1);
+                policyScrollViewRef.current?.scrollTo({ y: 0, animated: true });
+              } else if (viewingPoliciesOnly) {
+                setViewingPoliciesOnly(false);
+              } else if (router.canGoBack()) {
+                router.back();
               } else {
                 router.replace('/(tabs)/profile' as any);
               }
             }} 
-            className="flex-row items-center gap-1"
+            className="w-10 h-10 items-center justify-center rounded-full active:bg-zinc-100"
           >
-            <Feather name="arrow-left" size={16} color="#101828" />
-            <Text className="text-zinc-900 text-xs font-bold uppercase tracking-wider">Back</Text>
+            <Feather name="arrow-left" size={20} color="#101828" />
           </TouchableOpacity>
-          <Text className="text-[#E11D48] text-sm font-black tracking-widest uppercase">Trainer Join</Text>
-          <View className="w-10" />
+          {appStatus !== 'draft' && !viewingPoliciesOnly ? (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setHasAcceptedPolicies(true)}
+              className="px-2 py-1 bg-zinc-100 rounded"
+            >
+              <Text className="text-[10px] text-zinc-700 font-bold uppercase">Status</Text>
+            </TouchableOpacity>
+          ) : (
+            <View className="w-10" />
+          )}
         </View>
 
         {/* Scroll Content */}
         <ScrollView 
-          onScroll={policyPage === 1 ? handleScrollPage1 : handleScrollPage2}
-          scrollEventThrottle={16}
+          ref={policyScrollViewRef}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 140 }}
-          className="flex-1 bg-[#F7F8FC]"
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 4, paddingBottom: 140 }}
+          className="flex-1 bg-white"
         >
-          {/* Step indicator: Step 1 of 3 (Policies -> Application -> Review) */}
-          <View className="mb-6">
-            <Text className="text-[#E11D48] text-xs font-black uppercase tracking-widest">Step 1 of 3: Policies</Text>
-            <Text className="text-[#101828] text-xl font-black mt-1">
-              {policyPage === 1 ? 'Earnings & Partner Program' : 'Terms & Professional Standards'}
-            </Text>
-            <View className="flex-row items-center gap-1.5 mt-3">
-              <View className="h-2 rounded-full flex-1 bg-[#E11D48]" />
-              <View className="h-2 rounded-full flex-1 bg-zinc-200" />
-              <View className="h-2 rounded-full flex-1 bg-zinc-200" />
-            </View>
-          </View>
-
           {policyPage === 1 ? (
-            <View className="gap-5">
-              <Text className="text-[#101828] text-lg font-black tracking-tight leading-snug">
-                Welcome to the VIRLA Partner Coach Program
-              </Text>
-              <Text className="text-zinc-600 text-xs font-semibold leading-relaxed">
-                Thank you for your interest in becoming a VIRLA Partner Coach.
-              </Text>
-              <Text className="text-zinc-600 text-xs leading-relaxed">
-                VIRLA is India&apos;s premium home fitness platform connecting verified fitness professionals with customers seeking high-quality in-home wellness services. We believe in professionalism, transparency, fair earnings, and long-term career growth.
-              </Text>
+            <>
+              {/* Progress Slider (3 Steps) */}
+              <View className="flex-row items-center gap-1.5 mb-6">
+                <View className="h-1.5 rounded-full flex-1 bg-[#E11D48]" />
+                <View className="h-1.5 rounded-full flex-1 bg-zinc-200" />
+                <View className="h-1.5 rounded-full flex-1 bg-zinc-200" />
+              </View>
 
-              <LuxuryCard className="p-5 gap-3.5" interactive={false}>
-                <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider border-b border-zinc-100 pb-2">
-                  Your Journey at VIRLA
+              {/* Official Document Header */}
+              <View className="pb-5 mb-4 border-b border-zinc-200 gap-2">
+                <Text className="text-zinc-500 text-xs font-black tracking-widest uppercase">
+                  {PARTNER_POLICIES_DOCUMENT_INFO.docType}
                 </Text>
-                <Text className="text-zinc-500 text-[11px] leading-relaxed">
-                  Every approved trainer joins as an <Text className="font-extrabold text-zinc-900">Associate Coach</Text>. As you continue delivering excellent service, you may become eligible for promotion to:
+                <Text className="text-zinc-950 text-2xl font-black tracking-tight leading-tight">
+                  {PARTNER_POLICIES_DOCUMENT_INFO.title}
                 </Text>
-                
-                <View className="flex-row items-center gap-2 mt-1">
-                  <View className="px-3 py-1.5 bg-zinc-100 rounded-lg">
-                    <Text className="text-zinc-800 text-[9px] font-black uppercase">Associate Coach</Text>
-                  </View>
-                  <Feather name="arrow-right" size={12} color="#98A2B3" />
-                  <View className="px-3 py-1.5 bg-indigo-50 rounded-lg">
-                    <Text className="text-indigo-700 text-[9px] font-black uppercase">Certified Coach</Text>
-                  </View>
-                  <Feather name="arrow-right" size={12} color="#98A2B3" />
-                  <View className="px-3 py-1.5 bg-amber-50 rounded-lg">
-                    <Text className="text-amber-800 text-[9px] font-black uppercase">Elite Coach</Text>
-                  </View>
+                <Text className="text-zinc-600 text-sm font-semibold">
+                  Version: {PARTNER_POLICIES_DOCUMENT_INFO.version}  |  Applicable To: {PARTNER_POLICIES_DOCUMENT_INFO.applicableTo}
+                </Text>
+              </View>
+
+              {/* Quick Scroll to Bottom Option */}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => policyScrollViewRef.current?.scrollToEnd({ animated: true })}
+                className="flex-row items-center justify-between px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl mb-5"
+              >
+                <View className="flex-row items-center gap-2">
+                  <Feather name="arrow-down-circle" size={16} color="#101828" />
+                  <Text className="text-zinc-900 text-xs font-bold">Scroll to Bottom</Text>
                 </View>
+                <Feather name="chevron-down" size={16} color="#71717A" />
+              </TouchableOpacity>
 
-                <Text className="text-zinc-400 text-[9.5px] leading-normal font-medium italic mt-1">
-                  Promotions are based on performance, attendance, customer ratings, professionalism, and policy compliance. Promotions are reviewed solely by VIRLA and are not guaranteed.
-                </Text>
-              </LuxuryCard>
+              {/* All 61 Sections - Enhanced typography & font size */}
+              <View className="gap-6">
+                {PARTNER_POLICY_SECTIONS.map((sec) => (
+                  <View key={sec.id} className="pb-5 border-b border-zinc-150 gap-2.5">
+                    <Text className="text-zinc-950 text-base font-black uppercase tracking-wide">
+                      {sec.id}. {sec.title}
+                    </Text>
 
-              <LuxuryCard className="p-5 gap-3" interactive={false}>
-                <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider border-b border-zinc-100 pb-2">
-                  How You Earn
-                </Text>
-                <Text className="text-zinc-500 text-[11px] leading-relaxed">
-                  As a VIRLA Partner Coach, your income may include:{"\n"}
-                  • Payment for completed training sessions{"\n"}
-                  • Monthly Fixed Retainer (for eligible Partner Coaches){"\n"}
-                  • Performance incentives{"\n"}
-                  • Peak-hour incentives{"\n"}
-                  • Special campaign bonuses{"\n"}
-                  • Referral rewards (when applicable)
-                </Text>
-                <Text className="text-zinc-400 text-[9.5px] leading-normal font-medium italic">
-                  Actual payout rates are available inside the Trainer Dashboard after approval and may change from time to time.
-                </Text>
-              </LuxuryCard>
-
-              <LuxuryCard className="p-5 gap-3.5" interactive={false}>
-                <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider border-b border-zinc-100 pb-2">
-                  Monthly Fixed Retainer
-                </Text>
-                <Text className="text-zinc-500 text-[11px] leading-relaxed">
-                  Eligible Partner Coaches may receive a Monthly Fixed Retainer in addition to their session earnings. The retainer rewards trainers who consistently maintain their committed availability and service quality.
-                </Text>
-                <Text className="text-zinc-600 text-xs font-bold uppercase mt-1">Retainer Eligibility Requirements:</Text>
-                <Text className="text-zinc-500 text-[11px] leading-relaxed">
-                  • Meeting minimum attendance requirements{"\n"}
-                  • Maintaining committed weekly availability{"\n"}
-                  • Completing accepted sessions professionally{"\n"}
-                  • Following VIRLA Partner Policies{"\n"}
-                  • Maintaining satisfactory customer ratings{"\n"}
-                  • No repeated cancellations or no-shows
-                </Text>
-                <Text className="text-zinc-400 text-[9.5px] leading-normal font-medium italic">
-                  The Monthly Fixed Retainer is performance-based and is not guaranteed. VIRLA may revise eligibility criteria or retainer amounts as the platform evolves.
-                </Text>
-              </LuxuryCard>
-
-              <LuxuryCard className="p-5 gap-3" interactive={false}>
-                <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider border-b border-zinc-100 pb-2">
-                  Weekly Payouts
-                </Text>
-                <Text className="text-zinc-500 text-[11px] leading-relaxed">
-                  Payments are processed on a weekly basis for eligible completed sessions. Bank details are collected only after your application has been approved.
-                </Text>
-              </LuxuryCard>
-
-              <LuxuryCard className="p-5 gap-3" interactive={false}>
-                <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider border-b border-zinc-100 pb-2">
-                  Identity Verification
-                </Text>
-                <Text className="text-zinc-500 text-[11px] leading-relaxed">
-                  To protect both customers and trainers, all applicants must successfully complete identity verification. During your application you will be asked to upload required documents.
-                </Text>
-              </LuxuryCard>
-
-              <View className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl items-center my-2">
-                {!hasScrolledToBottomPage1 ? (
-                  <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest text-center">
-                    ⚠️ Scroll to the bottom to continue
-                  </Text>
-                ) : (
-                  <Text className="text-emerald-700 text-[10px] font-black uppercase tracking-widest text-center">
-                    ✓ You may proceed
-                  </Text>
-                )}
+                    {sec.paragraphs.map((para, pIdx) => (
+                      <Text key={pIdx} className="text-zinc-800 text-[15px] leading-6 font-normal">
+                        {para}
+                      </Text>
+                    ))}
+                  </View>
+                ))}
               </View>
 
-              <TouchableOpacity
-                disabled={!hasScrolledToBottomPage1}
-                onPress={() => setPolicyPage(2)}
-                className={`py-4 rounded-xl items-center justify-center ${
-                  hasScrolledToBottomPage1 ? 'bg-[#101828]' : 'bg-zinc-300'
-                }`}
-              >
-                <Text className="text-white text-xs font-black uppercase tracking-wider text-center">
-                  Next: Terms & Standards
+              {/* Document Footer Line */}
+              <View className="py-5 border-b border-zinc-200">
+                <Text className="text-zinc-500 text-sm font-semibold italic text-center">
+                  {PARTNER_POLICIES_DOCUMENT_INFO.footer}
                 </Text>
+              </View>
+
+              {/* Step 1 Action - Next */}
+              <View className="my-6">
+                <TouchableOpacity 
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    setPolicyPage(2);
+                    policyScrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                  }}
+                  className="py-4 bg-[#101828] rounded-xl items-center justify-center flex-row gap-2 shadow-sm"
+                >
+                  <Text className="text-white text-sm font-black uppercase tracking-wider text-center">
+                    Next
+                  </Text>
+                  <Feather name="arrow-right" size={16} color="white" />
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : policyPage === 2 ? (
+            <>
+              {/* Progress Slider (3 Steps) */}
+              <View className="flex-row items-center gap-1.5 mb-6">
+                <View className="h-1.5 rounded-full flex-1 bg-zinc-200" />
+                <View className="h-1.5 rounded-full flex-1 bg-[#E11D48]" />
+                <View className="h-1.5 rounded-full flex-1 bg-zinc-200" />
+              </View>
+
+              {/* Official Document Header */}
+              <View className="pb-5 mb-4 border-b border-zinc-200 gap-2">
+                <Text className="text-zinc-500 text-xs font-black tracking-widest uppercase">
+                  {PARTNER_TERMS_DOCUMENT_INFO.docType}
+                </Text>
+                <Text className="text-zinc-950 text-2xl font-black tracking-tight leading-tight">
+                  {PARTNER_TERMS_DOCUMENT_INFO.title}
+                </Text>
+                <Text className="text-zinc-600 text-sm font-semibold">
+                  Version: {PARTNER_TERMS_DOCUMENT_INFO.version}  |  Applicable To: {PARTNER_TERMS_DOCUMENT_INFO.applicableTo}
+                </Text>
+              </View>
+
+              {/* Quick Scroll to Bottom Option */}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => policyScrollViewRef.current?.scrollToEnd({ animated: true })}
+                className="flex-row items-center justify-between px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl mb-5"
+              >
+                <View className="flex-row items-center gap-2">
+                  <Feather name="arrow-down-circle" size={16} color="#101828" />
+                  <Text className="text-zinc-900 text-xs font-bold">Scroll to Bottom</Text>
+                </View>
+                <Feather name="chevron-down" size={16} color="#71717A" />
               </TouchableOpacity>
-            </View>
+
+              {/* All 44 Sections of Terms & Standards */}
+              <View className="gap-6">
+                {PARTNER_TERMS_SECTIONS.map((sec) => (
+                  <View key={sec.id} className="pb-5 border-b border-zinc-150 gap-2.5">
+                    <Text className="text-zinc-950 text-base font-black uppercase tracking-wide">
+                      {sec.id}. {sec.title}
+                    </Text>
+
+                    {sec.paragraphs.map((para, pIdx) => (
+                      <Text key={pIdx} className="text-zinc-800 text-[15px] leading-6 font-normal">
+                        {para}
+                      </Text>
+                    ))}
+                  </View>
+                ))}
+              </View>
+
+              {/* Document Footer Line */}
+              <View className="py-5 border-b border-zinc-200">
+                <Text className="text-zinc-500 text-sm font-semibold italic text-center">
+                  {PARTNER_TERMS_DOCUMENT_INFO.footer}
+                </Text>
+              </View>
+
+              {/* Step 2 Action - Next */}
+              <View className="my-6">
+                <TouchableOpacity 
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    setPolicyPage(3);
+                    policyScrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                  }}
+                  className="py-4 bg-[#101828] rounded-xl items-center justify-center flex-row gap-2 shadow-sm"
+                >
+                  <Text className="text-white text-sm font-black uppercase tracking-wider text-center">
+                    Next
+                  </Text>
+                  <Feather name="arrow-right" size={16} color="white" />
+                </TouchableOpacity>
+              </View>
+            </>
           ) : (
-            <View className="gap-5">
-              <Text className="text-[#101828] text-lg font-black tracking-tight leading-snug">
-                VIRLA Partner Coach Terms & Professional Standards
-              </Text>
-              <Text className="text-zinc-600 text-xs leading-relaxed">
-                Our customers trust VIRLA to provide safe, professional, and high-quality fitness experiences. Every Partner Coach is expected to maintain these standards.
-              </Text>
+            <>
+              {/* Progress Slider (3 Steps) */}
+              <View className="flex-row items-center gap-1.5 mb-6">
+                <View className="h-1.5 rounded-full flex-1 bg-zinc-200" />
+                <View className="h-1.5 rounded-full flex-1 bg-zinc-200" />
+                <View className="h-1.5 rounded-full flex-1 bg-[#E11D48]" />
+              </View>
 
-              <LuxuryCard className="p-5 gap-2.5" interactive={false}>
-                <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider border-b border-zinc-100 pb-2">
-                  Professional Behaviour
+              {/* Official Document Header */}
+              <View className="pb-5 mb-4 border-b border-zinc-200 gap-2">
+                <Text className="text-zinc-500 text-xs font-black tracking-widest uppercase">
+                  {PARTNER_EARNINGS_DOCUMENT_INFO.docType}
                 </Text>
-                <Text className="text-zinc-500 text-[11px] leading-relaxed">
-                  Every trainer must arrive on time, dress professionally, maintain excellent personal hygiene, and be respectful and courteous.
+                <Text className="text-zinc-950 text-2xl font-black tracking-tight leading-tight">
+                  {PARTNER_EARNINGS_DOCUMENT_INFO.title}
                 </Text>
-              </LuxuryCard>
+                <Text className="text-zinc-600 text-sm font-semibold">
+                  Version: {PARTNER_EARNINGS_DOCUMENT_INFO.version}  |  Applicable To: {PARTNER_EARNINGS_DOCUMENT_INFO.applicableTo}
+                </Text>
+              </View>
 
-              <LuxuryCard className="p-5 gap-2.5" interactive={false}>
-                <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider border-b border-zinc-100 pb-2">
-                  Mobile Phone Policy
-                </Text>
-                <Text className="text-zinc-500 text-[11px] leading-relaxed">
-                  During an active training session, trainers must give their complete attention to the customer. Personal mobile phone usage (social media, messages, calls) is strictly prohibited.
-                </Text>
-              </LuxuryCard>
+              {/* All 25 Sections of Earnings & Payout Policy */}
+              <View className="gap-6">
+                {PARTNER_EARNINGS_SECTIONS.map((sec) => (
+                  <View key={sec.id} className="pb-5 border-b border-zinc-150 gap-2.5">
+                    <Text className="text-zinc-950 text-base font-black uppercase tracking-wide">
+                      {sec.id}. {sec.title}
+                    </Text>
 
-              <LuxuryCard className="p-5 gap-2.5" interactive={false}>
-                <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider border-b border-zinc-100 pb-2">
-                  Physical Contact Policy
-                </Text>
-                <Text className="text-zinc-500 text-[11px] leading-relaxed">
-                  Trainers must maintain professional boundaries at all times. Avoid unnecessary physical contact. Physical assistance should only be provided for technique correction or safety with the customer&apos;s explicit consent.
-                </Text>
-                <Text className="text-rose-600 text-[9.5px] font-black uppercase">
-                  ⚠️ Any inappropriate behaviour will result in permanent removal from the platform.
-                </Text>
-              </LuxuryCard>
-
-              <LuxuryCard className="p-5 gap-2.5" interactive={false}>
-                <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider border-b border-zinc-100 pb-2">
-                  Attendance & Reliability
-                </Text>
-                <Text className="text-zinc-500 text-[11px] leading-relaxed">
-                  Accept only bookings you are genuinely available to complete. Repeated cancellations or no-shows affect incentives, retainers, and platform eligibility.
-                </Text>
-              </LuxuryCard>
-
-              <LuxuryCard className="p-5 gap-2.5" interactive={false}>
-                <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider border-b border-zinc-100 pb-2">
-                  Independent Partner
-                </Text>
-                <Text className="text-zinc-500 text-[11px] leading-relaxed">
-                  VIRLA Partner Coaches provide services as independent partners. Acceptance onto the platform does not guarantee any minimum number of sessions or earnings.
-                </Text>
-              </LuxuryCard>
-
-              <View className="w-full h-[1px] bg-zinc-200 my-2" />
-
-              <View className="gap-3.5">
-                <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">
-                  Accept Terms & Conditions
-                </Text>
-
-                {/* Checkbox 1 */}
-                <TouchableOpacity 
-                  disabled={!hasScrolledToBottomPage2}
-                  onPress={() => setCheckEarningsPolicy(!checkEarningsPolicy)}
-                  className="flex-row items-start gap-2.5"
-                >
-                  <View className={`w-4 h-4 border rounded items-center justify-center mt-0.5 ${
-                    checkEarningsPolicy ? 'bg-emerald-600 border-emerald-600' : 'bg-white border-zinc-300'
-                  }`}>
-                    {checkEarningsPolicy && <Feather name="check" size={10} color="white" />}
+                    {sec.paragraphs.map((para, pIdx) => (
+                      <Text key={pIdx} className="text-zinc-800 text-[15px] leading-6 font-normal">
+                        {para}
+                      </Text>
+                    ))}
                   </View>
-                  <Text className={`text-[10.5px] leading-tight flex-1 font-semibold ${
-                    !hasScrolledToBottomPage2 ? 'text-zinc-400' : 'text-zinc-700'
+                ))}
+
+                {/* IMPORTANT NOTICE */}
+                <View className="pb-5 border-b border-zinc-150 gap-2.5">
+                  <Text className="text-zinc-950 text-base font-black uppercase tracking-wide">
+                    IMPORTANT NOTICE
+                  </Text>
+                  {PARTNER_EARNINGS_IMPORTANT_NOTICE.map((para, pIdx) => (
+                    <Text key={pIdx} className="text-zinc-800 text-[15px] leading-6 font-normal">
+                      {para}
+                    </Text>
+                  ))}
+                </View>
+              </View>
+
+              {/* Document Footer Line */}
+              <View className="py-5 border-b border-zinc-200">
+                <Text className="text-zinc-500 text-sm font-semibold italic text-center">
+                  {PARTNER_EARNINGS_DOCUMENT_INFO.footer}
+                </Text>
+              </View>
+
+              {/* Section 25 Acceptance Checkbox */}
+              <View className="my-6 gap-3.5">
+                <TouchableOpacity 
+                  activeOpacity={0.8}
+                  onPress={() => setCheckEarningsAcceptance(!checkEarningsAcceptance)}
+                  className="flex-row items-start gap-3.5 p-4 bg-zinc-50 border border-zinc-300 rounded-xl"
+                >
+                  <View className={`w-6 h-6 border rounded-md items-center justify-center mt-0.5 ${
+                    checkEarningsAcceptance ? 'bg-emerald-600 border-emerald-600' : 'bg-white border-zinc-400'
                   }`}>
-                    I have read and understood the VIRLA Earnings & Payout Policy.
+                    {checkEarningsAcceptance && <Feather name="check" size={14} color="white" />}
+                  </View>
+                  <Text className="text-sm text-zinc-900 font-bold leading-snug flex-1">
+                    "I have read and understood the VIRLA Earnings &amp; Payout Policy and agree to comply with the applicable earnings, payout, professional conduct, client protection and platform requirements."
                   </Text>
                 </TouchableOpacity>
 
-                {/* Checkbox 2 */}
-                <TouchableOpacity 
-                  disabled={!hasScrolledToBottomPage2}
-                  onPress={() => setCheckTermsPolicy(!checkTermsPolicy)}
-                  className="flex-row items-start gap-2.5"
+                <TouchableOpacity
+                  disabled={!checkEarningsAcceptance}
+                  onPress={() => {
+                    setAcceptedAgreementTimestamp(new Date().toISOString());
+                    setAcceptedAgreementAppVersion('1.0.0');
+                    setHasAcceptedPolicies(true);
+                    setViewingPoliciesOnly(false);
+                    Alert.alert('All Agreements Confirmed', 'You may now proceed to complete your personal details.');
+                  }}
+                  className={`py-4 rounded-xl items-center justify-center shadow-sm ${
+                    checkEarningsAcceptance ? 'bg-[#101828]' : 'bg-zinc-300'
+                  }`}
                 >
-                  <View className={`w-4 h-4 border rounded items-center justify-center mt-0.5 ${
-                    checkTermsPolicy ? 'bg-emerald-600 border-emerald-600' : 'bg-white border-zinc-300'
-                  }`}>
-                    {checkTermsPolicy && <Feather name="check" size={10} color="white" />}
-                  </View>
-                  <Text className={`text-[10.5px] leading-tight flex-1 font-semibold ${
-                    !hasScrolledToBottomPage2 ? 'text-zinc-400' : 'text-zinc-700'
-                  }`}>
-                    I have read and understood the VIRLA Partner Terms & Professional Standards.
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Checkbox 3 */}
-                <TouchableOpacity 
-                  disabled={!hasScrolledToBottomPage2}
-                  onPress={() => setCheckReviewUnderstanding(!checkReviewUnderstanding)}
-                  className="flex-row items-start gap-2.5"
-                >
-                  <View className={`w-4 h-4 border rounded items-center justify-center mt-0.5 ${
-                    checkReviewUnderstanding ? 'bg-emerald-600 border-emerald-600' : 'bg-white border-zinc-300'
-                  }`}>
-                    {checkReviewUnderstanding && <Feather name="check" size={10} color="white" />}
-                  </View>
-                  <Text className={`text-[10.5px] leading-tight flex-1 font-semibold ${
-                    !hasScrolledToBottomPage2 ? 'text-zinc-400' : 'text-zinc-700'
-                  }`}>
-                    I understand that my application will be reviewed before approval.
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Checkbox 4 */}
-                <TouchableOpacity 
-                  disabled={!hasScrolledToBottomPage2}
-                  onPress={() => setCheckFollowRules(!checkFollowRules)}
-                  className="flex-row items-start gap-2.5"
-                >
-                  <View className={`w-4 h-4 border rounded items-center justify-center mt-0.5 ${
-                    checkFollowRules ? 'bg-emerald-600 border-emerald-600' : 'bg-white border-zinc-300'
-                  }`}>
-                    {checkFollowRules && <Feather name="check" size={10} color="white" />}
-                  </View>
-                  <Text className={`text-[10.5px] leading-tight flex-1 font-semibold ${
-                    !hasScrolledToBottomPage2 ? 'text-zinc-400' : 'text-zinc-700'
-                  }`}>
-                    I agree to follow all VIRLA Partner Policies while using the platform.
+                  <Text className="text-white text-sm font-black uppercase tracking-wider text-center">
+                    Accept &amp; Continue to Application Form
                   </Text>
                 </TouchableOpacity>
               </View>
-
-              <View className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl items-center mt-2">
-                {!hasScrolledToBottomPage2 ? (
-                  <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest text-center">
-                    ⚠️ Scroll to the bottom to activate checkboxes
-                  </Text>
-                ) : (!checkEarningsPolicy || !checkTermsPolicy || !checkReviewUnderstanding || !checkFollowRules) ? (
-                  <Text className="text-amber-800 text-[10px] font-black uppercase tracking-widest text-center">
-                    ⚠️ Accept all 4 policies to proceed
-                  </Text>
-                ) : (
-                  <Text className="text-emerald-700 text-[10px] font-black uppercase tracking-widest text-center">
-                    ✓ Policies Accepted
-                  </Text>
-                )}
-              </View>
-
-              <TouchableOpacity
-                disabled={
-                  !hasScrolledToBottomPage2 || 
-                  !checkEarningsPolicy || 
-                  !checkTermsPolicy || 
-                  !checkReviewUnderstanding || 
-                  !checkFollowRules
-                }
-                onPress={() => {
-                  setAcceptedAgreementTimestamp(new Date().toISOString());
-                  setAcceptedAgreementAppVersion('1.0.0');
-                  setHasAcceptedPolicies(true);
-                  Alert.alert('Agreement Confirmed', 'You may now proceed to complete your personal details.');
-                }}
-                className={`py-4 rounded-xl items-center justify-center ${
-                  (hasScrolledToBottomPage2 && checkEarningsPolicy && checkTermsPolicy && checkReviewUnderstanding && checkFollowRules)
-                    ? 'bg-[#E11D48]' 
-                    : 'bg-zinc-300'
-                }`}
-              >
-                <Text className="text-white text-xs font-black uppercase tracking-wider text-center">
-                  Continue to Personal Details
-                </Text>
-              </TouchableOpacity>
-            </View>
+            </>
           )}
         </ScrollView>
       </SafeAreaViewWrapper>
@@ -950,7 +883,17 @@ export default function TrainerApplicationScreen() {
         className="flex-1 bg-[#F7F8FC]"
       >
         <View className="mb-6">
-          <Text className="text-zinc-400 text-xs font-extrabold uppercase tracking-widest text-start">Step 2 of 3: Application</Text>
+          <View className="flex-row items-center justify-between">
+            <Text className="text-zinc-400 text-xs font-extrabold uppercase tracking-widest text-start">Step 4 of 5: Application</Text>
+            <TouchableOpacity 
+              activeOpacity={0.8}
+              onPress={() => setViewingPoliciesOnly(true)}
+              className="px-2.5 py-1 bg-zinc-100 border border-zinc-200 rounded-lg flex-row items-center gap-1"
+            >
+              <Feather name="file-text" size={11} color="#E11D48" />
+              <Text className="text-[#E11D48] text-[10px] font-black uppercase tracking-wider">View Policies (Steps 1–3)</Text>
+            </TouchableOpacity>
+          </View>
           <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1 text-start">Onboarding Application</Text>
           {appStatus === 'draft' && (
             <View className="flex-row items-center gap-1.5 mt-3">
@@ -968,7 +911,7 @@ export default function TrainerApplicationScreen() {
           <LuxuryCard className="p-6 gap-5 items-center justify-center bg-white border border-zinc-200" interactive={false}>
             <Text className="text-4xl text-center">✅</Text>
             <Text className="text-[#101828] text-lg font-extrabold text-center uppercase tracking-wider">Application Submitted</Text>
-            <Text className="text-[#E11D48] text-[10px] font-black uppercase tracking-widest text-center mt-1">Step 3 of 3: Review</Text>
+            <Text className="text-[#E11D48] text-[10px] font-black uppercase tracking-widest text-center mt-1">Step 5 of 5: Review</Text>
             
             <View className="w-full bg-[#ECFDF5] border border-[#A7F3D0] p-4 rounded-xl items-center my-1">
               <Text className="text-emerald-800 text-xs font-black uppercase tracking-wider text-center">🟢 Under Review</Text>
@@ -991,8 +934,16 @@ export default function TrainerApplicationScreen() {
             </Text>
 
             <TouchableOpacity
+              onPress={() => setViewingPoliciesOnly(true)}
+              className="w-full py-3.5 bg-zinc-100 border border-zinc-200 rounded-xl items-center justify-center mt-2 flex-row gap-2"
+            >
+              <Feather name="file-text" size={13} color="#E11D48" />
+              <Text className="text-zinc-900 text-xs font-bold">View Partner Policies (61 Rules)</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               onPress={() => router.replace('/(tabs)')}
-              className="w-full py-4 bg-[#101828] rounded-xl items-center justify-center mt-4"
+              className="w-full py-4 bg-[#101828] rounded-xl items-center justify-center mt-2"
             >
               <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Return to Home</Text>
             </TouchableOpacity>
@@ -1561,10 +1512,10 @@ export default function TrainerApplicationScreen() {
   );
 }
 
-function SafeAreaViewWrapper({ children }: { children: React.ReactNode }) {
+function SafeAreaViewWrapper({ children, bg = '#F7F8FC' }: { children: React.ReactNode; bg?: string }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: bg, paddingTop: insets.top }}>
       {children}
     </View>
   );

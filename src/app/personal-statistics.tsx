@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useUserProfileStore } from '../store/userProfileStore';
 import { useWalletStore } from '../store/walletStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import { ScreenHeader } from '../components/ScreenHeader';
 import Svg, { Rect, Line } from 'react-native-svg';
 
 export default function PersonalStatisticsScreen() {
@@ -22,22 +23,11 @@ export default function PersonalStatisticsScreen() {
     { label: 'Lifetime Spend', val: profile.lifetimeSpend, icon: 'shopping-bag', color: 'text-[#4F46E5]' },
     { label: 'Wallet Balance', val: `${creditBalance} Credits`, icon: 'credit-card', color: 'text-[#06B6D4]' },
     { label: 'Current Streak', val: `${profile.currentStreak} Days 🔥`, icon: 'trending-up', color: 'text-orange-500' },
-    { label: 'Favorite Coach', val: profile.favoriteTrainer, icon: 'users', color: 'text-purple-500' },
-    { label: 'Avg Rating Given', val: `⭐ ${profile.averageRatingGiven}`, icon: 'star', color: 'text-yellow-500' },
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
-      {/* Header */}
-      <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
-        <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#101828" />
-        </TouchableOpacity>
-        <Text className="text-[#101828] text-sm font-black uppercase tracking-wider">
-          Personal Statistics
-        </Text>
-        <View className="w-8" />
-      </View>
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+      <ScreenHeader title="Personal Statistics" category="VIRLA METRICS" />
 
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 60 }}>
         <View className="gap-6">

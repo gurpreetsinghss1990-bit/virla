@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore } from '../store/userProfileStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import { ScreenHeader } from '../components/ScreenHeader';
 
 export default function FitnessGoalsScreen() {
   const router = useRouter();
@@ -32,19 +33,16 @@ export default function FitnessGoalsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
-      {/* Header */}
-      <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
-        <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#101828" />
-        </TouchableOpacity>
-        <Text className="text-[#101828] text-sm font-black uppercase tracking-wider">
-          Target Fitness Goals
-        </Text>
-        <TouchableOpacity onPress={handleSave}>
-          <Text className="text-indigo-600 text-xs font-black uppercase">Done</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+      <ScreenHeader 
+        title="Fitness Goals" 
+        category="VIRLA TARGETS"
+        rightElement={
+          <TouchableOpacity onPress={handleSave} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Text className="text-indigo-600 text-xs font-black uppercase tracking-wider">Done</Text>
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 60 }}>
         <View className="gap-6">

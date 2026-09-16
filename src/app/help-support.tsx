@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Platform, K
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import { ScreenHeader } from '../components/ScreenHeader';
 
 export default function HelpSupportScreen() {
   const router = useRouter();
@@ -36,17 +37,8 @@ export default function HelpSupportScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
-      {/* Header */}
-      <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
-        <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#101828" />
-        </TouchableOpacity>
-        <Text className="text-[#101828] text-sm font-black uppercase tracking-wider">
-          Help & Support Center
-        </Text>
-        <View className="w-8" />
-      </View>
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+      <ScreenHeader title="Help & Support Center" category="VIRLA SUPPORT" />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

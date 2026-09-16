@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useNotificationStore } from '../store/notificationStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { NotificationItem } from '../types';
 
 type CategoryType = 'All' | 'Bookings' | 'Membership' | 'Credits' | 'Payments' | 'Promotions' | 'Trainer Updates' | 'Safety' | 'System';
@@ -106,38 +107,26 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
-      {/* Header */}
-      <View className="h-14 flex-row items-center justify-between px-6 border-b border-[#E5E7EB] bg-white">
-        <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#101828" />
-        </TouchableOpacity>
-        
-        <View className="items-center">
-          <Text className="text-[#101828] text-sm font-black uppercase tracking-wider">
-            Notifications Center
-          </Text>
-          {unreadCount > 0 && (
-            <Text className="text-[#4F46E5] text-[9px] font-black uppercase tracking-widest mt-0.5">
-              {unreadCount} Unread
-            </Text>
-          )}
-        </View>
-
-        <View className="flex-row items-center gap-3">
-          {unreadCount > 0 && (
-            <TouchableOpacity onPress={markAllAsRead} className="h-8 justify-center">
-              <Text className="text-[#4F46E5] text-[9px] font-black uppercase">Mark All Read</Text>
-            </TouchableOpacity>
-          )}
-          {notifications.length > 0 && (
-            <TouchableOpacity onPress={clearAll} className="h-8 justify-center">
-              <Text className="text-rose-600 text-[9px] font-black uppercase">Clear All</Text>
-            </TouchableOpacity>
-          )}
-          {notifications.length === 0 && <View className="w-8" />}
-        </View>
-      </View>
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+      <ScreenHeader 
+        title="Notifications Center" 
+        category="VIRLA ALERTS"
+        subtitle={unreadCount > 0 ? `${unreadCount} Unread` : undefined}
+        rightElement={
+          <View className="flex-row items-center gap-2.5">
+            {unreadCount > 0 && (
+              <TouchableOpacity onPress={markAllAsRead} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text className="text-indigo-600 text-[10px] font-black uppercase">Read All</Text>
+              </TouchableOpacity>
+            )}
+            {notifications.length > 0 && (
+              <TouchableOpacity onPress={clearAll} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text className="text-rose-600 text-[10px] font-black uppercase">Clear</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        }
+      />
 
       {/* Search Input */}
       <View className="px-6 pt-4 bg-white pb-3 border-b border-zinc-100">

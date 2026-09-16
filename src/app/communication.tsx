@@ -6,6 +6,7 @@ import { useBookingStore } from '../store/bookingStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useWalletStore } from '../store/walletStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import { ScreenHeader } from '../components/ScreenHeader';
 
 import { Database } from '../database/Database';
 import { useUserStore } from '../store/userStore';
@@ -174,31 +175,27 @@ export default function CommunicationScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+      <ScreenHeader
+        title={role === 'trainer' ? `Client ${booking ? 'VIRLA-C' + booking.id.slice(-6).toUpperCase() : ''}` : `Coach ${booking?.trainerName || 'Partner'}`}
+        category="VIRLA CONCIERGE"
+        subtitle={role === 'trainer' ? 'Solo Session' : `${booking?.trainerSpeciality || 'Fitness'} • ${booking?.trainerLevel || 'Certified'}`}
+        rightElement={
+          <TouchableOpacity 
+            onPress={handleSOS} 
+            activeOpacity={0.8}
+            className="bg-rose-50 px-3 py-1.5 rounded-full border border-rose-200/90 flex-row items-center gap-1.5"
+          >
+            <View className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+            <Text className="text-rose-700 text-xs font-black uppercase tracking-wider">SOS</Text>
+          </TouchableOpacity>
+        }
+      />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        {/* Header */}
-      <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
-        <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#101828" />
-        </TouchableOpacity>
-        
-        <View className="items-center">
-          <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">
-            {role === 'trainer' ? `Client (${booking ? 'VIRLA-C' + booking.id.slice(-6).toUpperCase() : ''})` : `Coach ${booking.trainerName}`}
-          </Text>
-          <Text className="text-zinc-400 text-[8px] font-bold uppercase">
-            {role === 'trainer' ? `Solo Session` : `${booking.trainerSpeciality} • ${booking.trainerLevel}`}
-          </Text>
-        </View>
-
-        <TouchableOpacity onPress={handleSOS} className="bg-red-50 px-3 py-1.5 rounded-full border border-red-150">
-          <Text className="text-red-500 text-[8px] font-black uppercase">SOS</Text>
-        </TouchableOpacity>
-      </View>
 
       {/* Communications Top Tool Bar */}
       <View className="bg-white border-b border-zinc-150 p-4 flex-row justify-around gap-2.5">

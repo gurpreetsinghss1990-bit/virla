@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore, SavedAddress } from '../store/userProfileStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import { ScreenHeader } from '../components/ScreenHeader';
 import * as Location from 'expo-location';
 import { fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords, AutocompleteSuggestion, getCurrentLocationCoords } from '../utils/distance';
 
@@ -202,21 +203,21 @@ export default function AddressManagementScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
-      {/* Header */}
-      <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
-        <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#101828" />
-        </TouchableOpacity>
-        <Text className="text-[#101828] text-sm font-black uppercase tracking-wider">
-          Saved Addresses
-        </Text>
-        <TouchableOpacity onPress={() => { if (showForm) { resetForm(); } else { setShowForm(true); } }}>
-          <Text className="text-indigo-600 text-xs font-black uppercase">
-            {showForm ? 'Cancel' : 'Add New'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+      <ScreenHeader 
+        title="Saved Addresses" 
+        category="VIRLA PLACES"
+        rightElement={
+          <TouchableOpacity 
+            onPress={() => { if (showForm) { resetForm(); } else { setShowForm(true); } }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text className="text-indigo-600 text-xs font-black uppercase tracking-wider">
+              {showForm ? 'Cancel' : 'Add New'}
+            </Text>
+          </TouchableOpacity>
+        }
+      />
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} className="p-6" contentContainerStyle={{ paddingBottom: 60 }}>

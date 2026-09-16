@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, Linking } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import { ScreenHeader } from '../components/ScreenHeader';
 import * as WebBrowser from 'expo-web-browser';
 
 interface LegalDoc {
@@ -88,22 +89,7 @@ export default function LegalCenterScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
-      {/* Header with Safe Area top padding */}
-      <View style={{ paddingTop: insets.top, backgroundColor: '#FFFFFF' }} className="border-b border-[#E5E7EB]">
-        <View className="h-14 flex-row items-center px-6 justify-between">
-          <TouchableOpacity 
-            onPress={() => router.back()} 
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} 
-            className="w-8 h-8 items-center justify-center rounded-full bg-zinc-50 border border-zinc-100"
-          >
-            <Ionicons name="arrow-back" size={18} color="#101828" />
-          </TouchableOpacity>
-          <Text className="text-zinc-900 text-sm font-bold tracking-tight">
-            Legal & Compliance
-          </Text>
-          <View className="w-8" />
-        </View>
-      </View>
+      <ScreenHeader title="Legal & Compliance" category="VIRLA LEGAL" />
 
       <ScrollView 
         showsVerticalScrollIndicator={false} 

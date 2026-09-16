@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Image, Animated, Modal, KeyboardAvoidingView, Platform, ActivityIndicator, Share } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
 import { useMembershipStore } from '../store/membershipStore';
@@ -1872,45 +1873,69 @@ export default function BookingScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
-      {/* Header with Safe Area top padding */}
-      <View style={{ paddingTop: insets.top, backgroundColor: '#FFFFFF' }} className="border-b border-[#E5E7EB]">
-        <View className={step === 6 ? 'py-3 px-6 flex-row items-center justify-between' : 'h-14 flex-row items-center px-6'}>
+      <StatusBar style="dark" />
+      {/* Header extending to the very top */}
+      <View 
+        style={{ paddingTop: insets.top }} 
+        className="bg-white border-b border-zinc-100 shadow-xs"
+      >
+        <View className="h-14 flex-row items-center px-5 justify-between">
           {step < 7 ? (
-            <TouchableOpacity onPress={handleBack} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} className="w-8 h-8 items-center justify-center">
-              <Ionicons name="arrow-back" size={20} color="#101828" />
+            <TouchableOpacity 
+              onPress={handleBack} 
+              activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} 
+              className="w-9 h-9 items-center justify-center rounded-full bg-zinc-100/80 border border-zinc-200/60"
+            >
+              <Ionicons name="arrow-back" size={18} color="#09090B" />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity 
               onPress={() => router.replace('/(tabs)')} 
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} 
-              className="w-8 h-8 items-center justify-center rounded-full bg-zinc-50 border border-zinc-100"
+              activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} 
+              className="w-9 h-9 items-center justify-center rounded-full bg-zinc-100/80 border border-zinc-200/60"
             >
-              <Ionicons name="arrow-back" size={18} color="#101828" />
+              <Ionicons name="arrow-back" size={18} color="#09090B" />
             </TouchableOpacity>
           )}
-          {step === 6 ? (
-            <View className="flex-1 items-center mr-8">
-              <Text className="text-[#101828] text-base font-bold tracking-tight">Review & Confirm Booking</Text>
-              <Text className="text-[#6B7280] text-xs font-normal mt-0.5">Please review your session details before confirming</Text>
+
+          {/* Premium Editorial Header Title */}
+          <View className="items-center flex-1 mx-2">
+            <View className="flex-row items-center gap-1.5">
+              <View className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
+              <Text 
+                style={{ letterSpacing: 2.2 }}
+                className="text-zinc-500 text-[9.5px] font-bold uppercase"
+              >
+                VIRLA AT-HOME
+              </Text>
+            </View>
+            <Text 
+              numberOfLines={1}
+              className="text-zinc-950 text-base font-extrabold tracking-tight mt-0.5"
+            >
+              {step === 6 ? 'Review & Confirm' : step === 7 ? 'Session Confirmed' : 'Schedule Home Session'}
+            </Text>
+          </View>
+
+          {step <= 5 ? (
+            <View className="bg-zinc-100/80 border border-zinc-200/60 px-2.5 py-1 rounded-full items-center justify-center">
+              <Text className="text-zinc-600 text-[10px] font-bold uppercase tracking-wider">
+                {step}/5
+              </Text>
             </View>
           ) : step === 7 ? (
-            <>
-              <View className="flex-1 items-center">
-                <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest">VIRLA AT-HOME</Text>
-                <Text className="text-zinc-900 text-sm font-bold tracking-tight">Session Confirmed</Text>
-              </View>
-              <TouchableOpacity
-                onPress={handleShareBooking}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                className="w-8 h-8 items-center justify-center rounded-full bg-zinc-50 border border-zinc-100"
-              >
-                <Feather name="share-2" size={16} color="#101828" />
-              </TouchableOpacity>
-            </>
+            <TouchableOpacity
+              onPress={handleShareBooking}
+              activeOpacity={0.8}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              className="w-9 h-9 items-center justify-center rounded-full bg-zinc-100/80 border border-zinc-200/60"
+            >
+              <Feather name="share-2" size={16} color="#09090B" />
+            </TouchableOpacity>
           ) : (
-            <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
-              Step {step} of 5
-            </Text>
+            <View className="w-9" />
           )}
         </View>
       </View>
@@ -1929,11 +1954,18 @@ export default function BookingScreen() {
               {step === 1 && (
                 <View className="gap-5">
                   <View>
-                    <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Training Experience</Text>
-                    <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1">Choose Workout Experience</Text>
+                    <Text className="text-[#E11D48] text-xs font-black uppercase tracking-[1.8px] mb-1">
+                      Training Experience
+                    </Text>
+                    <Text className="text-zinc-950 text-2xl font-black tracking-tight leading-tight">
+                      Choose Workout Experience
+                    </Text>
+                    <Text className="text-zinc-500 text-sm font-normal mt-1 leading-relaxed">
+                      Select a specialized discipline for your certified coach to lead at your residence.
+                    </Text>
                   </View>
 
-                  <View className="gap-4">
+                  <View className="gap-3.5">
                     {EXPERIENCES.map((exp) => {
                       const isSelected = selectedExperience.id === exp.id;
                       return (
@@ -1944,46 +1976,43 @@ export default function BookingScreen() {
                             setSelectedExperience(exp);
                             setTimeout(() => triggerTransition(2), 250);
                           }}
-                          className={`p-5 rounded-[28px] border flex-row items-center justify-between ${
+                          className={`p-4.5 rounded-[24px] border flex-row items-center justify-between ${
                             isSelected 
-                              ? 'bg-zinc-950 border-zinc-950' 
-                              : 'bg-white border-[#E5E7EB]'
+                              ? 'bg-zinc-950 border-zinc-950 shadow-md' 
+                              : 'bg-white border-zinc-200/80 shadow-xs'
                           }`}
-                          style={{
-                            shadowColor: '#101828',
-                            shadowOffset: { width: 0, height: isSelected ? 4 : 1 },
-                            shadowOpacity: isSelected ? 0.08 : 0.02,
-                            shadowRadius: isSelected ? 8 : 2,
-                            elevation: isSelected ? 3 : 1,
-                          }}
                         >
-                          <View className="flex-row items-center gap-4 flex-1">
+                          <View className="flex-row items-center gap-3.5 flex-1">
                             <View 
                               style={{ 
                                 backgroundColor: exp.gradientColors[0],
-                                shadowColor: '#101828',
-                                shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.02,
-                                shadowRadius: 2,
-                                elevation: 1,
                               }} 
-                              className="w-12 h-12 rounded-2xl items-center justify-center"
+                              className="w-12 h-12 rounded-2xl items-center justify-center shadow-xs"
                             >
-                              <Text className="text-xl">{exp.emoji}</Text>
+                              <Text className="text-2xl">{exp.emoji}</Text>
                             </View>
-                            <View className="flex-1">
-                              <Text className={`text-sm font-black tracking-tight ${isSelected ? 'text-white' : 'text-[#101828]'}`}>
-                                {exp.title}
-                              </Text>
-                              <Text className={`text-[10px] font-bold mt-1 leading-relaxed ${isSelected ? 'text-zinc-400' : 'text-[#6B7280]'}`}>
+                            <View className="flex-1 pr-2">
+                              <View className="flex-row items-center gap-2">
+                                <Text className={`text-[15px] font-bold tracking-tight ${isSelected ? 'text-white' : 'text-zinc-950'}`}>
+                                  {exp.title}
+                                </Text>
+                                <View className={`px-2 py-0.5 rounded-full ${isSelected ? 'bg-zinc-800 border border-zinc-700' : 'bg-zinc-100 border border-zinc-200/80'}`}>
+                                  <Text className={`text-[9px] font-bold uppercase tracking-wider ${isSelected ? 'text-zinc-300' : 'text-zinc-600'}`}>
+                                    {exp.duration} min
+                                  </Text>
+                                </View>
+                              </View>
+                              <Text className={`text-xs font-normal mt-1 leading-relaxed ${isSelected ? 'text-zinc-300' : 'text-zinc-600'}`}>
                                 {exp.description}
                               </Text>
                             </View>
                           </View>
-                          {isSelected && (
-                            <View className="w-5 h-5 rounded-full bg-indigo-500 items-center justify-center">
-                              <Feather name="check" size={12} color="white" />
+                          {isSelected ? (
+                            <View className="w-6 h-6 rounded-full bg-[#E11D48] items-center justify-center">
+                              <Feather name="check" size={13} color="white" />
                             </View>
+                          ) : (
+                            <View className="w-6 h-6 rounded-full border border-zinc-200 bg-zinc-50" />
                           )}
                         </TouchableOpacity>
                       );
@@ -1996,11 +2025,18 @@ export default function BookingScreen() {
               {step === 2 && (
                 <View className="gap-5">
                   <View>
-                    <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Concierge Match</Text>
-                    <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1">Trainer Preference</Text>
+                    <Text className="text-[#E11D48] text-xs font-black uppercase tracking-[1.8px] mb-1">
+                      Concierge Match
+                    </Text>
+                    <Text className="text-zinc-950 text-2xl font-black tracking-tight leading-tight">
+                      Trainer Preference
+                    </Text>
+                    <Text className="text-zinc-500 text-sm font-normal mt-1 leading-relaxed">
+                      Choose coach assignment preferences for your scheduled slot.
+                    </Text>
                   </View>
 
-                  <View className="flex-row flex-wrap justify-between gap-y-4">
+                  <View className="flex-row flex-wrap justify-between gap-y-3.5">
                     {[
                       { id: 'any', label: 'No Preference', icon: 'shuffle', desc: 'Any expert match' },
                       { id: 'female', label: 'Female Trainer', icon: 'smile', desc: 'Match female coach' },
@@ -2025,23 +2061,16 @@ export default function BookingScreen() {
                               setTimeout(() => triggerTransition(3), 300);
                             }
                           }}
-                          className={`w-[47%] p-5 rounded-[24px] border items-center justify-center gap-2.5 ${
-                            isSelected ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-[#E5E7EB]'
+                          className={`w-[48%] p-4.5 rounded-[22px] border items-center justify-center gap-2 ${
+                            isSelected ? 'bg-zinc-950 border-zinc-950 shadow-sm' : 'bg-white border-zinc-200/80 shadow-xs'
                           }`}
-                          style={{
-                            shadowColor: '#101828',
-                            shadowOffset: { width: 0, height: 1 },
-                            shadowOpacity: 0.02,
-                            shadowRadius: 2,
-                            elevation: 1,
-                          }}
                         >
-                          <Feather name={pref.icon as any} size={20} color={isSelected ? '#F59E0B' : '#6B7280'} />
+                          <Feather name={pref.icon as any} size={20} color={isSelected ? '#F59E0B' : '#71717A'} />
                           <View className="items-center">
-                            <Text className={`text-xs font-black tracking-tight text-center ${isSelected ? 'text-white' : 'text-[#101828]'}`}>
+                            <Text className={`text-xs font-bold tracking-tight text-center ${isSelected ? 'text-white' : 'text-zinc-950'}`}>
                               {pref.label}
                             </Text>
-                            <Text className={`text-[8px] text-center font-bold mt-1 ${isSelected ? 'text-zinc-500' : 'text-[#9CA3AF]'}`}>
+                            <Text className={`text-[10px] text-center font-normal mt-0.5 ${isSelected ? 'text-zinc-400' : 'text-zinc-500'}`}>
                               {pref.desc}
                             </Text>
                           </View>
@@ -2098,9 +2127,13 @@ export default function BookingScreen() {
               {step === 3 && (
                 <View className="gap-5">
                   <View>
-                    <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Training Venue</Text>
-                    <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1">Select Training Location</Text>
-                    <Text className="text-zinc-500 text-xs font-semibold mt-1">
+                    <Text className="text-[#E11D48] text-xs font-black uppercase tracking-[1.8px] mb-1">
+                      Training Venue
+                    </Text>
+                    <Text className="text-zinc-950 text-2xl font-black tracking-tight leading-tight">
+                      Select Training Location
+                    </Text>
+                    <Text className="text-zinc-500 text-sm font-normal mt-1 leading-relaxed">
                       Choose where your VIRLA Wellness Coach should visit.
                     </Text>
                   </View>
@@ -2781,8 +2814,15 @@ export default function BookingScreen() {
               {step === 4 && (
                 <View className="gap-5">
                   <View>
-                    <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Schedule Day</Text>
-                    <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1">Select Date</Text>
+                    <Text className="text-[#E11D48] text-xs font-black uppercase tracking-[1.8px] mb-1">
+                      Schedule Day
+                    </Text>
+                    <Text className="text-zinc-950 text-2xl font-black tracking-tight leading-tight">
+                      Select Date
+                    </Text>
+                    <Text className="text-zinc-500 text-sm font-normal mt-1 leading-relaxed">
+                      Choose which calendar day works best for your home session.
+                    </Text>
                   </View>
 
                   {/* Horizontal Date Capsules (Feature 4) */}
@@ -2973,8 +3013,15 @@ export default function BookingScreen() {
               {step === 5 && (
                 <View className="gap-5">
                   <View>
-                    <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Training Schedule</Text>
-                    <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1">Select Time Slot</Text>
+                    <Text className="text-[#E11D48] text-xs font-black uppercase tracking-[1.8px] mb-1">
+                      Training Schedule
+                    </Text>
+                    <Text className="text-zinc-950 text-2xl font-black tracking-tight leading-tight">
+                      Select Time Slot
+                    </Text>
+                    <Text className="text-zinc-500 text-sm font-normal mt-1 leading-relaxed">
+                      Choose an available hour for your coach visit.
+                    </Text>
                   </View>
 
 

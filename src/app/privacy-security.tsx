@@ -6,6 +6,7 @@ import { useUserProfileStore } from '../store/userProfileStore';
 import { useUserStore } from '../store/userStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { SignOutConfirmationModal } from '../components/SignOutConfirmationModal';
+import { ScreenHeader } from '../components/ScreenHeader';
 
 export default function PrivacySecurityScreen() {
   const router = useRouter();
@@ -66,22 +67,7 @@ export default function PrivacySecurityScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
-      {/* Header with Safe Area top padding */}
-      <View style={{ paddingTop: insets.top, backgroundColor: '#FFFFFF' }} className="border-b border-[#E5E7EB]">
-        <View className="h-14 flex-row items-center px-6 justify-between">
-          <TouchableOpacity 
-            onPress={() => router.back()} 
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} 
-            className="w-8 h-8 items-center justify-center rounded-full bg-zinc-50 border border-zinc-100"
-          >
-            <Ionicons name="arrow-back" size={18} color="#101828" />
-          </TouchableOpacity>
-          <Text className="text-zinc-900 text-sm font-bold tracking-tight">
-            Privacy & Security
-          </Text>
-          <View className="w-8" />
-        </View>
-      </View>
+      <ScreenHeader title="Privacy & Security" category="VIRLA SECURITY" />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
