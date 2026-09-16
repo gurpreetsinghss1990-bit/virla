@@ -1,19 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, TextInput, Alert, Platform, KeyboardAvoidingView, ScrollView, TouchableWithoutFeedback, Keyboard, ActivityIndicator, Animated } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AppLogo, Heading, PrimaryButton, Subtitle } from '@/presentation/components';
 import { router } from 'expo-router';
-import Svg, { Circle, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
-import { Heading, Subtitle, PrimaryButton, SecondaryButton, AppLogo } from '@/presentation/components';
-import { useUserStore } from '../store/userStore';
-import { useUserProfileStore } from '../store/userProfileStore';
-import { useBookingStore } from '../store/bookingStore';
-import { useMembershipStore } from '../store/membershipStore';
-import { useWalletStore } from '../store/walletStore';
-import { useAddressStore } from '../store/addressStore';
+import * as WebBrowser from 'expo-web-browser';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Animated, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { Database } from '../database/Database';
 import { supabase } from '../database/supabaseClient';
 import { OTPService } from '../services/OTPService';
-import Constants from 'expo-constants';
+import { useAddressStore } from '../store/addressStore';
+import { useBookingStore } from '../store/bookingStore';
+import { useMembershipStore } from '../store/membershipStore';
+import { useUserProfileStore } from '../store/userProfileStore';
+import { useUserStore } from '../store/userStore';
+import { useWalletStore } from '../store/walletStore';
 
 export default function GetStartedScreen() {
   const insets = useSafeAreaInsets();
@@ -64,6 +64,40 @@ export default function GetStartedScreen() {
     }
   };
 
+  const handleOpenUrl = async (url: string) => {
+    Keyboard.dismiss();
+    await new Promise<void>(resolve => setTimeout(resolve, Platform.OS === 'android' ? 150 : 0));
+    try {
+      if (Platform.OS === 'android') {
+        const browserInfo = await WebBrowser.getCustomTabsSupportingBrowsersAsync();
+        console.log('[WebBrowser] Android Custom Tabs browsers found:', JSON.stringify(browserInfo));
+        
+        const preferredPackage = browserInfo.preferredBrowserPackage || browserInfo.defaultBrowserPackage || browserInfo.browserPackages?.[0];
+        console.log('[WebBrowser] Selected browser package for Custom Tabs:', preferredPackage);
+
+        if (preferredPackage) {
+          await WebBrowser.warmUpAsync(preferredPackage).catch(e => console.log('[WebBrowser] warmUp error:', e));
+        }
+
+        await WebBrowser.openBrowserAsync(url, {
+          browserPackage: preferredPackage,
+          showInRecents: false,
+          createTask: false,
+          presentationStyle: WebBrowser.WebBrowserPresentationStyle.AUTOMATIC,
+        });
+      } else {
+        await WebBrowser.openBrowserAsync(url, {
+          presentationStyle: WebBrowser.WebBrowserPresentationStyle.AUTOMATIC,
+        });
+      }
+    } catch (err) {
+      console.error('[WebBrowser] Open error:', err);
+    }
+  };
+
+  const handleOpenTerms = () => handleOpenUrl('https://virla.in/terms.html');
+  const handleOpenPrivacy = () => handleOpenUrl('https://virla.in/privacy.html');
+
   // Initialize the MSG91 OTP widget SDK and check resume state on mount
   useEffect(() => {
     const diag = OTPService.getDiagnostics();
@@ -79,13 +113,13 @@ export default function GetStartedScreen() {
         console.log(`[get-started] Resuming incomplete user: ${user.name} (status: ${user.registrationStatus})`);
         setTempUserObj(user);
         setNewUserIdToRegister(user.id);
-        
+
         // Sync profile
         Database.setCurrentUserId(user.id);
         await Database.load();
         await useUserProfileStore.getState().syncFromDB();
         const profile = Database.getProfile(user.id);
-        
+
         if (user.registrationStatus === 'name_pending' || !user.name || user.name === 'Complete your profile') {
           setSetupStep(0);
         } else if (!profile?.gender) {
@@ -129,7 +163,7 @@ export default function GetStartedScreen() {
       // Real MSG91 OTP verification
       console.log('[DEBUG] Initiating client verifyOTP check...');
       const verifyRes = await OTPService.verifyOTP(phone, otpCode, reqId);
-      
+
       if (!verifyRes.success || !verifyRes.token) {
         throw new Error(verifyRes.error || 'The OTP is incorrect or has expired. Please try again.');
       }
@@ -139,7 +173,7 @@ export default function GetStartedScreen() {
 
       // Backend secure token verification
       console.log('[DEBUG] Token verified by MSG91 client. Requesting backend database verification...');
-      
+
       const { data, error } = await supabase.functions.invoke('verify-otp', {
         body: { accessToken: verifyRes.token }
       });
@@ -187,7 +221,7 @@ export default function GetStartedScreen() {
         if (regStatus === 'complete') {
           console.log('[DEBUG] Existing complete user detected. Triggering success animation...');
           await finalizeUserSession(userObj);
-          
+
           // Trigger 6 boxes -> circle -> 3x spin -> dumbbell success animation
           setIsOtpSuccessAnimating(true);
           Animated.timing(spinAnim, {
@@ -220,7 +254,7 @@ export default function GetStartedScreen() {
       }
     } catch (err: any) {
       console.error('[DEBUG ERROR] Mobile submit authentication failure:', err);
-      
+
       let friendlyMsg = 'Something went wrong while signing you in. Please try again.';
       if (err.message) {
         const lowerMsg = err.message.toLowerCase();
@@ -256,7 +290,7 @@ export default function GetStartedScreen() {
           }
 
           console.log(`[DEBUG] Updating new user name to "${name}"...`);
-          
+
           const { error: updateError } = await supabase
             .from('users')
             .update({ name: name.trim(), registration_status: 'PROFILE_DETAILS_PENDING' })
@@ -269,10 +303,10 @@ export default function GetStartedScreen() {
           const registeredUser = { ...tempUserObj, name: name.trim(), registrationStatus: 'incomplete' };
           setTempUserObj(registeredUser);
           setNewUserIdToRegister(registeredUser.id);
-          
+
           // Seed local user profile record and initialize session
           await finalizeUserSession(registeredUser);
-          
+
           console.log('[DEBUG] Step 0 complete: Name registered.');
           setSetupStep(1); // Proceed to Gender Selection
 
@@ -344,7 +378,7 @@ export default function GetStartedScreen() {
     await setLoggedIn(true);
     setCompletedOnboarding(true);
     updateProfile(userObj);
-    
+
     console.log('[DEBUG] Session established. Syncing database caches...');
     await useUserProfileStore.getState().syncFromDB();
     await useMembershipStore.getState().syncFromDB();
@@ -434,7 +468,7 @@ export default function GetStartedScreen() {
       console.log(`[DEBUG] OAuth request started for ${provider}`);
       const userObj = await Database.oauthLogin(provider, providerId, name, email, role);
       console.log(`[DEBUG] Provider response received successfully. Authenticated user ID: ${userObj.id}, Role: ${userObj.role}`);
-      
+
       Database.setCurrentUserId(userObj.id);
       await setLoggedIn(true);
       setCompletedOnboarding(true);
@@ -449,7 +483,7 @@ export default function GetStartedScreen() {
       await useBookingStore.getState().syncFromDB();
       await useWalletStore.getState().syncFromDB();
       console.log('[DEBUG] User/profile synchronization completed successfully.');
-      
+
       Alert.alert('Welcome', `Successfully authenticated as ${userObj.name}!`);
       console.log('[DEBUG] Navigation starting to Home tab /(tabs)...');
       router.replace('/(tabs)');
@@ -462,10 +496,10 @@ export default function GetStartedScreen() {
   const handleOAuth = async (provider: 'google' | 'apple') => {
     console.log(`[DEBUG] handleOAuth Button pressed for provider: ${provider}`);
     const formattedProvider = provider === 'google' ? 'Google' : 'Apple';
-    
+
     // Compile-time environment flag to prevent mock login in production
     const ENABLE_MOCK_LOGIN = __DEV__;
-    
+
     if (ENABLE_MOCK_LOGIN) {
       console.log('[DEBUG] Development environment detected. Launching Development Google/Apple login mock.');
       if (Platform.OS === 'web') {
@@ -473,7 +507,7 @@ export default function GetStartedScreen() {
         const choice = window.prompt(
           `[DEVELOPMENT ONLY] Select Generic Test Account:\n\nType "1" for: Test Customer (customer.test@${provider}.com)\nType "2" for: Test Trainer (trainer.test@${provider}.com)\nType "3" for: Test Admin (admin.test@${provider}.com)`
         );
-        
+
         if (choice === '1') {
           console.log('[DEBUG] Selected Test Customer account on web.');
           await proceedOAuth(provider, `${provider}-test-customer`, 'Test Customer', `customer.test@${provider}.com`, 'customer');
@@ -492,29 +526,29 @@ export default function GetStartedScreen() {
           `[DEVELOPMENT ONLY] Development ${formattedProvider} Login`,
           `Choose a generic test account:`,
           [
-            { 
-              text: `Test Customer (customer.test@${provider}.com)`, 
+            {
+              text: `Test Customer (customer.test@${provider}.com)`,
               onPress: () => {
                 console.log('[DEBUG] Selected Test Customer account on mobile.');
                 proceedOAuth(provider, `${provider}-test-customer`, 'Test Customer', `customer.test@${provider}.com`, 'customer');
               }
             },
-            { 
-              text: `Test Trainer (trainer.test@${provider}.com)`, 
+            {
+              text: `Test Trainer (trainer.test@${provider}.com)`,
               onPress: () => {
                 console.log('[DEBUG] Selected Test Trainer account on mobile.');
                 proceedOAuth(provider, `${provider}-test-trainer`, 'Test Trainer', `trainer.test@${provider}.com`, 'trainer');
               }
             },
-            { 
-              text: `Test Admin (admin.test@${provider}.com)`, 
+            {
+              text: `Test Admin (admin.test@${provider}.com)`,
               onPress: () => {
                 console.log('[DEBUG] Selected Test Admin account on mobile.');
                 proceedOAuth(provider, `${provider}-test-admin`, 'Test Admin', `admin.test@${provider}.com`, 'admin');
               }
             },
-            { 
-              text: 'Cancel', 
+            {
+              text: 'Cancel',
               style: 'cancel',
               onPress: () => console.log('[DEBUG] OAuth selection cancelled.')
             }
@@ -530,7 +564,7 @@ export default function GetStartedScreen() {
             redirectTo: Platform.OS === 'web' ? window.location.origin : 'virla://(tabs)'
           }
         });
-        
+
         if (error) throw error;
         console.log(`[DEBUG] Production OAuth flow initiated successfully. Data:`, data);
       } catch (err: any) {
@@ -586,7 +620,7 @@ export default function GetStartedScreen() {
 
             {newUserIdToRegister !== null ? (
               /* Profile Setup Form Wizard for New Users */
-              <View 
+              <View
                 className="bg-white p-6 rounded-[28px] border border-zinc-150 gap-4 my-6"
                 style={{
                   elevation: 1,
@@ -704,13 +738,13 @@ export default function GetStartedScreen() {
                 <View className="mt-2 gap-3.5">
                   <PrimaryButton
                     title={isLoading ? 'Saving...' : setupStep === 3 ? 'Finish Setup' : 'Next Step'}
-                    onPress={isLoading ? () => {} : handleSaveProfile}
+                    onPress={isLoading ? () => { } : handleSaveProfile}
                   />
                 </View>
               </View>
             ) : (
               /* Mobile Login/Register Form - Reference Exact Implementation */
-              <View 
+              <View
                 className="bg-[#0F0F12] p-6 rounded-[36px] border border-white/10 gap-5 my-4 items-center"
                 style={{
                   elevation: 12,
@@ -740,7 +774,7 @@ export default function GetStartedScreen() {
                     </View>
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      onPress={isLoading ? () => {} : handleSendOtp}
+                      onPress={isLoading ? () => { } : handleSendOtp}
                       disabled={isLoading || resendCountdown > 0}
                       className={`px-4 py-3.5 rounded-2xl justify-center items-center ${isLoading || resendCountdown > 0 ? 'bg-zinc-800' : 'bg-[#E11D48]'}`}
                     >
@@ -794,13 +828,12 @@ export default function GetStartedScreen() {
                               return (
                                 <View
                                   key={idx}
-                                  className={`w-11 h-14 rounded-2xl items-center justify-center border ${
-                                    digit
-                                      ? 'bg-[#1F1F24] border-[#E11D48]'
-                                      : isFocusedIndex
+                                  className={`w-11 h-14 rounded-2xl items-center justify-center border ${digit
+                                    ? 'bg-[#1F1F24] border-[#E11D48]'
+                                    : isFocusedIndex
                                       ? 'bg-[#1F1F24] border-[#E11D48]'
                                       : 'bg-[#141417] border-white/20'
-                                  }`}
+                                    }`}
                                   style={{
                                     transform: [{ rotate: rot }, { scale: isFocusedIndex ? 1.08 : 1 }],
                                     shadowColor: (digit || isFocusedIndex) ? '#E11D48' : '#000',
@@ -818,79 +851,79 @@ export default function GetStartedScreen() {
                             })}
                           </View>
                         ) : (
-                        /* Visual State 2: Post-Verification Success Animation (Circle Spin 2-3x -> Dumbbell -> Welcome) */
-                        <View className="items-center justify-center gap-3 py-2 z-20">
-                          {/* Animated Rotating Circle or Transformed Dumbbell */}
-                          <View className="relative items-center justify-center">
-                            {/* Step A: 2-3 Rapid Rotations Spinning Circle */}
-                            <Animated.View
-                              style={{
-                                transform: [
-                                  {
-                                    rotate: spinAnim.interpolate({
-                                      inputRange: [0, 1],
-                                      outputRange: ['0deg', '1080deg'], // 3 full 360deg spins
-                                    }),
-                                  },
-                                ],
-                              }}
-                            >
-                              <View 
-                                className="w-14 h-14 rounded-full border-2 border-[#E11D48] items-center justify-center bg-[#1F1F24]"
+                          /* Visual State 2: Post-Verification Success Animation (Circle Spin 2-3x -> Dumbbell -> Welcome) */
+                          <View className="items-center justify-center gap-3 py-2 z-20">
+                            {/* Animated Rotating Circle or Transformed Dumbbell */}
+                            <View className="relative items-center justify-center">
+                              {/* Step A: 2-3 Rapid Rotations Spinning Circle */}
+                              <Animated.View
                                 style={{
-                                  shadowColor: '#E11D48',
-                                  shadowOffset: { width: 0, height: 0 },
-                                  shadowOpacity: 0.8,
-                                  shadowRadius: 12,
-                                  elevation: 10,
+                                  transform: [
+                                    {
+                                      rotate: spinAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: ['0deg', '1080deg'], // 3 full 360deg spins
+                                      }),
+                                    },
+                                  ],
                                 }}
                               >
-                                <View className="w-3 h-3 rounded-full bg-white" />
-                              </View>
-                            </Animated.View>
+                                <View
+                                  className="w-14 h-14 rounded-full border-2 border-[#E11D48] items-center justify-center bg-[#1F1F24]"
+                                  style={{
+                                    shadowColor: '#E11D48',
+                                    shadowOffset: { width: 0, height: 0 },
+                                    shadowOpacity: 0.8,
+                                    shadowRadius: 12,
+                                    elevation: 10,
+                                  }}
+                                >
+                                  <View className="w-3 h-3 rounded-full bg-white" />
+                                </View>
+                              </Animated.View>
 
-                            {/* Step B: Vector Dumbbell Overlaid on Completion */}
-                            <Animated.View
-                              className="absolute items-center justify-center"
-                              style={{
-                                opacity: spinAnim.interpolate({
-                                  inputRange: [0, 0.7, 1],
-                                  outputRange: [0, 0, 1],
-                                }),
-                                transform: [
-                                  {
-                                    scale: spinAnim.interpolate({
-                                      inputRange: [0, 0.7, 1],
-                                      outputRange: [0.5, 0.7, 1],
-                                    }),
-                                  },
-                                ],
-                              }}
-                            >
-                              <View className="flex-row items-center justify-center bg-[#0F0F12] p-3 rounded-2xl border border-[#E11D48] shadow-lg">
-                                <Svg width="40" height="22" viewBox="0 0 42 24" fill="none">
-                                  <Path d="M 2 2 L 6 2 L 6 22 L 2 22 Z" fill="#E11D48" />
-                                  <Path d="M 8 5 L 12 5 L 12 19 L 8 19 Z" fill="#FFFFFF" />
-                                  <Path d="M 12 10 L 30 10 L 30 14 L 12 14 Z" fill="#E11D48" />
-                                  <Path d="M 30 5 L 34 5 L 34 19 L 30 19 Z" fill="#FFFFFF" />
-                                  <Path d="M 36 2 L 40 2 L 40 22 L 36 22 Z" fill="#E11D48" />
-                                </Svg>
-                              </View>
-                            </Animated.View>
-                          </View>
+                              {/* Step B: Vector Dumbbell Overlaid on Completion */}
+                              <Animated.View
+                                className="absolute items-center justify-center"
+                                style={{
+                                  opacity: spinAnim.interpolate({
+                                    inputRange: [0, 0.7, 1],
+                                    outputRange: [0, 0, 1],
+                                  }),
+                                  transform: [
+                                    {
+                                      scale: spinAnim.interpolate({
+                                        inputRange: [0, 0.7, 1],
+                                        outputRange: [0.5, 0.7, 1],
+                                      }),
+                                    },
+                                  ],
+                                }}
+                              >
+                                <View className="flex-row items-center justify-center bg-[#0F0F12] p-3 rounded-2xl border border-[#E11D48] shadow-lg">
+                                  <Svg width="40" height="22" viewBox="0 0 42 24" fill="none">
+                                    <Path d="M 2 2 L 6 2 L 6 22 L 2 22 Z" fill="#E11D48" />
+                                    <Path d="M 8 5 L 12 5 L 12 19 L 8 19 Z" fill="#FFFFFF" />
+                                    <Path d="M 12 10 L 30 10 L 30 14 L 12 14 Z" fill="#E11D48" />
+                                    <Path d="M 30 5 L 34 5 L 34 19 L 30 19 Z" fill="#FFFFFF" />
+                                    <Path d="M 36 2 L 40 2 L 40 22 L 36 22 Z" fill="#E11D48" />
+                                  </Svg>
+                                </View>
+                              </Animated.View>
+                            </View>
 
-                          <View className="items-center">
-                            <Text className="text-[#E11D48] text-xs font-black uppercase tracking-widest">
-                              VERIFIED • VIRLA ACTIVATED
-                            </Text>
-                            <Text className="text-white text-base font-bold mt-0.5">
-                              {authenticatedUserName
-                                ? `Welcome, ${authenticatedUserName.split(' ')[0]}`
-                                : 'Welcome to VIRLA'}
-                            </Text>
+                            <View className="items-center">
+                              <Text className="text-[#E11D48] text-xs font-black uppercase tracking-widest">
+                                VERIFIED • VIRLA ACTIVATED
+                              </Text>
+                              <Text className="text-white text-base font-bold mt-0.5">
+                                {authenticatedUserName
+                                  ? `Welcome, ${authenticatedUserName.split(' ')[0]}`
+                                  : 'Welcome to VIRLA'}
+                              </Text>
+                            </View>
                           </View>
-                        </View>
-                      )}
+                        )}
                       </View>
                     </TouchableWithoutFeedback>
                   </View>
@@ -905,7 +938,7 @@ export default function GetStartedScreen() {
                 <View className="mt-2 w-full">
                   <TouchableOpacity
                     activeOpacity={0.85}
-                    onPress={isLoading ? () => {} : handleMobileSubmit}
+                    onPress={isLoading ? () => { } : handleMobileSubmit}
                     disabled={isLoading}
                     className="w-full bg-[#E11D48] py-4 rounded-2xl items-center justify-center shadow-lg"
                     style={{
@@ -926,13 +959,31 @@ export default function GetStartedScreen() {
 
 
             {/* Terms & Privacy Policies at the Bottom */}
-            <View className="px-4">
+            <View className="px-4 pb-2 items-center">
               <Text className="text-[12px] text-zinc-400 text-center leading-relaxed">
-                By continuing, you agree to VIRLA&apos;s{'\n'}
-                <Text className="text-zinc-500 font-extrabold underline">Terms of Service</Text>
-                {'  '}&{'  '}
-                <Text className="text-zinc-500 font-extrabold underline">Privacy Policy</Text>
+                By continuing, you agree to VIRLA&apos;s
               </Text>
+              <View className="flex-row items-center justify-center mt-0.5 gap-2">
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={handleOpenTerms}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text className="text-zinc-500 font-extrabold underline text-[12px]">
+                    Terms of Service
+                  </Text>
+                </TouchableOpacity>
+                <Text className="text-zinc-400 text-[12px]">&amp;</Text>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={handleOpenPrivacy}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text className="text-zinc-500 font-extrabold underline text-[12px]">
+                    Privacy Policy
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>

@@ -361,7 +361,7 @@ export function mapUserProfileToPostgres(profile: UserProfile): any {
     medical_notes: profile.medicalNotes,
     membership_status: profile.membershipStatus,
     credits_balance: profile.creditsBalance,
-    trainer_preference: profile.trainerPreference,
+    trainer_preference: profile.trainerPreference && ['male', 'female', 'no_preference'].includes(profile.trainerPreference.toLowerCase()) ? profile.trainerPreference.toLowerCase() : 'no_preference',
     dob: profile.dob,
     fitness_level: profile.fitnessLevel,
     preferred_language: profile.preferredLanguage,

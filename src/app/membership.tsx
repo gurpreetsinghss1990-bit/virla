@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useWalletStore } from '../store/walletStore';
 import { useUserStore } from '../store/userStore';
+import { PayPhiService } from '../services/payphiService';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -186,11 +187,53 @@ export default function MembershipScreen() {
 
 
 
+  // PayPhi Gateway Integration
+  useEffect(() => {
+    const unsubscribe = PayPhiService.registerResponseListener(
+      () => {
+        setIsProcessing(false);
+        setIsSuccess(true);
+      },
+      (errorMsg) => {
+        setIsProcessing(false);
+        Alert.alert('Payment Failed', errorMsg || 'Transaction was not completed.');
+      }
+    );
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  const handlePayPhiPayment = async () => {
+    if (!selectedPlan) return;
+
+    setIsProcessing(true);
+
+    const cleanRawAmount = selectedPlan.price.replace(/[^\d]/g, ''); // e.g. "1499"
+
+    const res = await PayPhiService.startPayment(
+      {
+        name: selectedPlan.name,
+        credits: selectedPlan.credits,
+        priceText: selectedPlan.price,
+        totalText: selectedPlan.amountVal,
+        gstText: selectedPlan.gstVal,
+        rawAmount: cleanRawAmount,
+      },
+      userEmail
+    );
+
+    if (!res.success) {
+      setIsProcessing(false);
+      Alert.alert('Payment Error', res.error || 'Failed to initialize payment gateway.');
+    }
+  };
+
   // Simulated Sandbox/Apple Pay Confirm Swipe
   const handleConfirmPay = () => {
     setIsProcessing(true);
     progressAnim.setValue(0);
-    
+
     // Animate loader ring
     Animated.timing(progressAnim, {
       toValue: 1,
@@ -622,6 +665,18 @@ export default function MembershipScreen() {
 
                     {/* Purchase confirmation buttons */}
                     <View className="gap-3 mt-2">
+                      <TouchableOpacity
+                        activeOpacity={0.85}
+                        disabled={isProcessing}
+                        onPress={handlePayPhiPayment}
+                        className="h-14 bg-[#4F46E5] rounded-2xl items-center justify-center shadow-md"
+                        style={{ height: 54 }}
+                      >
+                        <Text className="text-white text-xs font-black uppercase tracking-wider">
+                          Pay {selectedPlan.price} with PayPhi Gateway
+                        </Text>
+                      </TouchableOpacity>
+
                       <TouchableOpacity
                         activeOpacity={0.8}
                         disabled={isProcessing}

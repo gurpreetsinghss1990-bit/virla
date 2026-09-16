@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Svg, { Circle, Path, Rect, Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { useUserStore } from '../store/userStore';
 import { PageIndicator } from '../presentation/components/PageIndicator';
 
 export default function OnboardingScreen() {
+  const insets = useSafeAreaInsets();
   const { setCompletedOnboarding } = useUserStore();
 
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -220,10 +222,10 @@ export default function OnboardingScreen() {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <View style={{ flex: 1, backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 24), paddingBottom: Math.max(insets.bottom, 24) }}>
       {/* Top Header Navigation Row */}
-      <View className="h-14 flex-row justify-end items-center px-6 z-10">
-        <TouchableOpacity onPress={handleFinishOnboarding} activeOpacity={0.6}>
+      <View className="h-12 flex-row justify-end items-center px-6 z-10">
+        <TouchableOpacity onPress={handleFinishOnboarding} activeOpacity={0.6} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Text className="text-[#6B7280] text-xs font-black uppercase tracking-widest">
             Skip
           </Text>
@@ -231,7 +233,7 @@ export default function OnboardingScreen() {
       </View>
 
       {/* Main slide content area */}
-      <View className="flex-1 justify-between px-6 pb-10">
+      <View className="flex-1 justify-between px-6 pb-2">
         <Animated.View 
           style={{ opacity: fadeContentAnim }} 
           className="flex-1 justify-center gap-6"
@@ -256,7 +258,7 @@ export default function OnboardingScreen() {
         </Animated.View>
 
         {/* Footer controls: Page indicator & Primary action */}
-        <View className="gap-6 mt-6 px-2">
+        <View className="gap-6 mt-4 px-2">
           {/* Custom Page indicator */}
           <PageIndicator activeIndex={currentSlide} total={3} />
 
@@ -272,6 +274,6 @@ export default function OnboardingScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }

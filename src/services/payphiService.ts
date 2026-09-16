@@ -24,15 +24,13 @@ let currentPendingPlan: { name: string; credits: number; priceText: string; tota
 export const PayPhiService = {
   initSDK: async (): Promise<{ success: boolean; code?: string; message?: string }> => {
     try {
-      const aggId = activeConfig.aggregatorId;
-      const merchantId = activeConfig.merchantId;
-      const mId = aggId ? aggId : merchantId;
       const environment = activeConfig.startingEnv;
+      const mId = activeConfig.aggregatorId || activeConfig.merchantId;
       const appId = activeConfig.appId;
       const merchantName = activeConfig.merchantName;
 
-      console.log(`[SDK Init] Calling setAppInfo for ${environment}...`);
-      console.log(`[SDK Init] Parameters -> mId: ${mId}, appId: ${appId}, merchantName: ${merchantName}`);
+      console.log(`[SDK Init] Calling setAppInfo...`);
+      console.log(`[SDK Init] env: ${environment}, mId: ${mId}, appId: ${appId}, merchantName: ${merchantName}`);
 
       const result = await PayphiSdk.setAppInfo(
         environment,
@@ -41,7 +39,7 @@ export const PayPhiService = {
         merchantName
       );
 
-      console.log(`[PayPhiService] Native setAppInfo Returned Raw Result:`, JSON.stringify(result));
+      console.log(`[PayPhiService] setAppInfo returned:`, JSON.stringify(result));
 
       if (result === '0000') {
         isInitialized = true;
@@ -54,11 +52,9 @@ export const PayPhiService = {
       isInitialized = false;
       const errCode = error?.code || 'INIT_ERROR';
       const errMsg = error?.message || String(error);
-      console.error(`[PayPhiService] setAppInfo Native Exception Catch:`);
-      console.error(`  - Error Code:`, errCode);
-      console.error(`  - Error Message:`, errMsg);
-      console.error(`  - Full Error Object:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
-      return { success: false, code: errCode, message: errMsg };
+      console.error(`[PayPhiService] setAppInfo Error: Code=${errCode}, Message=${errMsg}`);
+      console.error(`[PayPhiService] Full Error:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      return { success: false, code: errCode, message: `${errMsg} (${errCode})` };
     }
   },
 
@@ -147,9 +143,13 @@ export const PayPhiService = {
     const txnNo = `TXN_${Date.now()}`;
     currentPendingPlan = plan;
 
-    console.log(`[PayPhiService] SDK Initialized. Triggering makePayment for ${txnNo}...`);
+    // PayPhi expects amount in '1499.00' format (2 decimal places)
+    const amountValNum = parseFloat(plan.rawAmount);
+    const formattedAmount = isNaN(amountValNum) ? '20.00' : amountValNum.toFixed(2);
+
+    console.log(`[PayPhiService] SDK Initialized. Triggering makePayment for ${txnNo}, Amount: ${formattedAmount}...`);
     PayphiSdk.makePayment({
-      amount: plan.rawAmount,
+      amount: formattedAmount,
       merchantId: activeConfig.merchantId,
       merchantTxnNo: txnNo,
       currencyCode: activeConfig.currencyCode,

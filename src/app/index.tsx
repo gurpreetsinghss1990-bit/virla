@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, Animated } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useUserStore } from '../store/userStore';
 import { bootstrapApp } from '../utils/bootstrap';
 
 export default function SplashScreen() {
+  const insets = useSafeAreaInsets();
   
   // Animation values using useMemo to avoid render-phase ref reads
   const fadeAnim = useMemo(() => new Animated.Value(0), []);       // For the entire screen container
@@ -110,7 +112,7 @@ export default function SplashScreen() {
   }, [router]);
 
   return (
-    <View className="flex-1 bg-white items-center justify-center">
+    <View style={{ flex: 1, backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 24), paddingBottom: Math.max(insets.bottom, 24) }} className="items-center justify-center">
       <Animated.View 
         style={{ 
           opacity: fadeAnim,
