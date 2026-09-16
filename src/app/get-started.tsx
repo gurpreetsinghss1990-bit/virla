@@ -130,9 +130,6 @@ export default function GetStartedScreen() {
     }
   };
 
-  const handleOpenTerms = () => handleOpenUrl('https://virla.in/terms.html');
-  const handleOpenPrivacy = () => handleOpenUrl('https://virla.in/privacy.html');
-
   // Initialize the MSG91 OTP widget SDK and check resume state on mount
   useEffect(() => {
     const diag = OTPService.getDiagnostics();
