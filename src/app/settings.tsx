@@ -1,37 +1,30 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Switch, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore } from '../store/userProfileStore';
 import { useUserStore } from '../store/userStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import { SignOutConfirmationModal } from '../components/SignOutConfirmationModal';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { settings, updateGeneralSettings, notifications, updateNotificationPrefs } = useUserProfileStore();
   const { setLoggedIn } = useUserStore();
+  const [isSignOutModalVisible, setIsSignOutModalVisible] = useState(false);
 
   const handleAction = (label: string, detail: string) => {
     Alert.alert(label, detail);
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to log out of your session?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: () => {
-            setLoggedIn(false);
-            router.replace('/get-started' as any);
-          }
-        }
-      ]
-    );
+    setIsSignOutModalVisible(true);
+  };
+
+  const confirmLogout = () => {
+    setLoggedIn(false);
+    router.replace('/get-started' as any);
   };
 
   return (
@@ -277,6 +270,12 @@ export default function SettingsScreen() {
 
         </View>
       </ScrollView>
+
+      <SignOutConfirmationModal
+        visible={isSignOutModalVisible}
+        onClose={() => setIsSignOutModalVisible(false)}
+        onConfirm={confirmLogout}
+      />
     </View>
   );
 }

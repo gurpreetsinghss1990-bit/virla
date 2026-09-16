@@ -11,6 +11,7 @@ import { useUserProfileStore } from '../../store/userProfileStore';
 import { Database, TrainerApplication } from '../../database/Database';
 import { AutocompleteSuggestion, fetchGooglePlacesAutocomplete, reverseGeocodeCoords } from '../../utils/distance';
 import { LuxuryCard } from '../../components/LuxuryCard';
+import { SignOutConfirmationModal } from '../../components/SignOutConfirmationModal';
 import * as Location from 'expo-location';
 import { formatToDDMMYYYY } from '../../utils/date';
 
@@ -75,31 +76,15 @@ export default function ProfileScreen() {
   const { totalEarnings, earningsList } = useCoachStore();
   const { ledger, creditBalance, creditLots, syncFromDB: syncWallet } = useWalletStore();
   const profile = useUserProfileStore();
+  const [isSignOutModalVisible, setIsSignOutModalVisible] = useState(false);
 
   const handleLogout = () => {
-    if (Platform.OS === 'web') {
-      const confirmLogout = window.confirm('Are you sure you want to sign out?');
-      if (confirmLogout) {
-        setLoggedIn(false);
-        router.replace('/get-started' as any);
-      }
-    } else {
-      Alert.alert(
-        'Sign Out',
-        'Are you sure you want to sign out?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Sign Out',
-            style: 'destructive',
-            onPress: () => {
-              setLoggedIn(false);
-              router.replace('/get-started' as any);
-            }
-          }
-        ]
-      );
-    }
+    setIsSignOutModalVisible(true);
+  };
+
+  const confirmLogout = () => {
+    setLoggedIn(false);
+    router.replace('/get-started' as any);
   };
 
   const [hasApplied, setHasApplied] = useState(false);
@@ -1744,6 +1729,12 @@ export default function ProfileScreen() {
 
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <SignOutConfirmationModal
+        visible={isSignOutModalVisible}
+        onClose={() => setIsSignOutModalVisible(false)}
+        onConfirm={confirmLogout}
+      />
     </SafeAreaViewWrapper>
   );
 }

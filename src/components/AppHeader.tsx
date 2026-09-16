@@ -1,10 +1,11 @@
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useUserStore } from '../store/userStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { NotificationBadge } from './NotificationBadge';
 import { Ionicons } from '@expo/vector-icons';
+import { CommunicationCenterModal } from './CommunicationCenterModal';
 
 interface AppHeaderProps {
   onNotificationPress?: () => void;
@@ -15,30 +16,13 @@ export function AppHeader({ onNotificationPress, onAvatarPress }: AppHeaderProps
   const router = useRouter();
   const { user } = useUserStore();
   const { unreadCount } = useNotificationStore();
+  const [modalVisible, setModalVisible] = useState(false);
 
   const handlePress = () => {
     if (onNotificationPress) {
       onNotificationPress();
     } else {
-      Alert.alert(
-        'Communication Center',
-        'Select a destination to open:',
-        [
-          {
-            text: 'Notifications Center',
-            onPress: () => router.push('/notifications' as any),
-          },
-          {
-            text: 'Messages (Chats)',
-            onPress: () => router.push('/(tabs)/messages' as any),
-          },
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-        ],
-        { cancelable: true }
-      );
+      setModalVisible(true);
     }
   };
 
@@ -79,6 +63,20 @@ export function AppHeader({ onNotificationPress, onAvatarPress }: AppHeaderProps
         <Ionicons name="notifications-outline" size={20} color="#111111" />
         <NotificationBadge count={unreadCount} />
       </TouchableOpacity>
+
+      <CommunicationCenterModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        unreadCount={unreadCount}
+        onSelectNotifications={() => {
+          setModalVisible(false);
+          router.push('/notifications' as any);
+        }}
+        onSelectMessages={() => {
+          setModalVisible(false);
+          router.push('/(tabs)/messages' as any);
+        }}
+      />
     </View>
   );
 }

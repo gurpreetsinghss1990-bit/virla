@@ -1,4 +1,5 @@
 {
+  "git.path": "/Library/Developer/CommandLineTools/usr/bin/git",
   "editor.codeActionsOnSave": {
     "source.fixAll": "explicit",
     "source.organizeImports": "explicit",

@@ -428,7 +428,7 @@ export default function BookingsScreen() {
           <ScrollView 
             showsVerticalScrollIndicator={false} 
             className="flex-1 bg-[#F7F8FC]"
-            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 140 }}
+            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 180 }}
           >
             {/* Page Header */}
             <View className="mb-6">
@@ -1021,7 +1021,7 @@ export default function BookingsScreen() {
         <ScrollView 
           showsVerticalScrollIndicator={false} 
           className="flex-1 bg-[#F7F8FC]"
-          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 140 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 180 }}
         >
         {/* Page Header */}
         <View className="mb-6">

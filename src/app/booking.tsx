@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Alert, Image, Animated, Modal, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Image, Animated, Modal, KeyboardAvoidingView, Platform, ActivityIndicator, Share } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
 import { useMembershipStore } from '../store/membershipStore';
@@ -338,6 +339,7 @@ async function resolveExactLocation(
 
 export default function BookingScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const noteInputRef = React.useRef<TextInput>(null);
   const params = useLocalSearchParams();
   const initialWorkoutId = params.workoutId as string;
@@ -1857,28 +1859,60 @@ export default function BookingScreen() {
     });
   };
 
+  const handleShareBooking = async () => {
+    try {
+      const shareMessage = `I just booked a ${selectedExperience?.title || 'Forge Strength'} session with VIRLA for ${selectedDate}, ${selectedTime}! Join me on VIRLA: https://virla.app/booking/${successBookingId || ''}`;
+      await Share.share({
+        message: shareMessage,
+      });
+    } catch (error) {
+      console.log('Error sharing booking:', error);
+    }
+  };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
-      {/* Header back button */}
-      <View className={`border-b border-[#E5E7EB] bg-white ${step === 6 ? 'py-3 px-6 flex-row items-center justify-between' : 'h-14 flex-row items-center px-6'}`}>
-        {step < 7 ? (
-          <TouchableOpacity onPress={handleBack} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} className="w-8 h-8 items-center justify-center">
-            <Ionicons name="arrow-back" size={20} color="#101828" />
-          </TouchableOpacity>
-        ) : (
-          <View className="w-8" />
-        )}
-        {step === 6 ? (
-          <View className="flex-1 items-center mr-8">
-            <Text className="text-[#101828] text-base font-black tracking-tight">Review & Confirm Booking</Text>
-            <Text className="text-[#6B7280] text-[9px] font-semibold mt-0.5">Please review your session details before confirming</Text>
-          </View>
-        ) : (
-          <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
-            {step <= 5 ? `Step ${step} of 5` : 'Success'}
-          </Text>
-        )}
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+      {/* Header with Safe Area top padding */}
+      <View style={{ paddingTop: insets.top, backgroundColor: '#FFFFFF' }} className="border-b border-[#E5E7EB]">
+        <View className={step === 6 ? 'py-3 px-6 flex-row items-center justify-between' : 'h-14 flex-row items-center px-6'}>
+          {step < 7 ? (
+            <TouchableOpacity onPress={handleBack} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} className="w-8 h-8 items-center justify-center">
+              <Ionicons name="arrow-back" size={20} color="#101828" />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity 
+              onPress={() => router.replace('/(tabs)')} 
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} 
+              className="w-8 h-8 items-center justify-center rounded-full bg-zinc-50 border border-zinc-100"
+            >
+              <Ionicons name="arrow-back" size={18} color="#101828" />
+            </TouchableOpacity>
+          )}
+          {step === 6 ? (
+            <View className="flex-1 items-center mr-8">
+              <Text className="text-[#101828] text-base font-bold tracking-tight">Review & Confirm Booking</Text>
+              <Text className="text-[#6B7280] text-xs font-normal mt-0.5">Please review your session details before confirming</Text>
+            </View>
+          ) : step === 7 ? (
+            <>
+              <View className="flex-1 items-center">
+                <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest">VIRLA AT-HOME</Text>
+                <Text className="text-zinc-900 text-sm font-bold tracking-tight">Session Confirmed</Text>
+              </View>
+              <TouchableOpacity
+                onPress={handleShareBooking}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                className="w-8 h-8 items-center justify-center rounded-full bg-zinc-50 border border-zinc-100"
+              >
+                <Feather name="share-2" size={16} color="#101828" />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
+              Step {step} of 5
+            </Text>
+          )}
+        </View>
       </View>
 
       <KeyboardAvoidingView 
@@ -2218,19 +2252,21 @@ export default function BookingScreen() {
                     animationType="slide"
                     onRequestClose={() => setIsAddAddressModalVisible(false)}
                   >
-                    <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+                    <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
                       {/* Conditional Header for Stage 2 only */}
                       {addAddressStep === 2 && (
-                        <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
-                          <TouchableOpacity 
-                            onPress={() => setAddAddressStep(1)} 
-                            className="w-8 h-8 items-center justify-center rounded-full bg-zinc-50"
-                          >
-                            <Ionicons name="arrow-back" size={18} color="#101828" />
-                          </TouchableOpacity>
-                          <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
-                            Enter address details
-                          </Text>
+                        <View style={{ paddingTop: insets.top, backgroundColor: '#FFFFFF' }} className="border-b border-[#E5E7EB]">
+                          <View className="h-14 flex-row items-center px-6 bg-white">
+                            <TouchableOpacity 
+                              onPress={() => setAddAddressStep(1)} 
+                              className="w-8 h-8 items-center justify-center rounded-full bg-zinc-50"
+                            >
+                              <Ionicons name="arrow-back" size={18} color="#101828" />
+                            </TouchableOpacity>
+                            <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
+                              Enter address details
+                            </Text>
+                          </View>
                         </View>
                       )}
 
@@ -2321,7 +2357,7 @@ export default function BookingScreen() {
                             <View 
                               style={{
                                 position: 'absolute',
-                                top: 12,
+                                top: insets.top + 12,
                                 left: 16,
                                 right: 16,
                                 backgroundColor: 'white',
@@ -2424,7 +2460,7 @@ export default function BookingScreen() {
                             <View 
                               style={{
                                 position: 'absolute',
-                                bottom: 16,
+                                bottom: Math.max(insets.bottom + 12, Platform.OS === 'android' ? 24 : 16),
                                 left: 16,
                                 right: 16,
                                 backgroundColor: 'white',
@@ -2736,7 +2772,7 @@ export default function BookingScreen() {
                           </KeyboardAvoidingView>
                         )}
                       </View>
-                    </SafeAreaView>
+                    </View>
                   </Modal>
                 </View>
               )}
@@ -3261,14 +3297,14 @@ export default function BookingScreen() {
                 <View className="gap-6 pb-6">
                   {/* Reservation countdown warning alert */}
                   {reservationTimeLeft > 0 && (
-                    <View className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex-row items-center justify-between shadow-sm">
+                    <View className="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl flex-row items-center justify-between shadow-sm">
                       <View className="flex-row items-center gap-2">
-                        <Feather name="clock" size={14} color="#D97706" />
-                        <Text className="text-amber-800 text-[10px] font-bold">
+                        <Feather name="clock" size={15} color="#D97706" />
+                        <Text className="text-amber-800 text-xs font-medium">
                           Slot reserved. Complete checkout in:
                         </Text>
                       </View>
-                      <Text className="text-amber-900 text-xs font-black">
+                      <Text className="text-amber-900 text-sm font-bold tracking-wide">
                         {Math.floor(reservationTimeLeft / 60)}:{(reservationTimeLeft % 60).toString().padStart(2, '0')}
                       </Text>
                     </View>
@@ -3288,19 +3324,19 @@ export default function BookingScreen() {
                     {/* Card Header: Calendar Icon, Title, Edit Button */}
                     <View className="flex-row justify-between items-center">
                       <View className="flex-row items-center gap-2.5">
-                        <View className="w-7 h-7 rounded-full bg-rose-50 items-center justify-center">
-                          <Feather name="calendar" size={13} color="#E11D48" />
+                        <View className="w-8 h-8 rounded-full bg-rose-50 items-center justify-center">
+                          <Feather name="calendar" size={14} color="#E11D48" />
                         </View>
-                        <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Booking Summary</Text>
+                        <Text className="text-zinc-900 text-sm font-bold tracking-tight">Booking Summary</Text>
                       </View>
                       <TouchableOpacity
                         activeOpacity={0.8}
                         onPress={() => triggerTransition(1)}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        className="bg-rose-50 border border-rose-100 rounded-lg px-2.5 py-1.5 flex-row items-center gap-1"
+                        className="bg-rose-50 border border-rose-100 rounded-xl px-3 py-1.5 flex-row items-center gap-1.5"
                       >
-                        <Feather name="edit-2" size={10} color="#E11D48" />
-                        <Text className="text-[#E11D48] text-[10px] font-black uppercase">Edit</Text>
+                        <Feather name="edit-2" size={12} color="#E11D48" />
+                        <Text className="text-[#E11D48] text-xs font-semibold">Edit</Text>
                       </TouchableOpacity>
                     </View>
 
@@ -3311,11 +3347,11 @@ export default function BookingScreen() {
                         className="w-20 h-20 rounded-[20px] bg-zinc-50 border border-zinc-100" 
                       />
                       <View className="flex-1 gap-1.5">
-                        <Text className="text-[#101828] text-base font-black tracking-tight">{selectedExperience.title}</Text>
+                        <Text className="text-[#101828] text-base font-bold tracking-tight">{selectedExperience.title}</Text>
                         <View className="flex-row">
-                          <View className="bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full flex-row items-center gap-1.5">
-                            <Feather name="user" size={8} color="#E11D48" />
-                            <Text className="text-[#E11D48] text-[8px] font-black uppercase">Solo Session</Text>
+                          <View className="bg-rose-50 border border-rose-100 px-2.5 py-1 rounded-full flex-row items-center gap-1.5">
+                            <Feather name="user" size={10} color="#E11D48" />
+                            <Text className="text-[#E11D48] text-[11px] font-semibold">Solo Session</Text>
                           </View>
                         </View>
                       </View>
@@ -3326,30 +3362,30 @@ export default function BookingScreen() {
                       {/* Date Row */}
                       <View className="border-t border-dashed border-[#E5E7EB] py-3.5 flex-row justify-between items-center">
                         <View className="flex-row items-center gap-2">
-                          <Feather name="calendar" size={13} color="#6B7280" />
-                          <Text className="text-[#6B7280] text-xs font-semibold">Date</Text>
+                          <Feather name="calendar" size={15} color="#6B7280" />
+                          <Text className="text-[#6B7280] text-[13px] font-medium">Date</Text>
                         </View>
-                        <Text className="text-[#101828] text-xs font-extrabold">{getFormattedDateLabel()}</Text>
+                        <Text className="text-[#101828] text-[13px] font-bold">{getFormattedDateLabel()}</Text>
                       </View>
 
                       {/* Time Row */}
                       <View className="border-t border-dashed border-[#E5E7EB] py-3.5 flex-row justify-between items-center">
                         <View className="flex-row items-center gap-2">
-                          <Feather name="clock" size={13} color="#6B7280" />
-                          <Text className="text-[#6B7280] text-xs font-semibold">Time</Text>
+                          <Feather name="clock" size={15} color="#6B7280" />
+                          <Text className="text-[#6B7280] text-[13px] font-medium">Time</Text>
                         </View>
-                        <Text className="text-[#101828] text-xs font-extrabold">
-                          {getCustomerDisplayTime(selectedTime)} <Text className="text-[#6B7280] font-medium">({selectedExperience.duration} min workout)</Text>
+                        <Text className="text-[#101828] text-[13px] font-bold">
+                          {getCustomerDisplayTime(selectedTime)} <Text className="text-[#6B7280] font-normal">({selectedExperience.duration} min)</Text>
                         </Text>
                       </View>
 
                       {/* Trainer Preference Row */}
                       <View className="border-t border-dashed border-[#E5E7EB] py-3.5 flex-row justify-between items-center">
                         <View className="flex-row items-center gap-2">
-                          <Feather name="user" size={13} color="#6B7280" />
-                          <Text className="text-[#6B7280] text-xs font-semibold">Trainer Preference</Text>
+                          <Feather name="user" size={15} color="#6B7280" />
+                          <Text className="text-[#6B7280] text-[13px] font-medium">Trainer Preference</Text>
                         </View>
-                        <Text className="text-[#101828] text-xs font-extrabold">
+                        <Text className="text-[#101828] text-[13px] font-bold">
                           {trainerPref === 'any' ? 'No Preference' : trainerPref === 'female' ? 'Female Trainer' : trainerPref === 'male' ? 'Male Trainer' : 'Favorite Trainer'}
                         </Text>
                       </View>
@@ -3357,10 +3393,10 @@ export default function BookingScreen() {
                       {/* Location Row */}
                       <View className="border-t border-dashed border-[#E5E7EB] py-3.5 flex-row justify-between items-start">
                         <View className="flex-row items-center gap-2 mt-0.5">
-                          <Feather name="map-pin" size={13} color="#6B7280" />
-                          <Text className="text-[#6B7280] text-xs font-semibold">Location</Text>
+                          <Feather name="map-pin" size={15} color="#6B7280" />
+                          <Text className="text-[#6B7280] text-[13px] font-medium">Location</Text>
                         </View>
-                        <Text className="text-[#101828] text-xs font-extrabold max-w-[60%] text-right leading-relaxed">
+                        <Text className="text-[#101828] text-[13px] font-bold max-w-[60%] text-right leading-relaxed">
                           {addresses.find(a => a.id === selectedAddressId)?.addressLine || 'Selected Location'}
                         </Text>
                       </View>
@@ -3368,10 +3404,10 @@ export default function BookingScreen() {
                       {/* Credits Row */}
                       <View className="border-t border-dashed border-[#E5E7EB] pt-3.5 flex-row justify-between items-center">
                         <View className="flex-row items-center gap-2">
-                          <Feather name="credit-card" size={13} color="#6B7280" />
-                          <Text className="text-[#6B7280] text-xs font-semibold">Credits</Text>
+                          <Feather name="credit-card" size={15} color="#6B7280" />
+                          <Text className="text-[#6B7280] text-[13px] font-medium">Credits</Text>
                         </View>
-                        <Text className="text-[#101828] text-xs font-extrabold">1 Credit will be used</Text>
+                        <Text className="text-[#101828] text-[13px] font-bold">1 Credit will be used</Text>
                       </View>
                     </View>
                   </View>
@@ -3381,14 +3417,14 @@ export default function BookingScreen() {
                     {/* Header: Clipboard Icon, Title, Subtitle */}
                     <View className="flex-row gap-3 items-center">
                       <View className="w-9 h-9 rounded-full bg-rose-50 items-center justify-center">
-                        <Feather name="edit-3" size={15} color="#E11D48" />
+                        <Feather name="edit-3" size={16} color="#E11D48" />
                       </View>
                       <View className="flex-1">
-                        <View className="flex-row items-center gap-1">
-                          <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Note to Your Trainer</Text>
-                          <Text className="text-[#6B7280] text-[10px] font-semibold">(Optional)</Text>
+                        <View className="flex-row items-center gap-1.5">
+                          <Text className="text-[#101828] text-sm font-bold tracking-tight">Note to Your Trainer</Text>
+                          <Text className="text-[#6B7280] text-xs font-medium">(Optional)</Text>
                         </View>
-                        <Text className="text-[#6B7280] text-[9px] font-medium leading-none mt-1">Share anything that will help your trainer prepare better.</Text>
+                        <Text className="text-[#6B7280] text-xs font-normal mt-0.5">Share anything that will help your trainer prepare better.</Text>
                       </View>
                     </View>
 
@@ -3408,12 +3444,12 @@ export default function BookingScreen() {
                             activeOpacity={0.8}
                             onPress={() => handleChipPress(chip.label)}
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            className={`px-3 py-1.5 rounded-full border flex-row items-center gap-1.5 ${
-                              isSelected ? 'bg-rose-100/70 border-rose-300' : 'bg-rose-50/50 border-rose-100/60'
+                            className={`px-3.5 py-2 rounded-full border flex-row items-center gap-1.5 ${
+                              isSelected ? 'bg-rose-100/80 border-rose-300' : 'bg-rose-50/50 border-rose-100'
                             }`}
                           >
-                            <Feather name={chip.icon as any} size={10} color="#E11D48" />
-                            <Text className="text-[#E11D48] text-[9px] font-extrabold">{chip.label}</Text>
+                            <Feather name={chip.icon as any} size={12} color="#E11D48" />
+                            <Text className="text-[#E11D48] text-xs font-semibold">{chip.label}</Text>
                           </TouchableOpacity>
                         );
                       })}
@@ -3433,88 +3469,95 @@ export default function BookingScreen() {
                         }}
                         placeholder="Anything else your trainer should know..."
                         placeholderTextColor="#9CA3AF"
-                        className="text-[#101828] text-xs font-semibold h-20 text-start"
+                        className="text-[#101828] text-sm font-medium h-20 text-start"
                         style={{ minHeight: 80, padding: 0, textAlignVertical: 'top' }}
                         maxLength={250}
                       />
-                      <Text className="text-right text-[#9CA3AF] text-[9px] font-bold mt-1">
+                      <Text className="text-right text-[#9CA3AF] text-xs font-medium mt-1">
                         {trainerNote.length}/250
                       </Text>
                     </View>
                   </View>
 
-                  {/* Section 3 — Session Policies */}
+                  {/* Section 3 — Session Policies Card */}
                   <View 
-                    className="bg-amber-50/20 border border-amber-100/50 p-4.5 rounded-[28px] flex-row items-center justify-between mt-2"
+                    className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4 mt-1"
+                    style={{
+                      shadowColor: '#101828',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.02,
+                      shadowRadius: 6,
+                      elevation: 1,
+                    }}
                   >
-                    <View className="flex-row items-center gap-3.5 flex-1 pr-3">
-                      <View className="w-9 h-9 rounded-full bg-amber-100/40 items-center justify-center">
-                        <Feather name="shield" size={15} color="#D97706" />
+                    {/* Header: Shield Icon, Title & View Details button */}
+                    <View className="flex-row justify-between items-center">
+                      <View className="flex-row items-center gap-2.5 flex-1 pr-2">
+                        <View className="w-8 h-8 rounded-full bg-amber-50 items-center justify-center">
+                          <Feather name="shield" size={15} color="#D97706" />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-zinc-900 text-sm font-bold tracking-tight">Session Policies</Text>
+                          <Text className="text-zinc-500 text-xs font-normal mt-0.5">Cancellation, safety & session rules</Text>
+                        </View>
                       </View>
-                      <View className="flex-1 gap-0.5">
-                        <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Session Policies</Text>
-                        <Text className="text-[#6B7280] text-[9px] font-medium leading-normal">
-                          Important information about timing, cancellation, privacy, safety & more.
-                        </Text>
-                      </View>
-                    </View>
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => router.push('/legal-center')}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                      className="border border-rose-200 px-3.5 py-1.5 rounded-full flex-row items-center gap-0.5 bg-white shadow-sm"
-                    >
-                      <Text className="text-[#E11D48] text-[9px] font-black uppercase tracking-wide">View Details</Text>
-                      <Feather name="chevron-right" size={10} color="#E11D48" />
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Policy reminders grid icons */}
-                  <View className="flex-row justify-between py-4 border-t border-b border-zinc-200/50 mt-2 bg-white rounded-2xl px-2">
-                    <View className="flex-1 items-center px-1">
-                      <Feather name="clock" size={14} color="#4F46E5" />
-                      <Text className="text-zinc-950 text-[9px] font-black mt-1.5 text-center leading-none">15 Min Grace</Text>
-                      <Text className="text-zinc-400 text-[7px] font-bold text-center mt-1 leading-relaxed">Grace period for preparation</Text>
-                    </View>
-                    
-                    <View className="w-[1px] bg-zinc-100" />
-
-                    <View className="flex-1 items-center px-1">
-                      <Feather name="activity" size={14} color="#4B5563" />
-                      <Text className="text-zinc-950 text-[9px] font-black mt-1.5 text-center leading-none">60 Min Workout</Text>
-                      <Text className="text-zinc-400 text-[7px] font-bold text-center mt-1 leading-relaxed">Workout starts after OTP</Text>
-                    </View>
-
-                    <View className="w-[1px] bg-zinc-100" />
-
-                    <View className="flex-1 items-center px-1">
-                      <Feather name="shield" size={14} color="#E11D48" />
-                      <Text className="text-zinc-950 text-[9px] font-black mt-1.5 text-center leading-none">Fair & Transparent</Text>
-                      <Text className="text-zinc-400 text-[7px] font-bold text-center mt-1 leading-relaxed">Same rules for everyone</Text>
-                    </View>
-
-                    <View className="w-[1px] bg-zinc-100" />
-
-                    <View className="flex-1 items-center px-1">
-                      <Feather name="lock" size={14} color="#8B5CF6" />
-                      <Text className="text-zinc-950 text-[9px] font-black mt-1.5 text-center leading-none">Secure & Private</Text>
-                      <Text className="text-zinc-400 text-[7px] font-bold text-center mt-1 leading-relaxed">Your safety and privacy ensured</Text>
-                    </View>
-                  </View>
-
-                  {/* Policy Reminder Banner */}
-                  <View className="bg-indigo-50/50 border border-indigo-100/40 p-3.5 rounded-2xl flex-row items-center gap-2.5 mt-2">
-                    <Feather name="info" size={13} color="#4F46E5" />
-                    <Text className="text-zinc-600 text-[10px] font-medium flex-1">
-                      By confirming this booking, you agree to the{' '}
-                      <Text 
-                        onPress={() => router.push('/legal-center')} 
-                        className="text-indigo-600 font-extrabold underline"
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => router.push('/legal-center')}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        className="bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-1.5 flex-row items-center gap-1"
                       >
-                        VIRLA Session Policies
-                      </Text>
-                      .
-                    </Text>
+                        <Text className="text-zinc-700 text-xs font-semibold">View Details</Text>
+                        <Feather name="chevron-right" size={12} color="#6B7280" />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* 2x2 Highlights Grid */}
+                    <View className="bg-zinc-50/80 border border-zinc-100 rounded-2xl p-3 gap-2.5">
+                      <View className="flex-row gap-2.5">
+                        <View className="flex-1 bg-white border border-zinc-200/80 p-2.5 rounded-xl flex-row items-center gap-2.5">
+                          <View className="w-7 h-7 rounded-lg bg-indigo-50 items-center justify-center">
+                            <Feather name="clock" size={13} color="#4F46E5" />
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-zinc-900 text-xs font-bold leading-tight">15 Min Grace</Text>
+                            <Text className="text-zinc-500 text-[10px] font-normal leading-tight mt-0.5">Preparation window</Text>
+                          </View>
+                        </View>
+
+                        <View className="flex-1 bg-white border border-zinc-200/80 p-2.5 rounded-xl flex-row items-center gap-2.5">
+                          <View className="w-7 h-7 rounded-lg bg-emerald-50 items-center justify-center">
+                            <Feather name="activity" size={13} color="#059669" />
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-zinc-900 text-xs font-bold leading-tight">60 Min Workout</Text>
+                            <Text className="text-zinc-500 text-[10px] font-normal leading-tight mt-0.5">Starts after OTP</Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      <View className="flex-row gap-2.5">
+                        <View className="flex-1 bg-white border border-zinc-200/80 p-2.5 rounded-xl flex-row items-center gap-2.5">
+                          <View className="w-7 h-7 rounded-lg bg-rose-50 items-center justify-center">
+                            <Feather name="shield" size={13} color="#E11D48" />
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-zinc-900 text-xs font-bold leading-tight">Fair & Clear</Text>
+                            <Text className="text-zinc-500 text-[10px] font-normal leading-tight mt-0.5">Transparent policy</Text>
+                          </View>
+                        </View>
+
+                        <View className="flex-1 bg-white border border-zinc-200/80 p-2.5 rounded-xl flex-row items-center gap-2.5">
+                          <View className="w-7 h-7 rounded-lg bg-purple-50 items-center justify-center">
+                            <Feather name="lock" size={13} color="#7C3AED" />
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-zinc-900 text-xs font-bold leading-tight">Secure & Private</Text>
+                            <Text className="text-zinc-500 text-[10px] font-normal leading-tight mt-0.5">Safety guaranteed</Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
                   </View>
 
                   {/* Confirm Booking Primary Action */}
@@ -3524,7 +3567,7 @@ export default function BookingScreen() {
                     disabled={isConfirming}
                     className="w-full bg-[#E11D48] items-center justify-center flex-row gap-2 mt-4"
                     style={{
-                      height: 58,
+                      height: 56,
                       borderRadius: 16,
                       shadowColor: '#E11D48',
                       shadowOffset: { width: 0, height: 4 },
@@ -3537,16 +3580,16 @@ export default function BookingScreen() {
                       <ActivityIndicator size="small" color="white" />
                     ) : (
                       <>
-                        <Text className="text-white text-base font-extrabold">Confirm Booking</Text>
-                        <Feather name="chevron-right" size={16} color="white" />
+                        <Text className="text-white text-base font-bold">Confirm Booking</Text>
+                        <Feather name="chevron-right" size={18} color="white" />
                       </>
                     )}
                   </TouchableOpacity>
 
                   {/* Secure booking guarantee lock label */}
-                  <View className="flex-row items-center justify-center gap-1.5 mt-1">
-                    <Feather name="lock" size={11} color="#9CA3AF" />
-                    <Text className="text-[#9CA3AF] text-[9px] font-bold">Your booking is 100% secure</Text>
+                  <View className="flex-row items-center justify-center gap-1.5 mt-1.5">
+                    <Feather name="lock" size={13} color="#9CA3AF" />
+                    <Text className="text-[#9CA3AF] text-xs font-medium">Your booking is 100% secure</Text>
                   </View>
                 </View>
               )}
@@ -3569,6 +3612,7 @@ export default function BookingScreen() {
                   onBackToHome={() => {
                     router.replace('/(tabs)');
                   }}
+                  onShare={handleShareBooking}
                 />
               )}
 
@@ -3580,7 +3624,12 @@ export default function BookingScreen() {
 
       {/* Footer wizard navigation buttons (Steps 1 to 5) */}
       {step <= 5 && (
-        <View className="p-6 bg-white border-t border-[#E5E7EB] flex-row gap-3">
+        <View 
+          className="px-6 pt-3.5 bg-[#F7F8FC] flex-row gap-3"
+          style={{
+            paddingBottom: Math.max(insets.bottom + 12, Platform.OS === 'android' ? 36 : 24),
+          }}
+        >
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={handleBack}
@@ -3608,6 +3657,6 @@ export default function BookingScreen() {
           )}
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
