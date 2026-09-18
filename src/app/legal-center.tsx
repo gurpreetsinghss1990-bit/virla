@@ -201,8 +201,7 @@ export default function LegalCenterScreen() {
 
           {/* App Credits and Version */}
           <View className="items-center justify-center py-6 gap-1 border-t border-zinc-200 mt-2">
-            <Text className="text-zinc-900 text-xs font-bold tracking-wide">VIRLA FitTech Pvt. Ltd.</Text>
-            <Text className="text-zinc-400 text-xs font-medium mt-0.5">Version 3.0.0 (Build 57)</Text>
+            <Text className="text-zinc-400 text-xs font-medium">Version 3.0.0 (Build 57)</Text>
             <Text className="text-zinc-400 text-xs text-center mt-1 leading-relaxed max-w-[85%]">
               All rights reserved. Dedicated to safety, security, and certified training excellence.
             </Text>
