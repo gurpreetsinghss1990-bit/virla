@@ -2493,9 +2493,13 @@ class DatabaseClient {
     const endLimit = new Date(year, month, day, endHour, 0);
     
     let slotIndex = 1;
-    while (true) {
+    let safetyCounter = 0;
+    while (safetyCounter++ < 50) {
+      if (isNaN(current.getTime()) || isNaN(endLimit.getTime())) {
+        break;
+      }
       const slotEnd = new Date(current.getTime() + durationMinutes * 60 * 1000);
-      if (slotEnd.getTime() > endLimit.getTime()) {
+      if (isNaN(slotEnd.getTime()) || slotEnd.getTime() > endLimit.getTime() || current.getTime() >= slotEnd.getTime()) {
         break;
       }
       
@@ -2981,7 +2985,8 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
 
     if (!workoutFound) return 0;
 
-    while (true) {
+    let safetyCounter = 0;
+    while (safetyCounter++ < 3650) {
       const match = uniqueDates.some(d => d.toDateString() === checkDate.toDateString());
       if (match) {
         streak++;

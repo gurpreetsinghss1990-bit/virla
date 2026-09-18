@@ -339,6 +339,7 @@ async function resolveExactLocation(
 }
 
 export default function BookingScreen() {
+  console.log('[BOOKING] Breadcrumb R1: BookingScreen render start');
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const noteInputRef = React.useRef<TextInput>(null);
@@ -434,8 +435,10 @@ export default function BookingScreen() {
 
   // Debounced search query autocomplete for workout location selector
   useEffect(() => {
+    console.log('[BOOKING] useEffect #1 (autocomplete): INITIATED');
     if (searchQuery.trim().length < 3 || hasConfirmedSearchSelection) {
       setGoogleSuggestions([]);
+      console.log('[BOOKING] useEffect #1 (autocomplete): COMPLETED (short-circuit)');
       return;
     }
     let active = true;
@@ -580,6 +583,7 @@ export default function BookingScreen() {
 
   // Synchronize database content on mount in case of direct deep link / refresh
   useEffect(() => {
+    console.log('[BOOKING] useEffect #2 (mount sync): INITIATED');
     const initData = async () => {
       try {
         console.log('[BOOKING] Waiting for userStore hydration on mount...');
@@ -1263,6 +1267,7 @@ export default function BookingScreen() {
   };
 
   useEffect(() => {
+    console.log('[BOOKING] useEffect #3 (reservation timer): INITIATED, timeLeft:', reservationTimeLeft);
     let timer: any;
     if (reservationTimeLeft > 0) {
       timer = setInterval(() => {
@@ -1282,6 +1287,7 @@ export default function BookingScreen() {
   }, [reservationTimeLeft, reservationId]);
 
   useEffect(() => {
+    console.log('[BOOKING] useEffect #4 (reservation cleanup): INITIATED, resId:', reservationId);
     return () => {
       if (reservationId) {
         Database.releaseSlot(reservationId);
@@ -1291,6 +1297,7 @@ export default function BookingScreen() {
 
   // Initial workout matching logic for Sprint 3 compatibility
   useEffect(() => {
+    console.log('[BOOKING] useEffect #5 (workout match): INITIATED, params:', initialWorkoutId, initialWorkoutType, initialWorkoutName);
     const searchString = [initialWorkoutId, initialWorkoutType, initialWorkoutName]
       .filter(Boolean)
       .join(' ')
@@ -1341,7 +1348,7 @@ export default function BookingScreen() {
   }, [initialWorkoutId, initialWorkoutType, initialWorkoutName]);
 
   useEffect(() => {
-
+    console.log('[BOOKING] useEffect #6 (step 3 address): INITIATED, step:', step, 'selectedAddressId:', selectedAddressId);
     if (step === 3 && selectedAddressId) {
       const addr = addresses.find(a => a.id === selectedAddressId);
       if (addr) {
@@ -1403,7 +1410,7 @@ export default function BookingScreen() {
 
   // Pulse animation for radar scanning map
   useEffect(() => {
-
+    console.log('[BOOKING] useEffect #7 (step 3 radar): INITIATED, step:', step);
     if (step === 3) {
       radarAnim.setValue(0);
       Animated.loop(
@@ -1418,6 +1425,8 @@ export default function BookingScreen() {
 
   // Step transitions
   const triggerTransition = (nextStep: number) => {
+    console.log('[BOOKING] Breadcrumb 3a: Starting animation sequence for step', nextStep);
+
     Animated.sequence([
       Animated.timing(slideAnim, {
         toValue: -10,
@@ -1434,9 +1443,12 @@ export default function BookingScreen() {
         duration: 180,
         useNativeDriver: true,
       })
-    ]).start();
-    
+    ]).start(() => {
+      console.log('[BOOKING] Breadcrumb 3b: Animation sequence completed');
+    });
+
     if (nextStep === 6) {
+      console.log('[BOOKING] Breadcrumb 3c: Step 6 logic triggered, returning early');
       const activeCoach = matchedCoach || coaches[0];
       if (activeCoach) {
         Database.reserveSlot(user.id, activeCoach.id, selectedDate, selectedTime).then(resId => {
@@ -1455,7 +1467,9 @@ export default function BookingScreen() {
       }
     }
 
+    console.log('[BOOKING] Breadcrumb 3d: Calling setStep(', nextStep, ')');
     setStep(nextStep);
+    console.log('[BOOKING] Breadcrumb 3e: setStep completed');
   };
 
   const handleNext = () => {
@@ -1871,6 +1885,7 @@ export default function BookingScreen() {
     }
   };
 
+  console.log('[BOOKING] Breadcrumb R2: BookingScreen reached return statement');
   return (
     <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
       <StatusBar style="dark" />
@@ -1966,43 +1981,70 @@ export default function BookingScreen() {
                   </View>
 
                   <View className="gap-3.5">
-                    {EXPERIENCES.map((exp) => {
+                    {(() => {
+                      console.log('[BOOKING] JSX: Starting EXPERIENCES.map, length:', EXPERIENCES.length, 'selectedExperience:', selectedExperience?.id);
+                      return null;
+                    })()}
+                    {EXPERIENCES.map((exp, index) => {
                       const isSelected = selectedExperience.id === exp.id;
+                      console.log(`[BOOKING] JSX: Mapping experience item ${index} (${exp.id}), isSelected: ${isSelected}`);
                       return (
                         <TouchableOpacity
                           key={exp.id}
                           activeOpacity={0.9}
                           onPress={() => {
+                            console.log('[BOOKING] Breadcrumb 1: Experience tapped:', exp.id, exp.title);
                             setSelectedExperience(exp);
-                            setTimeout(() => triggerTransition(2), 250);
+                            console.log('[BOOKING] Breadcrumb 2: setSelectedExperience completed');
+
+                            setTimeout(() => {
+                              console.log('[BOOKING] Breadcrumb 3: Timeout fired, calling triggerTransition(2)');
+                              triggerTransition(2);
+                              console.log('[BOOKING] Breadcrumb 4: triggerTransition(2) returned');
+                            }, 250);
                           }}
-                          className={`p-4.5 rounded-[24px] border flex-row items-center justify-between ${
-                            isSelected 
-                              ? 'bg-zinc-950 border-zinc-950 shadow-md' 
-                              : 'bg-white border-zinc-200/80 shadow-xs'
-                          }`}
+                          style={{
+                            backgroundColor: isSelected ? '#09090B' : '#FFFFFF',
+                            borderColor: isSelected ? '#09090B' : 'rgba(228, 228, 231, 0.8)',
+                          }}
+                          className="p-4 rounded-[24px] border flex-row items-center justify-between"
                         >
                           <View className="flex-row items-center gap-3.5 flex-1">
                             <View 
                               style={{ 
                                 backgroundColor: exp.gradientColors[0],
                               }} 
-                              className="w-12 h-12 rounded-2xl items-center justify-center shadow-xs"
+                              className="w-12 h-12 rounded-2xl items-center justify-center"
                             >
                               <Text className="text-2xl">{exp.emoji}</Text>
                             </View>
                             <View className="flex-1 pr-2">
                               <View className="flex-row items-center gap-2">
-                                <Text className={`text-[15px] font-bold tracking-tight ${isSelected ? 'text-white' : 'text-zinc-950'}`}>
+                                <Text 
+                                  style={{ color: isSelected ? '#FFFFFF' : '#09090B' }}
+                                  className="text-[15px] font-bold tracking-tight"
+                                >
                                   {exp.title}
                                 </Text>
-                                <View className={`px-2 py-0.5 rounded-full ${isSelected ? 'bg-zinc-800 border border-zinc-700' : 'bg-zinc-100 border border-zinc-200/80'}`}>
-                                  <Text className={`text-[9px] font-bold uppercase tracking-wider ${isSelected ? 'text-zinc-300' : 'text-zinc-600'}`}>
+                                <View 
+                                  style={{
+                                    backgroundColor: isSelected ? '#27272A' : '#F4F4F5',
+                                    borderColor: isSelected ? '#3F3F46' : 'rgba(228, 228, 231, 0.8)',
+                                  }}
+                                  className="px-2 py-0.5 rounded-full border"
+                                >
+                                  <Text 
+                                    style={{ color: isSelected ? '#D4D4D8' : '#52525B' }}
+                                    className="text-[9px] font-bold uppercase tracking-wider"
+                                  >
                                     {exp.duration} min
                                   </Text>
                                 </View>
                               </View>
-                              <Text className={`text-xs font-normal mt-1 leading-relaxed ${isSelected ? 'text-zinc-300' : 'text-zinc-600'}`}>
+                              <Text 
+                                style={{ color: isSelected ? '#D4D4D8' : '#52525B' }}
+                                className="text-xs font-normal mt-1 leading-relaxed"
+                              >
                                 {exp.description}
                               </Text>
                             </View>
@@ -2017,6 +2059,10 @@ export default function BookingScreen() {
                         </TouchableOpacity>
                       );
                     })}
+                    {(() => {
+                      console.log('[BOOKING] JSX: Finished EXPERIENCES.map successfully');
+                      return null;
+                    })()}
                   </View>
                 </View>
               )}
@@ -3670,6 +3716,10 @@ export default function BookingScreen() {
     </KeyboardAvoidingView>
 
       {/* Footer wizard navigation buttons (Steps 1 to 5) */}
+      {(() => {
+        console.log('[BOOKING] JSX: Evaluating footer condition, step:', step);
+        return null;
+      })()}
       {step <= 5 && (
         <View 
           className="px-6 pt-3.5 bg-[#F7F8FC] flex-row gap-3"
@@ -3685,25 +3735,34 @@ export default function BookingScreen() {
           >
             <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">Back</Text>
           </TouchableOpacity>
-          {(step < 5 || getFilteredSlotsForPeriod().length > 0) && (
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={handleNext}
-              className="flex-1 bg-zinc-950 rounded-2xl items-center justify-center"
-              style={{
-                height: 56,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.05,
-                shadowRadius: 4,
-                elevation: 2,
-              }}
-            >
-              <Text className="text-white text-xs font-black uppercase tracking-wider">Continue</Text>
-            </TouchableOpacity>
-          )}
+          {(() => {
+            console.log('[BOOKING] JSX: Checking continue button condition, step:', step);
+            const canShow = (step < 5 || getFilteredSlotsForPeriod().length > 0);
+            console.log('[BOOKING] JSX: Continue button condition result:', canShow);
+            return canShow ? (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleNext}
+                className="flex-1 bg-zinc-950 rounded-2xl items-center justify-center"
+                style={{
+                  height: 56,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 4,
+                  elevation: 2,
+                }}
+              >
+                <Text className="text-white text-xs font-black uppercase tracking-wider">Continue</Text>
+              </TouchableOpacity>
+            ) : null;
+          })()}
         </View>
       )}
+      {(() => {
+        console.log('[BOOKING] JSX: Finished all JSX evaluation inside return statement');
+        return null;
+      })()}
     </View>
   );
 }
