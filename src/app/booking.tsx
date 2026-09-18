@@ -477,6 +477,8 @@ export default function BookingScreen() {
   const mapRef = useRef<MapView>(null);
   const reverseGeocodeTimerRef = useRef<any>(null);
   const geocodeRequestCounterRef = useRef(0);
+  const isMountedRef = useRef(true);
+  const autoTransitionTimerRef = useRef<any>(null);
 
   // New address form fields
   const [newHouseNo, setNewHouseNo] = useState('');
@@ -598,16 +600,26 @@ export default function BookingScreen() {
           console.warn('[BOOKING] User is not logged in or userId is missing on mount');
         }
 
-        console.log('[BOOKING] Reloading database from Supabase on mount...');
-        await Database.reload();
-        useCoachStore.getState().syncFromDB();
-        useAddressStore.getState().syncFromDB();
-        console.log('[BOOKING] Database reloaded and stores synchronized.');
+        if (isMountedRef.current) {
+          useCoachStore.getState().syncFromDB();
+          useAddressStore.getState().syncFromDB();
+          console.log('[BOOKING] Database reloaded and stores synchronized.');
+        }
       } catch (err) {
         console.warn('Direct store sync failed on mount:', err);
       }
     };
     initData();
+
+    return () => {
+      isMountedRef.current = false;
+      if (autoTransitionTimerRef.current) {
+        clearTimeout(autoTransitionTimerRef.current);
+      }
+      if (reverseGeocodeTimerRef.current) {
+        clearTimeout(reverseGeocodeTimerRef.current);
+      }
+    };
   }, []);
 
   const parseTimeToMinutesHelper = (timeStr: string): number => {
@@ -1418,6 +1430,12 @@ export default function BookingScreen() {
 
   // Step transitions
   const triggerTransition = (nextStep: number) => {
+    if (!isMountedRef.current) return;
+    if (autoTransitionTimerRef.current) {
+      clearTimeout(autoTransitionTimerRef.current);
+      autoTransitionTimerRef.current = null;
+    }
+
     Animated.sequence([
       Animated.timing(slideAnim, {
         toValue: -10,
@@ -1440,6 +1458,7 @@ export default function BookingScreen() {
       const activeCoach = matchedCoach || coaches[0];
       if (activeCoach) {
         Database.reserveSlot(user.id, activeCoach.id, selectedDate, selectedTime).then(resId => {
+          if (!isMountedRef.current) return;
           if (resId) {
             setReservationId(resId);
             setReservationTimeLeft(300); // 5 mins countdown
@@ -1449,13 +1468,17 @@ export default function BookingScreen() {
             setStep(5);
           }
         }).catch(() => {
-          setStep(5);
+          if (isMountedRef.current) {
+            setStep(5);
+          }
         });
         return;
       }
     }
 
-    setStep(nextStep);
+    if (isMountedRef.current) {
+      setStep(nextStep);
+    }
   };
 
   const handleNext = () => {
@@ -1514,6 +1537,11 @@ export default function BookingScreen() {
   };
 
   const handleBack = () => {
+    if (autoTransitionTimerRef.current) {
+      clearTimeout(autoTransitionTimerRef.current);
+      autoTransitionTimerRef.current = null;
+    }
+
     if (step === 6) {
       handleReleaseReservation();
     }
@@ -1974,13 +2002,19 @@ export default function BookingScreen() {
                           activeOpacity={0.9}
                           onPress={() => {
                             setSelectedExperience(exp);
-                            setTimeout(() => triggerTransition(2), 250);
                           }}
                           className={`p-4.5 rounded-[24px] border flex-row items-center justify-between ${
                             isSelected 
-                              ? 'bg-zinc-950 border-zinc-950 shadow-md' 
-                              : 'bg-white border-zinc-200/80 shadow-xs'
+                              ? 'bg-zinc-950 border-zinc-950' 
+                              : 'bg-white border-zinc-200/80'
                           }`}
+                          style={{
+                            shadowColor: isSelected ? '#000000' : '#101828',
+                            shadowOffset: { width: 0, height: isSelected ? 4 : 1 },
+                            shadowOpacity: isSelected ? 0.2 : 0.04,
+                            shadowRadius: isSelected ? 8 : 2,
+                            elevation: isSelected ? 4 : 1,
+                          }}
                         >
                           <View className="flex-row items-center gap-3.5 flex-1">
                             <View 
@@ -2058,7 +2092,12 @@ export default function BookingScreen() {
                                 useUserStore.getState().syncFromDB();
                               }
                               // Auto transition to step 3 on tap after small delay
-                              setTimeout(() => triggerTransition(3), 300);
+                              if (autoTransitionTimerRef.current) clearTimeout(autoTransitionTimerRef.current);
+                              autoTransitionTimerRef.current = setTimeout(() => {
+                                if (isMountedRef.current) {
+                                  triggerTransition(3);
+                                }
+                              }, 300);
                             }
                           }}
                           className={`w-[48%] p-4.5 rounded-[22px] border items-center justify-center gap-2 ${
@@ -2092,7 +2131,12 @@ export default function BookingScreen() {
                               activeOpacity={0.8}
                               onPress={() => {
                                 setSelectedTrainerId(coach.id);
-                                setTimeout(() => triggerTransition(3), 250);
+                                if (autoTransitionTimerRef.current) clearTimeout(autoTransitionTimerRef.current);
+                                autoTransitionTimerRef.current = setTimeout(() => {
+                                  if (isMountedRef.current) {
+                                    triggerTransition(3);
+                                  }
+                                }, 250);
                               }}
                               className={`p-4 rounded-2xl border flex-row items-center justify-between ${
                                 isSelected ? 'bg-indigo-50/50 border-indigo-500' : 'bg-white border-[#E5E7EB]'
@@ -2155,7 +2199,12 @@ export default function BookingScreen() {
                           onPress={() => {
                             setSelectedAddressId(addr.id);
                             // Auto transition to step 4 on card tap after small delay
-                            setTimeout(() => triggerTransition(4), 300);
+                            if (autoTransitionTimerRef.current) clearTimeout(autoTransitionTimerRef.current);
+                            autoTransitionTimerRef.current = setTimeout(() => {
+                              if (isMountedRef.current) {
+                                triggerTransition(4);
+                              }
+                            }, 300);
                           }}
                           className={`p-5 rounded-[24px] border flex-row items-center justify-between  ${
                             isSelected 
