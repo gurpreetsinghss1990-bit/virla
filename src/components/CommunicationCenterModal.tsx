@@ -32,41 +32,24 @@ export const CommunicationCenterModal: React.FC<CommunicationCenterModalProps> =
   const safeBottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 56 : 24) + 20;
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(300)).current;
 
   useEffect(() => {
     if (visible) {
       fadeAnim.setValue(0);
-      slideAnim.setValue(300);
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          friction: 8,
-          tension: 65,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }).start();
     }
   }, [visible]);
 
   const handleDismiss = () => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 180,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 300,
-        duration: 180,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 120,
+      useNativeDriver: true,
+    }).start(() => {
       onClose();
     });
   };
@@ -100,13 +83,10 @@ export const CommunicationCenterModal: React.FC<CommunicationCenterModalProps> =
           />
         </Animated.View>
 
-        {/* Modal Bottom Sheet Content with Slide Up Animation */}
+        {/* Modal Bottom Sheet Content */}
         <View style={{ flex: 1, justifyContent: 'flex-end' }} pointerEvents="box-none">
-          <Animated.View
-            style={{
-              transform: [{ translateY: slideAnim }],
-              paddingBottom: safeBottomPadding,
-            }}
+          <View
+            style={{ paddingBottom: safeBottomPadding }}
             className="bg-white rounded-t-[36px] px-6 pt-3 gap-5 shadow-2xl border-t border-rose-100"
           >
             {/* Subtle Pull Indicator Bar */}
@@ -210,7 +190,7 @@ export const CommunicationCenterModal: React.FC<CommunicationCenterModalProps> =
               Cancel
             </Text>
           </TouchableOpacity>
-        </Animated.View>
+        </View>
       </View>
     </KeyboardAvoidingView>
   </Modal>
