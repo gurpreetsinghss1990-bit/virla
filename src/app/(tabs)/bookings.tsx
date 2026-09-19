@@ -1154,8 +1154,14 @@ export default function BookingsScreen() {
           ) : (
             <EmptyState 
               type={activeFilter === 'completed' || activeFilter === 'past' ? 'no-sessions' : 'no-bookings'} 
-              title={activeFilter === 'cancelled' ? 'No Cancelled Sessions' : undefined}
-              showCard={activeFilter !== 'cancelled'}
+              title={
+                activeFilter === 'cancelled' 
+                  ? 'No Cancelled Sessions' 
+                  : activeFilter === 'completed' 
+                    ? 'No Completed Sessions' 
+                    : undefined
+              }
+              showCard={activeFilter !== 'cancelled' && activeFilter !== 'completed'}
               message={
                 activeFilter === 'cancelled' && cancelledDateFilter !== 'all'
                   ? `No cancelled or missed visits found for ${cancelledDateFilter}.`
