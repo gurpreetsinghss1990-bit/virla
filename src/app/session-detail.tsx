@@ -195,24 +195,24 @@ export default function SessionDetailScreen() {
       } else {
         locationTrackerService.stopTracking();
       }
-    } else if (role === 'customer') {
-      if (currentStatus === 'trainer_travelling' || currentStatus === 'trainer_arrived') {
-        unsubscribe = locationTrackerService.subscribeToLocation(
-          bookingId,
-          (coords) => {
-            setLiveTrainerCoords(coords);
-            setIsLiveConnectionStale(false);
-          },
-          () => {
-            setIsLiveConnectionStale(true);
-          }
-        );
-      } else {
-        setTimeout(() => {
-          setLiveTrainerCoords(null);
+    }
+
+    if (currentStatus === 'trainer_travelling' || currentStatus === 'trainer_arrived') {
+      unsubscribe = locationTrackerService.subscribeToLocation(
+        bookingId,
+        (coords) => {
+          setLiveTrainerCoords(coords);
           setIsLiveConnectionStale(false);
-        }, 0);
-      }
+        },
+        () => {
+          setIsLiveConnectionStale(true);
+        }
+      );
+    } else {
+      setTimeout(() => {
+        setLiveTrainerCoords(null);
+        setIsLiveConnectionStale(false);
+      }, 0);
     }
 
     return () => {
@@ -1435,7 +1435,7 @@ export default function SessionDetailScreen() {
                 {/* Real Live Map */}
                 <View className="h-44 overflow-hidden relative bg-slate-950">
                   <TrackingMap
-                    liveTrainerCoords={liveTrainerCoords}
+                    liveTrainerCoords={liveTrainerCoords || (role === 'trainer' && deviceCoords ? { latitude: deviceCoords.latitude, longitude: deviceCoords.longitude, accuracy: 0, heading: null, speed: null, updatedAt: new Date().toISOString() } : null)}
                     isStale={isLiveConnectionStale}
                     clientAddress={booking?.address}
                   />
@@ -1478,7 +1478,7 @@ export default function SessionDetailScreen() {
                 }}
               >
                 <View className="flex-row gap-4 items-start">
-                  <Image source={{ uri: booking.trainerPhoto }} className="w-14 h-14 rounded-full border border-zinc-200" />
+                  <Image source={{ uri: booking.trainerPhoto || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }} className="w-14 h-14 rounded-full border border-zinc-200" />
                   <View className="flex-1">
                     <View className="flex-row items-center gap-1.5 flex-wrap">
                       <Text className="text-zinc-950 text-base font-extrabold">Coach {booking.trainerName}</Text>
@@ -2157,6 +2157,7 @@ export default function SessionDetailScreen() {
                   }}
                   title="Workout Venue"
                   description={parsedAddress.addressLine || "Destination"}
+                  tracksViewChanges={false}
                 >
                   <View className="w-10 h-10 items-center justify-center bg-rose-500 rounded-full border-2 border-white shadow-md">
                     <Ionicons name="location" size={20} color="white" />

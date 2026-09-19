@@ -4,6 +4,7 @@ import * as Location from 'expo-location';
 class LocationTrackerService {
   private activeSubscription: Location.LocationSubscription | null = null;
   private currentBookingId: string | null = null;
+  private localListeners: Map<string, Set<(coords: { latitude: number; longitude: number; accuracy: number; heading: number | null; speed: number | null; updatedAt: string }) => void>> = new Map();
 
   /**
    * Starts tracking and publishing the trainer's location.
@@ -52,6 +53,22 @@ class LocationTrackerService {
    * Publishes coordinates to the trainer_travel_locations table in Supabase.
    */
   private async publishLocation(bookingId: string, coords: Location.LocationObjectCoords) {
+    const payloadData = {
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      accuracy: coords.accuracy ?? 0,
+      heading: coords.heading ?? null,
+      speed: coords.speed ?? null,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // 1. Instantly notify local memory listeners (for single-device testing or fallback)
+    const listeners = this.localListeners.get(bookingId);
+    if (listeners) {
+      listeners.forEach((cb) => cb(payloadData));
+    }
+
+    // 2. Publish to Supabase
     try {
       console.log('[LocationTracker] Publishing location for booking:', bookingId, coords.latitude, coords.longitude);
       const { error } = await supabase.from('trainer_travel_locations').upsert({
@@ -61,7 +78,7 @@ class LocationTrackerService {
         accuracy: coords.accuracy ?? 0,
         heading: coords.heading ?? null,
         speed: coords.speed ?? null,
-        updated_at: new Date().toISOString(),
+        updated_at: payloadData.updatedAt,
       });
 
       if (error) {
@@ -82,6 +99,12 @@ class LocationTrackerService {
     onStaleOrDisconnect?: () => void
   ): () => void {
     console.log('[LocationTracker] Setting up subscription for booking:', bookingId);
+
+    // Register local memory listener
+    if (!this.localListeners.has(bookingId)) {
+      this.localListeners.set(bookingId, new Set());
+    }
+    this.localListeners.get(bookingId)!.add(onUpdate);
 
     // 1. Fetch current/latest location first from database (cache recovery/initial state)
     supabase
@@ -141,6 +164,11 @@ class LocationTrackerService {
     // 3. Return cleanup/unsubscribe callback
     return () => {
       console.log('[LocationTracker] Cleaning up subscription for booking:', bookingId);
+      const set = this.localListeners.get(bookingId);
+      if (set) {
+        set.delete(onUpdate);
+        if (set.size === 0) this.localListeners.delete(bookingId);
+      }
       channel.unsubscribe();
     };
   }

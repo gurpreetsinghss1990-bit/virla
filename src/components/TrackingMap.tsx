@@ -51,15 +51,6 @@ export default function TrackingMap({ liveTrainerCoords, isStale, clientAddress 
     }
   }, [liveTrainerCoords, clientCoords]);
 
-  if (!liveTrainerCoords && !clientCoords) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="small" color="#9f1239" />
-        <Text style={styles.loadingText}>Initializing map...</Text>
-      </View>
-    );
-  }
-
   // Initial region centered on whatever coordinate is available
   const initialRegion = liveTrainerCoords
     ? {
@@ -76,8 +67,8 @@ export default function TrackingMap({ liveTrainerCoords, isStale, clientAddress 
         longitudeDelta: 0.02,
       }
     : {
-        latitude: 12.971598,
-        longitude: 77.594562,
+        latitude: 19.1358,
+        longitude: 72.8270,
         latitudeDelta: 0.02,
         longitudeDelta: 0.02,
       };
@@ -99,6 +90,7 @@ export default function TrackingMap({ liveTrainerCoords, isStale, clientAddress 
             coordinate={clientCoords}
             title="Destination"
             description="Your workout location"
+            tracksViewChanges={false}
           >
             <View style={styles.clientMarkerContainer}>
               <View style={styles.clientMarkerPin}>
@@ -117,6 +109,7 @@ export default function TrackingMap({ liveTrainerCoords, isStale, clientAddress 
             }}
             title="Trainer"
             description={isStale ? "Last known location (signal lost)" : "On the way"}
+            tracksViewChanges={false}
           >
             <View style={[styles.trainerMarkerContainer, isStale && styles.staleMarker]}>
               <View style={styles.trainerMarkerOutline}>
@@ -128,6 +121,14 @@ export default function TrackingMap({ liveTrainerCoords, isStale, clientAddress 
           </Marker>
         )}
       </MapView>
+
+      {/* Waiting for live GPS signal overlay badge */}
+      {!liveTrainerCoords && (
+        <View style={styles.staleOverlay}>
+          <ActivityIndicator size="small" color="#9f1239" style={{ marginRight: 6 }} />
+          <Text style={styles.staleText}>Acquiring live trainer GPS signal...</Text>
+        </View>
+      )}
 
       {/* Stale/Signal lost overlay badge */}
       {isStale && liveTrainerCoords && (

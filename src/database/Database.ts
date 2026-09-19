@@ -1,8 +1,7 @@
-import { supabase, setClientUserId } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, Workout, Coach, Booking, NotificationItem, Invoice, TrainerEarning, ScheduleSlot, AssignmentLog, TrainerWorkoutAssignment } from '../types';
-import { normalizeDate, canonicalizeTimeRange, getBookingISTDateRange } from '../utils/date';
-import { geocodeAddress, geocodeAddressSync } from '../utils/distance';
+import { AssignmentLog, Booking, Coach, Invoice, NotificationItem, ScheduleSlot, TrainerEarning, TrainerWorkoutAssignment, User, Workout } from '../types';
+import { canonicalizeTimeRange, getBookingISTDateRange, normalizeDate } from '../utils/date';
+import { setClientUserId, supabase } from './supabaseClient';
 
 // Simple UUID generator
 export function generateUUID(prefix = 'id'): string {
@@ -61,16 +60,16 @@ export function getISTDateInfo(date: Date) {
   for (const part of parts) {
     info[part.type] = part.value;
   }
-  
+
   const year = parseInt(info.year, 10);
   const month = parseInt(info.month, 10); // 1-12
   const day = parseInt(info.day, 10);
   const hour = parseInt(info.hour, 10);
   const minute = parseInt(info.minute, 10);
   const second = parseInt(info.second, 10);
-  
+
   const dateString = `${info.year}-${info.month}-${info.day}`;
-  
+
   return { year, month, day, hour, minute, second, dateString };
 }
 
@@ -87,7 +86,7 @@ export function calculateDurationFromTime(timeStr: string): number {
   const startPart = parts[0]?.trim();
   const endPart = parts[1]?.trim();
   if (!startPart || !endPart) return 60;
-  
+
   function parseTimePart(part: string) {
     const match = part.match(/(\d+):(\d+)\s*(AM|PM)/i);
     if (!match) return { hour: 0, minute: 0 };
@@ -98,17 +97,17 @@ export function calculateDurationFromTime(timeStr: string): number {
     if (ampm === 'AM' && h === 12) h = 0;
     return { hour: h, minute: m };
   }
-  
+
   const start = parseTimePart(startPart);
   const end = parseTimePart(endPart);
-  
+
   let startMinutes = start.hour * 60 + start.minute;
   let endMinutes = end.hour * 60 + end.minute;
-  
+
   if (endMinutes < startMinutes) {
     endMinutes += 24 * 60; // crossover midnight
   }
-  
+
   return endMinutes - startMinutes;
 }
 
@@ -178,7 +177,7 @@ export interface TrainerApplication {
   createdAt: string;
   updatedAt: string;
   status: 'pending' | 'approved' | 'rejected' | 'info_requested';
-  
+
   // Step 1: Personal Info
   fullName: string;
   phone: string;
@@ -244,7 +243,7 @@ export interface SavedAddress {
   pinCode: string;
   gpsPlaceholder?: string;
   isDefault: boolean;
-  
+
   lat?: number;
   lng?: number;
   apartment?: string;
@@ -277,8 +276,8 @@ export function mapDBUser(row: any): DBUser {
   if (rawStatus === 'COMPLETE' || rawStatus === 'complete') {
     regStatus = 'complete';
   } else if (
-    rawStatus === 'PROFILE_DETAILS_PENDING' || 
-    rawStatus === 'PROFILE_NAME_PENDING' || 
+    rawStatus === 'PROFILE_DETAILS_PENDING' ||
+    rawStatus === 'PROFILE_NAME_PENDING' ||
     rawStatus === 'incomplete'
   ) {
     regStatus = 'incomplete';
@@ -377,7 +376,7 @@ export function mapUserProfileToPostgres(profile: UserProfile): any {
 
 export function mapCoach(row: any): Coach {
   const prefs = row.preferences ? (typeof row.preferences === 'string' ? JSON.parse(row.preferences) : row.preferences) : { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] };
-  
+
   if (row.operating_address !== undefined) prefs.operatingAddress = row.operating_address || '';
   if (row.operating_latitude !== undefined && row.operating_latitude !== null) prefs.operatingLatitude = Number(row.operating_latitude);
   if (row.operating_longitude !== undefined && row.operating_longitude !== null) prefs.operatingLongitude = Number(row.operating_longitude);
@@ -528,9 +527,9 @@ export function validateBookingData(row: any): { isValid: boolean; reason?: stri
   }
 
   if (calculatedDuration !== storedDuration) {
-    return { 
-      isValid: false, 
-      reason: `Duration mismatch: calculated duration is ${calculatedDuration} mins but stored duration is ${storedDuration} mins` 
+    return {
+      isValid: false,
+      reason: `Duration mismatch: calculated duration is ${calculatedDuration} mins but stored duration is ${storedDuration} mins`
     };
   }
 
@@ -1047,27 +1046,27 @@ class DatabaseClient {
     client_disputes: any[];
     kit_requests: any[];
   } = {
-    users: [],
-    profiles: [],
-    coaches: [],
-    workouts: [],
-    bookings: [],
-    credit_transactions: [],
-    payments: [],
-    hydration: [],
-    calories: [],
-    notifications: [],
-    messages: [],
-    addresses: [],
-    earnings: [],
-    schedules: [],
-    trainer_applications: [],
-    assignment_logs: [],
-    slot_reservations: [],
-    trainer_workout_assignments: [],
-    client_disputes: [],
-    kit_requests: []
-  };
+      users: [],
+      profiles: [],
+      coaches: [],
+      workouts: [],
+      bookings: [],
+      credit_transactions: [],
+      payments: [],
+      hydration: [],
+      calories: [],
+      notifications: [],
+      messages: [],
+      addresses: [],
+      earnings: [],
+      schedules: [],
+      trainer_applications: [],
+      assignment_logs: [],
+      slot_reservations: [],
+      trainer_workout_assignments: [],
+      client_disputes: [],
+      kit_requests: []
+    };
 
   private currentUserId: string | null = null;
   private isLoaded = false;
@@ -1095,7 +1094,7 @@ class DatabaseClient {
     console.log('[DEBUG-DB] Database.resetAndClearLocalOnly() called. Clearing session and local memory caches...');
     this.currentUserId = null;
     this.isLoaded = false;
-    
+
     // Clear only local cached collections
     this.schema.bookings = [];
     this.schema.notifications = [];
@@ -1105,7 +1104,7 @@ class DatabaseClient {
     this.schema.hydration = [];
     this.schema.calories = [];
     this.schema.earnings = [];
-    
+
     if (typeof AsyncStorage !== 'undefined') {
       try {
         await AsyncStorage.removeItem(STORAGE_KEY);
@@ -1134,7 +1133,7 @@ class DatabaseClient {
     if (this.isLoaded) return;
     try {
       this.log('LoadDatabase', 'Loading database collections from Supabase...');
-      
+
       const fetchPromise = Promise.all([
         this.safeQuery(supabase.from('users').select('*'), 'users'),
         this.safeQuery(supabase.from('user_profiles').select('*'), 'user_profiles'),
@@ -1221,7 +1220,7 @@ class DatabaseClient {
       this.isLoaded = true;
       this.loadSource = 'supabase';
       this.log('LoadDatabase', 'Successfully synchronized local cache from Supabase');
-      
+
       this.save();
       await this.syncLocalDataToSupabase();
     } catch (err) {
@@ -1249,7 +1248,7 @@ class DatabaseClient {
   async syncLocalDataToSupabase(): Promise<void> {
     const userId = this.getCurrentUserId();
     if (!userId) return;
-    
+
     // 1. Sync disputes
     if (this.schema.client_disputes && this.schema.client_disputes.length > 0) {
       console.log(`[DB Sync] Syncing ${this.schema.client_disputes.length} local disputes to Supabase...`);
@@ -1261,7 +1260,7 @@ class DatabaseClient {
             .eq('description', d.description)
             .eq('category', d.category)
             .eq('trainer_id', d.trainerId || userId);
-            
+
           if (!error && (!data || data.length === 0)) {
             await supabase.from('disputes').insert({
               trainer_id: d.trainerId || userId,
@@ -1289,7 +1288,7 @@ class DatabaseClient {
             .select('id')
             .eq('trainer_id', k.trainerId || userId)
             .eq('items', k.items);
-            
+
           if (!error && (!data || data.length === 0)) {
             let normalizedItems: { [key: string]: number } = {};
             if (Array.isArray(k.items)) {
@@ -1321,7 +1320,7 @@ class DatabaseClient {
   syncCoachesWithAssignments(): void {
     if (!this.schema.coaches) return;
     const assignments = this.schema.trainer_workout_assignments || [];
-    
+
     const CATEGORY_DISPLAY_MAP: Record<string, string> = {
       'Strength': 'Strength Training',
       'Mind & Body': 'Yoga',
@@ -1900,14 +1899,14 @@ class DatabaseClient {
     const user = this.schema.users.find(u => u.id === userId);
     if (user) {
       Object.assign(user, fields);
-      
+
       const pgUser = mapDBUserToPostgres(user);
       const updateFields: any = {};
       for (const k of Object.keys(fields)) {
         const snakeKey = k.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
         updateFields[snakeKey] = pgUser[snakeKey];
       }
-      
+
       const { data, error } = await supabase.from('users').update(updateFields).eq('id', userId).select();
       if (error) {
         throw new Error(`Failed to update users table: ${error.message}`);
@@ -1927,14 +1926,14 @@ class DatabaseClient {
     const profile = this.getProfile(userId);
     if (profile) {
       Object.assign(profile, fields);
-      
+
       const pgProfile = mapUserProfileToPostgres(profile);
       const updateFields: any = {};
       for (const k of Object.keys(fields)) {
         const snakeKey = k.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
         updateFields[snakeKey] = pgProfile[snakeKey];
       }
-      
+
       const { data, error } = await supabase.from('user_profiles').update(updateFields).eq('user_id', userId).select();
       if (error) {
         throw new Error(`Failed to update user_profiles table: ${error.message}`);
@@ -1990,12 +1989,12 @@ class DatabaseClient {
         throw new Error("Gender cannot be changed after trainer profile creation.");
       }
     }
-    
+
     Object.assign(coach, fields);
-    
+
     // Map TypeScript fields to database columns dynamically to only send modified properties
     const updatePayload: any = {};
-    
+
     if (fields.name !== undefined) updatePayload.name = fields.name;
     if (fields.photo !== undefined) updatePayload.photo = fields.photo;
     if (fields.experience !== undefined) updatePayload.experience = fields.experience;
@@ -2071,7 +2070,7 @@ class DatabaseClient {
     try {
       const dateStr = normalizeDate(booking.date);
       if (!dateStr) return new Date();
-      
+
       const timePart = booking.time.split('-')[0].trim();
       const match = timePart.match(/(\d+):(\d+)\s*(AM|PM)/i);
       if (match) {
@@ -2080,7 +2079,7 @@ class DatabaseClient {
         const ampm = match[3].toUpperCase();
         if (ampm === 'PM' && hours < 12) hours += 12;
         if (ampm === 'AM' && hours === 12) hours = 0;
-        
+
         const [year, month, day] = dateStr.split('-').map(x => parseInt(x, 10));
         const d = new Date(year, month - 1, day, hours, minutes, 0, 0);
         if (!isNaN(d.getTime())) {
@@ -2101,7 +2100,7 @@ class DatabaseClient {
     this.schema.bookings.forEach(b => {
       if (b.status === 'upcoming') {
         const range = getBookingISTDateRange(b);
-        
+
         // 1. Unstarted bookings: auto-expire 30 minutes after scheduled start time
         if (!b.timelineStatus || ['booked', 'trainer_assigned', 'trainer_accepted', 'trainer_preparing', 'trainer_travelling', 'trainer_arrived'].includes(b.timelineStatus)) {
           const expireTime = range.start.getTime() + 30 * 60 * 1000;
@@ -2143,13 +2142,13 @@ class DatabaseClient {
       if (b.status === 'upcoming' && b.trainerId && b.trainerId !== 'searching' && !b.reminderSent) {
         const bookedTime = this.parseBookingDateHelper(b);
         const diffMs = bookedTime.getTime() - now;
-        
+
         if (diffMs > 0 && diffMs <= 60 * 60 * 1000) {
           b.reminderSent = true;
           changed = true;
-          
+
           const formattedTime = b.time.split('-')[0].trim();
-          
+
           // Generate client notification
           if (b.clientId) {
             this.addNotification(b.clientId, {
@@ -2162,7 +2161,7 @@ class DatabaseClient {
               deepLink: `/session-detail?id=${b.id}`
             });
           }
-          
+
           // Generate trainer notification
           if (b.trainerId) {
             this.addNotification(b.trainerId, {
@@ -2175,7 +2174,7 @@ class DatabaseClient {
               deepLink: `/session-detail?id=${b.id}`
             });
           }
-          
+
           supabase.from('bookings').update({
             reminder_sent: true
           }).eq('id', b.id).then();
@@ -2195,13 +2194,13 @@ class DatabaseClient {
         b.timelineStatus = 'trainer_accepted';
         b.acceptanceMethod = 'SYSTEM_AUTO_ACCEPT';
         b.autoAcceptedAt = now;
-        
+
         supabase.from('bookings').update({
           timeline_status: 'trainer_accepted',
           acceptance_method: 'SYSTEM_AUTO_ACCEPT',
           auto_accepted_at: now
         }).eq('id', b.id).then();
-        
+
         if (b.clientId) {
           this.addNotification(b.clientId, {
             title: 'Trainer Assigned ⚡',
@@ -2288,16 +2287,16 @@ class DatabaseClient {
 
   async reserveSlot(clientId: string, trainerId: string, date: string, time: string): Promise<string | null> {
     this.cleanExpiredReservations();
-    
+
     const range = getBookingISTDateRange({ date, time } as any);
     const scheduledStartAt = range.start.toISOString();
     const scheduledEndAt = range.end.toISOString();
 
     const id = `res-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-    
+
     // Check if already reserved by another client
-    const isReserved = this.schema.slot_reservations.some(r => 
+    const isReserved = this.schema.slot_reservations.some(r =>
       r.trainer_id === trainerId && normalizeDate(r.slot_date) === normalizeDate(date) && r.slot_time === time && r.client_id !== clientId
     );
     if (isReserved) return null;
@@ -2420,7 +2419,7 @@ class DatabaseClient {
       timelineStatus: 'booked',
       createdAt: Date.now()
     } as any;
-    
+
     // Optimistically insert locally so UI shows it, but we will write it via RPC in background
     this.schema.bookings.unshift(tempBooking);
     this.save();
@@ -2465,7 +2464,7 @@ class DatabaseClient {
     }
 
     await this.refreshBookings();
-    
+
     const booking = this.schema.bookings.find(b => b.id === bookingId);
     if (booking) {
       booking.date = date;
@@ -2482,23 +2481,23 @@ class DatabaseClient {
     const year = parseInt(dateParts[0], 10);
     const month = parseInt(dateParts[1], 10) - 1;
     const day = parseInt(dateParts[2], 10);
-    
+
     const startHour = 6;
     const endHour = 23;
     const durationMinutes = 60;
     const gapMinutes = 30;
-    
+
     const slots = [];
     let current = new Date(year, month, day, startHour, 0);
     const endLimit = new Date(year, month, day, endHour, 0);
-    
+
     let slotIndex = 1;
     while (true) {
       const slotEnd = new Date(current.getTime() + durationMinutes * 60 * 1000);
       if (slotEnd.getTime() > endLimit.getTime()) {
         break;
       }
-      
+
       const formatTime = (d: Date) => {
         let hr = d.getHours();
         const min = String(d.getMinutes()).padStart(2, '0');
@@ -2526,16 +2525,16 @@ class DatabaseClient {
     const normalizedDateStr = normalizeDate(dateStr);
     const dateParts = normalizedDateStr.split('-');
     if (dateParts.length < 3) return [];
-    
+
     const targetYear = parseInt(dateParts[0], 10);
     const targetMonth = parseInt(dateParts[1], 10) - 1; // 0-indexed month
     const targetDay = parseInt(dateParts[2], 10);
-    
+
     const defaultDaySlots = this.generateDaySlotsHelper(normalizedDateStr);
-    
+
     const coaches = this.getCoaches();
     const bookings = this.schema.bookings || [];
-    
+
     let eligibleCoaches = [];
     if (trainerId === 'searching') {
       eligibleCoaches = coaches.filter(c => c.preferences?.online !== false && c.verifiedBadge !== false);
@@ -2545,9 +2544,9 @@ class DatabaseClient {
         eligibleCoaches.push(coach);
       }
     }
-    
+
     const aggregatedSlotsMap: { [time: string]: boolean } = {};
-    
+
     const parseTime = (timeStr: string) => {
       const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
       if (!match) return 0;
@@ -2572,7 +2571,7 @@ class DatabaseClient {
     let customerLat = 19.0176;
     let customerLng = 72.8561;
     let targetCategory = 'Strength';
-    
+
     if (bookingIdToExclude) {
       const targetB = bookings.find(b => b.id === bookingIdToExclude);
       if (targetB) {
@@ -2587,13 +2586,13 @@ class DatabaseClient {
 
     for (const coach of eligibleCoaches) {
       if (coach.preferences?.online === false) continue;
-      
+
       if (trainerId === 'searching') {
         const trainerLat = coach.preferences?.operatingLatitude;
         const trainerLng = coach.preferences?.operatingLongitude;
         const radiusLimit = coach.preferences?.radiusKm || 15;
         let insideRadius = false;
-        
+
         if (trainerLat !== undefined && trainerLng !== undefined && trainerLat !== null && trainerLng !== null) {
           const lat1 = trainerLat;
           const lon1 = trainerLng;
@@ -2602,15 +2601,15 @@ class DatabaseClient {
           const R = 6371;
           const dLat = (lat2 - lat1) * Math.PI / 180;
           const dLon = (lon2 - lon1) * Math.PI / 180;
-          const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                    Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) *
-                    Math.sin(dLon/2) * Math.sin(dLon/2);
-          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
           const distance = R * c;
           insideRadius = distance <= radiusLimit;
         }
         if (!insideRadius) continue;
-        
+
         const assignments = this.getWorkoutAssignments(coach.id);
         const isApproved = assignments.some(a => a.workoutCategory === targetCategory && a.status === 'APPROVED');
         const acceptsAll = assignments.some(a => a.workoutCategory === 'All Workouts' && a.status === 'APPROVED');
@@ -2618,10 +2617,10 @@ class DatabaseClient {
       }
 
       const overrides = coach.preferences?.availabilityOverrides || [];
-      
+
       const dailySlots = defaultDaySlots.map(slot => {
-        const override = overrides.find(o => 
-          normalizeDate(o.date) === normalizedDateStr && 
+        const override = overrides.find(o =>
+          normalizeDate(o.date) === normalizedDateStr &&
           canonicalizeTimeRange(o.time) === canonicalizeTimeRange(slot.time)
         );
         const isAvailable = override ? override.isAvailable : true;
@@ -2631,7 +2630,7 @@ class DatabaseClient {
         };
       }).filter(s => {
         if (!s.isAvailable) return false;
-        
+
         const startPart = s.time.split('-')[0].trim();
         const match = startPart.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
         if (match) {
@@ -2640,7 +2639,7 @@ class DatabaseClient {
           const ampm = match[3].toUpperCase();
           if (ampm === 'PM' && hour < 12) hour += 12;
           if (ampm === 'AM' && hour === 12) hour = 0;
-          
+
           const slotStartIst = new Date(Date.UTC(targetYear, targetMonth, targetDay, hour, minute, 0));
           const visibilityStartMs = slotStartIst.getTime() - 15 * 60 * 1000;
           if (nowIstFixed.getTime() > visibilityStartMs) {
@@ -2649,18 +2648,18 @@ class DatabaseClient {
         }
         return true;
       });
-      
+
       for (const slot of dailySlots) {
-        const hasBooking = bookings.some(b => 
+        const hasBooking = bookings.some(b =>
           b.id !== bookingIdToExclude &&
           b.trainerId === coach.id &&
           b.status === 'upcoming' &&
           normalizeDate(b.date) === normalizedDateStr &&
           canonicalizeTimeRange(b.time) === canonicalizeTimeRange(slot.time)
         );
-        
+
         const targetMinutes = parseTime(slot.time);
-        
+
         const hasBufferConflict = bookings.some(b => {
           if (b.id === bookingIdToExclude || b.trainerId !== coach.id || b.status !== 'upcoming' || normalizeDate(b.date) !== normalizedDateStr) return false;
           const bMinutes = parseTime(b.time);
@@ -2668,21 +2667,21 @@ class DatabaseClient {
           const duration = b.durationMinutes || 60;
           return diff < (duration + 30);
         });
-        
+
         const slotReservations = this.schema.slot_reservations || [];
-        const isReserved = slotReservations.some(r => 
+        const isReserved = slotReservations.some(r =>
           r.trainer_id === coach.id &&
           normalizeDate(r.slot_date) === normalizedDateStr &&
           canonicalizeTimeRange(r.slot_time) === canonicalizeTimeRange(slot.time) &&
           r.client_id !== this.getCurrentUserId()
         );
-        
+
         if (!hasBooking && !hasBufferConflict && !isReserved) {
           aggregatedSlotsMap[slot.time] = true;
         }
       }
     }
-    
+
     return Object.keys(aggregatedSlotsMap).map(time => ({
       time,
       isAvailable: true
@@ -2924,7 +2923,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     const id = generateUUID('hyd');
     const newLog = { id, userId, date, amount };
     this.schema.hydration.push(newLog);
-    
+
     supabase.from('hydration_logs').insert(mapHydrationLogToPostgres(newLog)).then();
 
     this.save();
@@ -2948,7 +2947,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     const id = generateUUID('cal');
     const newLog = { id, userId, date, amount };
     this.schema.calories.push(newLog);
-    
+
     supabase.from('calorie_logs').insert(mapCalorieLogToPostgres(newLog)).then();
 
     this.save();
@@ -2972,7 +2971,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     today.setHours(0, 0, 0, 0);
 
     let checkDate = new Date(today);
-    
+
     let workoutFound = uniqueDates.some(d => d.toDateString() === today.toDateString());
     if (!workoutFound) {
       checkDate.setDate(today.getDate() - 1);
@@ -3276,7 +3275,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       group: 'today'
     };
     this.schema.notifications.unshift(newNotify);
-    
+
     // Only write to Supabase if the notification is for the currently logged in user.
     // Direct inserts for other users are blocked by RLS.
     if (!this.currentUserId || userId === this.currentUserId) {
@@ -3362,7 +3361,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       timestamp: timeStr
     };
     this.schema.messages.push(msg);
-    
+
     supabase.from('chat_messages').insert(mapChatMessageToPostgres(msg)).then();
 
     this.save();
@@ -3420,7 +3419,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
           supabase.from('addresses').update({ is_default: false }).eq('user_id', addr.userId).neq('id', id).then();
         }
       }
-      
+
       const pgAddr = mapSavedAddressToPostgres(addr);
       const updateFields: any = {};
       for (const k of Object.keys(fields)) {
@@ -3506,7 +3505,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       status: 'pending'
     };
     this.schema.trainer_applications.unshift(newApp);
-    
+
     const { error } = await supabase.from('trainer_applications').insert(mapTrainerApplicationToPostgres(newApp));
     if (error) {
       throw new Error(`Failed to submit application: ${error.message}`);
@@ -3536,16 +3535,16 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       status: 'pending' as const
     };
     this.schema.trainer_applications[appIndex] = updatedApp;
-    
+
     const { error } = await supabase
       .from('trainer_applications')
       .update(mapTrainerApplicationToPostgres(updatedApp))
       .eq('id', appId);
-      
+
     if (error) {
       throw new Error(`Failed to update application: ${error.message}`);
     }
-    
+
     await this.save();
     return updatedApp;
   }
@@ -3587,14 +3586,14 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       }
       app.status = 'info_requested';
       app.updatedAt = new Date().toISOString();
-      
+
       const pgApp = mapTrainerApplicationToPostgres(app);
-      const { error } = await supabase.from('trainer_applications').update({ 
-        status: 'info_requested', 
+      const { error } = await supabase.from('trainer_applications').update({
+        status: 'info_requested',
         updated_at: app.updatedAt,
         document_certifications: pgApp.document_certifications
       }).eq('id', appId);
-      
+
       if (error) {
         throw new Error(`Failed to request info: ${error.message}`);
       }
@@ -3614,10 +3613,10 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       this.schema.assignment_logs = [];
     }
     this.schema.assignment_logs.push(log);
-    
+
     // Asynchronously update supabase schema log if possible
-    supabase.from('assignment_logs').insert([log]).then(() => {});
-    
+    supabase.from('assignment_logs').insert([log]).then(() => { });
+
     this.save();
     console.log(`[ASSIGNMENT ENGINE EVENT] Booking ID: ${log.bookingId} | Trainer ID: ${log.trainerId} | Action: ${log.action.toUpperCase()} | Score: ${log.score.toFixed(1)} | Reason: ${log.reason}`);
   }
@@ -3660,16 +3659,16 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       status: 'PENDING',
       requestedAt: Date.now()
     };
-    
+
     if (!this.schema.trainer_workout_assignments) {
       this.schema.trainer_workout_assignments = [];
     }
-    
+
     // Check if there is an existing PENDING or REMOVED request to update/replace
     const existingIdx = this.schema.trainer_workout_assignments.findIndex(
       a => a.trainerId === trainerId && a.workoutCategory === category
     );
-    
+
     if (existingIdx >= 0) {
       this.schema.trainer_workout_assignments[existingIdx] = {
         ...this.schema.trainer_workout_assignments[existingIdx],
@@ -3692,7 +3691,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
         throw new Error(`Failed to insert request in database: ${error.message}`);
       }
     }
-    
+
     await this.save();
     this.syncCoachesWithAssignments();
     this.log('RequestWorkoutAssignment', `Trainer ${trainerId} requested assignment for ${category}.`);
@@ -3710,12 +3709,12 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       const { error } = await supabase.from('trainer_workout_assignments')
         .update({ status: 'REMOVAL_REQUESTED' })
         .eq('id', assignment.id);
-      
+
       if (error) {
         assignment.status = prevStatus; // Rollback
         throw new Error(`Failed to request removal in database: ${error.message}`);
       }
-      
+
       await this.save();
       this.syncCoachesWithAssignments();
       this.log('RequestWorkoutRemoval', `Trainer ${trainerId} requested removal of ${category}.`);
@@ -3753,7 +3752,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
             updatedCats.push(assignment.workoutCategory);
           }
         }
-        
+
         const updatedPrefs = {
           ...(coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] }),
           categories: updatedCats

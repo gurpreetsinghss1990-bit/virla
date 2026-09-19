@@ -21,6 +21,36 @@ import { AssignmentEngine } from '../services/AssignmentEngine';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
 import { WORKOUT_CATEGORY_MAPPING, getCategoryFromTitle } from '../config/WorkoutMapping';
 
+// Error boundary to prevent MapView crash if native Google Maps API Key is uninitialized on older client builds
+class SafeMapWrapper extends React.Component<{ children: React.ReactNode; fallback?: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: any) {
+    console.warn('[SafeMapWrapper] Caught MapView render crash gracefully:', error);
+  }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <View style={{ flex: 1, backgroundColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <Feather name="map-pin" size={32} color="#E11D48" />
+          <Text style={{ marginTop: 10, color: '#475569', fontSize: 13, fontWeight: '700', textAlign: 'center' }}>
+            Map View Unavailable
+          </Text>
+          <Text style={{ marginTop: 4, color: '#64748B', fontSize: 11, textAlign: 'center' }}>
+            Please use search or GPS button to set your address.
+          </Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // 5 Premium experiences specified
 interface Experience {
   id: string;
@@ -87,6 +117,13 @@ const EXPERIENCES: Experience[] = [
     emoji: '🧘‍♀️',
     duration: 60,
   },
+];
+
+const TRAINER_PREFERENCES = [
+  { id: 'any', label: 'No Preference', icon: 'shuffle', desc: 'Any expert match' },
+  { id: 'female', label: 'Female Trainer', icon: 'smile', desc: 'Match female coach' },
+  { id: 'male', label: 'Male Trainer', icon: 'user', desc: 'Match male coach' },
+  { id: 'favourite', label: 'Favourite Trainer', icon: 'heart', desc: 'Choose saved favorites' }
 ];
 
 function getCustomerDisplayTime(timeRangeStr: string): string {
@@ -2071,12 +2108,7 @@ export default function BookingScreen() {
                   </View>
 
                   <View className="flex-row flex-wrap justify-between gap-y-3.5">
-                    {[
-                      { id: 'any', label: 'No Preference', icon: 'shuffle', desc: 'Any expert match' },
-                      { id: 'female', label: 'Female Trainer', icon: 'smile', desc: 'Match female coach' },
-                      { id: 'male', label: 'Male Trainer', icon: 'user', desc: 'Match male coach' },
-                      { id: 'favourite', label: 'Favourite Trainer', icon: 'heart', desc: 'Choose saved favorites' }
-                    ].map((pref) => {
+                    {TRAINER_PREFERENCES.map((pref) => {
                       const isSelected = trainerPref === pref.id;
                       return (
                         <TouchableOpacity
@@ -2089,7 +2121,6 @@ export default function BookingScreen() {
                               if (user.id) {
                                 const dbPref = pref.id === 'any' ? 'no_preference' : pref.id;
                                 Database.updateProfile(user.id, { trainerPreference: dbPref });
-                                useUserStore.getState().syncFromDB();
                               }
                               // Auto transition to step 3 on tap after small delay
                               if (autoTransitionTimerRef.current) clearTimeout(autoTransitionTimerRef.current);
@@ -2356,59 +2387,61 @@ export default function BookingScreen() {
                         {/* STAGE 1: MAP + SEARCH */}
                         {addAddressStep === 1 && (
                           <View style={{ flex: 1, position: 'relative' }}>
-                            <MapView
-                              ref={mapRef}
-                              provider={PROVIDER_DEFAULT}
-                              style={{ flex: 1 }}
-                              initialRegion={{
-                                latitude: activeCoords.lat,
-                                longitude: activeCoords.lng,
-                                latitudeDelta: 0.005,
-                                longitudeDelta: 0.005,
-                              }}
-                              onRegionChangeComplete={(region) => {
-                                // Prevent geocoding cycle if region hasn't moved meaningfully
-                                const latDiff = Math.abs(region.latitude - activeCoords.lat);
-                                const lngDiff = Math.abs(region.longitude - activeCoords.lng);
-                                if (latDiff > 0.00005 || lngDiff > 0.00005) {
-                                  if (reverseGeocodeTimerRef.current) {
-                                    clearTimeout(reverseGeocodeTimerRef.current);
-                                  }
-                                  setIsReverseGeocoding(true);
-                                  const requestId = ++geocodeRequestCounterRef.current;
-                                  
-                                  reverseGeocodeTimerRef.current = setTimeout(async () => {
-                                    try {
-                                      const res = await reverseGeocodeCoords(region.latitude, region.longitude);
-                                      if (requestId !== geocodeRequestCounterRef.current) {
-                                        return;
-                                      }
-                                      
-                                      setActiveCoords({ lat: region.latitude, lng: region.longitude });
-                                      setSearchQuery(res.address);
-                                      setPlaceId(res.placeId || '');
-                                      setHasConfirmedSearchSelection(false);
-                                      setIsPinSelectionAuthoritative(true);
-                                      
-                                      const resolved = await resolveExactLocation(region.latitude, region.longitude, res.address, res.results);
-                                      setResolvedPlaceName(resolved.buildingName);
-                                      
-                                      const centerMumbai = { lat: 19.0176, lng: 72.8164 };
-                                      const dist = calculateDistanceKm(region.latitude, region.longitude, centerMumbai.lat, centerMumbai.lng);
-                                      setDistanceText(`${dist.toFixed(1)} km`);
-                                      setEtaText(`~${Math.round(dist * 2.5 + 5)} mins`);
-                                      setIsLocationOutsideCoverage(dist > 30);
-                                    } catch (e) {
-                                      console.warn('Map settle geocode failure:', e);
-                                    } finally {
-                                      if (requestId === geocodeRequestCounterRef.current) {
-                                        setIsReverseGeocoding(false);
-                                      }
+                            <SafeMapWrapper>
+                              <MapView
+                                ref={mapRef}
+                                provider={PROVIDER_DEFAULT}
+                                style={{ flex: 1 }}
+                                initialRegion={{
+                                  latitude: activeCoords.lat,
+                                  longitude: activeCoords.lng,
+                                  latitudeDelta: 0.005,
+                                  longitudeDelta: 0.005,
+                                }}
+                                onRegionChangeComplete={(region) => {
+                                  // Prevent geocoding cycle if region hasn't moved meaningfully
+                                  const latDiff = Math.abs(region.latitude - activeCoords.lat);
+                                  const lngDiff = Math.abs(region.longitude - activeCoords.lng);
+                                  if (latDiff > 0.00005 || lngDiff > 0.00005) {
+                                    if (reverseGeocodeTimerRef.current) {
+                                      clearTimeout(reverseGeocodeTimerRef.current);
                                     }
-                                  }, 800);
-                                }
-                              }}
-                            />
+                                    setIsReverseGeocoding(true);
+                                    const requestId = ++geocodeRequestCounterRef.current;
+                                    
+                                    reverseGeocodeTimerRef.current = setTimeout(async () => {
+                                      try {
+                                        const res = await reverseGeocodeCoords(region.latitude, region.longitude);
+                                        if (requestId !== geocodeRequestCounterRef.current) {
+                                          return;
+                                        }
+                                        
+                                        setActiveCoords({ lat: region.latitude, lng: region.longitude });
+                                        setSearchQuery(res.address);
+                                        setPlaceId(res.placeId || '');
+                                        setHasConfirmedSearchSelection(false);
+                                        setIsPinSelectionAuthoritative(true);
+                                        
+                                        const resolved = await resolveExactLocation(region.latitude, region.longitude, res.address, res.results);
+                                        setResolvedPlaceName(resolved.buildingName);
+                                        
+                                        const centerMumbai = { lat: 19.0176, lng: 72.8164 };
+                                        const dist = calculateDistanceKm(region.latitude, region.longitude, centerMumbai.lat, centerMumbai.lng);
+                                        setDistanceText(`${dist.toFixed(1)} km`);
+                                        setEtaText(`~${Math.round(dist * 2.5 + 5)} mins`);
+                                        setIsLocationOutsideCoverage(dist > 30);
+                                      } catch (e) {
+                                        console.warn('Map settle geocode failure:', e);
+                                      } finally {
+                                        if (requestId === geocodeRequestCounterRef.current) {
+                                          setIsReverseGeocoding(false);
+                                        }
+                                      }
+                                    }, 800);
+                                  }
+                                }}
+                              />
+                            </SafeMapWrapper>
 
                             {/* Static Central pin overlay */}
                             <View 

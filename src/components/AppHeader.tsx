@@ -32,7 +32,7 @@ export function AppHeader({ onNotificationPress, onAvatarPress }: AppHeaderProps
       <View className="flex-row items-center gap-3">
         <TouchableOpacity activeOpacity={0.8} onPress={onAvatarPress}>
           <Image
-            source={{ uri: user.avatar }}
+            source={{ uri: user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80' }}
             className="w-12 h-12 rounded-full border-2 border-zinc-50"
           />
         </TouchableOpacity>

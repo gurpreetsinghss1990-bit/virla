@@ -288,7 +288,7 @@ export function BookingCard({ booking }: BookingCardProps) {
             </View>
           ) : (
             <Image
-              source={{ uri: booking.trainerPhoto }}
+              source={{ uri: booking.trainerPhoto || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }}
               className="w-12 h-12 rounded-full border border-zinc-150"
             />
           )}
