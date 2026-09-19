@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Image, Animated, Modal, KeyboardAvoidingView, Platform, ActivityIndicator, Share } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Image, Animated, Modal, KeyboardAvoidingView, Platform, ActivityIndicator, Share, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -20,6 +20,60 @@ import Svg, { Circle, Line } from 'react-native-svg';
 import { AssignmentEngine } from '../services/AssignmentEngine';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
 import { WORKOUT_CATEGORY_MAPPING, getCategoryFromTitle } from '../config/WorkoutMapping';
+
+// Static styles for the Step 2 trainer-preference grid. The selected /
+// unselected variants are fixed StyleSheet refs so flipping selection never
+// rebuilds style objects from interpolated className strings during commit.
+const prefCardStyles = StyleSheet.create({
+  cardSelected: {
+    backgroundColor: '#09090B', // zinc-950
+    borderColor: '#09090B',
+    // shadow-sm = 0 1px 2px 0 rgb(0 0 0 / 0.05); no Android elevation mapping.
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  cardUnselected: {
+    backgroundColor: '#FFFFFF',
+    borderColor: 'rgba(228, 228, 231, 0.8)', // zinc-200/80
+    // NOTE: shadow-xs is not a real TW v3 utility, the original unselected
+    // card renders with no shadow — keep it that way (do not add one).
+  },
+  labelSelected: { color: '#FFFFFF' },
+  labelUnselected: { color: '#09090B' }, // zinc-950
+  descSelected: { color: '#A1A1AA' }, // zinc-400
+  descUnselected: { color: '#71717A' }, // zinc-500
+});
+
+// Static styles for the Step 1 experience cards. Same approach as Step 2:
+// flipping colors are fixed StyleSheet refs; padding is explicit (p-4.5 is not
+// a real TW v3 utility, so padding: 18 states the actual intended value).
+const expCardStyles = StyleSheet.create({
+  card: { padding: 18 },
+  cardSelected: {
+    backgroundColor: '#09090B', // zinc-950
+    borderColor: '#09090B',
+  },
+  cardUnselected: {
+    backgroundColor: '#FFFFFF',
+    borderColor: 'rgba(228, 228, 231, 0.8)', // zinc-200/80
+  },
+  titleSelected: { color: '#FFFFFF' },
+  titleUnselected: { color: '#09090B' }, // zinc-950
+  badgeSelected: {
+    backgroundColor: '#27272A', // zinc-800
+    borderColor: '#3F3F46', // zinc-700
+  },
+  badgeUnselected: {
+    backgroundColor: '#F4F4F5', // zinc-100
+    borderColor: 'rgba(228, 228, 231, 0.8)', // zinc-200/80
+  },
+  badgeTextSelected: { color: '#D4D4D8' }, // zinc-300
+  badgeTextUnselected: { color: '#52525B' }, // zinc-600
+  descSelected: { color: '#D4D4D8' }, // zinc-300
+  descUnselected: { color: '#52525B' }, // zinc-600
+});
 
 // 5 Premium experiences specified
 interface Experience {
@@ -354,8 +408,12 @@ export default function BookingScreen() {
   const { addNotification } = useNotificationStore();
   const { user } = useUserStore();
 
-  // Booking Wizard Steps (1 to 6)
-  const [step, setStep] = useState(1);
+  // Booking Wizard Steps (1 to 7)
+  const initialBookingId = (params.bookingId as string) || '';
+  const initialStep = params.step 
+    ? Math.min(Math.max(parseInt(params.step as string, 10), 1), 7)
+    : (initialBookingId ? 7 : 1);
+  const [step, setStep] = useState<number>(initialStep);
 
   const getInitialExperience = () => {
     const searchString = [initialWorkoutId, initialWorkoutType, initialWorkoutName]
@@ -464,7 +522,18 @@ export default function BookingScreen() {
   const [etaText, setEtaText] = useState('~12 mins travel');
   const [distanceText, setDistanceText] = useState('3.2 km');
   const [isLocationOutsideCoverage, setIsLocationOutsideCoverage] = useState(false);
-  const [successBookingId, setSuccessBookingId] = useState('');
+  const [successBookingId, setSuccessBookingId] = useState(initialBookingId);
+
+  // Fallback to latest booking if step 7 is mounted/refreshed without a specific bookingId
+  useEffect(() => {
+    if (step === 7 && !successBookingId) {
+      const userBookings = bookings.filter(b => !user?.id || b.clientId === user?.id);
+      const latest = userBookings[userBookings.length - 1] || bookings[bookings.length - 1];
+      if (latest) {
+        setSuccessBookingId(latest.id);
+      }
+    }
+  }, [step, successBookingId, bookings, user?.id]);
 
   // Redesigned Step 3 location modal/flow states
   const [isAddAddressModalVisible, setIsAddAddressModalVisible] = useState(false);
@@ -489,6 +558,35 @@ export default function BookingScreen() {
   const [newArrivalInstructions, setNewArrivalInstructions] = useState('');
   const [newAddressLabelType, setNewAddressLabelType] = useState<'Home' | 'Office' | 'Gym' | 'Custom'>('Home');
   const [newCustomLabel, setNewCustomLabel] = useState('');
+  const [addressFormAttempted, setAddressFormAttempted] = useState(false);
+  const [addressFieldTouched, setAddressFieldTouched] = useState<{ [key: string]: boolean }>({});
+
+  const validateHouseNo = (val: string) => {
+    const trimmed = val.trim();
+    if (!trimmed) return 'Flat / House number is mandatory';
+    if (!/[a-zA-Z0-9]/.test(trimmed)) return 'Must contain valid letters or digits (e.g. 401, A-12)';
+    if (trimmed.length > 30) return 'Must be 30 characters or less';
+    return null;
+  };
+
+  const validateBuildingName = (val: string) => {
+    const trimmed = val.trim();
+    if (!trimmed) return 'Building / Society name is mandatory';
+    if (trimmed.length < 3) return 'Must be at least 3 characters';
+    if (!/[a-zA-Z0-9]/.test(trimmed)) return 'Must contain a valid building or society name';
+    if (trimmed.length > 80) return 'Must be 80 characters or less';
+    return null;
+  };
+
+  const validateCustomLabel = (val: string, labelType: string) => {
+    if (labelType !== 'Custom') return null;
+    const trimmed = val.trim();
+    if (!trimmed) return 'Custom label is mandatory';
+    if (trimmed.length < 2) return 'Must be at least 2 characters (e.g. Studio, Villa)';
+    if (!/[a-zA-Z0-9]/.test(trimmed)) return 'Must contain letters or numbers';
+    if (trimmed.length > 20) return 'Must be 20 characters or less';
+    return null;
+  };
 
   const openAddressModal = () => {
     geocodeRequestCounterRef.current++;
@@ -497,6 +595,8 @@ export default function BookingScreen() {
     }
     setIsReverseGeocoding(false);
 
+    setAddressFormAttempted(false);
+    setAddressFieldTouched({});
     setNewHouseNo('');
     setNewBuildingName('');
     setNewFloor('');
@@ -1757,6 +1857,7 @@ export default function BookingScreen() {
 
         setSuccessBookingId(finalBooking.id);
         setStep(7);
+        router.setParams({ step: '7', bookingId: finalBooking.id });
       } catch (err: any) {
         Alert.alert('Booking Failed ⚠️', err.message || 'Unable to complete your booking. Please try again.');
       } finally {
@@ -1899,6 +2000,17 @@ export default function BookingScreen() {
     }
   };
 
+  const addressHouseError = validateHouseNo(newHouseNo);
+  const showAddressHouseError = (addressFormAttempted || addressFieldTouched.houseNo) && !!addressHouseError;
+
+  const addressBuildingError = validateBuildingName(newBuildingName);
+  const showAddressBuildingError = (addressFormAttempted || addressFieldTouched.buildingName) && !!addressBuildingError;
+
+  const addressCustomLabelError = validateCustomLabel(newCustomLabel, newAddressLabelType);
+  const showAddressCustomLabelError = (addressFormAttempted || addressFieldTouched.customLabel) && !!addressCustomLabelError;
+
+  const isAddressFormValid = !addressHouseError && !addressBuildingError && !addressCustomLabelError;
+
   return (
     <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
       <StatusBar style="dark" />
@@ -2003,40 +2115,52 @@ export default function BookingScreen() {
                           onPress={() => {
                             setSelectedExperience(exp);
                           }}
-                          className={`p-4.5 rounded-[24px] border flex-row items-center justify-between ${
-                            isSelected 
-                              ? 'bg-zinc-950 border-zinc-950' 
-                              : 'bg-white border-zinc-200/80'
-                          }`}
-                          style={{
-                            shadowColor: isSelected ? '#000000' : '#101828',
-                            shadowOffset: { width: 0, height: isSelected ? 4 : 1 },
-                            shadowOpacity: isSelected ? 0.2 : 0.04,
-                            shadowRadius: isSelected ? 8 : 2,
-                            elevation: isSelected ? 4 : 1,
-                          }}
+                          className="rounded-[24px] border flex-row items-center justify-between"
+                          style={[
+                            expCardStyles.card,
+                            isSelected ? expCardStyles.cardSelected : expCardStyles.cardUnselected,
+                            {
+                              shadowColor: isSelected ? '#000000' : '#101828',
+                              shadowOffset: { width: 0, height: isSelected ? 4 : 1 },
+                              shadowOpacity: isSelected ? 0.2 : 0.04,
+                              shadowRadius: isSelected ? 8 : 2,
+                              elevation: isSelected ? 4 : 1,
+                            },
+                          ]}
                         >
                           <View className="flex-row items-center gap-3.5 flex-1">
-                            <View 
-                              style={{ 
+                            <View
+                              style={{
                                 backgroundColor: exp.gradientColors[0],
-                              }} 
-                              className="w-12 h-12 rounded-2xl items-center justify-center shadow-xs"
+                              }}
+                              className="w-12 h-12 rounded-2xl items-center justify-center"
                             >
                               <Text className="text-2xl">{exp.emoji}</Text>
                             </View>
                             <View className="flex-1 pr-2">
                               <View className="flex-row items-center gap-2">
-                                <Text className={`text-[15px] font-bold tracking-tight ${isSelected ? 'text-white' : 'text-zinc-950'}`}>
+                                <Text
+                                  className="text-[15px] font-bold tracking-tight"
+                                  style={isSelected ? expCardStyles.titleSelected : expCardStyles.titleUnselected}
+                                >
                                   {exp.title}
                                 </Text>
-                                <View className={`px-2 py-0.5 rounded-full ${isSelected ? 'bg-zinc-800 border border-zinc-700' : 'bg-zinc-100 border border-zinc-200/80'}`}>
-                                  <Text className={`text-[9px] font-bold uppercase tracking-wider ${isSelected ? 'text-zinc-300' : 'text-zinc-600'}`}>
+                                <View
+                                  className="px-2 py-0.5 rounded-full border"
+                                  style={isSelected ? expCardStyles.badgeSelected : expCardStyles.badgeUnselected}
+                                >
+                                  <Text
+                                    className="text-[9px] font-bold uppercase tracking-wider"
+                                    style={isSelected ? expCardStyles.badgeTextSelected : expCardStyles.badgeTextUnselected}
+                                  >
                                     {exp.duration} min
                                   </Text>
                                 </View>
                               </View>
-                              <Text className={`text-xs font-normal mt-1 leading-relaxed ${isSelected ? 'text-zinc-300' : 'text-zinc-600'}`}>
+                              <Text
+                                className="text-xs font-normal mt-1 leading-relaxed"
+                                style={isSelected ? expCardStyles.descSelected : expCardStyles.descUnselected}
+                              >
                                 {exp.description}
                               </Text>
                             </View>
@@ -2091,25 +2215,31 @@ export default function BookingScreen() {
                                 Database.updateProfile(user.id, { trainerPreference: dbPref });
                                 useUserStore.getState().syncFromDB();
                               }
-                              // Auto transition to step 3 on tap after small delay
-                              if (autoTransitionTimerRef.current) clearTimeout(autoTransitionTimerRef.current);
-                              autoTransitionTimerRef.current = setTimeout(() => {
-                                if (isMountedRef.current) {
-                                  triggerTransition(3);
-                                }
-                              }, 300);
+                              // No auto-advance: user confirms via the Continue button (handleNext -> step 3)
                             }
                           }}
-                          className={`w-[48%] p-4.5 rounded-[22px] border items-center justify-center gap-2 ${
-                            isSelected ? 'bg-zinc-950 border-zinc-950 shadow-sm' : 'bg-white border-zinc-200/80 shadow-xs'
-                          }`}
+                          className="w-[48%] rounded-[22px] border items-center justify-center gap-2"
+                          style={[
+                            {
+                              paddingVertical: 18,
+                              paddingHorizontal: 12,
+                              minHeight: 116,
+                            },
+                            isSelected ? prefCardStyles.cardSelected : prefCardStyles.cardUnselected,
+                          ]}
                         >
                           <Feather name={pref.icon as any} size={20} color={isSelected ? '#F59E0B' : '#71717A'} />
                           <View className="items-center">
-                            <Text className={`text-xs font-bold tracking-tight text-center ${isSelected ? 'text-white' : 'text-zinc-950'}`}>
+                            <Text
+                              className="text-xs font-bold tracking-tight text-center"
+                              style={isSelected ? prefCardStyles.labelSelected : prefCardStyles.labelUnselected}
+                            >
                               {pref.label}
                             </Text>
-                            <Text className={`text-[10px] text-center font-normal mt-0.5 ${isSelected ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                            <Text
+                              className="text-[10px] text-center font-normal mt-0.5"
+                              style={isSelected ? prefCardStyles.descSelected : prefCardStyles.descUnselected}
+                            >
                               {pref.desc}
                             </Text>
                           </View>
@@ -2131,12 +2261,7 @@ export default function BookingScreen() {
                               activeOpacity={0.8}
                               onPress={() => {
                                 setSelectedTrainerId(coach.id);
-                                if (autoTransitionTimerRef.current) clearTimeout(autoTransitionTimerRef.current);
-                                autoTransitionTimerRef.current = setTimeout(() => {
-                                  if (isMountedRef.current) {
-                                    triggerTransition(3);
-                                  }
-                                }, 250);
+                                // No auto-advance: user confirms via the Continue button (handleNext -> step 3)
                               }}
                               className={`p-4 rounded-2xl border flex-row items-center justify-between ${
                                 isSelected ? 'bg-indigo-50/50 border-indigo-500' : 'bg-white border-[#E5E7EB]'
@@ -2270,14 +2395,23 @@ export default function BookingScreen() {
                       </View>
                     )}
 
-                    {/* Add New Address Trigger */}
+                    {/* Add New Location Trigger */}
                     <TouchableOpacity
                       activeOpacity={0.8}
                       onPress={() => openAddressModal()}
-                      className="p-5 rounded-[24px] border border-dashed border-[#CBD5E1] bg-[#F8FAFC] flex-row items-center justify-center gap-2"
+                      className="p-5 rounded-[24px] border border-dashed border-zinc-300 bg-white flex-row items-center justify-center gap-2.5"
+                      style={{
+                        shadowColor: '#101828',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.02,
+                        shadowRadius: 6,
+                        elevation: 1,
+                      }}
                     >
-                      <Feather name="plus" size={16} color="#475569" />
-                      <Text className="text-[#475569] text-xs font-black uppercase tracking-wider">Add New Address</Text>
+                      <View className="w-7 h-7 rounded-full bg-zinc-100 items-center justify-center">
+                        <Feather name="plus" size={15} color="#18181B" />
+                      </View>
+                      <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">Add New Location</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -2305,7 +2439,7 @@ export default function BookingScreen() {
                         </View>
                       </View>
                     ) : (
-                      <View className="bg-red-50 border border-red-150 p-5 rounded-[24px] gap-3">
+                      <View className="bg-red-50 border border-red-200 p-5 rounded-[24px] gap-3">
                         <View className="flex-row items-center gap-3">
                           <View className="w-10 h-10 rounded-full bg-red-100 items-center justify-center">
                             <Feather name="alert-triangle" size={20} color="#DC2626" />
@@ -2334,25 +2468,46 @@ export default function BookingScreen() {
                     animationType="slide"
                     onRequestClose={() => setIsAddAddressModalVisible(false)}
                   >
-                    <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+                    <View style={{ flex: 1, backgroundColor: addAddressStep === 2 ? '#FFFFFF' : '#F7F8FC' }}>
+                      <StatusBar style="dark" />
                       {/* Conditional Header for Stage 2 only */}
                       {addAddressStep === 2 && (
-                        <View style={{ paddingTop: insets.top, backgroundColor: '#FFFFFF' }} className="border-b border-[#E5E7EB]">
-                          <View className="h-14 flex-row items-center px-6 bg-white">
+                        <View 
+                          style={{ paddingTop: insets.top }} 
+                          className="bg-white border-b border-zinc-100 shadow-xs"
+                        >
+                          <View className="h-14 flex-row items-center px-5 justify-between">
                             <TouchableOpacity 
                               onPress={() => setAddAddressStep(1)} 
-                              className="w-8 h-8 items-center justify-center rounded-full bg-zinc-50"
+                              activeOpacity={0.7}
+                              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                              className="w-9 h-9 items-center justify-center rounded-full bg-zinc-100/80 border border-zinc-200/60"
                             >
-                              <Ionicons name="arrow-back" size={18} color="#101828" />
+                              <Ionicons name="arrow-back" size={18} color="#09090B" />
                             </TouchableOpacity>
-                            <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
-                              Enter address details
-                            </Text>
+                            <View className="items-center flex-1 mx-2">
+                              <View className="flex-row items-center gap-1.5">
+                                <View className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
+                                <Text 
+                                  style={{ letterSpacing: 2.2 }}
+                                  className="text-zinc-500 text-[9.5px] font-bold uppercase"
+                                >
+                                  TRAINING LOCATION
+                                </Text>
+                              </View>
+                              <Text 
+                                numberOfLines={1}
+                                className="text-zinc-950 text-base font-extrabold tracking-tight mt-0.5"
+                              >
+                                Address Details
+                              </Text>
+                            </View>
+                            <View className="w-9" />
                           </View>
                         </View>
                       )}
 
-                      <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+                      <View style={{ flex: 1, backgroundColor: addAddressStep === 2 ? '#FFFFFF' : '#F7F8FC' }}>
                         {/* STAGE 1: MAP + SEARCH */}
                         {addAddressStep === 1 && (
                           <View style={{ flex: 1, position: 'relative' }}>
@@ -2439,55 +2594,71 @@ export default function BookingScreen() {
                             <View 
                               style={{
                                 position: 'absolute',
-                                top: insets.top + 12,
+                                top: Math.max(insets.top, 16) + 8,
                                 left: 16,
                                 right: 16,
                                 backgroundColor: 'white',
-                                borderRadius: 20,
-                                padding: 14,
+                                borderRadius: 24,
+                                padding: 16,
                                 zIndex: 50,
                                 borderWidth: 1,
                                 borderColor: '#E5E7EB',
                                 shadowColor: '#101828',
                                 shadowOffset: { width: 0, height: 4 },
                                 shadowOpacity: 0.08,
-                                shadowRadius: 10,
+                                shadowRadius: 12,
                                 elevation: 4,
                               }}
                             >
                               {/* Back button and title */}
-                              <View className="flex-row items-center mb-3">
+                              <View className="flex-row items-center justify-between mb-3">
                                 <TouchableOpacity 
                                   onPress={() => setIsAddAddressModalVisible(false)} 
-                                  className="w-8 h-8 items-center justify-center rounded-full bg-zinc-50"
+                                  activeOpacity={0.7}
+                                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                  className="w-9 h-9 items-center justify-center rounded-full bg-zinc-100/80 border border-zinc-200/60"
                                 >
-                                  <Ionicons name="arrow-back" size={18} color="#101828" />
+                                  <Ionicons name="arrow-back" size={18} color="#09090B" />
                                 </TouchableOpacity>
-                                <Text className="flex-1 text-center text-[#101828] text-xs font-black uppercase tracking-wider mr-8">
-                                  Select delivery location
-                                </Text>
+                                <View className="items-center flex-1 mx-2">
+                                  <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">
+                                    Select Training Location
+                                  </Text>
+                                  <Text className="text-zinc-400 text-[9px] font-semibold mt-0.5">
+                                    Drag map to set your location pin
+                                  </Text>
+                                </View>
+                                <View className="w-9" />
                               </View>
 
                               {/* Search Input field */}
-                              <View className="flex-row items-center bg-zinc-50 border border-[#E5E7EB] px-3.5 py-1.5 rounded-xl">
-                                <Feather name="search" size={14} color="#6B7280" />
+                              <View className="flex-row items-center bg-zinc-50 border border-zinc-200/80 px-3.5 h-11 rounded-xl">
+                                <Feather name="search" size={15} color="#71717A" />
                                 <TextInput
                                   placeholder="Search society, street, building or area..."
-                                  placeholderTextColor="#9CA3AF"
+                                  placeholderTextColor="#A1A1AA"
                                   value={searchQuery}
                                   onChangeText={(t) => handleSearchTextChange(t)}
-                                  className="flex-1 text-xs font-semibold text-zinc-900 ml-2 py-0.5"
+                                  className="flex-1 text-xs font-semibold text-zinc-900 ml-2.5 py-0"
                                 />
                                 {searchQuery.trim().length > 0 && (
-                                  <TouchableOpacity onPress={() => handleSearchTextChange('')}>
-                                    <Feather name="x" size={14} color="#9CA3AF" />
+                                  <TouchableOpacity 
+                                    onPress={() => handleSearchTextChange('')}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  >
+                                    <Feather name="x" size={14} color="#A1A1AA" />
                                   </TouchableOpacity>
                                 )}
                               </View>
 
                               {/* Dropdown list of suggestions */}
                               {showSearchDropdown && googleSuggestions.length > 0 && (
-                                <View className="bg-white border-t border-zinc-100 mt-2 max-h-48 overflow-y-scroll">
+                                <ScrollView 
+                                  style={{ maxHeight: 200 }} 
+                                  keyboardShouldPersistTaps="handled" 
+                                  showsVerticalScrollIndicator={false} 
+                                  className="mt-2 border-t border-zinc-100"
+                                >
                                   {googleSuggestions.map((item, idx) => (
                                     <TouchableOpacity
                                       key={idx}
@@ -2507,7 +2678,7 @@ export default function BookingScreen() {
                                       <Feather name="arrow-up-left" size={12} color="#9CA3AF" />
                                     </TouchableOpacity>
                                   ))}
-                                </View>
+                                </ScrollView>
                               )}
                             </View>
 
@@ -2517,7 +2688,7 @@ export default function BookingScreen() {
                               onPress={handleUseCurrentGps}
                               style={{
                                 position: 'absolute',
-                                bottom: 220,
+                                bottom: Math.max(insets.bottom, 16) + 210,
                                 right: 16,
                                 width: 44,
                                 height: 44,
@@ -2542,7 +2713,7 @@ export default function BookingScreen() {
                             <View 
                               style={{
                                 position: 'absolute',
-                                bottom: Math.max(insets.bottom + 12, Platform.OS === 'android' ? 24 : 16),
+                                bottom: Math.max(insets.bottom + 8, Platform.OS === 'android' ? 20 : 16),
                                 left: 16,
                                 right: 16,
                                 backgroundColor: 'white',
@@ -2558,12 +2729,12 @@ export default function BookingScreen() {
                                 zIndex: 30,
                               }}
                             >
-                              <Text className="text-zinc-950 text-[10px] font-black uppercase tracking-wider text-center mb-3">
-                                Resolved location
+                              <Text className="text-zinc-400 text-[9.5px] font-black uppercase tracking-[1.5px] text-center mb-2.5">
+                                Target Location
                               </Text>
 
-                              <View className="bg-zinc-50 border border-zinc-150 p-4 rounded-xl mb-4 flex-row items-start gap-3">
-                                <View className="w-8 h-8 rounded-full bg-rose-50 items-center justify-center mt-0.5">
+                              <View className="bg-zinc-50 border border-zinc-200/80 p-3.5 rounded-2xl mb-3 flex-row items-start gap-3">
+                                <View className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 items-center justify-center mt-0.5">
                                   <Feather name="map-pin" size={14} color="#E11D48" />
                                 </View>
                                 <View className="flex-1">
@@ -2572,14 +2743,14 @@ export default function BookingScreen() {
                                       ? 'Locating target entrance...'
                                       : ((!hasConfirmedSearchSelection && !isPinSelectionAuthoritative) ? 'Selected location' : resolvedPlaceName)}
                                   </Text>
-                                  <Text className="text-zinc-500 text-[10px] font-semibold leading-relaxed">
+                                  <Text className="text-zinc-500 text-[10px] font-semibold leading-relaxed" numberOfLines={2}>
                                     {isReverseGeocoding
                                       ? 'Fetching address details...'
                                       : ((!hasConfirmedSearchSelection && !isPinSelectionAuthoritative) ? 'Select a location from search or move the pin on the map' : searchQuery || 'Select your location on map')}
                                   </Text>
 
                                   {gpsAccuracy !== null && !isReverseGeocoding && (
-                                    <Text className="text-indigo-600 text-[9px] font-bold mt-1.5">
+                                    <Text className="text-indigo-600 text-[9px] font-bold mt-1">
                                       🛰️ Accuracy: {gpsAccuracy <= 15 ? `High (~${gpsAccuracy.toFixed(0)}m)` : `Medium (~${gpsAccuracy.toFixed(0)}m)`}
                                     </Text>
                                   )}
@@ -2587,7 +2758,7 @@ export default function BookingScreen() {
                               </View>
 
                               {isLocationOutsideCoverage && (
-                                <View className="bg-rose-50 border border-rose-100 p-3 rounded-xl mb-4">
+                                <View className="bg-rose-50 border border-rose-100 p-2.5 rounded-xl mb-3">
                                   <Text className="text-[#E11D48] text-[9px] font-bold uppercase text-center">Outside Service Area (Mumbai Only)</Text>
                                 </View>
                               )}
@@ -2625,19 +2796,35 @@ export default function BookingScreen() {
                         {addAddressStep === 2 && (
                           <KeyboardAvoidingView
                             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                            style={{ flex: 1 }}
+                            style={{ flex: 1, backgroundColor: '#FFFFFF' }}
                           >
                             <ScrollView 
                               showsVerticalScrollIndicator={false}
-                              contentContainerStyle={{ padding: 24, paddingBottom: 100 }}
-                              className="flex-1"
+                              contentContainerStyle={{ 
+                                paddingHorizontal: 20,
+                                paddingTop: 20,
+                                paddingBottom: Math.max(insets.bottom + 32, 60),
+                              }}
+                              className="flex-1 bg-white"
                             >
                               <View className="gap-6">
-                                {/* Map Preview reference */}
-                                <View className="bg-white border border-[#E5E7EB] p-4 rounded-[24px] gap-3">
-                                  <Text className="text-zinc-400 text-[9px] font-black uppercase tracking-wider pl-1">Confirmed Location</Text>
-                                  <View className="bg-zinc-50 border border-zinc-150 p-4 rounded-xl flex-row items-start gap-3">
-                                    <View className="w-8 h-8 rounded-full bg-rose-50 items-center justify-center mt-0.5">
+                                {/* Confirmed Location Preview */}
+                                <View className="gap-2">
+                                  <View className="flex-row items-center justify-between">
+                                    <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-[1.5px] pl-0.5">
+                                      Confirmed Location
+                                    </Text>
+                                    <TouchableOpacity 
+                                      onPress={() => setAddAddressStep(1)} 
+                                      className="flex-row items-center gap-1"
+                                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    >
+                                      <Feather name="edit-2" size={11} color="#E11D48" />
+                                      <Text className="text-[#E11D48] text-[10px] font-bold uppercase tracking-wider">Change</Text>
+                                    </TouchableOpacity>
+                                  </View>
+                                  <View className="bg-zinc-50 border border-zinc-200/90 p-3.5 rounded-2xl flex-row items-start gap-3">
+                                    <View className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 items-center justify-center mt-0.5">
                                       <Feather name="map-pin" size={14} color="#E11D48" />
                                     </View>
                                     <View className="flex-1">
@@ -2651,73 +2838,143 @@ export default function BookingScreen() {
                                   </View>
                                 </View>
 
-                                {/* Form Input details */}
-                                <View className="bg-white border border-[#E5E7EB] p-5 rounded-[24px] gap-4">
+                                {/* House & Street Details Fields */}
+                                <View className="gap-4">
+                                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-[1.5px] pl-0.5">
+                                    House & Street Details
+                                  </Text>
                                   <View className="gap-3.5">
-                                    <View>
-                                      <Text className="text-zinc-700 text-[10px] font-bold uppercase mb-1.5 pl-1">Flat / House No. *</Text>
+                                    {/* Flat / House No. (Mandatory) */}
+                                    <View className="gap-1.5">
+                                      <View className="flex-row items-center justify-between">
+                                        <View className="flex-row items-center gap-1">
+                                          <Text className="text-zinc-700 text-[10px] font-bold uppercase tracking-wider pl-0.5">Flat / House No.</Text>
+                                          <Text className="text-red-500 font-black text-xs">*</Text>
+                                        </View>
+                                        <Text className="text-red-500 text-[9px] font-black uppercase tracking-wider">Required</Text>
+                                      </View>
                                       <TextInput
                                         value={newHouseNo}
-                                        onChangeText={setNewHouseNo}
-                                        placeholder="Enter flat or house number"
+                                        onChangeText={(text) => {
+                                          setNewHouseNo(text);
+                                          if (!addressFieldTouched.houseNo) {
+                                            setAddressFieldTouched(prev => ({ ...prev, houseNo: true }));
+                                          }
+                                        }}
+                                        onBlur={() => setAddressFieldTouched(prev => ({ ...prev, houseNo: true }))}
+                                        placeholder="Enter flat or house number (e.g. 401, A-12)"
                                         placeholderTextColor="#9CA3AF"
-                                        className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
+                                        maxLength={30}
+                                        className={`h-12 border px-4 rounded-xl text-xs font-semibold text-zinc-900 ${
+                                          showAddressHouseError
+                                            ? 'border-red-500 bg-red-50/20'
+                                            : 'border-zinc-200/90 bg-zinc-50'
+                                        }`}
                                       />
+                                      {showAddressHouseError && (
+                                        <View className="flex-row items-center gap-1 pl-0.5 mt-0.5">
+                                          <Feather name="alert-circle" size={11} color="#EF4444" />
+                                          <Text className="text-red-500 text-[10px] font-bold">{addressHouseError}</Text>
+                                        </View>
+                                      )}
                                     </View>
 
-                                    <View>
-                                      <Text className="text-zinc-700 text-[10px] font-bold uppercase mb-1.5 pl-1">Building / Society Name *</Text>
+                                    {/* Building / Society Name (Mandatory) */}
+                                    <View className="gap-1.5">
+                                      <View className="flex-row items-center justify-between">
+                                        <View className="flex-row items-center gap-1">
+                                          <Text className="text-zinc-700 text-[10px] font-bold uppercase tracking-wider pl-0.5">Building / Society Name</Text>
+                                          <Text className="text-red-500 font-black text-xs">*</Text>
+                                        </View>
+                                        <Text className="text-red-500 text-[9px] font-black uppercase tracking-wider">Required</Text>
+                                      </View>
                                       <TextInput
                                         value={newBuildingName}
-                                        onChangeText={setNewBuildingName}
-                                        placeholder="Enter building or society name"
+                                        onChangeText={(text) => {
+                                          setNewBuildingName(text);
+                                          if (!addressFieldTouched.buildingName) {
+                                            setAddressFieldTouched(prev => ({ ...prev, buildingName: true }));
+                                          }
+                                        }}
+                                        onBlur={() => setAddressFieldTouched(prev => ({ ...prev, buildingName: true }))}
+                                        placeholder="Enter building or society name (e.g. Oberoi Woods)"
                                         placeholderTextColor="#9CA3AF"
-                                        className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
+                                        maxLength={80}
+                                        className={`h-12 border px-4 rounded-xl text-xs font-semibold text-zinc-900 ${
+                                          showAddressBuildingError
+                                            ? 'border-red-500 bg-red-50/20'
+                                            : 'border-zinc-200/90 bg-zinc-50'
+                                        }`}
                                       />
+                                      {showAddressBuildingError && (
+                                        <View className="flex-row items-center gap-1 pl-0.5 mt-0.5">
+                                          <Feather name="alert-circle" size={11} color="#EF4444" />
+                                          <Text className="text-red-500 text-[10px] font-bold">{addressBuildingError}</Text>
+                                        </View>
+                                      )}
                                     </View>
 
-                                    <View className="flex-row justify-between">
-                                      <View style={{ width: '48%' }}>
-                                        <Text className="text-zinc-700 text-[10px] font-bold uppercase mb-1.5 pl-1">Floor</Text>
+                                    {/* Floor & Tower (Optional) */}
+                                    <View className="flex-row gap-3">
+                                      <View className="flex-1 gap-1.5">
+                                        <View className="flex-row items-center justify-between">
+                                          <Text className="text-zinc-700 text-[10px] font-bold uppercase tracking-wider pl-0.5">Floor</Text>
+                                          <Text className="text-zinc-400 text-[9px] font-medium">Optional</Text>
+                                        </View>
                                         <TextInput
                                           value={newFloor}
                                           onChangeText={setNewFloor}
                                           placeholder="e.g. 5th Floor"
                                           placeholderTextColor="#9CA3AF"
-                                          className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
+                                          maxLength={20}
+                                          className="h-12 border border-zinc-200/90 px-4 rounded-xl text-xs font-semibold bg-zinc-50 text-zinc-900"
                                         />
                                       </View>
-                                      <View style={{ width: '48%' }}>
-                                        <Text className="text-zinc-700 text-[10px] font-bold uppercase mb-1.5 pl-1">Tower</Text>
+                                      <View className="flex-1 gap-1.5">
+                                        <View className="flex-row items-center justify-between">
+                                          <Text className="text-zinc-700 text-[10px] font-bold uppercase tracking-wider pl-0.5">Tower / Wing</Text>
+                                          <Text className="text-zinc-400 text-[9px] font-medium">Optional</Text>
+                                        </View>
                                         <TextInput
                                           value={newTower}
                                           onChangeText={setNewTower}
-                                          placeholder="e.g. Tower A"
+                                          placeholder="e.g. Wing B"
                                           placeholderTextColor="#9CA3AF"
-                                          className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
+                                          maxLength={20}
+                                          className="h-12 border border-zinc-200/90 px-4 rounded-xl text-xs font-semibold bg-zinc-50 text-zinc-900"
                                         />
                                       </View>
                                     </View>
 
-                                    <View>
-                                      <Text className="text-zinc-700 text-[10px] font-bold uppercase mb-1.5 pl-1">Landmark</Text>
+                                    {/* Landmark (Optional) */}
+                                    <View className="gap-1.5">
+                                      <View className="flex-row items-center justify-between">
+                                        <Text className="text-zinc-700 text-[10px] font-bold uppercase tracking-wider pl-0.5">Landmark</Text>
+                                        <Text className="text-zinc-400 text-[9px] font-medium">Optional</Text>
+                                      </View>
                                       <TextInput
                                         value={newLandmark}
                                         onChangeText={setNewLandmark}
-                                        placeholder="e.g. Opposite Citi Mall"
+                                        placeholder="e.g. Opposite Citi Mall / Near Gate 2"
                                         placeholderTextColor="#9CA3AF"
-                                        className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
+                                        maxLength={80}
+                                        className="h-12 border border-zinc-200/90 px-4 rounded-xl text-xs font-semibold bg-zinc-50 text-zinc-900"
                                       />
                                     </View>
 
-                                    <View>
-                                      <Text className="text-zinc-700 text-[10px] font-bold uppercase mb-1.5 pl-1">Arrival instructions</Text>
+                                    {/* Arrival Instructions (Optional) */}
+                                    <View className="gap-1.5">
+                                      <View className="flex-row items-center justify-between">
+                                        <Text className="text-zinc-700 text-[10px] font-bold uppercase tracking-wider pl-0.5">Arrival instructions</Text>
+                                        <Text className="text-zinc-400 text-[9px] font-medium">Optional</Text>
+                                      </View>
                                       <TextInput
                                         value={newArrivalInstructions}
                                         onChangeText={setNewArrivalInstructions}
-                                        placeholder="e.g. Call me when you reach the gate"
+                                        placeholder="e.g. Call me when you reach the security gate"
                                         placeholderTextColor="#9CA3AF"
-                                        className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50"
+                                        maxLength={200}
+                                        className="h-12 border border-zinc-200/90 px-4 rounded-xl text-xs font-semibold bg-zinc-50 text-zinc-900"
                                       />
                                     </View>
                                   </View>
@@ -2725,8 +2982,10 @@ export default function BookingScreen() {
 
                                 {/* Save As selector */}
                                 <View className="gap-2.5">
-                                  <Text className="text-[#101828] text-xs font-black uppercase tracking-wider pl-1">Save As</Text>
-                                  <View className="flex-row justify-between">
+                                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-[1.5px] pl-0.5">
+                                    Save Address As
+                                  </Text>
+                                  <View className="flex-row gap-2">
                                     {[
                                       { id: 'Home', emoji: '🏠' },
                                       { id: 'Office', emoji: '🏢' },
@@ -2739,46 +2998,72 @@ export default function BookingScreen() {
                                           key={item.id}
                                           activeOpacity={0.8}
                                           onPress={() => setNewAddressLabelType(item.id as any)}
-                                          className={`w-[22%] py-3.5 rounded-xl border items-center justify-center flex-row gap-1 ${
-                                            isSel ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-[#E5E7EB]'
+                                          className={`flex-1 py-3.5 rounded-xl border items-center justify-center flex-row gap-1.5 ${
+                                            isSel ? 'bg-zinc-950 border-zinc-950' : 'bg-zinc-50 border-zinc-200/90'
                                           }`}
                                         >
                                           <Text className="text-xs">{item.emoji}</Text>
-                                          <Text className={`text-[9px] font-black uppercase ${isSel ? 'text-white' : 'text-zinc-800'}`}>{item.id}</Text>
+                                          <Text className={`text-[10px] font-black uppercase ${isSel ? 'text-white' : 'text-zinc-800'}`}>{item.id}</Text>
                                         </TouchableOpacity>
                                       );
                                     })}
                                   </View>
 
                                   {newAddressLabelType === 'Custom' && (
-                                    <TextInput
-                                      value={newCustomLabel}
-                                      onChangeText={setNewCustomLabel}
-                                      placeholder="Custom label (e.g. Parents, Guest)"
-                                      placeholderTextColor="#9CA3AF"
-                                      className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs font-semibold bg-zinc-50 mt-2"
-                                    />
+                                    <View className="gap-1.5 mt-1">
+                                      <View className="flex-row items-center justify-between">
+                                        <View className="flex-row items-center gap-1">
+                                          <Text className="text-zinc-700 text-[10px] font-bold uppercase tracking-wider pl-0.5">Custom Label</Text>
+                                          <Text className="text-red-500 font-black text-xs">*</Text>
+                                        </View>
+                                        <Text className="text-red-500 text-[9px] font-black uppercase tracking-wider">Required</Text>
+                                      </View>
+                                      <TextInput
+                                        value={newCustomLabel}
+                                        onChangeText={(text) => {
+                                          setNewCustomLabel(text);
+                                          if (!addressFieldTouched.customLabel) {
+                                            setAddressFieldTouched(prev => ({ ...prev, customLabel: true }));
+                                          }
+                                        }}
+                                        onBlur={() => setAddressFieldTouched(prev => ({ ...prev, customLabel: true }))}
+                                        placeholder="Custom label (e.g. Parents, Guest, Studio)"
+                                        placeholderTextColor="#9CA3AF"
+                                        maxLength={20}
+                                        className={`h-12 border px-4 rounded-xl text-xs font-semibold text-zinc-900 ${
+                                          showAddressCustomLabelError
+                                            ? 'border-red-500 bg-red-50/20'
+                                            : 'border-zinc-200/90 bg-zinc-50'
+                                        }`}
+                                      />
+                                      {showAddressCustomLabelError && (
+                                        <View className="flex-row items-center gap-1 pl-0.5 mt-0.5">
+                                          <Feather name="alert-circle" size={11} color="#EF4444" />
+                                          <Text className="text-red-500 text-[10px] font-bold">{addressCustomLabelError}</Text>
+                                        </View>
+                                      )}
+                                    </View>
                                   )}
                                 </View>
 
-                                {/* Receiver details card */}
-                                <View className="bg-white border border-[#E5E7EB] p-5 rounded-[24px] gap-3">
-                                  <Text className="text-[#101828] text-xs font-black uppercase tracking-wider pl-1">
-                                    Receiver details for this address
+                                {/* Receiver details */}
+                                <View className="gap-2">
+                                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-[1.5px] pl-0.5">
+                                    Receiver details
                                   </Text>
-                                  <View className="bg-zinc-50 border border-zinc-150 p-4 rounded-xl gap-2">
+                                  <View className="bg-zinc-50 border border-zinc-200/90 p-4 rounded-2xl gap-2.5">
                                     <View className="flex-row justify-between items-center">
                                       <Text className="text-zinc-500 text-[10px] font-bold uppercase">Name</Text>
-                                      <Text className="text-zinc-800 text-xs font-black">{user.name}</Text>
+                                      <Text className="text-zinc-900 text-xs font-black">{user.name}</Text>
                                     </View>
-                                    <View className="flex-row justify-between items-center border-t border-zinc-100 pt-2 mt-1">
+                                    <View className="flex-row justify-between items-center border-t border-zinc-200/60 pt-2.5 mt-1">
                                       <Text className="text-zinc-500 text-[10px] font-bold uppercase">Phone</Text>
-                                      <Text className="text-zinc-800 text-xs font-black">
+                                      <Text className="text-zinc-900 text-xs font-black">
                                         {Database.schema.users.find(u => u.id === user?.id)?.phone || 'No phone number'}
                                       </Text>
                                     </View>
                                   </View>
-                                  <Text className="text-zinc-400 text-[9px] font-semibold pl-1">
+                                  <Text className="text-zinc-400 text-[9px] font-medium pl-0.5">
                                     To edit receiver details, update profile settings.
                                   </Text>
                                 </View>
@@ -2786,8 +3071,27 @@ export default function BookingScreen() {
                                 {/* Save Button */}
                                 <TouchableOpacity
                                   activeOpacity={0.8}
-                                  disabled={!newHouseNo.trim() || !newBuildingName.trim()}
                                   onPress={async () => {
+                                    setAddressFormAttempted(true);
+
+                                    const houseErr = validateHouseNo(newHouseNo);
+                                    if (houseErr) {
+                                      Alert.alert('Flat / House No. Required', houseErr);
+                                      return;
+                                    }
+
+                                    const bldgErr = validateBuildingName(newBuildingName);
+                                    if (bldgErr) {
+                                      Alert.alert('Building / Society Required', bldgErr);
+                                      return;
+                                    }
+
+                                    const customErr = validateCustomLabel(newCustomLabel, newAddressLabelType);
+                                    if (customErr) {
+                                      Alert.alert('Custom Label Required', customErr);
+                                      return;
+                                    }
+
                                     if (!activeCoords.lat || !activeCoords.lng || activeCoords.lat === 0 || activeCoords.lng === 0) {
                                       Alert.alert('Validation Error', 'Verified location coordinates are missing. Please confirm your location on the map.');
                                       return;
@@ -2800,14 +3104,10 @@ export default function BookingScreen() {
                                       Alert.alert('Validation Error', 'Please confirm your location pin on the map.');
                                       return;
                                     }
-                                    if (!newHouseNo.trim() || !newBuildingName.trim()) {
-                                      Alert.alert('Validation Error', 'Please enter Flat/House No and Building Name.');
-                                      return;
-                                    }
 
-                                    const finalLabel = newAddressLabelType === 'Custom'
-                                      ? (newCustomLabel.trim() || 'Custom') as any
-                                      : newAddressLabelType;
+                                    const finalLabel = (newAddressLabelType === 'Custom'
+                                      ? (newCustomLabel.trim() || 'Custom')
+                                      : newAddressLabelType) as 'Home' | 'Office' | 'Gym' | 'Custom';
 
                                     // Prepend house number and combine building name and tower
                                     const displayBuilding = newTower.trim() 
@@ -2844,10 +3144,19 @@ export default function BookingScreen() {
                                     }
                                   }}
                                   className={`w-full h-14 rounded-2xl items-center justify-center mt-2 ${
-                                    (!newHouseNo.trim() || !newBuildingName.trim()) ? 'bg-zinc-300' : 'bg-zinc-950'
+                                    isAddressFormValid ? 'bg-zinc-950' : 'bg-zinc-900'
                                   }`}
+                                  style={isAddressFormValid ? {
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 2 },
+                                    shadowOpacity: 0.15,
+                                    shadowRadius: 4,
+                                    elevation: 3,
+                                  } : undefined}
                                 >
-                                  <Text className="text-white text-xs font-black uppercase tracking-wider">Save Address</Text>
+                                  <Text className="text-xs font-black uppercase tracking-wider text-white">
+                                    Save Location
+                                  </Text>
                                 </TouchableOpacity>
                               </View>
                             </ScrollView>

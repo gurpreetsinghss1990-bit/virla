@@ -82,6 +82,10 @@ export default function SessionDetailScreen() {
   const booking = bookings.find((b) => b.id === bookingId) || bookings[0];
   const parsedAddress = useMemo(() => parseBookingAddress(booking?.address), [booking?.address]);
 
+  // Status checks
+  const isMissed = booking?.status === 'missed_session_not_started' || booking?.status === 'client_no_show' || booking?.status === 'trainer_no_show';
+  const isCancelled = booking?.status === 'cancelled';
+
   // Fallback status alignment for 12-stage timeline
   const currentStatus = booking?.timelineStatus || 'booked';
   const isAccepted = currentStatus !== 'booked' && currentStatus !== 'trainer_assigned';
@@ -329,6 +333,19 @@ export default function SessionDetailScreen() {
 
   const getStatusText = (status: string) => {
     if (!booking) return '';
+
+    if (booking.status === 'missed_session_not_started') {
+      return 'Session Missed';
+    }
+    if (booking.status === 'client_no_show') {
+      return 'Missed — Client No-Show';
+    }
+    if (booking.status === 'trainer_no_show') {
+      return 'Missed — Trainer No-Show';
+    }
+    if (booking.status === 'cancelled') {
+      return 'Session Cancelled';
+    }
     
     const range = getBookingISTDateRange(booking);
     const now = getCurrentServerTime();
@@ -398,6 +415,28 @@ export default function SessionDetailScreen() {
 
   const getStageMeta = (stage: string) => {
     switch (stage) {
+      case 'session_missed':
+        return {
+          title: booking?.status === 'client_no_show'
+            ? 'Client No-Show'
+            : booking?.status === 'trainer_no_show'
+            ? 'Coach No-Show'
+            : 'Session Missed',
+          desc: booking?.status === 'client_no_show'
+            ? 'Client check-in was not completed within grace period'
+            : booking?.status === 'trainer_no_show'
+            ? 'Coach was unable to arrive or start the session'
+            : 'Session was not started and marked as missed',
+          icon: 'alert-circle' as const
+        };
+      case 'session_cancelled':
+        return {
+          title: 'Session Cancelled',
+          desc: (booking as any)?.cancellationReason 
+            ? `Reason: ${(booking as any).cancellationReason}`
+            : 'Booking was cancelled',
+          icon: 'x-circle' as const
+        };
       case 'booked':
         return { title: 'Booking Confirmed', desc: 'Appointment locked in system', icon: 'check-circle' as const };
       case 'trainer_assigned':
@@ -426,6 +465,20 @@ export default function SessionDetailScreen() {
         return { title: stage.replace(/_/g, ' '), desc: '', icon: 'circle' as const };
     }
   };
+
+  const timelineStages = useMemo(() => {
+    if (isMissed) {
+      const idx = stagesList.indexOf(currentStatus);
+      const past = stagesList.slice(0, Math.max(1, idx >= 0 ? idx + 1 : 1));
+      return [...past, 'session_missed'];
+    }
+    if (isCancelled) {
+      const idx = stagesList.indexOf(currentStatus);
+      const past = stagesList.slice(0, Math.max(1, idx >= 0 ? idx + 1 : 1));
+      return [...past, 'session_cancelled'];
+    }
+    return stagesList;
+  }, [isMissed, isCancelled, currentStatus]);
 
   // Interpolate coordinates along the polyline path
   const trainerCoords = useMemo(() => {
@@ -1090,7 +1143,7 @@ export default function SessionDetailScreen() {
       </View>
 
       {/* Developer Push Simulator (Only for trainer during development) */}
-      {__DEV__ && role === 'trainer' && (
+      {__DEV__ && role === 'trainer' && !isMissed && !isCancelled && (
         <View className="bg-zinc-950 p-3.5 border-b border-zinc-800 gap-2">
           <Text className="text-amber-500 text-xs font-bold uppercase tracking-wider pl-2.5">Developer Push Simulator</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-2 pl-2">
@@ -1181,18 +1234,50 @@ export default function SessionDetailScreen() {
             <View className="bg-zinc-950 border border-zinc-800 p-5 rounded-[26px] shadow-md gap-2.5">
               <View className="flex-row items-center justify-between">
                 <View className="flex-row items-center gap-2.5">
-                  <View className="w-2.5 h-2.5 rounded-full bg-[#E11D48]" />
-                  <Text className="text-rose-400 text-xs font-black uppercase tracking-wider">Live Concierge Status</Text>
+                  <View className={`w-2.5 h-2.5 rounded-full ${isMissed ? 'bg-amber-500' : isCancelled ? 'bg-rose-500' : 'bg-[#E11D48]'}`} />
+                  <Text className={`text-xs font-black uppercase tracking-wider ${isMissed ? 'text-amber-400' : isCancelled ? 'text-rose-400' : 'text-rose-400'}`}>
+                    {isMissed || isCancelled ? 'Session Status' : 'Live Concierge Status'}
+                  </Text>
                 </View>
-                <View className="bg-zinc-900 border border-zinc-800 px-2.5 py-0.5 rounded-full">
-                  <Text className="text-emerald-400 text-[10px] font-extrabold uppercase tracking-wider">Live Active</Text>
+                <View className={`border px-2.5 py-0.5 rounded-full ${
+                  isMissed 
+                    ? 'bg-amber-950/40 border-amber-800/50' 
+                    : isCancelled 
+                    ? 'bg-red-950/40 border-red-800/50' 
+                    : 'bg-zinc-900 border border-zinc-800'
+                }`}>
+                  <Text className={`text-[10px] font-extrabold uppercase tracking-wider ${
+                    isMissed 
+                      ? 'text-amber-400' 
+                      : isCancelled 
+                      ? 'text-rose-400' 
+                      : 'text-emerald-400'
+                  }`}>
+                    {isMissed ? 'Missed' : isCancelled ? 'Cancelled' : 'Live Active'}
+                  </Text>
                 </View>
               </View>
               <Text className="text-white text-xl font-black tracking-tight">{getStatusText(currentStatus)}</Text>
-              {role === 'customer' && !isAccepted && (
+              {isMissed ? (
                 <Text className="text-zinc-400 text-xs font-medium leading-5">
-                  Your session has been successfully booked. Sit back while we finalize and confirm your elite coach.
+                  {booking.status === 'client_no_show' 
+                    ? 'This session was marked as missed due to client no-show.'
+                    : booking.status === 'trainer_no_show'
+                    ? 'This session was marked as missed due to coach no-show.'
+                    : 'This session was not started and has been marked as missed.'}
                 </Text>
+              ) : isCancelled ? (
+                <Text className="text-zinc-400 text-xs font-medium leading-5">
+                  {(booking as any)?.cancellationReason 
+                    ? `Cancellation reason: ${(booking as any).cancellationReason}`
+                    : 'This booking has been cancelled.'}
+                </Text>
+              ) : (
+                role === 'customer' && !isAccepted && (
+                  <Text className="text-zinc-400 text-xs font-medium leading-5">
+                    Your session has been successfully booked. Sit back while we finalize and confirm your elite coach.
+                  </Text>
+                )
               )}
             </View>
 
@@ -1210,8 +1295,22 @@ export default function SessionDetailScreen() {
               >
                 <View className="flex-row items-center justify-between pb-1 border-b border-zinc-100">
                   <Text className="text-zinc-950 text-sm font-black uppercase tracking-wider">Session Overview</Text>
-                  <View className="bg-zinc-100 px-2.5 py-0.5 rounded-full">
-                    <Text className="text-zinc-600 text-[10px] font-black uppercase tracking-wider">Verified Booking</Text>
+                  <View className={`px-2.5 py-0.5 rounded-full ${
+                    isMissed 
+                      ? 'bg-amber-50 border border-amber-200' 
+                      : isCancelled 
+                      ? 'bg-red-50 border border-red-200' 
+                      : 'bg-zinc-100'
+                  }`}>
+                    <Text className={`text-[10px] font-black uppercase tracking-wider ${
+                      isMissed 
+                        ? 'text-amber-700' 
+                        : isCancelled 
+                        ? 'text-rose-600' 
+                        : 'text-zinc-600'
+                    }`}>
+                      {isMissed ? 'Missed Session' : isCancelled ? 'Cancelled Session' : 'Verified Booking'}
+                    </Text>
                   </View>
                 </View>
                 
@@ -1418,7 +1517,7 @@ export default function SessionDetailScreen() {
             />
 
             {/* Module 2: Premium Animated SVG Live Map */}
-            {(currentStatus === 'trainer_travelling' || currentStatus === 'trainer_arrived') && (
+            {(currentStatus === 'trainer_travelling' || currentStatus === 'trainer_arrived') && !isMissed && !isCancelled && (
               <View className="bg-slate-950 border border-slate-900 rounded-[28px] overflow-hidden shadow-md">
                 <View className="p-4 border-b border-slate-900 flex-row justify-between items-center bg-slate-900/40">
                   <View>
@@ -1529,42 +1628,72 @@ export default function SessionDetailScreen() {
                 <View className="flex-row items-center justify-between pr-2">
                   <Text className="text-zinc-950 text-sm font-black uppercase tracking-wider">Direct Coach Line</Text>
                   <View className="bg-zinc-100 px-2.5 py-0.5 rounded-full border border-zinc-200/80">
-                    <Text className="text-zinc-700 text-[10px] font-extrabold uppercase tracking-wider">Encrypted</Text>
+                    <Text className="text-zinc-700 text-[10px] font-extrabold uppercase tracking-wider">
+                      {isMissed || isCancelled ? 'Closed' : 'Encrypted'}
+                    </Text>
                   </View>
                 </View>
                 
                 <View className="flex-row gap-3">
                   {/* Secure Message */}
                   <TouchableOpacity 
-                    onPress={!isAccepted ? () => Alert.alert('Security Lock', 'Waiting for Trainer Acceptance. Secure communications will unlock after a coach confirms.') : handleMessage} 
-                    className="flex-1 bg-zinc-950 py-4 rounded-2xl items-center justify-center flex-row gap-2.5 shadow-sm border border-zinc-900"
+                    onPress={
+                      isMissed 
+                        ? () => Alert.alert('Session Missed', 'This session has been marked as missed and communications are closed.') 
+                        : isCancelled 
+                        ? () => Alert.alert('Session Cancelled', 'This session has been cancelled and communications are closed.') 
+                        : !isAccepted 
+                        ? () => Alert.alert('Security Lock', 'Waiting for Trainer Acceptance. Secure communications will unlock after a coach confirms.') 
+                        : handleMessage
+                    } 
+                    className={`flex-1 py-4 rounded-2xl items-center justify-center flex-row gap-2.5 shadow-sm border ${
+                      isMissed || isCancelled ? 'bg-zinc-100 border-zinc-200 opacity-60' : 'bg-zinc-950 border border-zinc-900'
+                    }`}
                   >
-                    <Feather name="message-square" size={16} color="white" />
-                    <Text className="text-white text-sm font-black tracking-wide">Message Coach</Text>
+                    <Feather name="message-square" size={16} color={isMissed || isCancelled ? '#6B7280' : 'white'} />
+                    <Text className={`text-sm font-black tracking-wide ${isMissed || isCancelled ? 'text-zinc-500' : 'text-white'}`}>Message Coach</Text>
                   </TouchableOpacity>
 
                   {/* Secure Call */}
                   <View className="flex-1">
                     <TouchableOpacity 
-                      onPress={!isAccepted ? () => Alert.alert('Security Lock', 'Waiting for Trainer Acceptance. Secure communications will unlock after a coach confirms.') : (getMinutesToSession() <= 60 ? handleCall : undefined)} 
-                      activeOpacity={!isAccepted ? 0.8 : (getMinutesToSession() <= 60 ? 0.8 : 1)}
+                      onPress={
+                        isMissed 
+                          ? () => Alert.alert('Session Missed', 'This session has been marked as missed and communications are closed.') 
+                          : isCancelled 
+                          ? () => Alert.alert('Session Cancelled', 'This session has been cancelled and communications are closed.') 
+                          : !isAccepted 
+                          ? () => Alert.alert('Security Lock', 'Waiting for Trainer Acceptance. Secure communications will unlock after a coach confirms.') 
+                          : (getMinutesToSession() <= 60 ? handleCall : undefined)
+                      } 
+                      activeOpacity={!isAccepted || isMissed || isCancelled ? 0.8 : (getMinutesToSession() <= 60 ? 0.8 : 1)}
                       className={`py-4 rounded-2xl items-center justify-center flex-row gap-2.5 shadow-sm ${
-                        (isAccepted && getMinutesToSession() <= 60) ? 'bg-zinc-950 border border-zinc-900' : 'bg-zinc-100 border border-zinc-200 opacity-60'
+                        (!isMissed && !isCancelled && isAccepted && getMinutesToSession() <= 60) ? 'bg-zinc-950 border border-zinc-900' : 'bg-zinc-100 border border-zinc-200 opacity-60'
                       }`}
                     >
-                      <Feather name="phone" size={16} color={(isAccepted && getMinutesToSession() <= 60) ? 'white' : '#6B7280'} />
-                      <Text className={`text-sm font-black tracking-wide ${(isAccepted && getMinutesToSession() <= 60) ? 'text-white' : 'text-zinc-500'}`}>Direct Call</Text>
+                      <Feather name="phone" size={16} color={(!isMissed && !isCancelled && isAccepted && getMinutesToSession() <= 60) ? 'white' : '#6B7280'} />
+                      <Text className={`text-sm font-black tracking-wide ${(!isMissed && !isCancelled && isAccepted && getMinutesToSession() <= 60) ? 'text-white' : 'text-zinc-500'}`}>Direct Call</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
 
                 {/* Helper text if Call is disabled */}
-                {isAccepted && getMinutesToSession() > 60 && (
+                {isMissed && (
+                  <Text className="text-zinc-500 text-xs font-semibold text-center mt-1 leading-relaxed">
+                    Direct communications are closed because this session was missed.
+                  </Text>
+                )}
+                {isCancelled && (
+                  <Text className="text-zinc-500 text-xs font-semibold text-center mt-1 leading-relaxed">
+                    Direct communications are closed because this session was cancelled.
+                  </Text>
+                )}
+                {!isMissed && !isCancelled && isAccepted && getMinutesToSession() > 60 && (
                   <Text className="text-zinc-600 text-xs font-semibold text-center mt-1 leading-relaxed">
                     Direct calling unlocks 60 minutes before your scheduled session.
                   </Text>
                 )}
-                {!isAccepted && (
+                {!isMissed && !isCancelled && !isAccepted && (
                   <Text className="text-zinc-600 text-xs font-semibold text-center mt-1 leading-relaxed">
                     Direct communications unlock as soon as your coach accepts the session.
                   </Text>
@@ -1573,7 +1702,7 @@ export default function SessionDetailScreen() {
             )}
 
             {/* Original Module 5 for Trainers */}
-            {role !== 'customer' && (
+            {role !== 'customer' && !isMissed && !isCancelled && (
               <View className="gap-4 pl-1">
                 <View className="flex-row justify-between items-center">
                   <Text className="text-zinc-950 text-sm font-extrabold uppercase tracking-wider">Concierge Controls</Text>
@@ -1683,7 +1812,7 @@ export default function SessionDetailScreen() {
             )}
 
             {/* OTP Display and Trainer Entry Verification */}
-            {currentStatus === 'trainer_arrived' && (role === 'customer' || role === 'admin') && (
+            {currentStatus === 'trainer_arrived' && !isMissed && !isCancelled && (role === 'customer' || role === 'admin') && (
               <View className="bg-zinc-950 p-6 rounded-[28px] border border-zinc-800 shadow-xl gap-4">
                 <View className="flex-row items-center gap-2">
                   <View className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
@@ -1740,8 +1869,8 @@ export default function SessionDetailScreen() {
               </View>
             )}
 
-            {currentStatus === 'trainer_arrived' && role === 'trainer' && (
-              <View className="bg-zinc-950 p-5 rounded-[28px] border border-zinc-850 gap-4 shadow-xl">
+            {currentStatus === 'trainer_arrived' && !isMissed && !isCancelled && role === 'trainer' && (
+              <View className="bg-zinc-950 p-5 rounded-[28px] border border-zinc-855 gap-4 shadow-xl">
                 <View className="flex-row justify-between items-center border-b border-zinc-900 pb-3">
                   <View className="flex-1">
                     <Text className="text-white text-xs font-black uppercase tracking-wider">Client check-in security OTP</Text>
@@ -1803,7 +1932,7 @@ export default function SessionDetailScreen() {
               </View>
             )}
 
-            {currentStatus === 'otp_verified' && (role === 'customer' || role === 'admin') && (
+            {currentStatus === 'otp_verified' && !isMissed && !isCancelled && (role === 'customer' || role === 'admin') && (
               <View className="bg-zinc-950 p-6 rounded-[28px] border border-zinc-800 shadow-xl gap-4">
                 <View className="flex-row items-center gap-2">
                   <View className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
@@ -1816,7 +1945,7 @@ export default function SessionDetailScreen() {
               </View>
             )}
 
-            {currentStatus === 'otp_verified' && role === 'trainer' && (
+            {currentStatus === 'otp_verified' && !isMissed && !isCancelled && role === 'trainer' && (
               <View className="bg-zinc-950 p-6 rounded-[28px] border border-zinc-800 shadow-xl gap-4">
                 <View className="flex-row items-center gap-2">
                   <View className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
@@ -1830,7 +1959,7 @@ export default function SessionDetailScreen() {
             )}
 
             {/* Active Workout timer dashboard console */}
-            {currentStatus === 'workout_started' && (
+            {currentStatus === 'workout_started' && !isMissed && !isCancelled && (
               <View className="bg-zinc-950 p-6 rounded-[28px] border border-zinc-800 items-center justify-center gap-3 shadow-xl">
                 <Text className="text-emerald-400 text-[8px] font-black uppercase tracking-wider">WORKOUT IN PROGRESS</Text>
                 <Text className="text-white text-4xl font-black tracking-tight">{formatTime(workoutTimeLeft)}</Text>
@@ -1901,7 +2030,7 @@ export default function SessionDetailScreen() {
             )}
 
             {/* Module 8: Full Post-Session Customer Experience Panel */}
-            {(currentStatus === 'customer_review_pending' || currentStatus === 'session_closed' || currentStatus === 'workout_completed' || currentStatus === 'trainer_report_submitted') && (role === 'customer' || role === 'admin') && (
+            {(currentStatus === 'customer_review_pending' || currentStatus === 'session_closed' || currentStatus === 'workout_completed' || currentStatus === 'trainer_report_submitted') && !isMissed && !isCancelled && (role === 'customer' || role === 'admin') && (
               <View 
                 className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4"
                 style={{
@@ -2014,24 +2143,52 @@ export default function SessionDetailScreen() {
               </View>
             )}
 
-            {/* 12-Stage Booking Timeline tracker */}
-            <View className="gap-4 pl-1">
-              <View className="flex-row items-center justify-between pr-2">
+            {/* Session Timeline tracker */}
+            <View 
+              className="bg-white border border-zinc-200/90 p-5 rounded-[28px] shadow-sm gap-4"
+              style={{
+                shadowColor: '#101828',
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.05,
+                shadowRadius: 8,
+                elevation: 2,
+              }}
+            >
+              <View className="flex-row items-center justify-between pb-3 border-b border-zinc-100">
                 <View>
-                  <Text className="text-zinc-950 text-base font-black uppercase tracking-wider">Live Concierge Milestones</Text>
-                  <Text className="text-zinc-600 text-xs font-semibold mt-0.5">Real-time status of your appointment</Text>
+                  <Text className="text-zinc-950 text-sm font-black uppercase tracking-wider">
+                    {isMissed ? 'Session Timeline' : isCancelled ? 'Session Timeline' : 'Live Concierge Milestones'}
+                  </Text>
+                  <Text className="text-zinc-500 text-[11px] font-semibold mt-0.5">
+                    {isMissed || isCancelled ? 'Complete status history of your appointment' : 'Real-time status of your appointment'}
+                  </Text>
                 </View>
-                <View className="bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/80 flex-row items-center gap-1.5">
-                  <View className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <Text className="text-emerald-700 text-[10px] font-black uppercase tracking-wider">Live Sync</Text>
+                <View className={`px-2.5 py-1 rounded-full border flex-row items-center gap-1.5 ${
+                  isMissed 
+                    ? 'bg-amber-50 border-amber-200' 
+                    : isCancelled 
+                    ? 'bg-rose-50 border-rose-200' 
+                    : 'bg-emerald-50 border-emerald-200/80'
+                }`}>
+                  <View className={`w-2 h-2 rounded-full ${
+                    isMissed ? 'bg-amber-500' : isCancelled ? 'bg-rose-500' : 'bg-emerald-500'
+                  }`} />
+                  <Text className={`text-[10px] font-black uppercase tracking-wider ${
+                    isMissed ? 'text-amber-700' : isCancelled ? 'text-rose-700' : 'text-emerald-700'
+                  }`}>
+                    {isMissed ? 'Missed' : isCancelled ? 'Cancelled' : 'Live Sync'}
+                  </Text>
                 </View>
               </View>
               
-              <View className="gap-0 pl-1 mt-1">
-                {stagesList.map((item, idx) => {
-                  const isCurrent = currentStatus === item;
-                  const isCompleted = stagesList.indexOf(currentStatus) > idx;
-                  const isLast = idx === stagesList.length - 1;
+              <View className="gap-0 mt-1">
+                {timelineStages.map((item, idx) => {
+                  const isTerminalMissed = item === 'session_missed';
+                  const isTerminalCancelled = item === 'session_cancelled';
+                  const isTerminal = isTerminalMissed || isTerminalCancelled;
+                  const isCompleted = isTerminal ? false : (isMissed || isCancelled ? true : stagesList.indexOf(currentStatus) > idx);
+                  const isCurrent = !isMissed && !isCancelled && currentStatus === item;
+                  const isLast = idx === timelineStages.length - 1;
                   const meta = getStageMeta(item);
 
                   return (
@@ -2043,14 +2200,22 @@ export default function SessionDetailScreen() {
                             transform: [{ scale: isCurrent ? pulseScale : 1 }]
                           }}
                           className={`w-7 h-7 rounded-full items-center justify-center border-2 ${
-                            isCompleted 
+                            isTerminalMissed
+                              ? 'bg-amber-500 border-amber-300 shadow-sm'
+                              : isTerminalCancelled
+                              ? 'bg-rose-500 border-rose-300 shadow-sm'
+                              : isCompleted 
                               ? 'bg-emerald-500 border-emerald-500 shadow-sm' 
                               : isCurrent 
                               ? 'bg-[#E11D48] border-rose-300 shadow-md' 
                               : 'border-zinc-300 bg-white'
                           }`}
                         >
-                          {isCompleted ? (
+                          {isTerminalMissed ? (
+                            <Feather name="alert-triangle" size={13} color="white" />
+                          ) : isTerminalCancelled ? (
+                            <Feather name="x" size={13} color="white" />
+                          ) : isCompleted ? (
                             <Feather name="check" size={13} color="white" />
                           ) : isCurrent ? (
                             <Feather name={meta.icon as any} size={13} color="white" />
@@ -2074,7 +2239,11 @@ export default function SessionDetailScreen() {
                       <View className="flex-1 pt-0.5 pb-2">
                         <View className="flex-row items-center justify-between pr-1">
                           <Text className={`text-sm tracking-tight ${
-                            isCurrent 
+                            isTerminalMissed
+                              ? 'font-black text-amber-700'
+                              : isTerminalCancelled
+                              ? 'font-black text-rose-700'
+                              : isCurrent 
                               ? 'font-black text-[#E11D48]' 
                               : isCompleted 
                               ? 'font-bold text-zinc-900' 
@@ -2083,6 +2252,16 @@ export default function SessionDetailScreen() {
                             {meta.title}
                           </Text>
 
+                          {isTerminalMissed && (
+                            <View className="bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                              <Text className="text-amber-700 text-[10px] font-black uppercase tracking-wider">Missed</Text>
+                            </View>
+                          )}
+                          {isTerminalCancelled && (
+                            <View className="bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                              <Text className="text-rose-600 text-[10px] font-black uppercase tracking-wider">Cancelled</Text>
+                            </View>
+                          )}
                           {isCurrent && (
                             <View className="bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
                               <Text className="text-rose-600 text-[10px] font-black uppercase tracking-wider">Active</Text>
@@ -2094,7 +2273,11 @@ export default function SessionDetailScreen() {
                         </View>
 
                         <Text className={`text-xs mt-0.5 leading-normal ${
-                          isCurrent 
+                          isTerminalMissed
+                            ? 'text-amber-700/90 font-medium'
+                            : isTerminalCancelled
+                            ? 'text-rose-700/90 font-medium'
+                            : isCurrent 
                             ? 'text-rose-700/90 font-medium' 
                             : isCompleted 
                             ? 'text-zinc-600 font-medium' 

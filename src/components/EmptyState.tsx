@@ -16,9 +16,11 @@ interface EmptyStateProps {
   onAction?: () => void;
   actionText?: string;
   message?: string;
+  title?: string;
+  showCard?: boolean;
 }
 
-export function EmptyState({ type, onAction, actionText, message }: EmptyStateProps) {
+export function EmptyState({ type, onAction, actionText, message, title, showCard = true }: EmptyStateProps) {
   const [scaleAnim] = React.useState(() => new Animated.Value(0.95));
   const [opacityAnim] = React.useState(() => new Animated.Value(0));
 
@@ -180,21 +182,37 @@ export function EmptyState({ type, onAction, actionText, message }: EmptyStatePr
 
   return (
     <Animated.View 
-      style={{
-        opacity: opacityAnim,
-        transform: [{ scale: scaleAnim }],
-        shadowColor: '#101828',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
-      }}
-      className="bg-white border border-[#E5E7EB] p-8 rounded-[32px] items-center justify-center"
+      style={[
+        {
+          opacity: opacityAnim,
+          transform: [{ scale: scaleAnim }],
+        },
+        showCard ? {
+          shadowColor: '#101828',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 8,
+          elevation: 2,
+        } : undefined,
+      ]}
+      className={`${
+        showCard 
+          ? 'bg-white border border-[#E5E7EB] p-8 rounded-[32px]' 
+          : 'py-10 px-4'
+      } items-center justify-center`}
     >
-      <View className="mb-4">{content.icon}</View>
-      <Text className="text-[#111827] text-lg font-black tracking-tight text-center">{content.title}</Text>
-      <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed text-center mt-2 max-w-[85%]">
-        {content.description}
+      <View className="mb-4 items-center justify-center">{content.icon}</View>
+      <Text 
+        style={{ textAlign: 'center', alignSelf: 'center' }} 
+        className="text-[#111827] text-lg font-black tracking-tight text-center w-full"
+      >
+        {title || content.title}
+      </Text>
+      <Text 
+        style={{ textAlign: 'center', alignSelf: 'center', maxWidth: 300 }} 
+        className="text-[#6B7280] text-xs font-semibold leading-relaxed text-center mt-2 px-2"
+      >
+        {message || content.description}
       </Text>
       {onAction && (
         <TouchableOpacity

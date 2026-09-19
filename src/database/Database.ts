@@ -3357,6 +3357,43 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     return list;
   }
 
+  getUnifiedChatMessages(chatIds: string[]): ChatMessage[] {
+    const idSet = new Set(chatIds.filter(Boolean));
+    // Support known seed chat mappings
+    if (chatIds.some(id => id.toLowerCase().includes('karan') || id === 'chat-c-1' || id === 'c-1')) {
+      idSet.add('chat-c-1');
+    }
+    if (chatIds.some(id => id.toLowerCase().includes('priya') || id === 'chat-c-2' || id === 'c-2')) {
+      idSet.add('chat-c-2');
+    }
+
+    const seenIds = new Set<string>();
+    const messages: ChatMessage[] = [];
+
+    this.schema.messages.forEach(m => {
+      if (idSet.has(m.chatId) && !seenIds.has(m.id)) {
+        seenIds.add(m.id);
+        messages.push(m);
+      }
+    });
+
+    // If empty and matched known seed, add default seed messages
+    if (messages.length === 0) {
+      if (idSet.has('chat-c-1')) {
+        messages.push(
+          { id: 'm-init-1', chatId: chatIds[0] || 'chat-c-1', sender: 'coach', text: "Hello! I'm preparing for our Strength session today.", timestamp: '10:05 AM' },
+          { id: 'm-init-2', chatId: chatIds[0] || 'chat-c-1', sender: 'coach', text: 'Do you have any specific areas of muscle soreness we should prioritize?', timestamp: '10:06 AM' }
+        );
+      }
+    }
+
+    return messages.sort((a, b) => {
+      const tA = new Date(a.timestamp).getTime() || 0;
+      const tB = new Date(b.timestamp).getTime() || 0;
+      return tA - tB;
+    });
+  }
+
   sendChatMessage(chatId: string, text: string, sender: ChatMessage['sender']): ChatMessage {
     const timeStr = new Date().toISOString();
     const msg: ChatMessage = {
