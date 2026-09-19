@@ -1159,9 +1159,9 @@ export default function BookingsScreen() {
                   ? 'No Cancelled Sessions' 
                   : activeFilter === 'completed' 
                     ? 'No Completed Sessions' 
-                    : undefined
+                    : 'No Upcoming Sessions'
               }
-              showCard={activeFilter !== 'cancelled' && activeFilter !== 'completed'}
+              showCard={false}
               message={
                 activeFilter === 'cancelled' && cancelledDateFilter !== 'all'
                   ? `No cancelled or missed visits found for ${cancelledDateFilter}.`

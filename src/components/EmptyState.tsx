@@ -184,6 +184,7 @@ export function EmptyState({ type, onAction, actionText, message, title, showCar
     <Animated.View 
       style={[
         {
+          width: '100%',
           opacity: opacityAnim,
           transform: [{ scale: scaleAnim }],
         },
@@ -199,7 +200,7 @@ export function EmptyState({ type, onAction, actionText, message, title, showCar
         showCard 
           ? 'bg-white border border-[#E5E7EB] p-8 rounded-[32px]' 
           : 'py-10 px-4'
-      } items-center justify-center`}
+      } items-center justify-center w-full`}
     >
       <View className="mb-4 items-center justify-center">{content.icon}</View>
       <Text 
