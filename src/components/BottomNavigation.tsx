@@ -1,15 +1,10 @@
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUserStore } from '../store/userStore';
-
-const { width: windowWidth } = Dimensions.get('window');
-const CONTAINER_MARGIN = 48; // left-6 right-6
-const CONTAINER_PADDING = 12; // horizontal padding
-const TAB_BAR_WIDTH = windowWidth - CONTAINER_MARGIN - CONTAINER_PADDING;
 
 export function BottomNavigation({ state, descriptors, navigation }: any) {
   const router = useRouter();
@@ -21,56 +16,29 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
 
   // Filter out messages from the visible routes
   const visibleRoutes = state.routes.filter((route: any) => route.name !== 'messages');
-  const numVisibleTabs = visibleRoutes.length; // 4
   const isTrainer = role === 'trainer';
 
-  // For client: 5 slots (4 tabs + central '+' slot)
-  // For trainer: 4 slots (4 tabs evenly distributed)
-  const totalSlots = isTrainer ? numVisibleTabs : numVisibleTabs + 1;
-  const tabWidth = TAB_BAR_WIDTH / totalSlots;
-
-  // Find the index of the active route among the visible routes
-  const currentRouteName = state.routes[state.index].name;
-  const visibleActiveIndex = visibleRoutes.findIndex((r: any) => r.name === currentRouteName);
-
-  // Animation values
-  const [slideAnim] = useState(() => new Animated.Value(0));
-
-  useEffect(() => {
-    if (visibleActiveIndex === -1) {
-      return;
-    }
-    // For client, skip slot 2 (the "+" button); for trainer, direct index mapping (0, 1, 2, 3)
-    const multiplier = (!isTrainer && visibleActiveIndex >= 2) ? visibleActiveIndex + 1 : visibleActiveIndex;
-    Animated.spring(slideAnim, {
-      toValue: multiplier * tabWidth,
-      useNativeDriver: true,
-      tension: 68,
-      friction: 10,
-    }).start();
-  }, [visibleActiveIndex, tabWidth, slideAnim, isTrainer]);
-
   const getIcon = (routeName: string, isFocused: boolean) => {
-    let iconName: any = 'home';
+    let iconName: any = isFocused ? 'home' : 'home-outline';
     switch (routeName) {
       case 'index':
-        iconName = 'home';
+        iconName = isFocused ? 'home' : 'home-outline';
         break;
       case 'bookings':
-        iconName = 'calendar';
+        iconName = isFocused ? 'calendar' : 'calendar-outline';
         break;
       case 'progress':
-        iconName = 'activity';
+        iconName = isFocused ? 'stats-chart' : 'stats-chart-outline';
         break;
       case 'profile':
-        iconName = 'user';
+        iconName = isFocused ? 'person' : 'person-outline';
         break;
     }
 
     return (
-      <Feather
+      <Ionicons
         name={iconName}
-        size={20}
+        size={22}
         color={isFocused ? '#E11D48' : '#9CA3AF'}
       />
     );
@@ -103,17 +71,6 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
         }
       ]}
     >
-      {/* Sliding Active Pill Indicator */}
-      <Animated.View
-        style={[
-          styles.activePill,
-          {
-            width: tabWidth - 8,
-            transform: [{ translateX: Animated.add(slideAnim, 4) }],
-            opacity: visibleActiveIndex !== -1 ? 1 : 0,
-          }
-        ]}
-      />
 
       {visibleRoutes.map((route: any, index: number) => {
         const isFocused = state.routes[state.index].name === route.name;
@@ -195,17 +152,6 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 12,
   },
-  activePill: {
-    position: 'absolute',
-    left: 6,
-    top: 6,
-    bottom: 6,
-    backgroundColor: '#FFF1F2', // Rose-50 solid brand pill
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: '#FFE4E6', // Rose-100 soft border
-    zIndex: 0,
-  }
 });
 
 export default BottomNavigation;
