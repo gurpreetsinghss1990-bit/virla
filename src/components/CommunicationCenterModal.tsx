@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Animated,
+  StyleSheet,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,35 +31,89 @@ export const CommunicationCenterModal: React.FC<CommunicationCenterModalProps> =
   // Ensure ample clearance above Android 3-button navigation bar (~48-56dp) or iOS indicator bar (~34dp)
   const safeBottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 56 : 24) + 20;
 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(300)).current;
+
+  useEffect(() => {
+    if (visible) {
+      fadeAnim.setValue(0);
+      slideAnim.setValue(300);
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          friction: 8,
+          tension: 65,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible]);
+
+  const handleDismiss = () => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 300,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onClose();
+    });
+  };
+
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="none"
       statusBarTranslucent
-      onRequestClose={onClose}
+      onRequestClose={handleDismiss}
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1 bg-black/60 justify-end"
+        style={{ flex: 1 }}
       >
-        {/* Backdrop tap to dismiss */}
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={onClose}
-          className="flex-1"
-        />
-
-        {/* Modal Bottom Sheet Content */}
-        <View
-          style={{ paddingBottom: safeBottomPadding }}
-          className="bg-white rounded-t-[36px] px-6 pt-3 gap-5 shadow-2xl border-t border-rose-100"
+        {/* Animated Fade Backdrop */}
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              opacity: fadeAnim,
+            },
+          ]}
         >
-          {/* Subtle Pull Indicator Bar */}
-          <View className="w-12 h-1.5 rounded-full bg-zinc-200 self-center mb-1" />
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={handleDismiss}
+            style={{ flex: 1 }}
+          />
+        </Animated.View>
 
-          {/* Modal Header */}
-          <View className="flex-row justify-between items-center pb-3 border-b border-zinc-100">
+        {/* Modal Bottom Sheet Content with Slide Up Animation */}
+        <View style={{ flex: 1, justifyContent: 'flex-end' }} pointerEvents="box-none">
+          <Animated.View
+            style={{
+              transform: [{ translateY: slideAnim }],
+              paddingBottom: safeBottomPadding,
+            }}
+            className="bg-white rounded-t-[36px] px-6 pt-3 gap-5 shadow-2xl border-t border-rose-100"
+          >
+            {/* Subtle Pull Indicator Bar */}
+            <View className="w-12 h-1.5 rounded-full bg-zinc-200 self-center mb-1" />
+
+            {/* Modal Header */}
+            <View className="flex-row justify-between items-center pb-3 border-b border-zinc-100">
             <View>
               <Text className="text-[#E11D48] text-[10px] font-black uppercase tracking-widest">
                 Communication Hub
@@ -67,7 +123,7 @@ export const CommunicationCenterModal: React.FC<CommunicationCenterModalProps> =
               </Text>
             </View>
             <TouchableOpacity
-              onPress={onClose}
+              onPress={handleDismiss}
               activeOpacity={0.7}
               className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center border border-zinc-200"
             >
@@ -147,15 +203,16 @@ export const CommunicationCenterModal: React.FC<CommunicationCenterModalProps> =
           {/* Dismiss Button */}
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={onClose}
+            onPress={handleDismiss}
             className="w-full py-3.5 bg-zinc-100 rounded-2xl items-center justify-center mt-1 border border-zinc-200"
           >
             <Text className="text-zinc-700 text-xs font-black uppercase tracking-wider">
               Cancel
             </Text>
           </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+        </Animated.View>
+      </View>
+    </KeyboardAvoidingView>
+  </Modal>
   );
 };
