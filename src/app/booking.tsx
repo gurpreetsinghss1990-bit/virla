@@ -15,7 +15,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { useUserStore } from '../store/userStore';
 import { EmptyState, ApplePayConfirmation, BookingSuccessAnimation } from '../components';
 import { Ionicons, Feather } from '@expo/vector-icons';
-import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
 import Svg, { Circle, Line } from 'react-native-svg';
 import { AssignmentEngine } from '../services/AssignmentEngine';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
@@ -47,7 +47,7 @@ class SafeMapWrapper extends React.Component<{ children: React.ReactNode; fallba
         </View>
       );
     }
-    return this.props.children;
+    return <View style={{ flex: 1 }}>{this.props.children}</View>;
   }
 }
 
@@ -2390,8 +2390,8 @@ export default function BookingScreen() {
                             <SafeMapWrapper>
                               <MapView
                                 ref={mapRef}
-                                provider={PROVIDER_DEFAULT}
-                                style={{ flex: 1 }}
+                                provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
+                                style={{ flex: 1, width: '100%', height: '100%' }}
                                 initialRegion={{
                                   latitude: activeCoords.lat,
                                   longitude: activeCoords.lng,
