@@ -1,5 +1,7 @@
 import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Linking from 'expo-linking';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -17,6 +19,34 @@ export default function RootLayout() {
 
     let isMounted = true;
     let responseSubscription: any = null;
+    let urlSubscription: any = null;
+
+    // 0. Deferred Deep-Link Handling: Capture 'ref' parameter from invite URLs
+    const handleIncomingDeepLink = async (urlStr: string | null) => {
+      if (!urlStr) return;
+      try {
+        const parsed = Linking.parse(urlStr);
+        const refParam = parsed.queryParams?.ref;
+        if (refParam && typeof refParam === 'string') {
+          await AsyncStorage.setItem('pending_referral_id', refParam);
+          console.log('[REFERRAL] Captured pending referral ID from incoming link:', refParam);
+        }
+      } catch (e) {
+        console.warn('[REFERRAL] Failed to parse incoming deep link URL:', e);
+      }
+    };
+
+    Linking.getInitialURL().then((initialUrl) => {
+      if (initialUrl && isMounted) {
+        handleIncomingDeepLink(initialUrl);
+      }
+    });
+
+    urlSubscription = Linking.addEventListener('url', (event) => {
+      if (event.url && isMounted) {
+        handleIncomingDeepLink(event.url);
+      }
+    });
 
     if (PushNotificationService.isNotificationsSupported()) {
       try {
@@ -83,6 +113,9 @@ export default function RootLayout() {
       isMounted = false;
       if (responseSubscription) {
         responseSubscription.remove();
+      }
+      if (urlSubscription) {
+        urlSubscription.remove();
       }
     };
   }, []);

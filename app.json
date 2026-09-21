@@ -23,6 +23,9 @@
         "NSFaceIDUsageDescription": "Allow Virla to use Face ID to authenticate you securely.",
         "UIBackgroundModes": [
           "location"
+        ],
+        "LSApplicationQueriesSchemes": [
+          "whatsapp"
         ]
       }
     },

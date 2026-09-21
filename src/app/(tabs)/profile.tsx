@@ -1721,9 +1721,9 @@ export default function ProfileScreen() {
           <TouchableOpacity
             onPress={handleLogout}
             activeOpacity={0.8}
-            className="bg-red-50 border border-red-200/50 p-4 rounded-xl flex-row justify-center items-center mt-6 mb-24"
+            className="bg-red-50 border border-red-200/50 px-8 py-3.5 rounded-xl flex-row justify-center items-center self-center mt-6 mb-24 gap-2"
           >
-            <Feather name="log-out" size={15} color="#EF4444" style={{ marginRight: 8 }} />
+            <Feather name="log-out" size={15} color="#EF4444" style={{ transform: [{ rotate: '-90deg' }] }} />
             <Text className="text-red-600 text-xs font-black uppercase tracking-widest">Sign Out</Text>
           </TouchableOpacity>
 

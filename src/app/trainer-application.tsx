@@ -71,25 +71,33 @@ export default function TrainerApplicationScreen() {
   const [isScrolledNearBottom, setIsScrolledNearBottom] = useState(false);
 
   const scrollToBottom = () => {
-    setIsScrolledNearBottom(true);
-    policyScrollViewRef.current?.scrollToEnd({ animated: true });
-    // Dual fallback for Android large scrollview layout
-    setTimeout(() => {
-      policyScrollViewRef.current?.scrollToEnd({ animated: false });
-      setIsScrolledNearBottom(true);
-    }, 150);
-  };
-
-  const scrollToTop = () => {
-    policyScrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    // ponytail: guarded scroll-to-end with fallback; never throws out of onPress
+    try {
+      policyScrollViewRef.current?.scrollToEnd({ animated: true });
+    } catch (err) {
+      try {
+        policyScrollViewRef.current?.scrollTo({ y: 99999, animated: true });
+      } catch (fallbackErr) {
+        console.warn('[TrainerAgreement] scrollToBottom failed:', fallbackErr);
+      }
+    }
   };
 
   const switchPolicyPage = (page: 1 | 2 | 3) => {
     setPolicyPage(page);
     setIsScrolledNearBottom(false);
-    policyScrollViewRef.current?.scrollTo({ y: 0, animated: false });
-    setTimeout(() => {
+    // ponytail: guarded + retried scroll-to-top; page switch must never depend on it
+    try {
       policyScrollViewRef.current?.scrollTo({ y: 0, animated: false });
+    } catch (err) {
+      console.warn('[TrainerAgreement] scrollTo failed:', err);
+    }
+    setTimeout(() => {
+      try {
+        policyScrollViewRef.current?.scrollTo({ y: 0, animated: false });
+      } catch (err) {
+        console.warn('[TrainerAgreement] deferred scrollTo failed:', err);
+      }
     }, 60);
   };
 
@@ -605,7 +613,7 @@ export default function TrainerApplicationScreen() {
                 router.replace('/(tabs)/profile' as any);
               }
             }} 
-            className="w-10 h-10 items-center justify-center rounded-full bg-zinc-50 border border-zinc-200"
+            className="w-10 h-10 items-center justify-center"
           >
             <Feather name="arrow-left" size={18} color="#101828" />
           </TouchableOpacity>
@@ -637,7 +645,7 @@ export default function TrainerApplicationScreen() {
           scrollEventThrottle={16}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={true}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: Math.max((insets.bottom || 0) + 40, 80) }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: policyPage === 3 ? Math.max(insets.bottom + 72, 96) : 24 }}
           className="flex-1 bg-white"
         >
           {policyPage === 1 ? (
@@ -685,21 +693,6 @@ export default function TrainerApplicationScreen() {
                   {PARTNER_POLICIES_DOCUMENT_INFO.footer}
                 </Text>
               </View>
-
-              {/* Step 1 Action - Next */}
-              <View className="my-5">
-                <TouchableOpacity 
-                  activeOpacity={0.7}
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                  onPress={() => switchPolicyPage(2)}
-                  className="py-4 bg-[#101828] rounded-xl items-center justify-center flex-row gap-2 shadow-sm"
-                >
-                  <Text className="text-white text-xs font-black uppercase tracking-wider text-center">
-                    Next: Terms &amp; Standards (Step 2/3)
-                  </Text>
-                  <Feather name="arrow-right" size={15} color="white" />
-                </TouchableOpacity>
-              </View>
             </>
           ) : policyPage === 2 ? (
             <>
@@ -745,33 +738,6 @@ export default function TrainerApplicationScreen() {
                 <Text className="text-zinc-400 text-[9.5px] font-medium italic text-center">
                   {PARTNER_TERMS_DOCUMENT_INFO.footer}
                 </Text>
-              </View>
-
-              {/* Step 2 Actions - Next & Previous */}
-              <View className="my-5 gap-2.5">
-                <TouchableOpacity 
-                  activeOpacity={0.7}
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                  onPress={() => switchPolicyPage(3)}
-                  className="py-4 bg-[#101828] rounded-xl items-center justify-center flex-row gap-2 shadow-sm"
-                >
-                  <Text className="text-white text-xs font-black uppercase tracking-wider text-center">
-                    Next: Earnings &amp; Payout (Step 3/3)
-                  </Text>
-                  <Feather name="arrow-right" size={15} color="white" />
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  activeOpacity={0.7}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  onPress={() => switchPolicyPage(1)}
-                  className="py-3.5 bg-zinc-100 border border-zinc-250 rounded-xl items-center justify-center flex-row gap-2"
-                >
-                  <Feather name="arrow-left" size={14} color="#3F3F46" />
-                  <Text className="text-zinc-800 text-[10.5px] font-black uppercase tracking-wider text-center">
-                    Previous: Policies &amp; Rules (Step 1)
-                  </Text>
-                </TouchableOpacity>
               </View>
             </>
           ) : (
@@ -868,24 +834,56 @@ export default function TrainerApplicationScreen() {
                   </Text>
                   {checkEarningsAcceptance && <Feather name="check-circle" size={14} color="white" />}
                 </TouchableOpacity>
-
-                <TouchableOpacity 
-                  activeOpacity={0.8}
-                  onPress={() => switchPolicyPage(2)}
-                  className="py-3 bg-zinc-100 border border-zinc-250 rounded-xl items-center justify-center flex-row gap-2"
-                >
-                  <Feather name="arrow-left" size={14} color="#3F3F46" />
-                  <Text className="text-zinc-800 text-[10.5px] font-black uppercase tracking-wider text-center">
-                    Previous: Terms &amp; Standards (Step 2)
-                  </Text>
-                </TouchableOpacity>
               </View>
             </>
           )}
         </ScrollView>
 
-        {/* Floating Scroll to Bottom Action Button (Safely elevated above 3-button navigation, hidden when reached bottom) */}
-        {!isScrolledNearBottom && (
+        {/* Sticky agreement navigation — outside the ScrollView so Next/Previous taps always land */}
+        {policyPage !== 3 && (
+        <View
+          className="bg-white border-t border-zinc-200 px-5 pt-3"
+          style={{ paddingBottom: Math.max(insets.bottom + 8, 24) }}
+        >
+          {policyPage === 1 ? (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => switchPolicyPage(2)}
+              className="py-4 bg-[#101828] rounded-xl items-center justify-center flex-row gap-2 shadow-sm"
+            >
+              <Text className="text-white text-xs font-black uppercase tracking-wider text-center">
+                Next: Terms &amp; Standards (Step 2/3)
+              </Text>
+              <Feather name="arrow-right" size={15} color="white" />
+            </TouchableOpacity>
+          ) : policyPage === 2 ? (
+            <View className="gap-2.5">
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => switchPolicyPage(3)}
+                className="py-4 bg-[#101828] rounded-xl items-center justify-center flex-row gap-2 shadow-sm"
+              >
+                <Text className="text-white text-xs font-black uppercase tracking-wider text-center">
+                  Next: Earnings &amp; Payout (Step 3/3)
+                </Text>
+                <Feather name="arrow-right" size={15} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => switchPolicyPage(1)}
+                className="py-3.5 bg-zinc-100 border border-zinc-200 rounded-xl items-center justify-center flex-row gap-2"
+              >
+                <Feather name="arrow-left" size={14} color="#3F3F46" />
+                <Text className="text-zinc-800 text-[10.5px] font-black uppercase tracking-wider text-center">
+                  Previous: Policies &amp; Rules (Step 1)
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+        </View>
+        )}
+        {/* Step 3 only: floating Scroll to Bottom, hidden near bottom so it never covers Accept */}
+        {policyPage === 3 && !isScrolledNearBottom && (
           <TouchableOpacity
             activeOpacity={0.9}
             onPress={scrollToBottom}
@@ -901,11 +899,7 @@ export default function TrainerApplicationScreen() {
             }}
             className="flex-row items-center gap-1.5 px-3 py-2 bg-[#101828] border border-zinc-700 rounded-full"
           >
-            <Feather 
-              name="arrow-down" 
-              size={13} 
-              color="#FFFFFF" 
-            />
+            <Feather name="arrow-down" size={13} color="#FFFFFF" />
             <Text className="text-white text-[10.5px] font-black uppercase tracking-wider">
               Scroll to Bottom
             </Text>
