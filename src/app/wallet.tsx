@@ -9,6 +9,7 @@ import { useMembershipStore } from '../store/membershipStore';
 import { useUserStore } from '../store/userStore';
 import { Database } from '../database/Database';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import Svg, { Circle } from 'react-native-svg';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { formatToDDMMYYYY } from '../utils/date';
 import { supabase } from '../database/supabaseClient';
@@ -22,6 +23,10 @@ export default function WalletScreen() {
   const { membership, isExpired } = useMembershipStore();
   const role = useUserStore((state) => state.role);
   const userName = useUserStore((state) => state.user?.name);
+  const activeLots = useMemo(() => {
+    if (!creditLots) return [];
+    return creditLots.filter((l) => l.remaining_credits > 0);
+  }, [creditLots]);
 
   useFocusEffect(
     useCallback(() => {
@@ -40,6 +45,8 @@ export default function WalletScreen() {
     }, [])
   );
 
+  const [activeTab, setActiveTab] = useState<'lots' | 'transfer' | 'ledger'>('lots');
+  const [dismissPriorityNotice, setDismissPriorityNotice] = useState(false);
   const [transferPhone, setTransferPhone] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
   const [recipientStatus, setRecipientStatus] = useState<'idle' | 'searching' | 'not_found' | 'self' | 'found'>('idle');
@@ -282,7 +289,7 @@ export default function WalletScreen() {
     }
 
     return (
-      <View className="pt-3.5 gap-2">
+      <View className="border-t border-zinc-100 pt-3.5 gap-2">
         <Text className="text-zinc-500 text-[10px] font-black uppercase tracking-wider mb-1">Credit Expiry Breakdown</Text>
         {breakdown.map((item, idx) => (
           <View key={idx} className="flex-row justify-between items-center py-0.5">
@@ -348,20 +355,23 @@ export default function WalletScreen() {
     }
   };
 
-  const activeLots = useMemo(() => {
-    if (!Array.isArray(creditLots)) return [];
-    return creditLots
-      .filter(l => l && l.remaining_credits > 0)
-      .sort((a, b) => new Date(a.official_expiry_date).getTime() - new Date(b.official_expiry_date).getTime());
-  }, [creditLots]);
+  const consumptionRate = useMemo(() => {
+    if (!lifetimePurchased || lifetimePurchased <= 0) return '0.0';
+    return ((creditsUsed / lifetimePurchased) * 100).toFixed(1);
+  }, [lifetimePurchased, creditsUsed]);
 
-  const sevenDaysFromNow = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 7);
-    return d;
-  }, []);
+  const nextRitual = useMemo(() => {
+    if (!Array.isArray(bookings)) return null;
+    return bookings
+      .filter(b => b && b.status === 'upcoming')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0] || null;
+  }, [bookings]);
 
-  const visibleLots = showAllLots ? activeLots : activeLots.slice(0, 3);
+  const burningDaysLeft = useMemo(() => {
+    if (!activeLots[0]) return 6;
+    const diff = new Date(activeLots[0].official_expiry_date).getTime() - Date.now();
+    return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  }, [activeLots]);
 
   const filteredLedger = useMemo(() => {
     if (ledgerFilter === 'all') return ledger;
@@ -384,463 +394,672 @@ export default function WalletScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8F9FB' }}>
-      {/* Standardized Virla Screen Header */}
-      <ScreenHeader
-        title="Credit Wallet"
-        category="VIRLA CONCIERGE"
-        onBack={() => {
-          if (router.canGoBack()) {
-            router.back();
-          } else {
-            router.replace('/(tabs)/profile');
-          }
-        }}
-        rightElement={
+    <View style={{ flex: 1, backgroundColor: '#F5F7FB' }}>
+      {/* Top Header */}
+      <View 
+        style={{ paddingTop: Math.max(insets.top, 14) }} 
+        className="px-5 pb-3 bg-[#F5F7FB]"
+      >
+        <View className="flex-row items-center justify-between relative h-10">
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace('/(tabs)/profile');
+              }
+            }}
+            className="w-9 h-9 rounded-full bg-white border border-zinc-200/80 items-center justify-center shadow-2xs z-10"
+          >
+            <Ionicons name="chevron-back" size={20} color="#101828" />
+          </TouchableOpacity>
+
+          {/* Centered Large Header Title */}
+          <View pointerEvents="none" className="absolute left-0 right-0 top-0 bottom-0 items-center justify-center">
+            <Text className="text-zinc-950 text-lg font-black tracking-tight">Credit Wallet</Text>
+          </View>
+
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => router.push('/payment-history' as any)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-100"
+            className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-zinc-200/80 shadow-2xs z-10"
           >
-            <Feather name="file-text" size={13} color="#101828" />
-            <Text className="text-[#101828] text-[11px] font-black uppercase tracking-wider">Invoices</Text>
+            <Feather name="file-text" size={13} color="#E11D48" />
+            <Text className="text-[#101828] text-xs font-bold">Invoices</Text>
           </TouchableOpacity>
-        }
-      />
+        </View>
+      </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 px-5 pt-5" contentContainerStyle={{ paddingBottom: Math.max((insets.bottom || 0) + 40, 100) }}>
-        <View className="gap-5">
+      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 px-5 pt-2" contentContainerStyle={{ paddingBottom: Math.max((insets.bottom || 0) + 40, 110) }}>
+        <View className="gap-4">
 
-          {/* Consolidated Prioritized Warning Banner */}
-          {isExpired() ? (
-            <View className="bg-rose-50 p-4 rounded-2xl flex-row items-center gap-3 shadow-xs">
-              <View className="w-9 h-9 rounded-xl bg-rose-100 items-center justify-center">
-                <Feather name="alert-triangle" size={18} color="#E11D48" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-rose-900 text-xs font-black uppercase tracking-wider">Wallet Expired</Text>
-                <Text className="text-rose-700 text-xs font-medium mt-0.5">Recharge to reactivate session check-ins.</Text>
-              </View>
-              {role !== 'trainer' && (
+          {/* Dynamic Notice Banner */}
+          {!dismissPriorityNotice && (
+            isExpired() ? (
+              <View className="bg-red-50 p-3.5 rounded-2xl flex-row items-center justify-between border border-red-100 shadow-2xs">
+                <View className="flex-row items-center gap-3 flex-1 mr-2">
+                  <View className="w-9 h-9 rounded-full bg-red-100 items-center justify-center">
+                    <Feather name="alert-triangle" size={16} color="#EF4444" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-red-800 text-[9px] font-black uppercase tracking-wider">Wallet Expired ⚠️</Text>
+                    <Text className="text-red-700 text-xs font-medium mt-0.5">Please recharge to reactivate session check-ins.</Text>
+                  </View>
+                </View>
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={() => router.push('/membership' as any)}
-                  className="bg-[#E11D48] px-3.5 py-2 rounded-xl"
+                  className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-2xs"
                 >
-                  <Text className="text-white text-[10px] font-black uppercase">Recharge</Text>
+                  <Text className="text-white text-[10px] font-black uppercase tracking-wider">RECHARGE</Text>
                 </TouchableOpacity>
-              )}
-            </View>
-          ) : role !== 'trainer' && creditBalance === 0 ? (
-            <View className="bg-rose-50 p-4 rounded-2xl flex-row items-center gap-3 shadow-xs">
-              <View className="w-9 h-9 rounded-xl bg-rose-100 items-center justify-center">
-                <Feather name="alert-circle" size={18} color="#E11D48" />
               </View>
-              <View className="flex-1">
-                <Text className="text-rose-900 text-xs font-black uppercase tracking-wider">Out of Credits</Text>
-                <Text className="text-rose-700 text-xs font-medium mt-0.5">Recharge your wallet to book workout sessions.</Text>
+            ) : role !== 'trainer' && creditBalance === 0 ? (
+              <View className="bg-rose-50 p-3.5 rounded-2xl flex-row items-center justify-between border border-rose-100 shadow-2xs">
+                <View className="flex-row items-center gap-3 flex-1 mr-2">
+                  <View className="w-9 h-9 rounded-full bg-rose-100 items-center justify-center">
+                    <Feather name="alert-circle" size={16} color="#E11D48" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-[#E11D48] text-[9px] font-black uppercase tracking-wider">You&apos;re out of credits ⚠️</Text>
+                    <Text className="text-rose-700 text-xs font-medium mt-0.5">Recharge your wallet to book wellness sessions.</Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => router.push('/membership' as any)}
+                  className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-2xs"
+                >
+                  <Text className="text-white text-[10px] font-black uppercase tracking-wider">RECHARGE</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => router.push('/membership' as any)}
-                className="bg-[#E11D48] px-3.5 py-2 rounded-xl shadow-xs"
-              >
-                <Text className="text-white text-[10px] font-black uppercase">Recharge</Text>
-              </TouchableOpacity>
-            </View>
-          ) : role !== 'trainer' && creditBalance <= 2 ? (
-            <View className="bg-amber-50 p-4 rounded-2xl flex-row items-center gap-3 shadow-xs">
-              <View className="w-9 h-9 rounded-xl bg-amber-100 items-center justify-center">
-                <Feather name="zap" size={18} color="#D97706" />
+            ) : role !== 'trainer' && creditBalance <= 2 ? (
+              <View className="bg-amber-50 p-3.5 rounded-2xl flex-row items-center justify-between border border-amber-100 shadow-2xs">
+                <View className="flex-row items-center gap-3 flex-1 mr-2">
+                  <View className="w-9 h-9 rounded-full bg-amber-100 items-center justify-center">
+                    <Feather name="zap" size={16} color="#D97706" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-amber-800 text-[9px] font-black uppercase tracking-wider">Running low on credits ⚡</Text>
+                    <Text className="text-amber-700 text-xs font-medium mt-0.5">Recharge your wallet to keep training.</Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => router.push('/membership' as any)}
+                  className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-2xs"
+                >
+                  <Text className="text-white text-[10px] font-black uppercase tracking-wider">RECHARGE</Text>
+                </TouchableOpacity>
               </View>
-              <View className="flex-1">
-                <Text className="text-amber-900 text-xs font-black uppercase tracking-wider">Running Low on Credits</Text>
-                <Text className="text-amber-700 text-xs font-medium mt-0.5">{creditBalance} {creditBalance === 1 ? 'credit' : 'credits'} left. Top up to keep training.</Text>
-              </View>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => router.push('/membership' as any)}
-                className="bg-amber-600 px-3.5 py-2 rounded-xl"
-              >
-                <Text className="text-white text-[10px] font-black uppercase">Top Up</Text>
-              </TouchableOpacity>
-            </View>
-          ) : isEliteUser && approachingLots.length > 0 ? (
-            <View className="bg-indigo-50 p-4 rounded-2xl gap-2 shadow-xs">
-              <View className="flex-row items-center justify-between">
+            ) : approachingLots.length > 0 ? (
+              <View className="bg-[#EEF4FF] p-3.5 rounded-2xl flex-row items-center justify-between border border-blue-100/60 shadow-2xs">
+                <View className="flex-row items-center gap-3 flex-1 mr-2">
+                  <View className="w-9 h-9 rounded-full bg-[#FFE4E6] items-center justify-center">
+                    <Ionicons name="hourglass-outline" size={16} color="#E11D48" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-[#E11D48] text-[9px] font-black uppercase tracking-wider">
+                      Expiring Soon ⚠️ • Lot #{activeLots[0]?.id?.slice(-3) || '1'}
+                    </Text>
+                    <Text className="text-zinc-800 text-xs font-bold mt-0.5" numberOfLines={1}>
+                      {approachingLots.length} lot(s) expiring in {burningDaysLeft} days ({activeLots[0] ? formatToDDMMYYYY(activeLots[0].official_expiry_date) : ''})
+                    </Text>
+                  </View>
+                </View>
                 <View className="flex-row items-center gap-2">
-                  <Feather name="shield" size={16} color="#4F46E5" />
-                  <Text className="text-indigo-900 text-xs font-black uppercase tracking-wider">Elite Member Benefit</Text>
-                </View>
-                <View className="bg-indigo-100 px-2 py-0.5 rounded-md">
-                  <Text className="text-indigo-800 text-[10px] font-black uppercase">+7 Days Grace</Text>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => router.push('/membership' as any)}
+                    className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-2xs"
+                  >
+                    <Text className="text-white text-[10px] font-black uppercase tracking-wider">EXTEND</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    activeOpacity={0.7}
+                    onPress={() => setDismissPriorityNotice(true)}
+                    className="p-1"
+                  >
+                    <Feather name="x" size={16} color="#64748B" />
+                  </TouchableOpacity>
                 </View>
               </View>
-              <Text className="text-indigo-800 text-xs font-medium leading-relaxed">
-                Your credits expiring on {formatToDDMMYYYY(approachingLots[0].official_expiry_date)} have an active 7-day grace extension until {formatToDDMMYYYY(approachingLots[0].grace_expiry_date)}.
+            ) : null
+          )}
+
+          {/* Universal Session Pass Card */}
+          <View className="bg-white rounded-[32px] p-6 shadow-sm border border-zinc-100/80 items-center gap-3">
+            <View className="flex-row items-center gap-1.5">
+              <View className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
+              <Text className="text-zinc-700 text-[10px] font-black uppercase tracking-widest">UNIVERSAL SESSION PASS</Text>
+              <View className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
+            </View>
+
+            {/* Circular Gauge */}
+            <View className="relative w-[180px] h-[180px] items-center justify-center my-1">
+              <Svg width={180} height={180} viewBox="0 0 180 180">
+                {/* Background Ring */}
+                <Circle
+                  cx="90"
+                  cy="90"
+                  r="72"
+                  stroke="#E2EDFD"
+                  strokeWidth="8"
+                  fill="none"
+                />
+                {/* Active Crimson Arc */}
+                <Circle
+                  cx="90"
+                  cy="90"
+                  r="72"
+                  stroke="#E11D48"
+                  strokeWidth="8"
+                  fill="none"
+                  strokeDasharray={`${0.58 * 452.4} ${452.4}`}
+                  strokeLinecap="round"
+                  transform="rotate(-65 90 90)"
+                />
+                {/* Left Indicator Dot */}
+                <Circle
+                  cx="18"
+                  cy="90"
+                  r="6.5"
+                  fill="#E11D48"
+                />
+              </Svg>
+
+              <View className="absolute inset-0 items-center justify-center">
+                <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest">AVAILABLE BALANCE</Text>
+                <Text className="text-zinc-950 text-4xl font-black tracking-tight my-0.5">
+                  {creditBalance}<Text className="text-[#E11D48]">.</Text>
+                </Text>
+                <Text className="text-zinc-700 text-[10px] font-bold uppercase tracking-wider">AVAILABLE CREDITS</Text>
+              </View>
+            </View>
+
+            {/* Valid Badge & Card Holder */}
+            <View className="items-center gap-1">
+              <View className="bg-[#F0F4FA] border border-blue-100/60 px-3.5 py-1 rounded-full flex-row items-center gap-1.5">
+                <Feather name="shield" size={12} color="#E11D48" />
+                <Text className="text-zinc-800 text-xs font-bold">Valid until {membership.renewalDate || '14 Sep 2027'}</Text>
+              </View>
+              <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">
+                CARD HOLDER: {userName ? userName.toUpperCase() : 'VIRAL'}
               </Text>
             </View>
-          ) : role === 'trainer' ? (
-            <View className="bg-zinc-100 p-4 rounded-2xl flex-row items-center gap-3">
-              <Feather name="info" size={16} color="#3F3F46" />
-              <View className="flex-1">
-                <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">Transfer-Only Wallet</Text>
-                <Text className="text-zinc-600 text-xs font-medium mt-0.5">As a trainer, you can receive and transfer credits, but cannot self-book sessions.</Text>
-              </View>
-            </View>
-          ) : null}
 
-          {/* Luxury Apple Wallet Pass Card */}
-          <View className="bg-white rounded-[28px] p-6 border border-[#E5E7EB] shadow-sm gap-5">
-            <View className="flex-row justify-between items-start">
-              <View>
-                <View className="flex-row items-center gap-1.5">
-                  <Ionicons name="sparkles" size={12} color="#F43F5E" />
-                  <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">VIRLA ACCESS PASS</Text>
-                </View>
-                <Text className="text-zinc-900 text-base font-black tracking-tight mt-1">Universal Session Pass</Text>
-              </View>
-              <View className="bg-zinc-100 border border-zinc-200 px-3 py-1 rounded-full">
-                <Text className="text-zinc-700 text-[10px] font-black uppercase tracking-wider">
-                  {isEliteUser ? '★ ELITE' : 'ACTIVE'}
-                </Text>
-              </View>
-            </View>
-
-            <View className="my-1">
-              <View className="flex-row items-baseline gap-2">
-                <Text className="text-zinc-900 text-4xl font-black tracking-tight">{creditBalance}</Text>
-                <Text className="text-zinc-400 text-base font-bold uppercase tracking-wider">Credits</Text>
-              </View>
-              <Text className="text-zinc-400 text-[11px] font-medium mt-1">Available for personal training & wellness sessions</Text>
-            </View>
-
-            <View className="flex-row justify-between items-center border-t border-zinc-100 pt-4">
-              <View>
-                <Text className="text-zinc-500 text-[10px] font-black uppercase tracking-wider">Pass Holder</Text>
-                <Text className="text-zinc-900 text-xs font-black mt-0.5">{userName || 'Virla Member'}</Text>
-              </View>
-              <View className="items-end">
-                <Text className="text-zinc-500 text-[10px] font-black uppercase tracking-wider">Plan Expiry</Text>
-                <View className="flex-row items-center gap-1.5 mt-0.5">
-                  <Text className="text-zinc-900 text-xs font-black">{membership.renewalDate || 'No Expiry'}</Text>
-                  {isExpired() && (
-                    <View className="bg-red-50 border border-red-200 px-1.5 py-0.5 rounded">
-                      <Text className="text-red-600 text-[9px] font-black uppercase">Expired</Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Action Buttons Right Below Card */}
-          <View className="flex-row gap-3">
-            {role !== 'trainer' && (
-              <TouchableOpacity 
+            {/* Action Buttons */}
+            <View className="flex-row gap-3 w-full mt-2">
+              {role !== 'trainer' && (
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => router.push('/membership' as any)}
+                  className="flex-1 bg-black py-3.5 rounded-2xl items-center justify-center flex-row gap-2 shadow-sm"
+                >
+                  <Feather name="plus-circle" size={16} color="white" />
+                  <Text className="text-white text-xs font-black uppercase tracking-wider">Recharge Wallet</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
                 activeOpacity={0.85}
-                onPress={() => router.push('/membership' as any)}
-                className="flex-1 bg-[#E11D48] py-3.5 px-4 rounded-2xl items-center justify-center flex-row gap-2 shadow-sm"
+                onPress={() => setActiveTab('transfer')}
+                className="flex-1 bg-black py-3.5 rounded-2xl items-center justify-center flex-row gap-2 shadow-sm"
               >
-                <Feather name="plus-circle" size={15} color="white" />
-                <Text className="text-white text-xs font-black uppercase tracking-wider">Recharge Wallet</Text>
+                <Feather name="send" size={15} color="white" />
+                <Text className="text-white text-xs font-black uppercase tracking-wider">Transfer Credits</Text>
               </TouchableOpacity>
-            )}
+            </View>
           </View>
 
-          {/* Quick Metrics Grid */}
-          <View className="gap-3">
-            <View className="flex-row gap-3">
-              <View className="flex-1 bg-white p-4 rounded-2xl shadow-xs">
-                <View className="flex-row items-center justify-between mb-1">
-                  <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Lifetime Bought</Text>
-                  <Feather name="arrow-up-right" size={13} color="#10B981" />
-                </View>
-                <Text className="text-zinc-900 text-base font-black tracking-tight">{lifetimePurchased} <Text className="text-xs font-bold text-zinc-400">Credits</Text></Text>
-              </View>
-
-              <View className="flex-1 bg-white p-4 rounded-2xl shadow-xs">
-                <View className="flex-row items-center justify-between mb-1">
-                  <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Credits Consumed</Text>
-                  <Feather name="activity" size={13} color="#6366F1" />
-                </View>
-                <Text className="text-zinc-900 text-base font-black tracking-tight">{creditsUsed} <Text className="text-xs font-bold text-zinc-400">Credits</Text></Text>
-              </View>
+          {/* Quick Stats 3-Column Card */}
+          <View className="bg-white rounded-2xl p-4 shadow-xs border border-zinc-100/80 flex-row justify-between items-center">
+            <View className="flex-1 items-center">
+              <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">PURCHASED</Text>
+              <Text className="text-zinc-950 text-2xl font-bold mt-0.5">{lifetimePurchased}</Text>
+              <Text className="text-zinc-400 text-xs font-medium mt-0.5">Lifetime</Text>
             </View>
 
-            <TouchableOpacity 
-              activeOpacity={0.8}
+            <View className="w-[1px] h-9 bg-zinc-100" />
+
+            <View className="flex-1 items-center">
+              <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">CONSUMED</Text>
+              <Text className="text-zinc-950 text-2xl font-bold mt-0.5">{creditsUsed}</Text>
+              <Text className="text-[#E11D48] text-xs font-semibold mt-0.5">{consumptionRate}% Rate</Text>
+            </View>
+
+            <View className="w-[1px] h-9 bg-zinc-100" />
+
+            <TouchableOpacity
+              activeOpacity={0.7}
               onPress={handleUpcomingBookingsPress}
-              className="bg-white p-4 rounded-2xl shadow-xs flex-row justify-between items-center"
+              className="flex-1 items-center"
             >
-              <View className="flex-row items-center gap-3">
-                <View className="w-9 h-9 rounded-xl bg-indigo-50 items-center justify-center">
-                  <Feather name="calendar" size={16} color="#4F46E5" />
-                </View>
-                <View>
-                  <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">Upcoming Bookings</Text>
-                  <Text className="text-zinc-500 text-[11px] font-medium mt-0.5">View your scheduled sessions</Text>
-                </View>
-              </View>
-              <View className="flex-row items-center gap-1.5">
-                <Text className="text-[#4F46E5] text-xs font-black">{upcomingCount} active</Text>
-                <Feather name="chevron-right" size={16} color="#4F46E5" />
-              </View>
+              <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">NEXT SESSION</Text>
+              <Text className="text-zinc-950 text-[13px] font-bold mt-1" numberOfLines={1}>
+                {nextRitual ? formatToDDMMYYYY(nextRitual.date) : 'No Sessions'}
+              </Text>
             </TouchableOpacity>
           </View>
 
-          {/* Credit Lot Expiry Summary */}
-          {activeLots.length > 0 && (
-            <View className="bg-white p-5 rounded-2xl shadow-xs gap-3">
-              <View className="flex-row items-center justify-between pb-3">
-                <View className="flex-row items-center gap-2">
-                  <Feather name="clock" size={15} color="#101828" />
-                  <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Lot Expiry Breakdown</Text>
+          {/* Line Tab Switch */}
+          <View className="flex-row border-b border-zinc-200 mt-3 mb-1">
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setActiveTab('lots')}
+              className={`flex-1 py-3 items-center justify-center border-b-2 ${
+                activeTab === 'lots' ? 'border-zinc-950 -mb-[1px]' : 'border-transparent'
+              }`}
+            >
+              <Text 
+                numberOfLines={1}
+                className={`text-xs font-bold uppercase tracking-wide ${
+                  activeTab === 'lots' ? 'text-zinc-950' : 'text-zinc-400'
+                }`}
+              >
+                CREDIT LOTS
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setActiveTab('transfer')}
+              className={`flex-[1.1] py-3 items-center justify-center border-b-2 ${
+                activeTab === 'transfer' ? 'border-zinc-950 -mb-[1px]' : 'border-transparent'
+              }`}
+            >
+              <Text 
+                numberOfLines={1}
+                className={`text-xs font-bold uppercase tracking-wide ${
+                  activeTab === 'transfer' ? 'text-zinc-950' : 'text-zinc-400'
+                }`}
+              >
+                TRANSFER CREDITS
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setActiveTab('ledger')}
+              className={`flex-[1.3] py-3 items-center justify-center border-b-2 ${
+                activeTab === 'ledger' ? 'border-zinc-950 -mb-[1px]' : 'border-transparent'
+              }`}
+            >
+              <Text 
+                numberOfLines={1}
+                className={`text-xs font-bold uppercase tracking-wide ${
+                  activeTab === 'ledger' ? 'text-zinc-950' : 'text-zinc-400'
+                }`}
+              >
+                TRANSACTION LEDGER
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Tab 1: Credit Lots */}
+          {activeTab === 'lots' && (
+            <View className="gap-3">
+              <View className="flex-row items-center justify-between">
+                <View>
+                  <Text className="text-zinc-950 text-sm font-black tracking-tight">Credit Expiry Breakdown</Text>
+                  <Text className="text-zinc-500 text-[11px] font-medium mt-0.5">Credits consume strictly in chronological order</Text>
                 </View>
-                <Text className="text-zinc-400 text-[10px] font-black uppercase">{activeLots.length} {activeLots.length === 1 ? 'Lot' : 'Lots'}</Text>
-              </View>
-
-              <View className="gap-2.5">
-                {visibleLots.map((lot, idx) => {
-                  const expDate = new Date(lot.official_expiry_date);
-                  const isExpiringSoon = expDate <= sevenDaysFromNow;
-                  return (
-                    <View key={lot.id || idx} className="flex-row justify-between items-center py-1">
-                      <View className="flex-row items-center gap-2.5">
-                        <View className={`w-2 h-2 rounded-full ${isExpiringSoon ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                        <Text className="text-zinc-900 text-xs font-bold">
-                          {lot.remaining_credits} {lot.remaining_credits === 1 ? 'Credit' : 'Credits'}
-                        </Text>
-                      </View>
-                      <View className="items-end">
-                        <Text className={`text-[11px] font-bold ${isExpiringSoon ? 'text-amber-700' : 'text-zinc-500'}`}>
-                          Expires {formatToDDMMYYYY(lot.official_expiry_date)}
-                        </Text>
-                        {isExpiringSoon && (
-                          <Text className="text-amber-600 text-[9px] font-black uppercase">Expiring soon</Text>
-                        )}
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-
-              {activeLots.length > 3 && (
-                <TouchableOpacity 
-                  activeOpacity={0.7}
-                  onPress={() => setShowAllLots(!showAllLots)}
-                  className="pt-2 items-center justify-center"
-                >
-                  <Text className="text-zinc-600 text-[11px] font-black uppercase tracking-wider">
-                    {showAllLots ? 'Show Less' : `View All ${activeLots.length} Lots`}
+                <View className="bg-[#FEE2E2] px-2.5 py-1 rounded-full">
+                  <Text className="text-[#E11D48] text-[9px] font-black uppercase tracking-wider">
+                    {activeLots.length} ACTIVE LOTS
                   </Text>
-                </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* 3-Queue Visual Card */}
+              <View className="bg-white rounded-[28px] p-5 shadow-xs border border-zinc-100/80 relative">
+                {/* Connecting horizontal line */}
+                <View 
+                  className="absolute h-[2px] bg-[#E11D48]" 
+                  style={{ top: 40, left: '16.6%', width: '33.4%' }} 
+                  pointerEvents="none" 
+                />
+                <View 
+                  className="absolute h-[2px] bg-[#DBEAFE]" 
+                  style={{ top: 40, left: '50%', width: '33.4%' }} 
+                  pointerEvents="none" 
+                />
+
+                <View className="flex-row justify-between items-start">
+                  {/* Node 1: Burning Now */}
+                  <View className="items-center flex-1">
+                    <View className="w-10 h-10 rounded-full bg-[#E11D48] items-center justify-center shadow-xs">
+                      <Text className="text-white text-sm font-black">
+                        {activeLots[0]?.remaining_credits || 0}
+                      </Text>
+                    </View>
+                    <Text className="text-[#E11D48] text-[9px] font-black uppercase mt-2">EXPIRING SOON</Text>
+                    <Text className="text-zinc-900 text-xs font-black mt-0.5">
+                      Lot #{activeLots[0]?.id?.slice(-3) || '1'}
+                    </Text>
+                    <Text className="text-[#E11D48] text-[10px] font-black mt-0.5">{burningDaysLeft}d left</Text>
+                    <Text className="text-zinc-400 text-[9px] font-medium mt-0.5">
+                      Exp: {activeLots[0] ? formatToDDMMYYYY(activeLots[0].official_expiry_date) : '-'}
+                    </Text>
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => router.push('/membership' as any)}
+                      className="mt-1.5"
+                    >
+                      <Text className="text-[#E11D48] text-[9px] font-black uppercase underline tracking-wider">EXTEND</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Node 2: Next in Line */}
+                  <View className="items-center flex-1">
+                    <View className="w-10 h-10 rounded-full bg-[#E0EDFD] items-center justify-center">
+                      <Text className="text-[#1E293B] text-sm font-black">
+                        {activeLots[1]?.remaining_credits || 0}
+                      </Text>
+                    </View>
+                    <Text className="text-zinc-500 text-[9px] font-black uppercase mt-2">NEXT IN LINE</Text>
+                    <Text className="text-zinc-900 text-xs font-black mt-0.5">
+                      Lot #{activeLots[1]?.id?.slice(-3) || '2'}
+                    </Text>
+                    <Text className="text-zinc-700 text-[10px] font-bold mt-0.5">Safe</Text>
+                    <Text className="text-zinc-400 text-[9px] font-medium mt-0.5">
+                      Exp: {activeLots[1] ? formatToDDMMYYYY(activeLots[1].official_expiry_date) : '-'}
+                    </Text>
+                    <Text className="text-zinc-400 text-[8px] font-black uppercase mt-1.5 tracking-wider">QUEUE 02</Text>
+                  </View>
+
+                  {/* Node 3: Dormant */}
+                  <View className="items-center flex-1">
+                    <View className="w-10 h-10 rounded-full bg-[#E0EDFD] items-center justify-center">
+                      <Text className="text-[#1E293B] text-sm font-black">
+                        {activeLots[2]?.remaining_credits || 0}
+                      </Text>
+                    </View>
+                    <Text className="text-zinc-500 text-[9px] font-black uppercase mt-2">RESERVE</Text>
+                    <Text className="text-zinc-900 text-xs font-black mt-0.5">
+                      Lot #{activeLots[2]?.id?.slice(-3) || '3'}
+                    </Text>
+                    <Text className="text-zinc-700 text-[10px] font-bold mt-0.5">Safe</Text>
+                    <Text className="text-zinc-400 text-[9px] font-medium mt-0.5">
+                      Exp: {activeLots[2] ? formatToDDMMYYYY(activeLots[2].official_expiry_date) : '-'}
+                    </Text>
+                    <Text className="text-zinc-400 text-[8px] font-black uppercase mt-1.5 tracking-wider">QUEUE 03</Text>
+                  </View>
+                </View>
+
+                {/* Optional Expand Lots */}
+                {activeLots.length > 3 && (
+                  <View className="mt-4 pt-3 border-t border-zinc-100">
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => setShowAllLots(!showAllLots)}
+                      className="items-center justify-center"
+                    >
+                      <Text className="text-zinc-600 text-[11px] font-black uppercase tracking-wider">
+                        {showAllLots ? 'Show Less' : `View All ${activeLots.length} Lots`}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {showAllLots && (
+                      <View className="gap-2 mt-3">
+                        {activeLots.slice(3).map((lot: any, idx: number) => (
+                          <View key={lot.id || idx} className="flex-row justify-between items-center py-1">
+                            <Text className="text-zinc-900 text-xs font-bold">{lot.remaining_credits} Credits</Text>
+                            <Text className="text-zinc-500 text-[11px] font-medium">Expires {formatToDDMMYYYY(lot.official_expiry_date)}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+
+              {/* Contextual Benefit / Tip Card */}
+              {isEliteUser && approachingLots.length > 0 ? (
+                <View className="bg-[#EDF3FC] p-4 rounded-2xl flex-row items-start gap-3 border border-blue-100/60 mt-1">
+                  <View className="w-9 h-9 rounded-full bg-[#FCE7F3] items-center justify-center">
+                    <Ionicons name="heart-outline" size={17} color="#E11D48" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-zinc-950 text-xs font-black">A special benefit for you ❤️</Text>
+                    <Text className="text-zinc-600 text-xs font-medium mt-1 leading-relaxed">
+                      Your credits are approaching their expiry date. Because you&apos;re a premium Virla client, we&apos;re giving you an additional 7 days to use your remaining credits.
+                    </Text>
+                  </View>
+                </View>
+              ) : role === 'trainer' ? (
+                <View className="bg-[#EDF3FC] p-4 rounded-2xl flex-row items-start gap-3 border border-blue-100/60 mt-1">
+                  <View className="w-9 h-9 rounded-full bg-[#FCE7F3] items-center justify-center">
+                    <Ionicons name="information-circle-outline" size={17} color="#E11D48" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-zinc-950 text-xs font-black">Transfer-Only Credits</Text>
+                    <Text className="text-zinc-600 text-xs font-medium mt-1 leading-relaxed">
+                      As a trainer, you can receive and transfer credits, but you cannot use credits to book sessions for yourself.
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <View className="bg-[#EDF3FC] p-4 rounded-2xl flex-row items-start gap-3 border border-blue-100/60 mt-1">
+                  <View className="w-9 h-9 rounded-full bg-[#FCE7F3] items-center justify-center">
+                    <Ionicons name="bulb-outline" size={17} color="#E11D48" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-zinc-950 text-xs font-black">Session Scheduling Tip</Text>
+                    <Text className="text-zinc-600 text-xs font-medium mt-1 leading-relaxed">
+                      Schedule your workout sessions in advance to ensure your available credits are utilized effectively before expiration.
+                    </Text>
+                  </View>
+                </View>
               )}
             </View>
           )}
 
-          {/* Transfer Credits Section */}
-          <View className="bg-white p-5 rounded-2xl shadow-xs gap-4">
-            <View className="flex-row items-center gap-2 pb-3">
-              <Feather name="send" size={16} color="#101828" />
-              <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Transfer Credits</Text>
-            </View>
-            
-            <Text className="text-zinc-500 text-xs font-medium leading-relaxed">
-              Instantly share session credits with friends or family on Virla.
-            </Text>
-
-            <View className="gap-3.5">
+          {/* Tab 2: P2P Transfer */}
+          {activeTab === 'transfer' && (
+            <View className="gap-3">
               <View>
-                <Text className="text-zinc-500 text-[10px] font-black uppercase tracking-wider mb-1.5">Recipient Phone Number</Text>
-                <View className="flex-row gap-2">
-                  <View className="bg-zinc-100 px-3.5 py-3 rounded-xl justify-center">
-                    <Text className="text-zinc-700 text-xs font-black">+91</Text>
-                  </View>
-                  <TextInput
-                    placeholder="10-digit mobile number"
-                    placeholderTextColor="#9CA3AF"
-                    value={transferPhone}
-                    onChangeText={(txt) => {
-                      const cleaned = txt.replace(/\D/g, '');
-                      if (cleaned.length <= 10) {
-                        setTransferPhone(cleaned);
-                        setRecipientStatus('idle');
-                        setRecipientName('');
-                        setIsInviteSent(false);
-                      }
-                    }}
-                    keyboardType="numeric"
-                    maxLength={10}
-                    className="flex-1 bg-zinc-50 px-4 py-3 rounded-xl text-zinc-900 text-xs font-bold"
-                  />
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={handleVerifyRecipient}
-                    className="bg-zinc-900 px-4 rounded-xl items-center justify-center"
-                  >
-                    <Text className="text-white text-[11px] font-black uppercase tracking-wider">Verify</Text>
-                  </TouchableOpacity>
-                </View>
+                <Text className="text-zinc-950 text-sm font-black tracking-tight">Peer-to-Peer Transfer</Text>
+                <Text className="text-zinc-500 text-[11px] font-medium mt-0.5">
+                  Instantly share booking credits with friends or family on Virla.
+                </Text>
+              </View>
 
-                {/* Recipient status confirmations */}
-                {recipientStatus === 'searching' && (
-                  <View className="flex-row items-center gap-2 mt-2.5 ml-1">
-                    <ActivityIndicator size="small" color="#101828" />
-                    <Text className="text-zinc-500 text-[11px] font-bold">Verifying recipient...</Text>
-                  </View>
-                )}
-                {recipientStatus === 'not_found' && (
-                  <View className="mt-3 p-3.5 rounded-2xl bg-zinc-50 gap-3">
-                    <View className="flex-row items-center gap-2">
-                      <Feather name="info" size={15} color="#D97706" />
-                      <Text className="text-zinc-800 text-xs font-bold">
-                        {t('wallet.recipient_not_found', "This person isn't on Virla yet.")}
-                      </Text>
-                    </View>
-
+              <View className="bg-white rounded-[28px] p-5 shadow-xs border border-zinc-100/80 gap-4">
+                <View className="gap-3.5">
+                  <View>
+                    <Text className="text-zinc-500 text-[10px] font-black uppercase tracking-wider mb-1.5">Recipient Phone Number</Text>
                     <View className="flex-row gap-2">
-                      {/* Branded WhatsApp Invite Button */}
-                      <TouchableOpacity
-                        activeOpacity={0.85}
-                        onPress={handleInviteWhatsApp}
-                        className={`flex-1 py-2.5 px-3 rounded-xl flex-row items-center justify-center gap-2 shadow-xs ${
-                          isInviteSent ? 'bg-emerald-700' : 'bg-[#25D366]'
-                        }`}
-                      >
-                        <Ionicons name="logo-whatsapp" size={16} color="white" />
-                        <Text className="text-white text-[11px] font-black uppercase tracking-wider">
-                          {isInviteSent ? t('wallet.invited_whatsapp', 'Invited on WhatsApp ✓') : t('wallet.invite_whatsapp', 'Invite via WhatsApp')}
-                        </Text>
-                      </TouchableOpacity>
-
-                      {/* Secondary More Options / Share Button */}
+                      <View className="bg-zinc-100 border border-zinc-200 px-3.5 py-3 rounded-xl justify-center">
+                        <Text className="text-zinc-700 text-xs font-black">+91</Text>
+                      </View>
+                      <TextInput
+                        placeholder="Enter 10-digit mobile number"
+                        placeholderTextColor="#9CA3AF"
+                        value={transferPhone}
+                        onChangeText={(txt) => {
+                          const cleaned = txt.replace(/\D/g, '');
+                          if (cleaned.length <= 10) {
+                            setTransferPhone(cleaned);
+                            setRecipientStatus('idle');
+                            setRecipientName('');
+                            setIsInviteSent(false);
+                          }
+                        }}
+                        keyboardType="numeric"
+                        maxLength={10}
+                        className="flex-1 bg-zinc-50 border border-zinc-200 px-4 py-3 rounded-xl text-zinc-900 text-xs font-bold"
+                      />
                       <TouchableOpacity
                         activeOpacity={0.8}
-                        onPress={handleShareMoreOptions}
-                        className="bg-white py-2.5 px-3 rounded-xl items-center justify-center flex-row gap-1.5 shadow-2xs"
+                        onPress={handleVerifyRecipient}
+                        className="bg-indigo-600 px-4 rounded-xl items-center justify-center shadow-xs"
                       >
-                        <Feather name="share-2" size={13} color="#374151" />
-                        <Text className="text-zinc-700 text-[11px] font-bold">
-                          {t('wallet.more_options', 'More')}
-                        </Text>
+                        <Text className="text-white text-[10px] font-black uppercase">Verify</Text>
                       </TouchableOpacity>
                     </View>
-                  </View>
-                )}
-                {recipientStatus === 'self' && (
-                  <Text className="text-red-500 text-[11px] font-bold mt-2 ml-1">
-                    You cannot transfer credits to yourself.
-                  </Text>
-                )}
-                {recipientStatus === 'found' && (
-                  <View className="flex-row items-center gap-1.5 mt-2.5 ml-1">
-                    <Feather name="check-circle" size={13} color="#059669" />
-                    <Text className="text-emerald-700 text-[11px] font-black uppercase">
-                      Recipient Confirmed: {recipientName}
-                    </Text>
-                  </View>
-                )}
-              </View>
 
-              <View>
-                <Text className="text-zinc-500 text-[10px] font-black uppercase tracking-wider mb-1.5">Credits Amount</Text>
-                <TextInput
-                  placeholder="Number of credits to transfer"
-                  placeholderTextColor="#9CA3AF"
-                  value={transferAmount}
-                  onChangeText={setTransferAmount}
-                  keyboardType="numeric"
-                  editable={recipientStatus === 'found'}
-                  className={`bg-zinc-50 px-4 py-3 rounded-xl text-zinc-900 text-xs font-bold ${recipientStatus !== 'found' ? 'opacity-50' : ''}`}
-                />
-              </View>
-
-              <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={handleTransfer}
-                disabled={recipientStatus !== 'found'}
-                className={`w-full py-3.5 rounded-xl items-center justify-center mt-1 shadow-xs ${recipientStatus === 'found' ? 'bg-[#E11D48]' : 'bg-zinc-200'}`}
-              >
-                <Text className={`text-xs font-black uppercase tracking-wider ${recipientStatus === 'found' ? 'text-white' : 'text-zinc-400'}`}>
-                  Transfer Credits
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Wallet Transaction Ledger */}
-          <View className="bg-white p-5 rounded-2xl shadow-xs gap-4">
-            <View className="flex-row items-center justify-between pb-3">
-              <View className="flex-row items-center gap-2">
-                <Feather name="list" size={15} color="#101828" />
-                <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Transaction Ledger</Text>
-              </View>
-              <Text className="text-zinc-400 text-[10px] font-black uppercase">{ledger.length} Total</Text>
-            </View>
-
-            {/* Filter Chips */}
-            <View className="flex-row gap-2">
-              {(['all', 'booking', 'purchase', 'refund'] as const).map((filter) => (
-                <TouchableOpacity
-                  key={filter}
-                  activeOpacity={0.7}
-                  onPress={() => setLedgerFilter(filter)}
-                   className={`px-3 py-1.5 rounded-full ${
-                    ledgerFilter === filter
-                      ? 'bg-zinc-900'
-                      : 'bg-zinc-50'
-                  }`}
-                >
-                  <Text className={`text-[10px] font-black uppercase tracking-wider ${
-                    ledgerFilter === filter ? 'text-white' : 'text-zinc-600'
-                  }`}>
-                    {filter === 'all' ? 'All' : filter === 'booking' ? 'Sessions' : filter === 'purchase' ? 'Purchases' : 'Refunds'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            
-            <View className="gap-3 mt-1">
-              {filteredLedger.length === 0 ? (
-                <View className="py-6 items-center justify-center gap-1">
-                  <Feather name="inbox" size={24} color="#D1D5DB" />
-                  <Text className="text-zinc-400 text-xs font-bold uppercase mt-1">No transactions found</Text>
-                </View>
-              ) : (
-                filteredLedger.map((tx) => {
-                  const isAdd = tx.change >= 0;
-                  const iconInfo = getLedgerIcon(tx.type);
-                  return (
-                    <View key={tx.id} className="flex-row justify-between items-center py-2">
-                      <View className="flex-row items-center gap-3 flex-1 pr-3">
-                        <View className={`w-8 h-8 rounded-xl ${iconInfo.bg} items-center justify-center`}>
-                          <Feather name={iconInfo.icon as any} size={14} color={iconInfo.color} />
-                        </View>
-                        <View className="flex-1 gap-0.5">
-                          <Text className="text-zinc-900 text-xs font-black leading-tight">{tx.title}</Text>
-                          <Text className="text-zinc-400 text-[10px] font-bold uppercase mt-0.5">{formatToDDMMYYYY(tx.date)}</Text>
-                        </View>
+                    {/* Recipient status confirmations */}
+                    {recipientStatus === 'searching' && (
+                      <View className="flex-row items-center gap-2 mt-2.5 ml-1">
+                        <ActivityIndicator size="small" color="#4F46E5" />
+                        <Text className="text-zinc-500 text-[10px] font-bold">Checking registered Virla users...</Text>
                       </View>
-                      <View className="items-end gap-1">
-                        <Text className={`text-xs font-black ${isAdd ? 'text-emerald-600' : 'text-zinc-900'}`}>
-                          {isAdd ? '+' : ''}{tx.change} {Math.abs(tx.change) === 1 ? 'Credit' : 'Credits'}
-                        </Text>
-                        
-                        {/* Type Badge */}
-                        <View className="px-2 py-0.5 rounded-md bg-zinc-100">
-                          <Text className="text-[8px] font-black uppercase text-zinc-600">
-                            {tx.type}
+                    )}
+                    {recipientStatus === 'not_found' && (
+                      <View className="mt-3 p-3.5 rounded-2xl bg-zinc-50 border border-zinc-200 gap-3">
+                        <View className="flex-row items-center gap-2">
+                          <Feather name="info" size={15} color="#D97706" />
+                          <Text className="text-zinc-800 text-xs font-bold">
+                            {t('wallet.recipient_not_found', "This person isn't on Virla yet.")}
                           </Text>
                         </View>
+                        
+                        <View className="flex-row gap-2">
+                          <TouchableOpacity
+                            activeOpacity={0.85}
+                            onPress={handleInviteWhatsApp}
+                            className={`flex-1 py-2.5 px-3 rounded-xl items-center justify-center flex-row gap-1.5 shadow-2xs ${
+                              isInviteSent ? 'bg-[#1EBE5D]' : 'bg-[#25D366]'
+                            }`}
+                          >
+                            <Ionicons name="logo-whatsapp" size={15} color="white" />
+                            <Text className="text-white text-[11px] font-black uppercase tracking-wider">
+                              {isInviteSent ? t('wallet.invited_whatsapp', 'Invited on WhatsApp ✓') : t('wallet.invite_whatsapp', 'Invite via WhatsApp')}
+                            </Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={handleShareMoreOptions}
+                            className="bg-white border border-zinc-300 py-2.5 px-3 rounded-xl items-center justify-center flex-row gap-1.5 shadow-2xs"
+                          >
+                            <Feather name="share-2" size={13} color="#374151" />
+                            <Text className="text-zinc-700 text-[11px] font-bold">
+                              {t('wallet.more_options', 'More')}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                    </View>
-                  );
-                })
-              )}
+                    )}
+                    {recipientStatus === 'self' && (
+                      <Text className="text-rose-600 text-[10px] font-black uppercase mt-2 ml-1">
+                        You cannot transfer credits to yourself.
+                      </Text>
+                    )}
+                    {recipientStatus === 'found' && (
+                      <View className="flex-row items-center gap-1.5 mt-2.5 ml-1">
+                        <Feather name="check-circle" size={13} color="#059669" />
+                        <Text className="text-emerald-700 text-xs font-black uppercase tracking-wider">
+                          Verified: {recipientName}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View>
+                    <Text className="text-zinc-500 text-[10px] font-black uppercase tracking-wider mb-1.5">Credits Amount</Text>
+                    <TextInput
+                      placeholder="Number of credits to send"
+                      placeholderTextColor="#9CA3AF"
+                      value={transferAmount}
+                      onChangeText={setTransferAmount}
+                      keyboardType="numeric"
+                      editable={recipientStatus === 'found'}
+                      className={`bg-zinc-50 border border-zinc-200 px-4 py-3 rounded-xl text-zinc-900 text-xs font-bold ${recipientStatus !== 'found' ? 'opacity-50' : ''}`}
+                    />
+                  </View>
+
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={handleTransfer}
+                    disabled={recipientStatus !== 'found'}
+                    className={`w-full py-3.5 rounded-xl items-center justify-center mt-1 shadow-xs ${recipientStatus === 'found' ? 'bg-[#E11D48]' : 'bg-zinc-200'}`}
+                  >
+                    <Text className={`text-xs font-black uppercase tracking-wider ${recipientStatus === 'found' ? 'text-white' : 'text-zinc-400'}`}>
+                      Transfer Credits
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
-          </View>
+          )}
+
+          {/* Tab 3: Ledger Audit */}
+          {activeTab === 'ledger' && (
+            <View className="gap-3.5 mt-1">
+              <View className="flex-row items-center justify-between px-1">
+                <View>
+                  <Text className="text-zinc-950 text-base font-bold tracking-tight">Transaction Ledger Audit</Text>
+                  <Text className="text-zinc-500 text-xs font-normal mt-0.5">Complete record of session debits & credit top-ups</Text>
+                </View>
+                <View className="bg-zinc-100 px-3 py-1 rounded-full">
+                  <Text className="text-zinc-500 text-xs font-semibold">{ledger.length} Total</Text>
+                </View>
+              </View>
+
+              {/* Filter Chips */}
+              <View className="flex-row gap-2.5 my-2">
+                {(['all', 'booking', 'purchase', 'refund'] as const).map((filter) => (
+                  <TouchableOpacity
+                    key={filter}
+                    activeOpacity={0.7}
+                    onPress={() => setLedgerFilter(filter)}
+                    className={`px-4 py-2.5 rounded-full border ${
+                      ledgerFilter === filter
+                        ? 'bg-zinc-900 border-zinc-900'
+                        : 'bg-zinc-50 border-zinc-200'
+                    }`}
+                  >
+                    <Text className={`text-sm font-semibold ${
+                      ledgerFilter === filter ? 'text-white' : 'text-zinc-600'
+                    }`}>
+                      {filter === 'all' ? 'All' : filter === 'booking' ? 'Sessions' : filter === 'purchase' ? 'Purchases' : 'Refunds'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              <View className="bg-white rounded-[28px] p-5 shadow-xs border border-zinc-100/80">
+                {filteredLedger.length === 0 ? (
+                  <View className="py-8 items-center justify-center gap-2">
+                    <Feather name="inbox" size={26} color="#D1D5DB" />
+                    <Text className="text-zinc-400 text-sm font-semibold uppercase">No transactions found</Text>
+                  </View>
+                ) : (
+                  filteredLedger.map((tx) => {
+                    const isAdd = tx.change >= 0;
+                    const iconInfo = getLedgerIcon(tx.type);
+                    return (
+                      <View key={tx.id} className="flex-row justify-between items-center py-3.5 border-b border-zinc-100 last:border-0">
+                        <View className="flex-row items-center gap-3.5 flex-1 pr-3">
+                          <View className={`w-9 h-9 rounded-xl ${iconInfo.bg} items-center justify-center`}>
+                            <Feather name={iconInfo.icon as any} size={16} color={iconInfo.color} />
+                          </View>
+                          <View className="flex-1 gap-0.5">
+                            <Text className="text-zinc-900 text-sm font-semibold leading-tight">{tx.title}</Text>
+                            <Text className="text-zinc-500 text-xs font-medium mt-0.5">{formatToDDMMYYYY(tx.date)}</Text>
+                          </View>
+                        </View>
+                        <View className="items-end gap-1.5">
+                          <Text className={`text-sm font-bold ${isAdd ? 'text-emerald-600' : 'text-zinc-900'}`}>
+                            {isAdd ? '+' : ''}{tx.change} {Math.abs(tx.change) === 1 ? 'Credit' : 'Credits'}
+                          </Text>
+                          
+                          {/* Type Badge */}
+                          <View className="px-2.5 py-0.5 rounded-md bg-zinc-100 border border-zinc-200">
+                            <Text className="text-[10px] font-semibold uppercase text-zinc-600">
+                              {tx.type}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })
+                )}
+              </View>
+            </View>
+          )}
 
         </View>
       </ScrollView>
@@ -851,8 +1070,8 @@ export default function WalletScreen() {
           className="absolute top-0 left-0 right-0 bottom-0 bg-black/60 items-center justify-center z-50 px-6"
           style={{ position: 'absolute', elevation: 10 }}
         >
-          <View className="w-full bg-white rounded-[28px] p-6 gap-5 shadow-2xl">
-            <View className="flex-row items-center gap-2.5 pb-3">
+          <View className="w-full bg-white rounded-[28px] p-6 border border-zinc-200 gap-5 shadow-2xl">
+            <View className="flex-row items-center gap-2.5 border-b border-zinc-100 pb-3">
               <Feather name="alert-circle" size={18} color="#E11D48" />
               <Text className="text-[#101828] text-sm font-black uppercase tracking-wider">Transfer Credits?</Text>
             </View>
