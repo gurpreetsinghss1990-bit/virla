@@ -947,7 +947,7 @@ export default function TrainerApplicationScreen() {
         <ScrollView 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 140 }}
-        className="flex-1 bg-[#F7F8FC]"
+        className="flex-1 bg-[#FCF5F5]"
       >
         <View className="mb-6">
           <View className="flex-row items-center justify-between">
@@ -1579,7 +1579,7 @@ export default function TrainerApplicationScreen() {
   );
 }
 
-function SafeAreaViewWrapper({ children, bg = '#F7F8FC' }: { children: React.ReactNode; bg?: string }) {
+function SafeAreaViewWrapper({ children, bg = '#FCF5F5' }: { children: React.ReactNode; bg?: string }) {
   const insets = useSafeAreaInsets();
   return (
     <View style={{ flex: 1, backgroundColor: bg, paddingTop: insets.top }}>

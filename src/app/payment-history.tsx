@@ -20,7 +20,7 @@ export default function PaymentHistoryScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+    <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
       <ScreenHeader title="Billing History" category="VIRLA BILLING" />
 
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1 px-6 pt-6" contentContainerStyle={{ paddingBottom: 120 }}>

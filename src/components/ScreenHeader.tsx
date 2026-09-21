@@ -15,6 +15,8 @@ export interface ScreenHeaderProps {
   accentColor?: string;
   showBorder?: boolean;
   backButtonBg?: boolean;
+  backgroundColor?: string;
+  titleClassName?: string;
 }
 
 export function ScreenHeader({
@@ -27,6 +29,8 @@ export function ScreenHeader({
   accentColor = '#E11D48',
   showBorder = true,
   backButtonBg = false,
+  backgroundColor,
+  titleClassName,
 }: ScreenHeaderProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -43,8 +47,8 @@ export function ScreenHeader({
     <>
       <StatusBar style="dark" />
       <View 
-        style={{ paddingTop: insets.top }} 
-        className={`bg-white ${showBorder ? 'border-b border-zinc-100 shadow-xs' : ''}`}
+        style={{ paddingTop: insets.top, backgroundColor: backgroundColor || undefined }} 
+        className={`${backgroundColor ? '' : 'bg-white'} ${showBorder ? 'border-b border-zinc-100 shadow-xs' : ''}`}
       >
         <View className="h-14 flex-row items-center px-5 justify-between">
           {showBack ? (
@@ -83,7 +87,7 @@ export function ScreenHeader({
             )}
             <Text 
               numberOfLines={1}
-              className="text-zinc-950 text-base font-extrabold tracking-tight mt-0.5"
+              className={titleClassName || "text-zinc-950 text-base font-extrabold tracking-tight mt-0.5"}
             >
               {title}
             </Text>

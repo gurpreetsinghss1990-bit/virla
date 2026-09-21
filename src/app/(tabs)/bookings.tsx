@@ -449,7 +449,7 @@ export default function BookingsScreen() {
         ) : (
           <ScrollView 
             showsVerticalScrollIndicator={false} 
-            className="flex-1 bg-[#F7F8FC]"
+            className="flex-1 bg-[#FCF5F5]"
             contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 180 }}
           >
             {/* Page Header */}
@@ -1059,7 +1059,7 @@ export default function BookingsScreen() {
       ) : (
         <ScrollView 
           showsVerticalScrollIndicator={false} 
-          className="flex-1 bg-[#F7F8FC]"
+          className="flex-1 bg-[#FCF5F5]"
           contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 180 }}
         >
         {/* Page Header */}
@@ -1185,7 +1185,7 @@ export default function BookingsScreen() {
 function SafeAreaViewWrapper({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: '#FCF5F5', paddingTop: insets.top }}>
       {children}
     </View>
   );

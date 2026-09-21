@@ -32,7 +32,7 @@ export default function InvoiceScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+    <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
       <ScreenHeader title="Invoice Pass" category="VIRLA BILLING" />
 
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 100 }}>

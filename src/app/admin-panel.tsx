@@ -226,7 +226,7 @@ export default function AdminPanelScreen() {
   if (isAdminAuthorized === null) {
     return (
       <SafeAreaViewWrapper>
-        <View className="flex-1 bg-[#F7F8FC] justify-center items-center">
+        <View className="flex-1 bg-[#FCF5F5] justify-center items-center">
           <ActivityIndicator size="large" color="#4F46E5" />
           <Text className="text-zinc-400 text-xs font-black uppercase tracking-wider mt-4">Verifying Credentials...</Text>
         </View>
@@ -237,7 +237,7 @@ export default function AdminPanelScreen() {
   if (isAdminAuthorized === false) {
     return (
       <SafeAreaViewWrapper>
-        <View className="flex-1 bg-[#F7F8FC] justify-center items-center px-6">
+        <View className="flex-1 bg-[#FCF5F5] justify-center items-center px-6">
           <Text className="text-4xl mb-4">🚫</Text>
           <Text className="text-zinc-900 text-sm font-black tracking-tight uppercase">Access Denied</Text>
           <Text className="text-zinc-500 text-xs font-semibold text-center mt-2 leading-relaxed">
@@ -256,7 +256,7 @@ export default function AdminPanelScreen() {
 
   return (
     <SafeAreaViewWrapper>
-      <View className="flex-1 bg-[#F7F8FC]">
+      <View className="flex-1 bg-[#FCF5F5]">
         {/* Header */}
         <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
           <TouchableOpacity 
@@ -1536,7 +1536,7 @@ export default function AdminPanelScreen() {
 function SafeAreaViewWrapper({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: '#FCF5F5', paddingTop: insets.top }}>
       {children}
     </View>
   );

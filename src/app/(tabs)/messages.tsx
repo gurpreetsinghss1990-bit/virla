@@ -242,7 +242,7 @@ export default function MessagesScreen() {
   }, [chatsList, searchQuery]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFFFFF', paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: '#FCF5F5', paddingTop: insets.top }}>
       {/* Top Header */}
       <View className="px-6 pt-3 pb-3 flex-row items-center justify-between">
         <View className="flex-1">

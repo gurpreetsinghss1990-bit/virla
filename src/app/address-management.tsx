@@ -203,7 +203,7 @@ export default function AddressManagementScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+    <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
       <ScreenHeader 
         title="Saved Addresses" 
         category="VIRLA PLACES"

@@ -143,7 +143,7 @@ export default function ProgressScreen() {
       <ScrollView 
         showsVerticalScrollIndicator={false} 
         contentContainerStyle={{ paddingBottom: 140 }}
-        className="bg-[#F7F8FC]"
+        className="bg-[#FCF5F5]"
       >
         <View className="px-6 pt-8 pb-4 gap-6">
           <View className="flex-row justify-between items-end">
@@ -442,7 +442,7 @@ export default function ProgressScreen() {
 function SafeAreaViewWrapper({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: '#FCF5F5', paddingTop: insets.top }}>
       {children}
     </View>
   );

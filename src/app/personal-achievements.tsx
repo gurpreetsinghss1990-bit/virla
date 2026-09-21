@@ -25,7 +25,7 @@ export default function PersonalAchievementsScreen() {
   const unlockedCount = achievements.filter(a => a.unlocked).length;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+    <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
       <ScreenHeader title="Personal Achievements" category="VIRLA REWARDS" />
 
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 60 }}>

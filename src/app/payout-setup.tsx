@@ -65,7 +65,7 @@ export default function PayoutSetupScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: '#FCF5F5', paddingTop: insets.top }}>
       <View className="h-16 flex-row items-center px-6 justify-between bg-white border-b border-zinc-150">
         <TouchableOpacity 
           activeOpacity={0.8} 
@@ -86,7 +86,7 @@ export default function PayoutSetupScreen() {
         <ScrollView 
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 100 }}
-          className="flex-1 bg-[#F7F8FC]"
+          className="flex-1 bg-[#FCF5F5]"
         >
           <View className="mb-6">
             <Text className="text-zinc-400 text-xs font-extrabold uppercase tracking-widest">Approved Partner</Text>

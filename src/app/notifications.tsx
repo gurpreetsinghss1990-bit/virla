@@ -138,6 +138,19 @@ export default function NotificationsScreen() {
     return groups;
   }, [paginated]);
 
+  const resolveNotificationCategory = (item: NotificationItem): string | null => {
+    if (item.type && item.type !== 'System') {
+      return item.type;
+    }
+    const text = `${item.title || ''} ${item.body || ''}`.toLowerCase();
+    if (text.includes('booking') || text.includes('session') || text.includes('workout')) return 'Bookings';
+    if (text.includes('credit') || text.includes('wallet') || text.includes('recharge')) return 'Credits';
+    if (text.includes('payment') || text.includes('paid') || text.includes('invoice')) return 'Payments';
+    if (text.includes('trainer') || text.includes('coach')) return 'Trainer Updates';
+    if (text.includes('safety') || text.includes('emergency')) return 'Safety';
+    return null;
+  };
+
   const getCategoryTheme = (type?: string) => {
     switch (type) {
       case 'Bookings':
@@ -217,12 +230,14 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
       {/* Unified Screen Header - Virla Concierge category removed, borderless */}
       <ScreenHeader 
         title={isSelectionMode ? `${selectedIds.size} Selected` : 'Notifications'} 
         category=""
         showBorder={false}
+        backgroundColor="#FCF5F5"
+        titleClassName="text-zinc-950 text-2xl font-black tracking-tight mt-0.5"
         subtitle={!isSelectionMode && unreadCount > 0 ? `${unreadCount} unread` : undefined}
         onBack={isSelectionMode ? () => {
           setIsSelectionMode(false);
@@ -235,7 +250,7 @@ export default function NotificationsScreen() {
                 activeOpacity={0.7}
                 onPress={() => handleSelectAll(paginated)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                className="px-2.5 py-1.5 rounded-full bg-zinc-100"
+                className="px-2.5 py-1.5 rounded-full bg-white border border-zinc-200/80 shadow-xs"
               >
                 <Text className="text-zinc-900 text-xs font-black">
                   {selectedIds.size === paginated.length && paginated.length > 0 ? 'Deselect All' : 'Select All'}
@@ -248,7 +263,7 @@ export default function NotificationsScreen() {
                   setSelectedIds(new Set());
                 }}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                className="px-2.5 py-1.5 rounded-full bg-zinc-100"
+                className="px-2.5 py-1.5 rounded-full bg-white border border-zinc-200/80 shadow-xs"
               >
                 <Text className="text-zinc-600 text-xs font-bold">Done</Text>
               </TouchableOpacity>
@@ -258,11 +273,10 @@ export default function NotificationsScreen() {
               <TouchableOpacity 
                 activeOpacity={0.7}
                 onPress={() => setIsSelectionMode(true)} 
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                className="px-3.5 py-1.5 rounded-full bg-zinc-100 flex-row items-center gap-1.5"
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                className="w-9 h-9 items-center justify-center"
               >
-                <Feather name="check-square" size={13} color="#101828" />
-                <Text className="text-zinc-900 text-xs font-bold">Select</Text>
+                <Feather name="trash-2" size={20} color="#101828" />
               </TouchableOpacity>
             ) : undefined
           )
@@ -271,8 +285,8 @@ export default function NotificationsScreen() {
 
       {/* Search Input Bar (shown only when notifications exist and not selecting) */}
       {!isSelectionMode && notifications.length > 0 && (
-        <View className="px-5 pt-2 pb-2 bg-white">
-          <View className="flex-row items-center bg-zinc-100/90 border border-zinc-200/70 px-3.5 py-2.5 rounded-2xl">
+        <View className="px-5 pt-2 pb-2 bg-[#FCF5F5]">
+          <View className="flex-row items-center bg-white border border-zinc-200/70 px-3.5 py-2.5 rounded-2xl shadow-xs">
             <Feather name="search" size={15} color="#9CA3AF" />
             <TextInput
               placeholder="Search notifications..."
@@ -325,7 +339,8 @@ export default function NotificationsScreen() {
                   {/* Notification Items - Clean list rows without cards or horizontal lines */}
                   <View className="gap-1.5">
                     {group.items.map((item) => {
-                      const theme = getCategoryTheme(item.type);
+                      const category = resolveNotificationCategory(item);
+                      const theme = getCategoryTheme(category || undefined);
                       const isUnread = !item.read;
                       const isSelected = selectedIds.has(item.id);
 
@@ -367,11 +382,13 @@ export default function NotificationsScreen() {
                             {/* Category Tag & Time / Status Header */}
                             <View className="flex-row items-center justify-between mb-1.5">
                               <View className="flex-row items-center gap-2">
-                                <View className={`px-2.5 py-0.5 rounded-md border ${theme.badgeBg}`}>
-                                  <Text className={`text-xs font-extrabold uppercase tracking-wider ${theme.badgeText}`}>
-                                    {item.type || 'Alert'}
-                                  </Text>
-                                </View>
+                                {Boolean(category) && (
+                                  <View className={`px-2.5 py-0.5 rounded-md border ${theme.badgeBg}`}>
+                                    <Text className={`text-xs font-extrabold uppercase tracking-wider ${theme.badgeText}`}>
+                                      {category}
+                                    </Text>
+                                  </View>
+                                )}
                                 {item.priority === 'high' && (
                                   <View className="bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-md flex-row items-center gap-1">
                                     <View className="w-1.5 h-1.5 rounded-full bg-rose-500" />
@@ -388,18 +405,6 @@ export default function NotificationsScreen() {
                                   </View>
                                 )}
                                 <Text className="text-zinc-400 text-xs font-semibold">{item.timestamp}</Text>
-                                {!isSelectionMode && (
-                                  <TouchableOpacity 
-                                    onPress={(e) => {
-                                      e.stopPropagation?.();
-                                      deleteNotification(item.id);
-                                    }}
-                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                    className="ml-1 p-1"
-                                  >
-                                    <Feather name="trash-2" size={13} color="#9CA3AF" />
-                                  </TouchableOpacity>
-                                )}
                               </View>
                             </View>
                             

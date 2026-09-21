@@ -101,7 +101,7 @@ export default function TrainerWorkoutsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FAFAFA' }}>
+    <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
       {/* Header */}
       <View 
         style={{ paddingTop: insets.top + 16 }}

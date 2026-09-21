@@ -143,7 +143,7 @@ export default function AdminWorkoutApprovalsScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8F9FC' }}>
+    <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
       {/* Header */}
       <View 
         style={{ paddingTop: insets.top + 16 }}
