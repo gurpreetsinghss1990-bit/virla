@@ -125,18 +125,25 @@ export default function ProfileScreen() {
     ).start();
   }, [shimmerAnim]);
 
-  // Subtle sparkle intro pulse (1-2 gentle twinkles on screen load)
+  // Subtle sparkle intro pulse (1-2 gentle twinkles on screen load and on tap)
   const sparkleAnim = useMemo(() => new Animated.Value(0), []);
-  useEffect(() => {
-    // 2 subtle twinkle pulses: scale 1 -> 1.35 -> 1 -> 1.35 -> 1 with light rotation
+  const triggerSparkleAnimation = useCallback(() => {
+    sparkleAnim.stopAnimation();
+    sparkleAnim.setValue(0);
     Animated.sequence([
-      Animated.delay(350),
-      Animated.timing(sparkleAnim, { toValue: 1, duration: 320, useNativeDriver: true }),
-      Animated.timing(sparkleAnim, { toValue: 0, duration: 280, useNativeDriver: true }),
-      Animated.timing(sparkleAnim, { toValue: 1, duration: 320, useNativeDriver: true }),
-      Animated.timing(sparkleAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      Animated.timing(sparkleAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.timing(sparkleAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+      Animated.timing(sparkleAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.timing(sparkleAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
     ]).start();
   }, [sparkleAnim]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      triggerSparkleAnimation();
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [triggerSparkleAnimation]);
 
   // Client Profile Edit local states
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -660,9 +667,7 @@ export default function ProfileScreen() {
               </View>
 
               {/* Luxury Virla Pass Card */}
-              <TouchableOpacity 
-                activeOpacity={0.9}
-                onPress={() => router.push('/wallet' as any)}
+              <View 
                 className="bg-[#0B1528] rounded-[26px] p-5 shadow-xl relative overflow-hidden mb-5 border border-[#1E293B]"
               >
                 {/* Subtle wave lines on dark card */}
@@ -676,7 +681,10 @@ export default function ProfileScreen() {
                 </View>
 
                 <View className="flex-row justify-between items-start">
-                  <View>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={triggerSparkleAnimation}
+                  >
                     <View className="flex-row items-center">
                       <Animated.View
                         style={{
@@ -705,7 +713,7 @@ export default function ProfileScreen() {
                     <Text className="text-white text-2xl font-black mt-1 tracking-tight">
                       {(membership.tier || 'PREMIUM').toUpperCase()}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                   <View className="bg-white p-1.5 rounded-xl shadow-xs">
                     <Ionicons name="qr-code" size={32} color="#0B1528" />
                   </View>
@@ -728,13 +736,17 @@ export default function ProfileScreen() {
                     <Text className="text-white text-xs font-bold mt-0.5">
                       {membership.renewalDate || 'Sep 19, 2027'}
                     </Text>
-                    <View className="flex-row items-center gap-1 mt-1">
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => router.push('/wallet' as any)}
+                      className="flex-row items-center gap-1 mt-1.5 py-0.5"
+                    >
                       <Text className="text-[#2DD4BF] text-xs font-black">View Wallet</Text>
                       <Feather name="arrow-right" size={11} color="#2DD4BF" />
-                    </View>
+                    </TouchableOpacity>
                   </View>
                 </View>
-              </TouchableOpacity>
+              </View>
 
               {/* 1. Personal Information Accordion Card */}
               <View className="bg-white border border-[#E5E7EB] rounded-[24px] p-5 shadow-xs mb-4">
