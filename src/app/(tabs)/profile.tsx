@@ -125,6 +125,19 @@ export default function ProfileScreen() {
     ).start();
   }, [shimmerAnim]);
 
+  // Subtle sparkle intro pulse (1-2 gentle twinkles on screen load)
+  const sparkleAnim = useMemo(() => new Animated.Value(0), []);
+  useEffect(() => {
+    // 2 subtle twinkle pulses: scale 1 -> 1.35 -> 1 -> 1.35 -> 1 with light rotation
+    Animated.sequence([
+      Animated.delay(350),
+      Animated.timing(sparkleAnim, { toValue: 1, duration: 320, useNativeDriver: true }),
+      Animated.timing(sparkleAnim, { toValue: 0, duration: 280, useNativeDriver: true }),
+      Animated.timing(sparkleAnim, { toValue: 1, duration: 320, useNativeDriver: true }),
+      Animated.timing(sparkleAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start();
+  }, [sparkleAnim]);
+
   // Client Profile Edit local states
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isPersonalInfoExpanded, setIsPersonalInfoExpanded] = useState(false);
@@ -665,7 +678,26 @@ export default function ProfileScreen() {
                 <View className="flex-row justify-between items-start">
                   <View>
                     <View className="flex-row items-center">
-                      <Ionicons name="sparkles" size={11} color="#2DD4BF" />
+                      <Animated.View
+                        style={{
+                          transform: [
+                            {
+                              scale: sparkleAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [1, 1.35],
+                              }),
+                            },
+                            {
+                              rotate: sparkleAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: ['0deg', '25deg'],
+                              }),
+                            },
+                          ],
+                        }}
+                      >
+                        <Ionicons name="sparkles" size={11} color="#2DD4BF" />
+                      </Animated.View>
                       <Text className="text-[#2DD4BF] text-[9px] font-black uppercase tracking-widest ml-1">
                         VIRLA PASS
                       </Text>
