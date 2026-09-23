@@ -142,8 +142,10 @@ export default function ProfileScreen() {
   const layer1Anim = useMemo(() => new Animated.Value(0), []);
   const layer2Anim = useMemo(() => new Animated.Value(0), []);
   const layer3Anim = useMemo(() => new Animated.Value(0), []);
+  const [isLayersAnimating, setIsLayersAnimating] = useState(false);
 
   const triggerLayersAnimation = useCallback(() => {
+    setIsLayersAnimating(true);
     layer1Anim.stopAnimation();
     layer2Anim.stopAnimation();
     layer3Anim.stopAnimation();
@@ -196,7 +198,9 @@ export default function ProfileScreen() {
               tension: 80,
               useNativeDriver: true,
             }),
-          ]).start();
+          ]).start(() => {
+            setIsLayersAnimating(false);
+          });
         });
       });
     });
@@ -804,7 +808,7 @@ export default function ProfileScreen() {
                         <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
                           <Polygon
                             points="12 2 2 7 12 12 22 7 12 2"
-                            stroke="#CBD5E1"
+                            stroke={isLayersAnimating ? '#2DD4BF' : '#CBD5E1'}
                             strokeWidth="1.8"
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -826,7 +830,7 @@ export default function ProfileScreen() {
                         <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
                           <Polyline
                             points="2 12 12 17 22 12"
-                            stroke="#CBD5E1"
+                            stroke={isLayersAnimating ? '#2DD4BF' : '#CBD5E1'}
                             strokeWidth="1.8"
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -848,7 +852,7 @@ export default function ProfileScreen() {
                         <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
                           <Polyline
                             points="2 17 12 22 22 17"
-                            stroke="#CBD5E1"
+                            stroke={isLayersAnimating ? '#2DD4BF' : '#CBD5E1'}
                             strokeWidth="1.8"
                             strokeLinecap="round"
                             strokeLinejoin="round"
