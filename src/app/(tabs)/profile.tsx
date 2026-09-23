@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, InteractionManager } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, InteractionManager, BackHandler } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
@@ -201,6 +201,29 @@ export default function ProfileScreen() {
   } catch (e) {}
 
   const [isEditingTrainer, setIsEditingTrainer] = useState(false);
+
+  // ── Hardware back button (Android) ──────────────────────────────────────
+  // Intercept back press so it closes panels/modals instead of exiting the app.
+  useEffect(() => {
+    const onBackPress = () => {
+      if (isSignOutModalVisible) {
+        setIsSignOutModalVisible(false);
+        return true;
+      }
+      if (isEditingProfile) {
+        setIsEditingProfile(false);
+        return true;
+      }
+      if (isEditingTrainer) {
+        setIsEditingTrainer(false);
+        return true;
+      }
+      // Root tab screen – prevent accidental app exit
+      return true;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [isSignOutModalVisible, isEditingProfile, isEditingTrainer]);
   const [trainerBio, setTrainerBio] = useState(coach?.shortBio || '');
   const [trainerName, setTrainerName] = useState(coach?.name || user?.name || '');
   const [trainerEmail, setTrainerEmail] = useState(user?.email || '');

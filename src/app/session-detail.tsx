@@ -663,18 +663,6 @@ export default function SessionDetailScreen() {
     );
   };
 
-  const handleOpenSystemMaps = () => {
-    if (!parsedAddress || !parsedAddress.lat || !parsedAddress.lng) return;
-    const url = Platform.select({
-      ios: `maps://?daddr=${parsedAddress.lat},${parsedAddress.lng}&dirflg=d`,
-      android: `google.navigation:q=${parsedAddress.lat},${parsedAddress.lng}`
-    }) || `https://www.google.com/maps/dir/?api=1&destination=${parsedAddress.lat},${parsedAddress.lng}`;
-    
-    Linking.openURL(url).catch(() => {
-      Alert.alert('Navigation Error', 'Could not open map navigation services.');
-    });
-  };
-
   const handleNavigateAddress = () => {
     if (!parsedAddress || !parsedAddress.lat || !parsedAddress.lng || isNaN(parsedAddress.lat) || isNaN(parsedAddress.lng) || (parsedAddress.lat === 0 && parsedAddress.lng === 0)) {
       Alert.alert(
@@ -2185,11 +2173,11 @@ export default function SessionDetailScreen() {
 
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={handleOpenSystemMaps}
-                className="w-full h-12 bg-[#E11D48] rounded-2xl items-center justify-center flex-row gap-2 shadow-md"
+                onPress={() => setIsNavigationMapVisible(false)}
+                className="w-full h-12 bg-slate-800 rounded-2xl items-center justify-center flex-row gap-2 border border-zinc-700 shadow-md"
               >
-                <Feather name="navigation" size={14} color="white" />
-                <Text className="text-white text-xs font-black uppercase tracking-wider">Open in Google/Apple Maps</Text>
+                <Ionicons name="close-circle" size={16} color="white" />
+                <Text className="text-white text-xs font-black uppercase tracking-wider">Close In-App Map</Text>
               </TouchableOpacity>
             </View>
           </View>

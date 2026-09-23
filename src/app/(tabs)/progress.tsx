@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Animated, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Animated, Platform, BackHandler } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProgressRing } from '../../components/ProgressRing';
 import { EmptyState } from '../../components/EmptyState';
@@ -16,6 +16,12 @@ export default function ProgressScreen() {
   const [activeRange, setActiveRange] = useState<RangeType>('weekly');
   const [simulateEmpty, setSimulateEmpty] = useState(false);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
+
+  // Prevent hardware back from exiting the app on this root tab screen
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => sub.remove();
+  }, []);
 
   const { totalSessions, totalCalories } = useUserProfileStore();
   const { user, role } = useUserStore();

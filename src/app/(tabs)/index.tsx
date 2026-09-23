@@ -28,32 +28,6 @@ import { SessionEngine } from '../../services/SessionEngine';
 import { Booking } from '../../types';
 import { normalizeDate, canonicalizeTimeRange, getBookingISTDateRange, getDisplayWorkoutTitle, formatToDDMMYYYY } from '../../utils/date';
 
-function launchNavigation(address: string | undefined | null) {
-  if (!address || address.trim() === '') {
-    Alert.alert('Destination Missing ⚠️', 'This booking does not contain a valid service address.');
-    return;
-  }
-  const match = address.match(/\(([-\d.]+),\s*([-\d.]+)\)/);
-  let url = '';
-  if (match) {
-    const lat = match[1];
-    const lng = match[2];
-    url = Platform.select({
-      ios: `maps://?daddr=${lat},${lng}&dirflg=d`,
-      android: `google.navigation:q=${lat},${lng}`
-    }) || `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-  } else {
-    const query = encodeURIComponent(address);
-    url = Platform.select({
-      ios: `maps://?q=${query}`,
-      android: `geo:0,0?q=${query}`
-    }) || `https://maps.google.com/?q=${query}`;
-  }
-  
-  Linking.openURL(url).catch(() => {
-    Alert.alert('Navigation Error', 'Could not open map navigation services.');
-  });
-}
 
 function getClientGender(booking: Booking): string {
   if (!booking?.clientId) {
@@ -2099,7 +2073,7 @@ export default function HomeScreen() {
                                 body: 'Coach has started travelling to your venue.',
                                 icon: 'user-check'
                               });
-                              launchNavigation(nextSession.address);
+                              router.push({ pathname: '/session-detail', params: { id: nextSession.id } });
                             } catch (err: any) {
                               Alert.alert('Error', err.message || 'Could not start travel.');
                             }

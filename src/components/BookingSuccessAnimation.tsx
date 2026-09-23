@@ -86,18 +86,6 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
     ]).start();
   }, [successScaleAnim, successOpacityAnim]);
 
-  const openExternalMap = (address: string) => {
-    if (!address) return;
-    const encoded = encodeURIComponent(address);
-    const url = Platform.select({
-      ios: `maps:0,0?q=${encoded}`,
-      android: `geo:0,0?q=${encoded}`,
-    }) || `https://www.google.com/maps/search/?api=1&query=${encoded}`;
-    
-    Linking.openURL(url).catch(() => {
-      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encoded}`);
-    });
-  };
 
   return (
     <View className="items-center gap-5 py-2 w-full">
@@ -113,7 +101,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
         }}
       >
         {/* Outer radial aura ring */}
-        <View 
+        <View
           className="w-20 h-20 rounded-full items-center justify-center"
           style={{ backgroundColor: 'rgba(0, 195, 137, 0.15)' }}
         >
@@ -240,16 +228,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
                 </View>
                 <Text className="text-zinc-300 text-sm font-semibold">Venue Address</Text>
               </View>
-              <TouchableOpacity 
-                activeOpacity={0.7} 
-                onPress={() => openExternalMap(locationAddress)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                className="flex-row items-center gap-1.5 px-2.5 py-1 rounded-lg border"
-                style={{ backgroundColor: 'rgba(80, 7, 26, 0.4)', borderColor: 'rgba(136, 19, 55, 0.5)' }}
-              >
-                <Text className="text-rose-400 text-xs font-extrabold">View Map</Text>
-                <Feather name="external-link" size={12} color="#FB7185" />
-              </TouchableOpacity>
+
             </View>
             <Text className="text-zinc-100 text-sm font-semibold leading-relaxed" style={{ paddingLeft: 44 }}>
               {locationAddress || 'Selected Location'}

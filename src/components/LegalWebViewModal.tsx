@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { Feather } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  Modal,
-  TouchableOpacity,
-  ScrollView,
   Linking,
+  Modal,
   Platform,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
 
 export interface LegalWebViewModalProps {
   visible: boolean;
@@ -36,7 +36,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
       activeTab === 'terms'
         ? 'https://virla.in/terms.html'
         : 'https://virla.in/privacy.html';
-    Linking.openURL(targetUrl).catch(() => {});
+    Linking.openURL(targetUrl).catch(() => { });
   };
 
   return (
@@ -94,11 +94,10 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => setActiveTab('terms')}
-            className={`flex-1 py-2 rounded-xl items-center justify-center flex-row gap-1.5 border ${
-              activeTab === 'terms'
+            className={`flex-1 py-2 rounded-xl items-center justify-center flex-row gap-1.5 border ${activeTab === 'terms'
                 ? 'bg-rose-50 border-rose-200'
                 : 'bg-zinc-50 border-zinc-100'
-            }`}
+              }`}
           >
             <Feather
               name="file-text"
@@ -106,9 +105,8 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               color={activeTab === 'terms' ? '#E11D48' : '#71717A'}
             />
             <Text
-              className={`text-xs font-black ${
-                activeTab === 'terms' ? 'text-[#E11D48]' : 'text-zinc-600'
-              }`}
+              className={`text-xs font-black ${activeTab === 'terms' ? 'text-[#E11D48]' : 'text-zinc-600'
+                }`}
             >
               Terms of Service
             </Text>
@@ -117,11 +115,10 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => setActiveTab('privacy')}
-            className={`flex-1 py-2 rounded-xl items-center justify-center flex-row gap-1.5 border ${
-              activeTab === 'privacy'
+            className={`flex-1 py-2 rounded-xl items-center justify-center flex-row gap-1.5 border ${activeTab === 'privacy'
                 ? 'bg-rose-50 border-rose-200'
                 : 'bg-zinc-50 border-zinc-100'
-            }`}
+              }`}
           >
             <Feather
               name="shield"
@@ -129,9 +126,8 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               color={activeTab === 'privacy' ? '#E11D48' : '#71717A'}
             />
             <Text
-              className={`text-xs font-black ${
-                activeTab === 'privacy' ? 'text-[#E11D48]' : 'text-zinc-600'
-              }`}
+              className={`text-xs font-black ${activeTab === 'privacy' ? 'text-[#E11D48]' : 'text-zinc-600'
+                }`}
             >
               Privacy Policy
             </Text>
@@ -171,7 +167,12 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
                   <Text className="text-zinc-800 text-xs font-bold">Legal Name: Namratha Jauni</Text>
                   <Text className="text-zinc-800 text-xs font-bold">Brand: Virla</Text>
                   <Text className="text-zinc-800 text-xs font-bold">Phone: +91 22-49715552</Text>
+
                   <Text className="text-zinc-800 text-xs font-bold">Official Website: virla.in</Text>
+                  <Text className="text-zinc-800 text-xs font-bold">Address : 35/151, Laxmi Vijay Industries,
+                    SAB TV Lane, New Link Road,
+                    Andheri West, Mumbai – 400053,
+                    Maharashtra, India </Text>
                 </View>
               </View>
 
@@ -274,6 +275,9 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
                 <Text className="text-zinc-600 text-xs leading-relaxed">
                   For compliance queries or legal inquiries, reach out at virla.in or call +91 22-49715552.
                 </Text>
+                <View className="bg-zinc-50 border border-zinc-100 rounded-xl p-3 mt-1 gap-1">
+                  <Text className="text-zinc-800 text-xs font-bold">Address: 35/151, Laxmi Vijay Industries,{`\n`}SAB TV Lane, New Link Road,{`\n`}Andheri West, Mumbai – 400053,{`\n`}Maharashtra, India.</Text>
+                </View>
               </View>
             </View>
           ) : (
@@ -304,6 +308,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
                   <Text className="text-zinc-800 text-xs font-bold">Brand: Virla</Text>
                   <Text className="text-zinc-800 text-xs font-bold">Phone: +91 22-49715552</Text>
                   <Text className="text-zinc-800 text-xs font-bold">Official Website: virla.in</Text>
+                  <Text className="text-zinc-800 text-xs font-bold">Address: 35/151, Laxmi Vijay Industries,{`\n`}SAB TV Lane, New Link Road,{`\n`}Andheri West, Mumbai – 400053,{`\n`}Maharashtra, India.</Text>
                 </View>
               </View>
 

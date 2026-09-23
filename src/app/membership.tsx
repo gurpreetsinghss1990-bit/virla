@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Animated, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Animated, Platform, BackHandler } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useWalletStore } from '../store/walletStore';
@@ -155,6 +155,24 @@ export default function MembershipScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [showDemoPayment, setShowDemoPayment] = useState(false);
+
+  // Hardware back button: close payment modal instead of navigating away
+  useEffect(() => {
+    const onBackPress = () => {
+      if (selectedPlan) {
+        if (showDemoPayment) {
+          // Go back from demo payment step to plan details step
+          setShowDemoPayment(false);
+        } else {
+          closeDetails();
+        }
+        return true; // consumed
+      }
+      return false; // let default back happen
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [selectedPlan, showDemoPayment]);
 
   const openPlanDetails = (plan: Plan) => {
     setSelectedPlan(plan);
@@ -495,13 +513,14 @@ export default function MembershipScreen() {
             {/* Modal Drag handle indicator */}
             <View className="w-10 h-1 bg-zinc-200 rounded-full align-self-center mx-auto" />
 
-            {/* Red Box Notice for Demo Payment */}
+            {/* Demo payment simulation notice hidden — dev only
             <View className="bg-red-50 border border-red-200 p-3.5 rounded-2xl flex-row items-center gap-3">
               <Feather name="info" size={16} color="#DC2626" />
               <Text className="text-red-700 text-xs font-bold leading-tight flex-1">
                 This is just a demo payment simulation. Real payment gateway will integrate after the production approval.
               </Text>
             </View>
+            */}
 
             {!isProcessing && !isSuccess && (
               <>
@@ -663,31 +682,48 @@ export default function MembershipScreen() {
                       </View>
                     </View>
 
+                    {/* Demo simulator note banner for iOS */}
+                    {Platform.OS === 'ios' && (
+                      <View className="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl gap-1">
+                        <View className="flex-row items-center gap-1.5">
+                          <Feather name="info" size={13} color="#D97706" />
+                          <Text className="text-amber-800 text-[10px] font-black uppercase tracking-wider">Demo Simulator Note</Text>
+                        </View>
+                        <Text className="text-amber-700 text-[10px] font-semibold leading-relaxed">
+                          This is just a demo payment simulator for testing. No real money will be charged.
+                        </Text>
+                      </View>
+                    )}
+
                     {/* Purchase confirmation buttons */}
                     <View className="gap-3 mt-2">
-                      <TouchableOpacity
-                        activeOpacity={0.85}
-                        disabled={isProcessing}
-                        onPress={handlePayPhiPayment}
-                        className="h-14 bg-[#4F46E5] rounded-2xl items-center justify-center shadow-md"
-                        style={{ height: 54 }}
-                      >
-                        <Text className="text-white text-xs font-black uppercase tracking-wider">
-                          Pay {selectedPlan.price} with PayPhi Gateway
-                        </Text>
-                      </TouchableOpacity>
+                      {Platform.OS !== 'ios' && (
+                        <TouchableOpacity
+                          activeOpacity={0.85}
+                          disabled={isProcessing}
+                          onPress={handlePayPhiPayment}
+                          className="h-14 bg-[#4F46E5] rounded-2xl items-center justify-center shadow-md"
+                          style={{ height: 54 }}
+                        >
+                          <Text className="text-white text-xs font-black uppercase tracking-wider">
+                            Pay {selectedPlan.price} with PayPhi Gateway
+                          </Text>
+                        </TouchableOpacity>
+                      )}
 
-                      <TouchableOpacity
-                        activeOpacity={0.8}
-                        disabled={isProcessing}
-                        onPress={() => setShowDemoPayment(true)}
-                        className="h-12 bg-zinc-100 border border-zinc-200 rounded-2xl items-center justify-center"
-                        style={{ height: 48 }}
-                      >
-                        <Text className="text-zinc-600 text-[10px] font-black uppercase tracking-wider">
-                          Use Test Simulator (Demo)
-                        </Text>
-                      </TouchableOpacity>
+                      {Platform.OS === 'ios' && (
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          disabled={isProcessing}
+                          onPress={() => setShowDemoPayment(true)}
+                          className="h-14 bg-[#4F46E5] rounded-2xl items-center justify-center shadow-md"
+                          style={{ height: 54 }}
+                        >
+                          <Text className="text-white text-xs font-black uppercase tracking-wider">
+                            Use Test Simulator (Demo)
+                          </Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
                 )}
