@@ -4,7 +4,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient, Stop, Polygon, Polyline } from 'react-native-svg';
 import { useUserStore } from '../../store/userStore';
 import { useMembershipStore } from '../../store/membershipStore';
 import { useCoachStore } from '../../store/coachStore';
@@ -137,6 +137,70 @@ export default function ProfileScreen() {
       Animated.timing(sparkleAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
     ]).start();
   }, [sparkleAnim]);
+
+  // Sponge/Layers cascading compression animation (layer1 hits layer2, layer2 hits layer3, then returns)
+  const layer1Anim = useMemo(() => new Animated.Value(0), []);
+  const layer2Anim = useMemo(() => new Animated.Value(0), []);
+  const layer3Anim = useMemo(() => new Animated.Value(0), []);
+
+  const triggerLayersAnimation = useCallback(() => {
+    layer1Anim.stopAnimation();
+    layer2Anim.stopAnimation();
+    layer3Anim.stopAnimation();
+    layer1Anim.setValue(0);
+    layer2Anim.setValue(0);
+    layer3Anim.setValue(0);
+
+    // Step 1: Top layer 1 drops down to hit layer 2
+    Animated.timing(layer1Anim, {
+      toValue: 3.5,
+      duration: 120,
+      useNativeDriver: true,
+    }).start(() => {
+      // Step 2: Layer 2 receives impact, pushes down to hit layer 3
+      Animated.parallel([
+        Animated.timing(layer1Anim, {
+          toValue: 5,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(layer2Anim, {
+          toValue: 2.5,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        // Step 3: Layer 3 compresses slightly under bottom impact
+        Animated.timing(layer3Anim, {
+          toValue: 1.2,
+          duration: 80,
+          useNativeDriver: true,
+        }).start(() => {
+          // Step 4: Spring back up sequentially to stationary positions
+          Animated.parallel([
+            Animated.spring(layer1Anim, {
+              toValue: 0,
+              friction: 5,
+              tension: 100,
+              useNativeDriver: true,
+            }),
+            Animated.spring(layer2Anim, {
+              toValue: 0,
+              friction: 6,
+              tension: 90,
+              useNativeDriver: true,
+            }),
+            Animated.spring(layer3Anim, {
+              toValue: 0,
+              friction: 7,
+              tension: 80,
+              useNativeDriver: true,
+            }),
+          ]).start();
+        });
+      });
+    });
+  }, [layer1Anim, layer2Anim, layer3Anim]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -720,12 +784,83 @@ export default function ProfileScreen() {
                 </View>
 
                 <View className="flex-row justify-between items-end mt-5 pt-3 border-t border-zinc-800/60">
-                  <View className="flex-row items-center">
-                    <Ionicons name="layers-outline" size={20} color="#CBD5E1" />
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={triggerLayersAnimation}
+                    className="flex-row items-center py-1"
+                  >
+                    <View style={{ width: 22, height: 22, justifyContent: 'center', alignItems: 'center' }}>
+                      {/* Layer 1 (Top diamond) */}
+                      <Animated.View
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          transform: [{ translateY: layer1Anim }],
+                        }}
+                      >
+                        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                          <Polygon
+                            points="12 2 2 7 12 12 22 7 12 2"
+                            stroke="#CBD5E1"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </Svg>
+                      </Animated.View>
+
+                      {/* Layer 2 (Middle chevron) */}
+                      <Animated.View
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          transform: [{ translateY: layer2Anim }],
+                        }}
+                      >
+                        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                          <Polyline
+                            points="2 12 12 17 22 12"
+                            stroke="#CBD5E1"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </Svg>
+                      </Animated.View>
+
+                      {/* Layer 3 (Bottom chevron) */}
+                      <Animated.View
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          transform: [{ translateY: layer3Anim }],
+                        }}
+                      >
+                        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                          <Polyline
+                            points="2 17 12 22 22 17"
+                            stroke="#CBD5E1"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </Svg>
+                      </Animated.View>
+                    </View>
+
                     <Text className="text-white text-sm font-black ml-2">
                       {membership.availableCredits ?? 20} Credits
                     </Text>
-                  </View>
+                  </TouchableOpacity>
 
                   <View className="w-[1px] h-7 bg-zinc-700/60 mx-2" />
 
