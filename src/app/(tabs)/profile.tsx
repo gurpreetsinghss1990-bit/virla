@@ -206,6 +206,22 @@ export default function ProfileScreen() {
     });
   }, [layer1Anim, layer2Anim, layer3Anim]);
 
+  // View Wallet Underline swipe animation (left to right rapid stroke on press, then navigate)
+  const walletUnderlineAnim = useMemo(() => new Animated.Value(0), []);
+  const handleViewWalletPress = useCallback(() => {
+    walletUnderlineAnim.setValue(0);
+    Animated.timing(walletUnderlineAnim, {
+      toValue: 1,
+      duration: 180,
+      useNativeDriver: false,
+    }).start(() => {
+      router.push('/wallet' as any);
+      setTimeout(() => {
+        walletUnderlineAnim.setValue(0);
+      }, 500);
+    });
+  }, [walletUnderlineAnim, router]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       triggerSparkleAnimation();
@@ -898,11 +914,27 @@ export default function ProfileScreen() {
                     </Text>
                     <TouchableOpacity
                       activeOpacity={0.7}
-                      onPress={() => router.push('/wallet' as any)}
-                      className="flex-row items-center gap-1 mt-1.5 py-0.5"
+                      onPress={handleViewWalletPress}
+                      className="mt-1.5 py-0.5"
                     >
-                      <Text className="text-[#2DD4BF] text-xs font-black">View Wallet</Text>
-                      <Feather name="arrow-right" size={11} color="#2DD4BF" />
+                      <View className="flex-row items-center gap-1">
+                        <Text className="text-[#2DD4BF] text-xs font-black">View Wallet</Text>
+                        <Feather name="arrow-right" size={11} color="#2DD4BF" />
+                      </View>
+                      {/* Rapid Left-to-Right Green Underline */}
+                      <View style={{ height: 2, marginTop: 2, overflow: 'hidden', width: '100%' }}>
+                        <Animated.View
+                          style={{
+                            height: 2,
+                            backgroundColor: '#2DD4BF',
+                            borderRadius: 1,
+                            width: walletUnderlineAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: ['0%', '100%'],
+                            }),
+                          }}
+                        />
+                      </View>
                     </TouchableOpacity>
                   </View>
                 </View>
