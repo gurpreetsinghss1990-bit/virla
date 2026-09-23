@@ -37,7 +37,7 @@ export default function HealthProfileScreen() {
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: '#FCF5F5', paddingTop: insets.top }}>
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
         <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">

@@ -116,6 +116,7 @@ export default function BookingsScreen() {
   const { role, user } = useUserStore();
   const [prevRole, setPrevRole] = useState(role);
   const [activeFilter, setActiveFilter] = useState<FilterType>(role === 'trainer' ? 'today' : 'upcoming');
+  const [cancelledDateFilter, setCancelledDateFilter] = useState<'all' | 'today' | 'yesterday' | 'older'>('all');
   const [loading, setLoading] = useState(true);
 
   // Trainer States
@@ -393,7 +394,28 @@ export default function BookingsScreen() {
       return b.status === 'upcoming' && getBookingISTDateRange(b).start.getTime() > serverNow.getTime();
     }
     if (activeFilter === 'cancelled') {
-      return b.status === 'cancelled' || b.status === 'client_no_show' || b.status === 'trainer_no_show' || b.status === 'missed_session_not_started';
+      const isCancelledOrMissed = b.status === 'cancelled' || b.status === 'client_no_show' || b.status === 'trainer_no_show' || b.status === 'missed_session_not_started';
+      if (!isCancelledOrMissed) return false;
+
+      if (cancelledDateFilter === 'all') return true;
+
+      const bDateStr = normalizeDate(getBookingDateObj(b.date));
+      const now = getCurrentServerTime();
+      const todayStr = normalizeDate(now);
+      const yesterdayDate = new Date(now);
+      yesterdayDate.setDate(now.getDate() - 1);
+      const yesterdayStr = normalizeDate(yesterdayDate);
+
+      if (cancelledDateFilter === 'today') {
+        return bDateStr === todayStr;
+      }
+      if (cancelledDateFilter === 'yesterday') {
+        return bDateStr === yesterdayStr;
+      }
+      if (cancelledDateFilter === 'older') {
+        return bDateStr !== todayStr && bDateStr !== yesterdayStr;
+      }
+      return true;
     }
     return b.status === activeFilter;
   });
@@ -427,7 +449,7 @@ export default function BookingsScreen() {
         ) : (
           <ScrollView 
             showsVerticalScrollIndicator={false} 
-            className="flex-1 bg-[#F7F8FC]"
+            className="flex-1 bg-[#FCF5F5]"
             contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 180 }}
           >
             {/* Page Header */}
@@ -957,6 +979,7 @@ export default function BookingsScreen() {
                           const daySessions = historyGroups[dateKey];
                           const completedCount = daySessions.filter(s => s.status === 'completed').length;
                           const cancelledCount = daySessions.filter(s => s.status === 'cancelled').length;
+                          const missedCount = daySessions.filter(s => s.status === 'client_no_show' || s.status === 'trainer_no_show' || s.status === 'missed_session_not_started').length;
                           
                           const d = new Date(dateKey);
                           const formattedDate = formatToDDMMYYYY(d);
@@ -968,27 +991,43 @@ export default function BookingsScreen() {
                                 <Text className="text-zinc-500 text-[10px] font-bold uppercase">
                                   {completedCount} completed {completedCount === 1 ? 'session' : 'sessions'}
                                   {cancelledCount > 0 && ` · ${cancelledCount} cancelled`}
+                                  {missedCount > 0 && ` · ${missedCount} missed`}
                                 </Text>
                               </View>
                               <View className="gap-2.5 mt-1">
-                                {daySessions.map(b => (
-                                  <TouchableOpacity
-                                    key={b.id}
-                                    activeOpacity={0.8}
-                                    onPress={() => router.push({ pathname: '/session-detail', params: { id: b.id } })}
-                                    className="flex-row justify-between items-center py-1"
-                                  >
-                                    <View>
-                                      <Text className="text-zinc-900 text-xs font-semibold">{b.workoutTitle}</Text>
-                                      <Text className="text-zinc-450 text-[9px] font-bold mt-0.5">{b.time} · {b.clientName || 'Client'}</Text>
-                                    </View>
-                                    <View className={`px-2 py-0.5 rounded-full ${b.status === 'completed' ? 'bg-[#ECFDF5] border border-[#A7F3D0]' : 'bg-[#FEF2F2] border border-[#FEE2E2]'}`}>
-                                      <Text className={`text-[8px] font-black uppercase ${b.status === 'completed' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                        {b.status === 'completed' ? 'Completed' : 'Cancelled'}
-                                      </Text>
-                                    </View>
-                                  </TouchableOpacity>
-                                ))}
+                                {daySessions.map(b => {
+                                  const isMissedSession = b.status === 'client_no_show' || b.status === 'trainer_no_show' || b.status === 'missed_session_not_started';
+                                  return (
+                                    <TouchableOpacity
+                                      key={b.id}
+                                      activeOpacity={0.8}
+                                      onPress={() => router.push({ pathname: '/session-detail', params: { id: b.id } })}
+                                      className="flex-row justify-between items-center py-1"
+                                    >
+                                      <View>
+                                        <Text className="text-zinc-900 text-xs font-semibold">{b.workoutTitle}</Text>
+                                        <Text className="text-zinc-450 text-[9px] font-bold mt-0.5">{b.time} · {b.clientName || 'Client'}</Text>
+                                      </View>
+                                      <View className={`px-2 py-0.5 rounded-full ${
+                                        b.status === 'completed' 
+                                          ? 'bg-[#ECFDF5] border border-[#A7F3D0]' 
+                                          : isMissedSession 
+                                          ? 'bg-amber-50 border border-amber-200' 
+                                          : 'bg-[#FEF2F2] border border-[#FEE2E2]'
+                                      }`}>
+                                        <Text className={`text-[8px] font-black uppercase ${
+                                          b.status === 'completed' 
+                                            ? 'text-emerald-600' 
+                                            : isMissedSession 
+                                            ? 'text-amber-600' 
+                                            : 'text-rose-600'
+                                        }`}>
+                                          {b.status === 'completed' ? 'Completed' : isMissedSession ? 'Missed' : 'Cancelled'}
+                                        </Text>
+                                      </View>
+                                    </TouchableOpacity>
+                                  );
+                                })}
                               </View>
                             </View>
                           );
@@ -1020,7 +1059,7 @@ export default function BookingsScreen() {
       ) : (
         <ScrollView 
           showsVerticalScrollIndicator={false} 
-          className="flex-1 bg-[#F7F8FC]"
+          className="flex-1 bg-[#FCF5F5]"
           contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 180 }}
         >
         {/* Page Header */}
@@ -1037,14 +1076,17 @@ export default function BookingsScreen() {
         </View>
 
         {/* Filter Capsule Selector Tabs */}
-        <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1.5 rounded-2xl mb-6">
+        <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1.5 rounded-2xl mb-4">
           {filterOptions.map((opt) => {
             const isActive = activeFilter === opt;
             return (
               <TouchableOpacity
                 key={opt}
                 activeOpacity={0.8}
-                onPress={() => setActiveFilter(opt)}
+                onPress={() => {
+                  setActiveFilter(opt);
+                  setCancelledDateFilter('all');
+                }}
                 className={`flex-1 py-3.5 rounded-xl items-center justify-center ${
                   isActive ? 'bg-[#101828]' : ''
                 }`}
@@ -1068,6 +1110,41 @@ export default function BookingsScreen() {
           })}
         </View>
 
+        {/* Date Filter Pills ONLY for Cancelled & Missed tab */}
+        {activeFilter === 'cancelled' && (
+          <View className="flex-row gap-2 mb-5 px-0.5">
+            {(['all', 'today', 'yesterday', 'older'] as const).map((filterKey) => {
+              const isActive = cancelledDateFilter === filterKey;
+              const labels = {
+                all: 'All',
+                today: 'Today',
+                yesterday: 'Yesterday',
+                older: 'Older',
+              };
+              return (
+                <TouchableOpacity
+                  key={filterKey}
+                  activeOpacity={0.8}
+                  onPress={() => setCancelledDateFilter(filterKey)}
+                  className={`px-4 py-2 rounded-full border ${
+                    isActive
+                      ? 'bg-[#101828] border-[#101828]'
+                      : 'bg-white border-zinc-200'
+                  }`}
+                >
+                  <Text
+                    className={`text-xs font-bold ${
+                      isActive ? 'text-white' : 'text-zinc-600'
+                    }`}
+                  >
+                    {labels[filterKey]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
         {/* Bookings Render List */}
         <View>
           {filteredBookings.length > 0 ? (
@@ -1077,11 +1154,25 @@ export default function BookingsScreen() {
           ) : (
             <EmptyState 
               type={activeFilter === 'completed' || activeFilter === 'past' ? 'no-sessions' : 'no-bookings'} 
-              message={
-                activeFilter === 'upcoming' 
-                  ? 'Schedule your next premium at-home training session from the home dashboard.'
-                  : `You do not have any ${activeFilter} visits logged in your profile.`
+              title={
+                activeFilter === 'cancelled' 
+                  ? 'No Cancelled Sessions' 
+                  : activeFilter === 'completed' 
+                    ? 'No Completed Sessions' 
+                    : 'No Upcoming Sessions'
               }
+              showCard={false}
+              message={
+                activeFilter === 'cancelled' && cancelledDateFilter !== 'all'
+                  ? `No cancelled or missed visits found for ${cancelledDateFilter}.`
+                  : activeFilter === 'upcoming' 
+                    ? 'Schedule your next premium at-home training session from the home dashboard.'
+                    : activeFilter === 'cancelled'
+                      ? 'You do not have any cancelled sessions logged in your profile.'
+                      : `You do not have any ${activeFilter} visits logged in your profile.`
+              }
+              actionText={activeFilter === 'cancelled' && cancelledDateFilter !== 'all' ? 'Show All' : undefined}
+              onAction={activeFilter === 'cancelled' && cancelledDateFilter !== 'all' ? () => setCancelledDateFilter('all') : undefined}
             />
           )}
         </View>
@@ -1094,7 +1185,7 @@ export default function BookingsScreen() {
 function SafeAreaViewWrapper({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: '#FCF5F5', paddingTop: insets.top }}>
       {children}
     </View>
   );

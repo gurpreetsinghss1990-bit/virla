@@ -8,6 +8,7 @@ export default function TabsLayout() {
       tabBar={(props) => <BottomNavigation {...props} />}
       screenOptions={{
         headerShown: false,
+        sceneStyle: { backgroundColor: '#FCF5F5' },
       }}
     >
       <Tabs.Screen name="index" />

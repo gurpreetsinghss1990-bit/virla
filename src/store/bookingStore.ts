@@ -47,6 +47,9 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     if (!target) {
       throw new Error('Booking not found in local store');
     }
+    if (target.status === 'cancelled') {
+      return;
+    }
     if (target.status !== 'upcoming') {
       throw new Error(`Cannot cancel session with status: ${target.status}`);
     }

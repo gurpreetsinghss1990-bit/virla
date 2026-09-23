@@ -29,7 +29,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+    <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
       <ScreenHeader title="System Settings" category="VIRLA SETTINGS" />
 
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 60 }}>

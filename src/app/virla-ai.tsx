@@ -332,7 +332,7 @@ export default function VirlaAIScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1 }}
     >
-      <View style={{ flex: 1, backgroundColor: '#F8F9FC', paddingTop: insets.top }}>
+      <View style={{ flex: 1, backgroundColor: '#FCF5F5', paddingTop: insets.top }}>
         {/* Header */}
         <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
           {step > 1 && !generatedPlan ? (

@@ -44,8 +44,8 @@ export const SignOutConfirmationModal: React.FC<SignOutConfirmationModalProps> =
         <TouchableWithoutFeedback>
           <View className="w-full max-w-sm bg-white rounded-[28px] p-6 shadow-2xl border border-zinc-100">
             {/* Top Icon Badge */}
-            <View className="w-14 h-14 rounded-2xl bg-red-50 border border-red-100 items-center justify-center self-center mb-4">
-              <Feather name="log-out" size={24} color="#DC2626" style={{ marginLeft: 2 }} />
+            <View className="w-14 h-14 items-center justify-center self-center mb-4">
+              <Feather name="log-out" size={24} color="#DC2626" style={{ marginLeft: 2, transform: [{ rotate: '-90deg' }] }} />
             </View>
 
             {/* Title & Description */}

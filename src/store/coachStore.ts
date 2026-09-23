@@ -63,9 +63,13 @@ export const generateMonthlySlots = (
     const endLimit = new Date(year, month, day, options.endHour, 0);
     
     let slotIndex = 1;
-    while (true) {
+    let safetyCounter = 0;
+    while (safetyCounter++ < 50) {
+      if (isNaN(current.getTime()) || isNaN(endLimit.getTime())) {
+        break;
+      }
       const slotEnd = new Date(current.getTime() + options.durationMinutes * 60 * 1000);
-      if (slotEnd.getTime() > endLimit.getTime()) {
+      if (isNaN(slotEnd.getTime()) || slotEnd.getTime() > endLimit.getTime() || current.getTime() >= slotEnd.getTime()) {
         break;
       }
       

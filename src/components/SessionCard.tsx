@@ -20,9 +20,13 @@ export function SessionCard({ booking }: SessionCardProps) {
         {
           text: 'Cancel Session',
           style: 'destructive',
-          onPress: () => {
-            cancelSession(booking.id);
-            Alert.alert('Session Cancelled', 'Your home session has been successfully cancelled.');
+          onPress: async () => {
+            try {
+              await cancelSession(booking.id);
+              Alert.alert('Session Cancelled', 'Your home session has been successfully cancelled.');
+            } catch (err: any) {
+              Alert.alert('Notice', err?.message || 'Could not cancel this session.');
+            }
           },
         },
       ]

@@ -8,6 +8,7 @@
     "scheme": "virla",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "supportsTablet": true,
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.varshaniviral.Virla",
       "buildNumber": "81",
@@ -23,6 +24,9 @@
         "NSFaceIDUsageDescription": "Allow Virla to use Face ID to authenticate you securely.",
         "UIBackgroundModes": [
           "location"
+        ],
+        "LSApplicationQueriesSchemes": [
+          "whatsapp"
         ]
       }
     },

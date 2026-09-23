@@ -30,3 +30,4 @@ export * from './TrainerStatusModal';
 export * from './SignOutConfirmationModal';
 export * from './LegalWebViewModal';
 export * from './ScreenHeader';
+export * from './ConfirmationDialog';

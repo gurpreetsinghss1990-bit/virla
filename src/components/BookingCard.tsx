@@ -9,6 +9,7 @@ import { Feather } from '@expo/vector-icons';
 import { useUserStore } from '../store/userStore';
 import { SessionEngine } from '../services/SessionEngine';
 import { AddPartnerModal } from './AddPartnerModal';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
 import { getDisplayWorkoutTitle, getBookingISTDateRange, formatToDDMMYYYY } from '../utils/date';
 
@@ -18,6 +19,7 @@ interface BookingCardProps {
 
 export function BookingCard({ booking }: BookingCardProps) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { cancelSession, rescheduleSession } = useBookingStore();
   const { role } = useUserStore();
   const [showPartnerModal, setShowPartnerModal] = useState(false);
@@ -272,6 +274,68 @@ export function BookingCard({ booking }: BookingCardProps) {
   const isUpcoming = booking.status === 'upcoming';
   const isTrainer = role === 'trainer';
   const isAccepted = booking.timelineStatus !== 'booked' && booking.timelineStatus !== 'trainer_assigned';
+  const isCancelled = booking.status === 'cancelled' || booking.status === 'client_no_show' || booking.status === 'trainer_no_show' || booking.status === 'missed_session_not_started';
+
+  if (isCancelled) {
+    return (
+      <View className="py-4 mb-3 border-b border-zinc-200/80">
+        {/* Top Section: Workout Title, Type & Status Badge */}
+        <View className="flex-row items-start justify-between">
+          <View className="flex-1 pr-2">
+            <Text className="text-[#101828] text-lg font-black tracking-tight">
+              {getDisplayWorkoutTitle(booking.workoutTitle)}
+            </Text>
+            <Text className="text-[#6B7280] text-xs font-semibold mt-1">
+              {booking.sessionType === 'COUPLE' ? 'Couple' : 'Solo'}
+              {isTrainer 
+                ? (booking.clientName ? ` • Client: ${booking.clientName}` : '') 
+                : (booking.trainerName ? ` • Coach ${booking.trainerName}` : '')}
+              {` • 60 mins`}
+            </Text>
+          </View>
+          <BookingStatusBadge status={booking.status} />
+        </View>
+
+        {/* Location address row for trainers */}
+        {isTrainer && !!booking.address && (
+          <View className="bg-zinc-100/70 px-3.5 py-2 rounded-xl mt-3 flex-row items-center gap-2">
+            <Feather name="map-pin" size={11} color="#6B7280" />
+            <Text className="text-zinc-600 text-[10px] font-semibold flex-1 leading-snug">
+              {booking.address}
+            </Text>
+          </View>
+        )}
+
+        {/* Bottom Row: Date, Time & View Details in ONE LINE */}
+        <View className="flex-row items-center justify-between mt-3 pt-1">
+          <View className="flex-row items-center gap-3 flex-shrink">
+            <View className="flex-row items-center gap-1.5">
+              <Feather name="calendar" size={12} color="#6B7280" />
+              <Text className="text-zinc-600 text-xs font-semibold">
+                {formatToDDMMYYYY(booking.date)}
+              </Text>
+            </View>
+            <View className="flex-row items-center gap-1.5">
+              <Feather name="clock" size={12} color="#6B7280" />
+              <Text className="text-zinc-600 text-xs font-semibold">
+                {booking.time}
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={handleViewDetails}
+            className="px-4 py-1.5 rounded-full items-center justify-center bg-[#101828]"
+          >
+            <Text className="text-white text-[11px] font-black uppercase tracking-wider">
+              View Details
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <LuxuryCard className="p-5 mb-4" interactive={false}>
@@ -508,7 +572,13 @@ export function BookingCard({ booking }: BookingCardProps) {
         animationType="slide"
         presentationStyle="fullScreen"
       >
-        <View className="flex-1 bg-white justify-between px-6 py-12">
+        <View 
+          className="flex-1 bg-white justify-between px-6"
+          style={{
+            paddingTop: Math.max(insets.top + 20, 36),
+            paddingBottom: Math.max(insets.bottom + 28, 56),
+          }}
+        >
           {/* Top content */}
           <View className="items-center justify-center flex-1 gap-6">
             <View className="w-20 h-20 rounded-full bg-rose-50 border border-rose-100 items-center justify-center">
@@ -561,7 +631,13 @@ export function BookingCard({ booking }: BookingCardProps) {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowRescheduleModal(false)}
       >
-        <View className="flex-1 bg-white justify-between px-6 py-8">
+        <View 
+          className="flex-1 bg-white justify-between px-6"
+          style={{
+            paddingTop: Math.max(insets.top + 16, 24),
+            paddingBottom: Math.max(insets.bottom + 20, 32),
+          }}
+        >
           <View className="flex-1 gap-5">
             {/* Header */}
             <View className="flex-row justify-between items-center pb-4 border-b border-zinc-100">

@@ -66,7 +66,7 @@ export default function PrivacySecurityScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+    <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
       <ScreenHeader title="Privacy & Security" category="VIRLA SECURITY" />
 
       <KeyboardAvoidingView
