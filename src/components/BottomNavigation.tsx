@@ -26,6 +26,13 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
   const visibleRoutes = state.routes.filter((route: any) => route.name !== 'messages');
   const isTrainer = role === 'trainer';
 
+  const hasTabUnread = (routeName: string) => {
+    if (routeName === 'messages') {
+      return unreadCount > 0;
+    }
+    return false;
+  };
+
   const getIcon = (routeName: string, isFocused: boolean) => {
     let iconName: any = isFocused ? 'home' : 'home-outline';
     switch (routeName) {
@@ -81,7 +88,7 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
         }
       ]}
     >
-
+      <View style={styles.navContainer}>
         {visibleRoutes.map((route: any, index: number) => {
           const isFocused = state.routes[state.index]?.name === route.name;
 
@@ -182,6 +189,22 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 6,
     position: 'relative',
+  },
+  redDot: {
+    position: 'absolute',
+    top: 1,
+    right: 3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#E11D48',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    shadowColor: '#E11D48',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.45,
+    shadowRadius: 2,
+    elevation: 3,
   },
 });
 

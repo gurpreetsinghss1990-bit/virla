@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, InteractionManager, BackHandler } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, InteractionManager, BackHandler, Modal } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
@@ -597,6 +597,7 @@ export default function ProfileScreen() {
               {/* Top Bar Header */}
               <View className="flex-row items-center justify-between mb-5 z-10">
                 <Text className="text-[#101828] text-3xl font-black tracking-tight">Profile</Text>
+                {/* Settings button commented out
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => router.push('/settings' as any)}
@@ -604,6 +605,7 @@ export default function ProfileScreen() {
                 >
                   <Ionicons name="settings-outline" size={20} color="#101828" />
                 </TouchableOpacity>
+                */}
               </View>
 
               {/* User Hero Section */}

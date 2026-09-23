@@ -230,8 +230,8 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
       {/* Hero Confirmation: Concentric Mint Emerald Ripple Rings */}
       <Animated.View
         style={{
-          transform: [{ scale: successScaleAnim }],
-          opacity: successOpacityAnim,
+          transform: [{ scale: heroScaleAnim }],
+          opacity: heroOpacityAnim,
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
@@ -303,7 +303,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
             </View>
           </View>
         </Animated.View>
-      </View>
+      </Animated.View>
 
       {/* 2. HERO TITLE & TYPOGRAPHY HEADER */}
       <Animated.View
@@ -532,17 +532,6 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
                     Venue Address
                   </Text>
                 </View>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => openExternalMap(effectiveAddress)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  className="flex-row items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-rose-50 border-rose-100"
-                >
-                  <Text className="text-[#E11D48] text-[11px] font-black uppercase tracking-wider">
-                    View Map
-                  </Text>
-                  <Feather name="external-link" size={11} color="#E11D48" />
-                </TouchableOpacity>
               </View>
               <Text className="text-slate-800 text-xs font-bold leading-5 pl-11">
                 {effectiveAddress}

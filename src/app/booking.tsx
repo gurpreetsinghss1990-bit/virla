@@ -4044,3 +4044,66 @@ export default function BookingScreen() {
     </View>
   );
 }
+
+const expCardStyles = StyleSheet.create({
+  card: {
+    padding: 16,
+  },
+  cardSelected: {
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
+  },
+  cardUnselected: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#F1F5F9',
+  },
+  titleSelected: {
+    color: '#FFFFFF',
+  },
+  titleUnselected: {
+    color: '#0F172A',
+  },
+  badgeSelected: {
+    backgroundColor: 'rgba(225, 29, 72, 0.2)',
+    borderColor: 'rgba(225, 29, 72, 0.4)',
+  },
+  badgeUnselected: {
+    backgroundColor: '#FFF1F2',
+    borderColor: '#FFE4E6',
+  },
+  badgeTextSelected: {
+    color: '#FB7185',
+  },
+  badgeTextUnselected: {
+    color: '#E11D48',
+  },
+  descSelected: {
+    color: '#94A3B8',
+  },
+  descUnselected: {
+    color: '#64748B',
+  },
+});
+
+const prefCardStyles = StyleSheet.create({
+  cardSelected: {
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
+  },
+  cardUnselected: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#F1F5F9',
+  },
+  labelSelected: {
+    color: '#FFFFFF',
+  },
+  labelUnselected: {
+    color: '#0F172A',
+  },
+  descSelected: {
+    color: '#94A3B8',
+  },
+  descUnselected: {
+    color: '#64748B',
+  },
+});

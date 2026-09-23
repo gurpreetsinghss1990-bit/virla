@@ -420,6 +420,7 @@ export default function WalletScreen() {
             <Text className="text-zinc-950 text-lg font-black tracking-tight">Credit Wallet</Text>
           </View>
 
+          {/* Invoices button commented out
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => router.push('/payment-history' as any)}
@@ -428,6 +429,7 @@ export default function WalletScreen() {
             <Feather name="file-text" size={13} color="#E11D48" />
             <Text className="text-[#101828] text-xs font-bold">Invoices</Text>
           </TouchableOpacity>
+          */}
         </View>
       </View>
 
