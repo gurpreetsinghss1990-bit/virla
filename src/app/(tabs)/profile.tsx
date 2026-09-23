@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, InteractionManager, BackHandler, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, InteractionManager, BackHandler, Modal, LayoutAnimation, UIManager } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
@@ -216,6 +216,27 @@ export default function ProfileScreen() {
   // Client Profile Edit local states
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isPersonalInfoExpanded, setIsPersonalInfoExpanded] = useState(false);
+
+  const togglePersonalInfoExpansion = useCallback((targetState?: boolean) => {
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+    LayoutAnimation.configureNext({
+      duration: 260,
+      create: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+      update: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+      },
+      delete: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+    });
+    setIsPersonalInfoExpanded(prev => (typeof targetState === 'boolean' ? targetState : !prev));
+  }, []);
   const [editName, setEditName] = useState(profile.name || '');
   const [editMobile, setEditMobile] = useState(profile.mobile || '');
   const [editEmail, setEditEmail] = useState(profile.email || '');
@@ -891,7 +912,7 @@ export default function ProfileScreen() {
               <View className="bg-white border border-[#E5E7EB] rounded-[24px] p-5 shadow-xs mb-4">
                 <TouchableOpacity
                   activeOpacity={0.7}
-                  onPress={() => setIsPersonalInfoExpanded(!isPersonalInfoExpanded)}
+                  onPress={() => togglePersonalInfoExpansion()}
                   className={`flex-row justify-between items-center ${isPersonalInfoExpanded ? 'mb-2 pb-2.5 border-b border-zinc-100' : ''}`}
                 >
                   <View className="flex-row items-center gap-3 flex-1">
@@ -1076,7 +1097,7 @@ export default function ProfileScreen() {
                     {/* Bottom Collapse Toggle */}
                     <TouchableOpacity
                       activeOpacity={0.7}
-                      onPress={() => setIsPersonalInfoExpanded(false)}
+                      onPress={() => togglePersonalInfoExpansion(false)}
                       className="flex-row items-center justify-center gap-2 py-2.5 mt-2 border-t border-zinc-100"
                     >
                       <Feather name="chevron-up" size={15} color="#4F46E5" />
