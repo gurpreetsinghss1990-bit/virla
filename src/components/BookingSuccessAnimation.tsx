@@ -249,25 +249,11 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
             style={{ backgroundColor: 'rgba(0, 195, 137, 0.25)' }}
           >
             {/* Core checkmark circle */}
-            <View 
-              className="w-12 h-12 rounded-full bg-[#00C389] items-center justify-center"
-              style={{
-                position: 'absolute',
-                width: p.size,
-                height: p.size,
-                borderRadius: p.shape === 'circle' ? p.size / 2 : 2,
-                backgroundColor: p.color,
-                transform: [
-                  { translateX: pTx },
-                  { translateY: pTy },
-                  { scale: pScale },
-                  { rotate: pRot },
-                ],
-                opacity: pOpacity,
-              }}
-            />
-          );
-        })}
+            <View className="w-12 h-12 rounded-full bg-[#00C389] items-center justify-center">
+              <Feather name="check" size={26} color="white" />
+            </View>
+          </View>
+        </View>
 
         {/* Breathing Outer Emerald Ring */}
         <Animated.View
