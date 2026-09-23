@@ -8,6 +8,7 @@
     "scheme": "virla",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "supportsTablet": true,
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.varshaniviral.Virla",
       "buildNumber": "81",

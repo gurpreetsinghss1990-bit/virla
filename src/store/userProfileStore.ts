@@ -118,6 +118,7 @@ interface UserProfileState {
   updateCoreProfile: (fields: Partial<Omit<UserProfileState, 'addresses' | 'emergencyContacts' | 'healthProfile' | 'notifications' | 'privacy' | 'settings'>>) => Promise<void>;
   updateHealthProfile: (fields: Partial<HealthProfile>) => void;
   toggleGoal: (goal: string) => void;
+  setGoals: (goals: string[]) => Promise<void>;
   
   // Address CRUD
   addAddress: (address: Omit<SavedAddress, 'id'>) => void;
@@ -137,6 +138,10 @@ interface UserProfileState {
   updateGeneralSettings: (fields: Partial<GeneralSettings>) => void;
   syncFromDB: () => void;
 }
+
+// ponytail: debounce timer for goal persist — per-tap network + full syncFromDB was freezing the UI
+let goalSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingGoals: string[] | null = null;
 
 export const useUserProfileStore = create<UserProfileState>((set, get) => ({
   avatar: '',
@@ -258,14 +263,27 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
   },
   
   toggleGoal: (goal) => {
+    console.log('[DEBUG-GOALS] 1. toggleGoal called with goal:', goal);
+    const currentGoals = Array.isArray(get().selectedGoals) ? get().selectedGoals : [];
+    console.log('[DEBUG-GOALS] 2. currentGoals before:', currentGoals);
+    const updated = currentGoals.includes(goal)
+      ? currentGoals.filter(g => g !== goal)
+      : [...currentGoals, goal];
+    console.log('[DEBUG-GOALS] 3. updating store selectedGoals to:', updated);
+    set({ selectedGoals: updated });
+    console.log('[DEBUG-GOALS] 4. store updated successfully!');
+  },
+
+  setGoals: async (goals: string[]) => {
+    const primaryGoal = goals.length > 0 ? goals[0] : '';
+    set({ selectedGoals: goals, targetGoal: primaryGoal });
     const userId = Database.getCurrentUserId();
     if (userId) {
-      const currentGoals = get().selectedGoals;
-      const updated = currentGoals.includes(goal)
-        ? currentGoals.filter(g => g !== goal)
-        : [...currentGoals, goal];
-      Database.updateProfile(userId, { selectedGoals: updated } as any);
-      get().syncFromDB();
+      try {
+        await Database.updateProfile(userId, { selectedGoals: goals, fitnessGoal: primaryGoal } as any);
+      } catch (e) {
+        console.warn('[ProfileStore] setGoals persist error:', e);
+      }
     }
   },
 
@@ -487,7 +505,7 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
           hoursTrained: Math.round((completedSessions.length * 45) / 60),
           currentStreak: currentStreakVal,
           favoriteTrainer: favoriteTrainerName,
-          selectedGoals: (profile as any).selectedGoals || ['Strength', 'Fitness']
+          selectedGoals: Array.isArray((profile as any).selectedGoals) ? (profile as any).selectedGoals : ['Strength', 'Fitness']
         });
       }
     } else {

@@ -410,9 +410,9 @@ export default function WalletScreen() {
                 router.replace('/(tabs)/profile');
               }
             }}
-            className="w-9 h-9 rounded-full bg-white border border-zinc-200/80 items-center justify-center shadow-2xs z-10"
+            className="w-9 h-9 items-center justify-center z-10"
           >
-            <Ionicons name="chevron-back" size={20} color="#101828" />
+            <Ionicons name="chevron-back" size={24} color="#101828" />
           </TouchableOpacity>
 
           {/* Centered Large Header Title */}
@@ -742,11 +742,11 @@ export default function WalletScreen() {
                       Exp: {activeLots[0] ? formatToDDMMYYYY(activeLots[0].official_expiry_date) : '-'}
                     </Text>
                     <TouchableOpacity
-                      activeOpacity={0.7}
+                      activeOpacity={0.8}
                       onPress={() => router.push('/membership' as any)}
-                      className="mt-1.5"
+                      className="mt-2.5 bg-[#E11D48] px-3.5 py-1.5 rounded-full items-center justify-center shadow-xs"
                     >
-                      <Text className="text-[#E11D48] text-[9px] font-black uppercase underline tracking-wider">EXTEND</Text>
+                      <Text className="text-white text-[10px] font-black uppercase tracking-wider">EXTEND</Text>
                     </TouchableOpacity>
                   </View>
 

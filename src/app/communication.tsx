@@ -11,6 +11,7 @@ import { ScreenHeader, ConfirmationDialog } from '../components';
 
 import { Database } from '../database/Database';
 import { useUserStore } from '../store/userStore';
+import { useChatStore } from '../store/chatStore';
 import { supabase } from '../database/supabaseClient';
 import { getBookingISTDateRange, getDisplayWorkoutTitle } from '../utils/date';
 
@@ -31,6 +32,7 @@ export default function CommunicationScreen() {
   const { bookings, cancelSession } = useBookingStore();
   const { addNotification } = useNotificationStore();
   const { refundCredit } = useWalletStore();
+  const { markAsRead } = useChatStore();
 
   const booking = bookings.find((b) => b.id === bookingId) || bookings[0];
 
@@ -174,12 +176,26 @@ export default function CommunicationScreen() {
       });
       
       setMessages(filtered);
+
+      // Mark messages as read for this session and thread
+      if (filtered.length > 0) {
+        const keysToMark = Array.from(new Set([bookingId, booking?.id, unifiedChatId, ...relatedChatIds].filter(Boolean) as string[]));
+        markAsRead(keysToMark, filtered.map((m) => m.id));
+      }
     };
 
     loadAndFilterMessages();
     const interval = setInterval(loadAndFilterMessages, 1000);
     return () => clearInterval(interval);
-  }, [booking, role, relatedChatIds]);
+  }, [booking, role, relatedChatIds, bookingId, unifiedChatId, markAsRead]);
+
+  useEffect(() => {
+    // Immediate mark as read on entering the screen
+    if (bookingId || booking?.id) {
+      const keysToMark = Array.from(new Set([bookingId, booking?.id, unifiedChatId, ...relatedChatIds].filter(Boolean) as string[]));
+      markAsRead(keysToMark);
+    }
+  }, [bookingId, booking?.id, unifiedChatId, relatedChatIds, markAsRead]);
 
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);

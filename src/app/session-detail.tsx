@@ -7,6 +7,7 @@ import { useBookingStore } from '../store/bookingStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useUserStore } from '../store/userStore';
 import { useUserProfileStore } from '../store/userProfileStore';
+import { useChatStore } from '../store/chatStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { SkeletonLoader } from '../components/SkeletonLoader';
@@ -253,6 +254,18 @@ export default function SessionDetailScreen() {
   const [showCustomerOtpInput, setShowCustomerOtpInput] = useState(false);
   const [customerOtpInput, setCustomerOtpInput] = useState('');
   const [hasDelayedAlertFired, setHasDelayedAlertFired] = useState(false);
+
+  // Automatically mark session and its messages as read when user views this session
+  useEffect(() => {
+    if (booking?.id) {
+      const trainerKey = (booking.trainerName || booking.trainerId || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const clientKey = (booking.clientName || booking.clientId || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
+      useChatStore.getState().markSessionAsRead(booking.id, [
+        `chat-coach-${trainerKey}`,
+        `chat-client-${clientKey}`,
+      ]);
+    }
+  }, [booking?.id, booking?.trainerName, booking?.clientName]);
 
   useEffect(() => {
     if (!booking) return;
@@ -696,6 +709,9 @@ export default function SessionDetailScreen() {
   };
 
   const handleMessage = () => {
+    if (booking?.id) {
+      useChatStore.getState().markAsRead([booking.id]);
+    }
     router.push({
       pathname: '/communication' as any,
       params: { id: booking.id }

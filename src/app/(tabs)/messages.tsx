@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBookingStore } from '../../store/bookingStore';
 import { useUserStore } from '../../store/userStore';
+import { useChatStore } from '../../store/chatStore';
 import { Database } from '../../database/Database';
 import { EmptyState } from '../../components/EmptyState';
 import { getBookingISTDateRange } from '../../utils/date';
@@ -175,7 +176,8 @@ export default function MessagesScreen() {
         } catch {}
       }
 
-      const hasUnread = sortedBookings.some((b) => b.status === 'upcoming') && allMsgs.length > 0;
+      const chatStore = useChatStore.getState();
+      const hasUnread = chatStore.hasUnreadForKeys(relatedIds, allMsgs, role);
       // ponytail: green dot only when this person's session is actually live, not merely upcoming.
       const isOnline = primaryBooking.status === 'upcoming' && getMinutesToSession(primaryBooking) <= 60;
 
@@ -199,6 +201,7 @@ export default function MessagesScreen() {
 
     // Fallback coach chats ONLY if no active coach bookings exist at all
     if (coachChats.length === 0) {
+      const isMock1Read = useChatStore.getState().isMessageRead('mock-1', ['mock-1', 'chat-c-1']);
       list.push(
         {
           id: 'mock-1',
@@ -207,7 +210,7 @@ export default function MessagesScreen() {
           avatar: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=200&q=80',
           lastMessage: "I'll be bringing the resistance bands today. See you at 10 AM!",
           time: '',
-          unread: true,
+          unread: !isMock1Read,
           isOnline: false,
           type: 'coach',
         },
@@ -297,10 +300,14 @@ export default function MessagesScreen() {
               <TouchableOpacity
                 key={chat.id}
                 activeOpacity={0.7}
-                onPress={() => router.push({
-                  pathname: '/communication' as any,
-                  params: { id: chat.bookingId || chat.id, name: chat.name }
-                })}
+                onPress={() => {
+                  const targetId = chat.bookingId || chat.id;
+                  useChatStore.getState().markAsRead([targetId, chat.id]);
+                  router.push({
+                    pathname: '/communication' as any,
+                    params: { id: targetId, name: chat.name }
+                  });
+                }}
                 className="py-3.5 px-3 rounded-2xl flex-row items-center gap-3.5 active:bg-zinc-50"
               >
                 {/* Avatar with Online indicator */}
