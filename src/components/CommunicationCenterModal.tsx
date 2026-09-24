@@ -87,106 +87,105 @@ export const CommunicationCenterModal: React.FC<CommunicationCenterModalProps> =
         <View style={{ flex: 1, justifyContent: 'flex-end' }} pointerEvents="box-none">
           <View
             style={{ paddingBottom: safeBottomPadding }}
-            className="bg-white rounded-t-[36px] px-6 pt-3 gap-5 shadow-2xl border-t border-rose-100"
+            className="bg-white rounded-t-[32px] px-6 pt-3.5 gap-4 shadow-2xl"
           >
             {/* Subtle Pull Indicator Bar */}
-            <View className="w-12 h-1.5 rounded-full bg-zinc-200 self-center mb-1" />
+            <View className="w-10 h-1.5 rounded-full bg-zinc-200 self-center mb-1" />
 
             {/* Modal Header */}
-            <View className="flex-row justify-between items-center pb-3 border-b border-zinc-100">
-            <View>
-              <Text className="text-[#E11D48] text-[10px] font-black uppercase tracking-widest">
-                Communication Hub
-              </Text>
-              <Text className="text-zinc-950 text-xl font-black mt-0.5">
+            <View className="flex-row items-center pb-3 border-b border-zinc-100">
+              <View className="w-8" />
+              <Text className="flex-1 text-zinc-900 text-lg font-bold tracking-tight text-center">
                 Notifications & Messages
               </Text>
+              <TouchableOpacity
+                onPress={handleDismiss}
+                activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center"
+              >
+                <Feather name="x" size={16} color="#64748B" />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              onPress={handleDismiss}
-              activeOpacity={0.7}
-              className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center border border-zinc-200"
-            >
-              <Feather name="x" size={15} color="#101828" />
-            </TouchableOpacity>
-          </View>
 
           {/* Options Destination List */}
-          <View className="gap-3">
+          <View className="gap-1">
             {/* Notifications Center Option */}
             <TouchableOpacity
-              activeOpacity={0.75}
+              activeOpacity={0.7}
               onPress={onSelectNotifications}
-              className="flex-row items-center p-4 bg-zinc-50 border border-zinc-200 rounded-2xl active:bg-rose-50/50"
+              className="flex-row items-center py-3.5 px-3 rounded-2xl active:bg-zinc-100/70"
             >
-              <View className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 items-center justify-center">
+              <View className="w-10 h-10 items-center justify-center">
                 <Feather name="bell" size={22} color="#E11D48" />
               </View>
 
-              <View className="flex-1 ml-3.5 mr-2">
-                <View className="flex-row items-center gap-2">
-                  <Text className="text-zinc-950 text-sm font-black">
+              <View className="flex-1 ml-3 mr-2">
+                <View className="flex-row items-center gap-2 flex-wrap">
+                  <Text className="text-zinc-900 text-sm font-semibold">
                     Notifications Center
                   </Text>
                   {unreadCount > 0 ? (
                     <View className="bg-[#E11D48] px-2 py-0.5 rounded-full">
-                      <Text className="text-white text-[9px] font-black tracking-wider uppercase">
-                        {unreadCount} New
+                      <Text numberOfLines={1} className="text-white text-[9px] font-bold uppercase tracking-wide">
+                        {unreadCount > 99 ? '99+' : unreadCount} New
                       </Text>
                     </View>
                   ) : (
                     <View className="bg-zinc-200 px-2 py-0.5 rounded-full">
-                      <Text className="text-zinc-600 text-[8px] font-extrabold tracking-wider uppercase">
+                      <Text className="text-zinc-600 text-[9px] font-bold uppercase tracking-wide">
                         All Caught Up
                       </Text>
                     </View>
                   )}
                 </View>
-                <Text className="text-zinc-500 text-xs font-medium mt-0.5" numberOfLines={1}>
+                <Text className="text-zinc-500 text-xs font-normal mt-1 leading-4">
                   Session updates, schedule alerts & announcements
                 </Text>
               </View>
 
-              <Feather name="chevron-right" size={18} color="#9CA3AF" />
+              <Feather name="chevron-right" size={20} color="#CBD5E1" />
             </TouchableOpacity>
+
+            <View className="h-[1px] bg-zinc-100 mx-2 my-0.5" />
 
             {/* Messages (Chats) Option */}
             <TouchableOpacity
-              activeOpacity={0.75}
+              activeOpacity={0.7}
               onPress={onSelectMessages}
-              className="flex-row items-center p-4 bg-zinc-50 border border-zinc-200 rounded-2xl active:bg-sky-50/50"
+              className="flex-row items-center py-3.5 px-3 rounded-2xl active:bg-zinc-100/70"
             >
-              <View className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-100 items-center justify-center">
-                <Feather name="message-square" size={20} color="#0284C7" />
+              <View className="w-10 h-10 items-center justify-center">
+                <Feather name="message-square" size={21} color="#0284C7" />
               </View>
 
-              <View className="flex-1 ml-3.5 mr-2">
-                <View className="flex-row items-center gap-2">
-                  <Text className="text-zinc-950 text-sm font-black">
+              <View className="flex-1 ml-3 mr-2">
+                <View className="flex-row items-center gap-2 flex-wrap">
+                  <Text className="text-zinc-900 text-sm font-semibold">
                     Messages (Chats)
                   </Text>
-                  <View className="bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-full">
-                    <Text className="text-sky-700 text-[8px] font-extrabold tracking-wider uppercase">
+                  <View className="bg-sky-100 px-2 py-0.5 rounded-full">
+                    <Text className="text-sky-800 text-[9px] font-bold uppercase tracking-wide">
                       Direct Chat
                     </Text>
                   </View>
                 </View>
-                <Text className="text-zinc-500 text-xs font-medium mt-0.5" numberOfLines={1}>
+                <Text className="text-zinc-500 text-xs font-normal mt-1 leading-4">
                   Direct line with your coaches & VIRLA concierge
                 </Text>
               </View>
 
-              <Feather name="chevron-right" size={18} color="#9CA3AF" />
+              <Feather name="chevron-right" size={20} color="#CBD5E1" />
             </TouchableOpacity>
           </View>
 
           {/* Dismiss Button */}
           <TouchableOpacity
-            activeOpacity={0.8}
+            activeOpacity={0.7}
             onPress={handleDismiss}
-            className="w-full py-3.5 bg-zinc-100 rounded-2xl items-center justify-center mt-1 border border-zinc-200"
+            className="w-full py-4 px-4 bg-zinc-100 rounded-2xl items-center justify-center mt-3 mb-1 active:bg-zinc-200"
           >
-            <Text className="text-zinc-700 text-xs font-black uppercase tracking-wider">
+            <Text className="text-zinc-800 text-sm font-semibold text-center">
               Cancel
             </Text>
           </TouchableOpacity>

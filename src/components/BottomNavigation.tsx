@@ -1,7 +1,7 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Database } from '../database/Database';
@@ -13,6 +13,16 @@ import { useChatStore } from '../store/chatStore';
 export function BottomNavigation({ state, descriptors, navigation }: any) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const isTabPressingRef = useRef(false);
+
+  const handlePlusPress = useCallback(() => {
+    if (isTabPressingRef.current) return;
+    isTabPressingRef.current = true;
+    router.push('/booking' as any);
+    setTimeout(() => {
+      isTabPressingRef.current = false;
+    }, 500);
+  }, [router]);
   const { role } = useUserStore();
   const { unreadCount, notifications } = useNotificationStore();
   const { bookings } = useBookingStore();
@@ -93,6 +103,12 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
           const isFocused = state.routes[state.index]?.name === route.name;
 
           const onPress = () => {
+            if (isTabPressingRef.current) return;
+            isTabPressingRef.current = true;
+            setTimeout(() => {
+              isTabPressingRef.current = false;
+            }, 500);
+
             const event = navigation.emit({
               type: 'tabPress',
               target: route.key,
@@ -140,7 +156,7 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
                 <View className="items-center justify-center flex-1 py-1 z-20 relative" style={{ minHeight: 44 }}>
                   <TouchableOpacity
                     activeOpacity={0.9}
-                    onPress={() => router.push('/booking' as any)}
+                    onPress={handlePlusPress}
                     className="w-12 h-12 rounded-full bg-[#E11D48] items-center justify-center"
                     style={{
                       minHeight: 48,

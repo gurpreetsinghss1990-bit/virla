@@ -4,10 +4,16 @@ import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { LogBox } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PushNotificationService } from '../services/PushNotificationService';
 import { useUserStore } from '../store/userStore';
 import '../global.css';
+
+// Suppress known upstream React Native Fabric / Expo Router useLinking race condition warning
+LogBox.ignoreLogs([
+  "Can't perform a React state update on a component that hasn't mounted yet",
+]);
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();

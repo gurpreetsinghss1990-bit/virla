@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Alert, Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet, AppState, AppStateStatus, Vibration, Linking } from 'react-native';
 import Svg, { Rect, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -296,6 +296,17 @@ const getWorkoutEmoji = (title: string) => {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const isNavigatingRef = useRef(false);
+
+  const navigateSafely = useCallback((route: any) => {
+    if (isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
+    router.push(route);
+    setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 700);
+  }, [router]);
+
   const { bookings, acceptBooking, updateTimelineStatus, reassignTrainer } = useBookingStore();
   const { membership } = useMembershipStore();
   const { unreadCount } = useNotificationStore();
@@ -318,7 +329,7 @@ export default function HomeScreen() {
     try {
       const { data, error } = await supabase.from('users').select('role').eq('id', userId).single();
       if (data && data.role === 'admin') {
-        router.push('/admin-panel' as any);
+        navigateSafely('/admin-panel');
       } else {
         Alert.alert('Access Denied', 'You do not have administrative authorization.');
       }
@@ -759,16 +770,20 @@ export default function HomeScreen() {
     };
   }, []);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Database.getIsLoaded() ? false : true);
 
   useEffect(() => {
+    let isMounted = true;
     const syncData = async () => {
       // 1. Wait for Zustand store hydration
       if (!useUserStore.persist.hasHydrated()) {
-        const unsub = useUserStore.persist.onHydrate(() => {
+        const unsub = useUserStore.persist.onFinishHydration(() => {
           unsub();
-          syncData();
+          if (isMounted) syncData();
         });
+        setTimeout(() => {
+          if (isMounted) syncData();
+        }, 300);
         return;
       }
 
@@ -779,7 +794,9 @@ export default function HomeScreen() {
       }
 
       try {
-        setLoading(true);
+        if (!Database.getIsLoaded()) {
+          setLoading(true);
+        }
         // Force reload database with the authenticated user context
         await Database.reload();
 
@@ -794,10 +811,15 @@ export default function HomeScreen() {
       } catch (e) {
         console.error('Home sync failed:', e);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     syncData();
+    return () => {
+      isMounted = false;
+    };
   }, [bookings.length]);
 
   const upcomingBookings = bookings
@@ -947,7 +969,7 @@ export default function HomeScreen() {
       acceptBooking(bookingId);
       Alert.alert('Job Accepted', 'You accepted this session. Ready to begin travel at the scheduled time!');
     } else {
-      router.push({
+      navigateSafely({
         pathname: '/session-detail' as any,
         params: { id: bookingId },
       });
@@ -1005,22 +1027,22 @@ export default function HomeScreen() {
         </View>
         <View className="flex-row items-center gap-4">
           <TouchableOpacity
-            activeOpacity={0.8}
+            activeOpacity={0.7}
             onPress={handleCommunicationCenter}
-            className="w-11 h-11 rounded-full border border-zinc-200 bg-white items-center justify-center relative"
+            className="w-11 h-11 items-center justify-center relative"
             style={{ minWidth: 44, minHeight: 44 }}
           >
-            <Feather name="bell" size={18} color="#101828" />
+            <Feather name="bell" size={20} color="#101828" />
             {unreadCount > 0 && (
-              <View className="absolute top-2.5 right-2.5 bg-red-500 rounded-full w-4 h-4 justify-center items-center">
-                <Text className="text-white text-[8px] font-bold">{unreadCount}</Text>
+              <View className="absolute top-0 right-0 bg-[#E11D48] rounded-full min-w-[20px] h-[20px] px-1.5 justify-center items-center border border-[#FCF5F5]">
+                <Text numberOfLines={1} className="text-white text-[8px] font-bold text-center leading-none">{unreadCount > 99 ? '99+' : unreadCount}</Text>
               </View>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => router.push('/(tabs)/profile' as any)}
+            onPress={() => navigateSafely('/(tabs)/profile')}
             className="w-11 h-11 rounded-full border border-zinc-200 overflow-hidden relative"
             style={{ minWidth: 44, minHeight: 44 }}
           >
@@ -1039,7 +1061,7 @@ export default function HomeScreen() {
           {activeBooking && (role === 'customer' || role === 'admin') && (
             <TouchableOpacity
               activeOpacity={0.88}
-              onPress={() => router.push({ pathname: '/session-detail' as any, params: { id: activeBooking.id } })}
+              onPress={() => navigateSafely({ pathname: '/session-detail', params: { id: activeBooking.id } })}
               className="mx-6 mt-3 mb-2 bg-zinc-950 border border-zinc-800 rounded-[22px] flex-row items-center justify-between p-4 shadow-lg"
               style={{
                 shadowColor: '#000000',
@@ -1213,7 +1235,7 @@ export default function HomeScreen() {
                   {/* Schedule Session Button */}
                   <TouchableOpacity
                     activeOpacity={0.95}
-                    onPress={() => router.push('/booking' as any)}
+                    onPress={() => navigateSafely('/booking')}
                     className="w-full h-14 bg-[#E11D48] rounded-[22px] justify-between items-center px-5 flex-row"
                     style={{
                       minHeight: 56,
@@ -1239,24 +1261,31 @@ export default function HomeScreen() {
 
               {/* Choose Your Workout Section */}
               <View className="gap-4">
-                <View className="flex-row justify-between items-end pl-1">
+                <View className="flex-row justify-between items-end">
                   <Text className="text-[#101828] text-[20px] font-semibold tracking-tight">Choose Your Workout</Text>
-                  <TouchableOpacity onPress={() => router.push('/booking' as any)}>
+                  <TouchableOpacity onPress={() => navigateSafely('/booking')}>
                     <Text className="text-[#E11D48] text-[15px] font-semibold">View All ›</Text>
                   </TouchableOpacity>
                 </View>
 
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingHorizontal: 2 }}>
+                <ScrollView
+                  horizontal
+                  nestedScrollEnabled={true}
+                  showsHorizontalScrollIndicator={false}
+                  overScrollMode="never"
+                  style={{ marginHorizontal: -24 }}
+                  contentContainerStyle={{ paddingHorizontal: 24, gap: 12 }}
+                >
                   {[
-                    { id: 'strength', title: 'Strength', sub: 'Build & Tone', emoji: '🏋️', colors: ['#FF7E7E', '#E11D48'] },
-                    { id: 'yoga', title: 'Yoga', sub: 'Mind & Body', emoji: '🧘', colors: ['#F472B6', '#8B5CF6'] },
-                    { id: 'rhythm', title: 'Rhythm Dance', sub: 'Cardio & Dance', emoji: '💃', colors: ['#EC4899', '#BE185D'] },
-                    { id: 'boxing', title: 'Boxing', sub: 'Power & Endurance', emoji: '🥊', colors: ['#FBBF24', '#F97316'] }
+                    { id: 'strength', title: 'Strength', sub: 'Build & Tone', emoji: '🏋️', colors: ['#FF6B6B', '#E11D48'] },
+                    { id: 'yoga', title: 'Yoga', sub: 'Mind & Body', emoji: '🧘', colors: ['#C084FC', '#7C3AED'] },
+                    { id: 'rhythm', title: 'Rhythm Dance', sub: 'Cardio & Dance', emoji: '💃', colors: ['#F472B6', '#BE185D'] },
+                    { id: 'boxing', title: 'Boxing', sub: 'Power & Endurance', emoji: '🥊', colors: ['#FBBF24', '#EA580C'] }
                   ].map((item) => (
                     <TouchableOpacity
                       key={item.id}
-                      activeOpacity={0.85}
-                      onPress={() => router.push({
+                      activeOpacity={0.88}
+                      onPress={() => navigateSafely({
                         pathname: '/booking',
                         params: {
                           workoutId: item.id,
@@ -1264,8 +1293,7 @@ export default function HomeScreen() {
                           workoutName: item.title,
                         },
                       })}
-                      className="w-36 p-5 rounded-[28px] relative overflow-hidden justify-between"
-                      style={{ minHeight: 160 }}
+                      className="w-[140px] h-[150px] p-3.5 rounded-2xl relative overflow-hidden justify-between border border-white/20 shadow-sm"
                     >
                       {/* SVG Background Gradient */}
                       <View style={StyleSheet.absoluteFill}>
@@ -1280,20 +1308,25 @@ export default function HomeScreen() {
                         </Svg>
                       </View>
 
-                      <View>
-                        {/* Icon container */}
-                        <View className="w-11 h-11 rounded-full bg-white/20 items-center justify-center self-start">
-                          <Text className="text-lg">{item.emoji}</Text>
-                        </View>
+                      {/* Subtle ambient light bubble in top-right */}
+                      <View className="absolute -top-5 -right-5 w-16 h-16 rounded-full bg-white/10" pointerEvents="none" />
+
+                      {/* Top icon badge */}
+                      <View className="w-9 h-9 rounded-xl bg-white/25 border border-white/30 items-center justify-center self-start">
+                        <Text className="text-base">{item.emoji}</Text>
                       </View>
 
-                      {/* Text contents and chevron */}
-                      <View className="gap-1.5">
-                        <Text className="text-white text-[15px] font-semibold tracking-tight">{item.title}</Text>
-                        <View className="flex-row justify-between items-center">
-                          <Text className="text-white/80 text-[10px] font-medium">{item.sub}</Text>
+                      {/* Bottom content & chevron */}
+                      <View className="gap-0.5 mt-auto">
+                        <Text className="text-white text-[14px] font-semibold tracking-tight leading-snug" numberOfLines={1}>
+                          {item.title}
+                        </Text>
+                        <View className="flex-row justify-between items-center pt-0.5">
+                          <Text className="text-white/85 text-[10.5px] font-medium flex-1 pr-1" numberOfLines={1}>
+                            {item.sub}
+                          </Text>
                           <View className="w-5 h-5 rounded-full bg-white/25 items-center justify-center">
-                            <Feather name="chevron-right" size={12} color="white" />
+                            <Feather name="chevron-right" size={10} color="white" />
                           </View>
                         </View>
                       </View>
@@ -1424,7 +1457,7 @@ export default function HomeScreen() {
                       <TouchableOpacity
                         activeOpacity={0.8}
                         onPress={() => {
-                          router.push({ pathname: '/session-detail', params: { id: activeBooking.id } });
+                          navigateSafely({ pathname: '/session-detail', params: { id: activeBooking.id } });
                         }}
                         className="w-full bg-rose-50 rounded-2xl items-center justify-center flex-row gap-2"
                         style={{ minHeight: 52 }}
@@ -1501,7 +1534,7 @@ export default function HomeScreen() {
                   {/* Wallet Credits Widget */}
                   <TouchableOpacity
                     activeOpacity={0.8}
-                    onPress={() => router.push('/membership' as any)}
+                    onPress={() => navigateSafely('/membership')}
                     className="w-[47%] h-[148px] p-5 rounded-[28px] bg-[#F5F3FF] border border-[#EDE9FE] justify-between"
                   >
                     <View className="flex-row items-center gap-2">
@@ -1628,7 +1661,7 @@ export default function HomeScreen() {
 
                     <TouchableOpacity
                       activeOpacity={0.85}
-                      onPress={() => router.push('/virla-ai' as any)}
+                      onPress={() => navigateSafely('/virla-ai')}
                       className="h-11 bg-[#E11D48] rounded-[18px] justify-between items-center px-5 flex-row self-start gap-3 mt-1"
                       style={{
                         minHeight: 44,
@@ -1744,7 +1777,7 @@ export default function HomeScreen() {
                           {/* Navigation Map Action */}
                           <TouchableOpacity
                             activeOpacity={0.8}
-                            onPress={() => router.push({ pathname: '/session-detail', params: { id: bookingData.id } })}
+                            onPress={() => navigateSafely({ pathname: '/session-detail', params: { id: bookingData.id } })}
                             className="w-11 h-11 rounded-full bg-[#16C784] items-center justify-center"
                             style={{
                               minWidth: 44,
@@ -1861,7 +1894,7 @@ export default function HomeScreen() {
                         key={req.id}
                         booking={req}
                         onAcknowledge={handleAcknowledgeRequest}
-                        onPress={(id) => router.push({ pathname: '/session-detail', params: { id } })}
+                        onPress={(id) => navigateSafely({ pathname: '/session-detail', params: { id } })}
                       />
                     ))}
                   </View>
@@ -1899,7 +1932,7 @@ export default function HomeScreen() {
                         onAccept={handleAcceptRequest}
                         onDecline={handleDeclineRequest}
                         onTimeout={handleTimeoutRequest}
-                        onPress={(id) => router.push({ pathname: '/session-detail', params: { id } })}
+                        onPress={(id) => navigateSafely({ pathname: '/session-detail', params: { id } })}
                       />
                     ))}
                   </View>
@@ -1957,7 +1990,7 @@ export default function HomeScreen() {
                     </View>
 
                     <TouchableOpacity
-                      onPress={() => router.push({ pathname: '/session-detail', params: { id: activeSession.id } })}
+                      onPress={() => navigateSafely({ pathname: '/session-detail', params: { id: activeSession.id } })}
                       className="w-full bg-rose-500 py-3.5 rounded-2xl items-center justify-center flex-row gap-2"
                       style={{
                         shadowColor: '#E11D48',
@@ -2024,7 +2057,7 @@ export default function HomeScreen() {
                         <TouchableOpacity
                           onPress={() => {
                             if (SessionEngine.isTravelWindowOpen(nextSession)) {
-                              router.push({ pathname: '/session-detail', params: { id: nextSession.id, openMap: 'true' } });
+                              navigateSafely({ pathname: '/session-detail', params: { id: nextSession.id, openMap: 'true' } });
                             } else {
                               Alert.alert(
                                 'Travel Window Locked ⚠️',
@@ -2053,7 +2086,7 @@ export default function HomeScreen() {
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                          onPress={() => router.push({ pathname: '/communication', params: { id: nextSession.id } })}
+                          onPress={() => navigateSafely({ pathname: '/communication', params: { id: nextSession.id } })}
                           className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-850 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
                         >
                           <Feather name="message-square" size={10} color="white" />
@@ -2102,7 +2135,7 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                       ) : (
                         <TouchableOpacity
-                          onPress={() => router.push({ pathname: '/session-detail', params: { id: nextSession.id } })}
+                          onPress={() => navigateSafely({ pathname: '/session-detail', params: { id: nextSession.id } })}
                           className="w-full bg-zinc-800 py-3.5 rounded-xl items-center justify-center"
                         >
                           <Text className="text-white text-xs font-black uppercase tracking-wider">
@@ -2151,7 +2184,7 @@ export default function HomeScreen() {
                       <TouchableOpacity 
                         key={booking.id} 
                         activeOpacity={0.8}
-                        onPress={() => router.push({ pathname: '/session-detail', params: { id: booking.id } })}
+                        onPress={() => navigateSafely({ pathname: '/session-detail', params: { id: booking.id } })}
                         className="bg-white border border-[#E5E7EB] p-4 rounded-2xl flex-row justify-between items-center"
                         style={{
                           shadowColor: '#101828',
@@ -2228,7 +2261,7 @@ export default function HomeScreen() {
                     </View>
                     
                     <TouchableOpacity
-                      onPress={() => router.push('/bookings' as any)}
+                      onPress={() => navigateSafely('/bookings')}
                       className="bg-indigo-600 p-3 rounded-2xl items-center justify-center flex-row gap-1.5"
                     >
                       <Feather name="calendar" size={12} color="white" />
@@ -2252,7 +2285,7 @@ export default function HomeScreen() {
                           <Text className="text-zinc-900 text-xs font-black uppercase">
                             {tomorrowBookings.length} {tomorrowBookings.length === 1 ? 'Session' : 'Sessions'} Scheduled
                           </Text>
-                          <TouchableOpacity onPress={() => router.push('/bookings' as any)}>
+                          <TouchableOpacity onPress={() => navigateSafely('/bookings')}>
                             <Text className="text-indigo-600 text-[9px] font-black uppercase tracking-wider">View All →</Text>
                           </TouchableOpacity>
                         </View>
@@ -2285,7 +2318,7 @@ export default function HomeScreen() {
                         
                         <TouchableOpacity
                           activeOpacity={0.8}
-                          onPress={() => router.push('/bookings' as any)}
+                          onPress={() => navigateSafely('/bookings')}
                           className="bg-zinc-950 py-2.5 px-4 rounded-xl"
                         >
                           <Text className="text-white text-[9px] font-black uppercase tracking-wider">
@@ -2319,11 +2352,11 @@ export default function HomeScreen() {
         unreadCount={unreadCount}
         onSelectNotifications={() => {
           setCommunicationModalVisible(false);
-          router.push('/notifications' as any);
+          navigateSafely('/notifications');
         }}
         onSelectMessages={() => {
           setCommunicationModalVisible(false);
-          router.push('/(tabs)/messages' as any);
+          navigateSafely('/(tabs)/messages');
         }}
       />
       <TrainerStatusModal
