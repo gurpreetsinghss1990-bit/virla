@@ -206,25 +206,6 @@ export default function ProfileScreen() {
     });
   }, [layer1Anim, layer2Anim, layer3Anim]);
 
-  // View Wallet Underline swipe animation (left to right rapid stroke on press, then navigate)
-  const walletUnderlineAnim = useMemo(() => new Animated.Value(0), []);
-  const [walletLineWidth, setWalletLineWidth] = useState(85);
-  const handleViewWalletPress = useCallback(() => {
-    walletUnderlineAnim.setValue(0);
-    Animated.timing(walletUnderlineAnim, {
-      toValue: 1,
-      duration: 140,
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) {
-        router.push('/wallet' as any);
-        setTimeout(() => {
-          walletUnderlineAnim.setValue(0);
-        }, 400);
-      }
-    });
-  }, [walletUnderlineAnim, router]);
-
   useEffect(() => {
     const timer = setTimeout(() => {
       triggerSparkleAnimation();
@@ -917,40 +898,11 @@ export default function ProfileScreen() {
                     </Text>
                     <TouchableOpacity
                       activeOpacity={0.7}
-                      onPress={handleViewWalletPress}
-                      className="mt-1.5 py-0.5 self-end"
+                      onPress={() => router.push('/wallet' as any)}
+                      className="flex-row items-center gap-1 mt-1.5 py-0.5"
                     >
-                      <View className="flex-row items-center gap-1">
-                        <Text className="text-[#2DD4BF] text-xs font-black">View Wallet</Text>
-                        <Feather name="arrow-right" size={11} color="#2DD4BF" />
-                      </View>
-                      {/* Rapid Left-to-Right Green Underline */}
-                      <View 
-                        style={{ height: 2.5, marginTop: 3, overflow: 'hidden', width: '100%', borderRadius: 2 }}
-                        onLayout={(e) => {
-                          const w = e.nativeEvent.layout.width;
-                          if (w > 0 && w !== walletLineWidth) {
-                            setWalletLineWidth(w);
-                          }
-                        }}
-                      >
-                        <Animated.View
-                          style={{
-                            height: 2.5,
-                            width: '100%',
-                            backgroundColor: '#2DD4BF',
-                            borderRadius: 2,
-                            transform: [
-                              {
-                                translateX: walletUnderlineAnim.interpolate({
-                                  inputRange: [0, 1],
-                                  outputRange: [-walletLineWidth, 0],
-                                }),
-                              },
-                            ],
-                          }}
-                        />
-                      </View>
+                      <Text className="text-[#2DD4BF] text-xs font-black">View Wallet</Text>
+                      <Feather name="arrow-right" size={11} color="#2DD4BF" />
                     </TouchableOpacity>
                   </View>
                 </View>
