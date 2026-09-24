@@ -227,17 +227,8 @@ export default function MembershipScreen() {
 
     setIsProcessing(true);
 
-    const cleanRawAmount = selectedPlan.price.replace(/[^\d]/g, ''); // e.g. "1499"
-
     const res = await PayPhiService.startPayment(
-      {
-        name: selectedPlan.name,
-        credits: selectedPlan.credits,
-        priceText: selectedPlan.price,
-        totalText: selectedPlan.amountVal,
-        gstText: selectedPlan.gstVal,
-        rawAmount: cleanRawAmount,
-      },
+      selectedPlan.id,
       userEmail
     );
 
