@@ -208,19 +208,20 @@ export default function ProfileScreen() {
 
   // View Wallet Underline swipe animation (left to right rapid stroke on press, then navigate)
   const walletUnderlineAnim = useMemo(() => new Animated.Value(0), []);
+  const [walletLineWidth, setWalletLineWidth] = useState(85);
   const handleViewWalletPress = useCallback(() => {
     walletUnderlineAnim.setValue(0);
     Animated.timing(walletUnderlineAnim, {
       toValue: 1,
-      duration: 260,
+      duration: 140,
       useNativeDriver: true,
-    }).start(() => {
-      setTimeout(() => {
+    }).start(({ finished }) => {
+      if (finished) {
         router.push('/wallet' as any);
         setTimeout(() => {
           walletUnderlineAnim.setValue(0);
         }, 400);
-      }, 60);
+      }
     });
   }, [walletUnderlineAnim, router]);
 
@@ -924,7 +925,15 @@ export default function ProfileScreen() {
                         <Feather name="arrow-right" size={11} color="#2DD4BF" />
                       </View>
                       {/* Rapid Left-to-Right Green Underline */}
-                      <View style={{ height: 2.5, marginTop: 3, overflow: 'hidden', width: '100%', borderRadius: 2 }}>
+                      <View 
+                        style={{ height: 2.5, marginTop: 3, overflow: 'hidden', width: '100%', borderRadius: 2 }}
+                        onLayout={(e) => {
+                          const w = e.nativeEvent.layout.width;
+                          if (w > 0 && w !== walletLineWidth) {
+                            setWalletLineWidth(w);
+                          }
+                        }}
+                      >
                         <Animated.View
                           style={{
                             height: 2.5,
@@ -935,7 +944,7 @@ export default function ProfileScreen() {
                               {
                                 translateX: walletUnderlineAnim.interpolate({
                                   inputRange: [0, 1],
-                                  outputRange: [-100, 0],
+                                  outputRange: [-walletLineWidth, 0],
                                 }),
                               },
                             ],
