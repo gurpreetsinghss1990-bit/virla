@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, InteractionManager, BackHandler, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, InteractionManager, BackHandler, Modal, LayoutAnimation, UIManager } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient, Stop, Polygon, Polyline } from 'react-native-svg';
 import { useUserStore } from '../../store/userStore';
 import { useMembershipStore } from '../../store/membershipStore';
 import { useCoachStore } from '../../store/coachStore';
@@ -125,9 +125,118 @@ export default function ProfileScreen() {
     ).start();
   }, [shimmerAnim]);
 
+  // Subtle sparkle intro pulse (1-2 gentle twinkles on screen load and on tap)
+  const sparkleAnim = useMemo(() => new Animated.Value(0), []);
+  const triggerSparkleAnimation = useCallback(() => {
+    sparkleAnim.stopAnimation();
+    sparkleAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(sparkleAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.timing(sparkleAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+      Animated.timing(sparkleAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.timing(sparkleAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+    ]).start();
+  }, [sparkleAnim]);
+
+  // Sponge/Layers cascading compression animation (layer1 hits layer2, layer2 hits layer3, then returns)
+  const layer1Anim = useMemo(() => new Animated.Value(0), []);
+  const layer2Anim = useMemo(() => new Animated.Value(0), []);
+  const layer3Anim = useMemo(() => new Animated.Value(0), []);
+  const [isLayersAnimating, setIsLayersAnimating] = useState(false);
+
+  const triggerLayersAnimation = useCallback(() => {
+    setIsLayersAnimating(true);
+    layer1Anim.stopAnimation();
+    layer2Anim.stopAnimation();
+    layer3Anim.stopAnimation();
+    layer1Anim.setValue(0);
+    layer2Anim.setValue(0);
+    layer3Anim.setValue(0);
+
+    // Step 1: Top layer 1 drops down to hit layer 2
+    Animated.timing(layer1Anim, {
+      toValue: 3.5,
+      duration: 120,
+      useNativeDriver: true,
+    }).start(() => {
+      // Step 2: Layer 2 receives impact, pushes down to hit layer 3
+      Animated.parallel([
+        Animated.timing(layer1Anim, {
+          toValue: 5,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(layer2Anim, {
+          toValue: 2.5,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        // Step 3: Layer 3 compresses slightly under bottom impact
+        Animated.timing(layer3Anim, {
+          toValue: 1.2,
+          duration: 80,
+          useNativeDriver: true,
+        }).start(() => {
+          // Step 4: Spring back up sequentially to stationary positions
+          Animated.parallel([
+            Animated.spring(layer1Anim, {
+              toValue: 0,
+              friction: 5,
+              tension: 100,
+              useNativeDriver: true,
+            }),
+            Animated.spring(layer2Anim, {
+              toValue: 0,
+              friction: 6,
+              tension: 90,
+              useNativeDriver: true,
+            }),
+            Animated.spring(layer3Anim, {
+              toValue: 0,
+              friction: 7,
+              tension: 80,
+              useNativeDriver: true,
+            }),
+          ]).start(() => {
+            setIsLayersAnimating(false);
+          });
+        });
+      });
+    });
+  }, [layer1Anim, layer2Anim, layer3Anim]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      triggerSparkleAnimation();
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [triggerSparkleAnimation]);
+
   // Client Profile Edit local states
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isPersonalInfoExpanded, setIsPersonalInfoExpanded] = useState(false);
+
+  const togglePersonalInfoExpansion = useCallback((targetState?: boolean) => {
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+    LayoutAnimation.configureNext({
+      duration: 260,
+      create: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+      update: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+      },
+      delete: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+    });
+    setIsPersonalInfoExpanded(prev => (typeof targetState === 'boolean' ? targetState : !prev));
+  }, []);
   const [editName, setEditName] = useState(profile.name || '');
   const [editMobile, setEditMobile] = useState(profile.mobile || '');
   const [editEmail, setEditEmail] = useState(profile.email || '');
@@ -647,9 +756,7 @@ export default function ProfileScreen() {
               </View>
 
               {/* Luxury Virla Pass Card */}
-              <TouchableOpacity 
-                activeOpacity={0.9}
-                onPress={() => router.push('/wallet' as any)}
+              <View 
                 className="bg-[#0B1528] rounded-[26px] p-5 shadow-xl relative overflow-hidden mb-5 border border-[#1E293B]"
               >
                 {/* Subtle wave lines on dark card */}
@@ -663,9 +770,31 @@ export default function ProfileScreen() {
                 </View>
 
                 <View className="flex-row justify-between items-start">
-                  <View>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={triggerSparkleAnimation}
+                  >
                     <View className="flex-row items-center">
-                      <Ionicons name="sparkles" size={11} color="#2DD4BF" />
+                      <Animated.View
+                        style={{
+                          transform: [
+                            {
+                              scale: sparkleAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [1, 1.35],
+                              }),
+                            },
+                            {
+                              rotate: sparkleAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: ['0deg', '25deg'],
+                              }),
+                            },
+                          ],
+                        }}
+                      >
+                        <Ionicons name="sparkles" size={11} color="#2DD4BF" />
+                      </Animated.View>
                       <Text className="text-[#2DD4BF] text-[9px] font-black uppercase tracking-widest ml-1">
                         VIRLA PASS
                       </Text>
@@ -673,19 +802,90 @@ export default function ProfileScreen() {
                     <Text className="text-white text-2xl font-black mt-1 tracking-tight">
                       {(membership.tier || 'PREMIUM').toUpperCase()}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                   <View className="bg-white p-1.5 rounded-xl shadow-xs">
                     <Ionicons name="qr-code" size={32} color="#0B1528" />
                   </View>
                 </View>
 
                 <View className="flex-row justify-between items-end mt-5 pt-3 border-t border-zinc-800/60">
-                  <View className="flex-row items-center">
-                    <Ionicons name="layers-outline" size={20} color="#CBD5E1" />
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={triggerLayersAnimation}
+                    className="flex-row items-center py-1"
+                  >
+                    <View style={{ width: 22, height: 22, justifyContent: 'center', alignItems: 'center' }}>
+                      {/* Layer 1 (Top diamond) */}
+                      <Animated.View
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          transform: [{ translateY: layer1Anim }],
+                        }}
+                      >
+                        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                          <Polygon
+                            points="12 2 2 7 12 12 22 7 12 2"
+                            stroke={isLayersAnimating ? '#2DD4BF' : '#CBD5E1'}
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </Svg>
+                      </Animated.View>
+
+                      {/* Layer 2 (Middle chevron) */}
+                      <Animated.View
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          transform: [{ translateY: layer2Anim }],
+                        }}
+                      >
+                        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                          <Polyline
+                            points="2 12 12 17 22 12"
+                            stroke={isLayersAnimating ? '#2DD4BF' : '#CBD5E1'}
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </Svg>
+                      </Animated.View>
+
+                      {/* Layer 3 (Bottom chevron) */}
+                      <Animated.View
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          transform: [{ translateY: layer3Anim }],
+                        }}
+                      >
+                        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                          <Polyline
+                            points="2 17 12 22 22 17"
+                            stroke={isLayersAnimating ? '#2DD4BF' : '#CBD5E1'}
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </Svg>
+                      </Animated.View>
+                    </View>
+
                     <Text className="text-white text-sm font-black ml-2">
                       {membership.availableCredits ?? 20} Credits
                     </Text>
-                  </View>
+                  </TouchableOpacity>
 
                   <View className="w-[1px] h-7 bg-zinc-700/60 mx-2" />
 
@@ -696,19 +896,23 @@ export default function ProfileScreen() {
                     <Text className="text-white text-xs font-bold mt-0.5">
                       {membership.renewalDate || 'Sep 19, 2027'}
                     </Text>
-                    <View className="flex-row items-center gap-1 mt-1">
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => router.push('/wallet' as any)}
+                      className="flex-row items-center gap-1 mt-1.5 py-0.5"
+                    >
                       <Text className="text-[#2DD4BF] text-xs font-black">View Wallet</Text>
                       <Feather name="arrow-right" size={11} color="#2DD4BF" />
-                    </View>
+                    </TouchableOpacity>
                   </View>
                 </View>
-              </TouchableOpacity>
+              </View>
 
               {/* 1. Personal Information Accordion Card */}
               <View className="bg-white border border-[#E5E7EB] rounded-[24px] p-5 shadow-xs mb-4">
                 <TouchableOpacity
                   activeOpacity={0.7}
-                  onPress={() => setIsPersonalInfoExpanded(!isPersonalInfoExpanded)}
+                  onPress={() => togglePersonalInfoExpansion()}
                   className={`flex-row justify-between items-center ${isPersonalInfoExpanded ? 'mb-2 pb-2.5 border-b border-zinc-100' : ''}`}
                 >
                   <View className="flex-row items-center gap-3 flex-1">
@@ -893,7 +1097,7 @@ export default function ProfileScreen() {
                     {/* Bottom Collapse Toggle */}
                     <TouchableOpacity
                       activeOpacity={0.7}
-                      onPress={() => setIsPersonalInfoExpanded(false)}
+                      onPress={() => togglePersonalInfoExpansion(false)}
                       className="flex-row items-center justify-center gap-2 py-2.5 mt-2 border-t border-zinc-100"
                     >
                       <Feather name="chevron-up" size={15} color="#4F46E5" />

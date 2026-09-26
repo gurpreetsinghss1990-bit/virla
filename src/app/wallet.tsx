@@ -14,6 +14,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { formatToDDMMYYYY } from '../utils/date';
 import { supabase } from '../database/supabaseClient';
 import { t } from '../utils/i18n';
+import { PayPhiService } from '../services/payphiService';
 
 export default function WalletScreen() {
   const router = useRouter();
@@ -37,10 +38,20 @@ export default function WalletScreen() {
         Database.setCurrentUserId(storedUser.id);
       }
       
-      Database.load().then(() => {
+      Database.load().then(async () => {
         useWalletStore.getState().syncFromDB();
         useMembershipStore.getState().syncFromDB();
         useBookingStore.getState().syncFromDB();
+
+        // Passive Self-Healing: Check if user has any orphan pending payments (phone died/crash)
+        const currentUid = Database.getCurrentUserId();
+        if (currentUid) {
+          PayPhiService.reconcileUserPendingOrders(currentUid).then((recovered) => {
+            if (recovered) {
+              Alert.alert('Payment Recovered 🎉', 'Your pending payment was confirmed by the payment gateway and credits have been credited to your wallet!');
+            }
+          });
+        }
       });
     }, [])
   );
