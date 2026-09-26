@@ -30,7 +30,7 @@ export default function ProgressScreen() {
     return () => sub.remove();
   }, [router]);
 
-  const { totalSessions, totalCalories } = useUserProfileStore();
+  const { totalSessions, totalCalories, currentStreak } = useUserProfileStore();
   const { user, role } = useUserStore();
 
   const bookings = user.id 
@@ -43,6 +43,8 @@ export default function ProgressScreen() {
   const cancelledJobs = bookings.filter(b => b.status === 'cancelled');
   const totalCompleted = completedJobs.length;
   const totalUpcoming = upcomingJobs.length;
+  const effectiveSessions = Math.max(totalSessions || 0, totalCompleted || 0);
+  const streak = currentStreak || 0;
 
   const trainerEarningsList = user.id ? Database.getEarnings(user.id) : [];
   const monthlyEarnings = trainerEarningsList.reduce((acc, earn) => acc + (earn.amount > 0 ? earn.amount : 0), 0);
@@ -56,8 +58,8 @@ export default function ProgressScreen() {
       : Database.getBookings(userId).filter(b => b.status === 'completed').length;
     const dateStr = new Date().toLocaleDateString('en-CA');
     const hydrationLogged = Database.getHydration(userId, dateStr);
-    return role === 'trainer' ? bookingsCount === 0 : (bookingsCount === 0 && hydrationLogged === 0);
-  }, [totalSessions, totalCalories, user.id, simulateEmpty, role, user.name]);
+    return role === 'trainer' ? bookingsCount === 0 : (bookingsCount === 0 && hydrationLogged === 0 && effectiveSessions === 0);
+  }, [totalSessions, totalCalories, effectiveSessions, user.id, simulateEmpty, role, user.name]);
 
   useEffect(() => {
     fadeAnim.setValue(0.3);
@@ -72,155 +74,156 @@ export default function ProgressScreen() {
     const userId = Database.getCurrentUserId();
     const dateStr = new Date().toLocaleDateString('en-CA');
     const dbRecovery = userId ? (Database.getRecoveryScore(userId, dateStr) ?? 85) : 85;
-    const completedSessions = userId 
-      ? (role === 'trainer'
-          ? (Database.schema.bookings || []).filter(b => (b.trainerId === userId || b.trainerName === user.name) && b.status === 'completed').length
-          : Database.getBookings(userId).filter(b => b.status === 'completed').length)
-      : 0;
     const caloriesBurned = userId ? Database.getCalories(userId, dateStr) : 0;
+    const totalJobs = totalCompleted + cancelledJobs.length;
+    const attendanceRate = totalJobs > 0 
+      ? Math.round((totalCompleted / totalJobs) * 100) 
+      : (effectiveSessions > 0 ? 96 : 0);
+    const trainerObj = role === 'trainer' && user.id ? (Database.schema.coaches || []).find((c) => c.id === user.id) : null;
+    const computedTrainerRating = trainerObj?.rating ? Number(trainerObj.rating).toFixed(2) : '4.90';
 
     switch (activeRange) {
       case 'weekly': {
         const calGoal = 3500;
         const calAmount = caloriesBurned > 0 
-          ? caloriesBurned + 1850 
-          : (completedSessions > 0 ? completedSessions * 450 + 1200 : 2450);
-        const calProg = Math.min(1.0, calAmount / calGoal);
+          ? caloriesBurned + (effectiveSessions > 0 ? effectiveSessions * 450 : 0)
+          : (effectiveSessions > 0 ? effectiveSessions * 450 : 0);
+        const calProg = calGoal > 0 ? Math.min(1.0, calAmount / calGoal) : 0;
 
-        const sessCount = Math.max(completedSessions, 4);
+        const sessCount = effectiveSessions > 0 ? Math.min(effectiveSessions, 5) : 0;
         const sessGoal = 5;
 
         return {
           frequency: `${sessCount} sessions/wk`,
-          attendance: 100,
-          attendanceSub: `${sessCount}/5 This Week`,
+          attendance: attendanceRate,
+          attendanceSub: `${sessCount}/${sessGoal} This Week`,
           calories: calAmount,
           caloriesDisplay: `${calAmount.toLocaleString()} Kcal`,
           caloriesGoal: calGoal,
           caloriesProgress: calProg,
-          caloriesSub: 'This Week\'s Burn',
-          consistency: 92,
+          caloriesSub: "This Week's Burn",
+          consistency: Math.min(100, Math.max(60, streak * 20)),
           recovery: dbRecovery,
           recoverySub: 'Weekly Peak',
           sessions: sessCount,
           sessionsGoal: sessGoal,
           sessionsProgress: Math.min(1.0, sessCount / sessGoal),
-          sessionsSub: 'Goal: 5/wk',
+          sessionsSub: `Goal: ${sessGoal}/wk`,
           // Trainer Stats
-          trainerRating: '4.90',
+          trainerRating: computedTrainerRating,
           trainerRatingProgress: 0.98,
-          trainerRatingSub: '6 Reviews (Wk)',
-          trainerCompletion: '100%',
-          trainerCompletionProgress: 1.0,
+          trainerRatingSub: `${completedJobs.length} Completed (Wk)`,
+          trainerCompletion: `${attendanceRate}%`,
+          trainerCompletionProgress: attendanceRate / 100,
           trainerCompletionSub: 'Target 95%',
-          trainerVisits: `${Math.max(totalUpcoming, 4)}`,
-          trainerVisitsProgress: Math.min(1.0, Math.max(totalUpcoming, 4) / 5),
-          trainerVisitsSub: '5 Assigned / Wk',
-          trainerPayoutVal: '85%',
+          trainerVisits: `${Math.max(totalUpcoming, 0)}`,
+          trainerVisitsProgress: Math.min(1.0, totalUpcoming / 5),
+          trainerVisitsSub: '5 Target / Wk',
+          trainerPayoutVal: monthlyEarnings > 0 ? `₹${Math.round(monthlyEarnings / 4)}` : '85%',
           trainerPayoutProgress: 0.85,
-          trainerPayoutSub: '₹12,800 / ₹15k Goal',
+          trainerPayoutSub: 'Target: ₹15k/wk',
           chartData: [
-            { label: 'Mon', val: 65, cap: 'Active' },
-            { label: 'Tue', val: 85, cap: 'Active' },
-            { label: 'Wed', val: 30, cap: 'Rest' },
-            { label: 'Thu', val: 90, cap: 'Active' },
-            { label: 'Fri', val: 45, cap: 'Active' },
-            { label: 'Sat', val: 80, cap: 'Active' },
-            { label: 'Sun', val: 25, cap: 'Rest' }
+            { label: 'Mon', val: sessCount >= 1 ? 75 : 0, cap: 'Active' },
+            { label: 'Tue', val: sessCount >= 2 ? 85 : 0, cap: 'Active' },
+            { label: 'Wed', val: 0, cap: 'Rest' },
+            { label: 'Thu', val: sessCount >= 3 ? 90 : 0, cap: 'Active' },
+            { label: 'Fri', val: sessCount >= 4 ? 65 : 0, cap: 'Active' },
+            { label: 'Sat', val: sessCount >= 5 ? 80 : 0, cap: 'Active' },
+            { label: 'Sun', val: 0, cap: 'Rest' }
           ]
         };
       }
       case 'monthly': {
         const calGoal = 14000;
         const calAmount = caloriesBurned > 0 
-          ? caloriesBurned * 4 + 7800 
-          : (completedSessions > 0 ? completedSessions * 1800 + 5400 : 10850);
-        const calProg = Math.min(1.0, calAmount / calGoal);
+          ? caloriesBurned * 4 + (effectiveSessions > 0 ? effectiveSessions * 1800 : 0)
+          : (effectiveSessions > 0 ? effectiveSessions * 1800 : 0);
+        const calProg = calGoal > 0 ? Math.min(1.0, calAmount / calGoal) : 0;
 
-        const sessCount = Math.max(completedSessions * 4, 18);
+        const sessCount = effectiveSessions > 0 ? Math.min(effectiveSessions * 4, 20) : 0;
         const sessGoal = 20;
 
         return {
           frequency: `${sessCount} sessions/mo`,
-          attendance: 94,
-          attendanceSub: '22/24 Workouts',
+          attendance: attendanceRate,
+          attendanceSub: `${sessCount}/${sessGoal} Workouts`,
           calories: calAmount,
           caloriesDisplay: `${(calAmount / 1000).toFixed(1)}k Kcal`,
           caloriesGoal: calGoal,
           caloriesProgress: calProg,
           caloriesSub: '30-Day Burn',
-          consistency: 88,
+          consistency: Math.min(100, Math.max(65, streak * 18)),
           recovery: Math.max(70, Math.min(95, dbRecovery - 4)),
           recoverySub: '30-Day Mean',
           sessions: sessCount,
           sessionsGoal: sessGoal,
           sessionsProgress: Math.min(1.0, sessCount / sessGoal),
-          sessionsSub: 'Goal: 20/mo',
+          sessionsSub: `Goal: ${sessGoal}/mo`,
           // Trainer Stats
-          trainerRating: '4.95',
+          trainerRating: computedTrainerRating,
           trainerRatingProgress: 0.99,
-          trainerRatingSub: '28 Reviews (Mo)',
-          trainerCompletion: '98%',
-          trainerCompletionProgress: 0.98,
+          trainerRatingSub: `${completedJobs.length * 4} Reviews (Mo)`,
+          trainerCompletion: `${attendanceRate}%`,
+          trainerCompletionProgress: attendanceRate / 100,
           trainerCompletionSub: 'Target 95%',
-          trainerVisits: `${Math.max(totalUpcoming * 4, 18)}`,
-          trainerVisitsProgress: Math.min(1.0, Math.max(totalUpcoming * 4, 18) / 20),
-          trainerVisitsSub: '20 Visits / Mo',
-          trainerPayoutVal: '88%',
+          trainerVisits: `${Math.max(totalUpcoming * 4, 0)}`,
+          trainerVisitsProgress: Math.min(1.0, (totalUpcoming * 4) / 20),
+          trainerVisitsSub: '20 Target / Mo',
+          trainerPayoutVal: monthlyEarnings > 0 ? `₹${monthlyEarnings.toLocaleString()}` : '88%',
           trainerPayoutProgress: 0.88,
-          trainerPayoutSub: '₹52,800 / ₹60k Goal',
+          trainerPayoutSub: 'Target: ₹60k/mo',
           chartData: [
-            { label: 'Wk 1', val: 75, cap: 'Active' },
-            { label: 'Wk 2', val: 92, cap: 'Active' },
-            { label: 'Wk 3', val: 68, cap: 'Active' },
-            { label: 'Wk 4', val: 86, cap: 'Active' }
+            { label: 'Wk 1', val: sessCount >= 4 ? 75 : 30, cap: 'Active' },
+            { label: 'Wk 2', val: sessCount >= 8 ? 92 : 45, cap: 'Active' },
+            { label: 'Wk 3', val: sessCount >= 12 ? 68 : 20, cap: 'Active' },
+            { label: 'Wk 4', val: sessCount >= 16 ? 86 : 40, cap: 'Active' }
           ]
         };
       }
       case 'yearly': {
         const calGoal = 150000;
         const calAmount = caloriesBurned > 0 
-          ? caloriesBurned * 48 + 85000 
-          : (completedSessions > 0 ? completedSessions * 21000 + 62000 : 118400);
-        const calProg = Math.min(1.0, calAmount / calGoal);
+          ? caloriesBurned * 48 + (effectiveSessions > 0 ? effectiveSessions * 21000 : 0)
+          : (effectiveSessions > 0 ? effectiveSessions * 21000 : 0);
+        const calProg = calGoal > 0 ? Math.min(1.0, calAmount / calGoal) : 0;
 
-        const sessCount = Math.max(completedSessions * 48, 192);
-        const sessGoal = 200;
+        const sessCount = effectiveSessions > 0 ? effectiveSessions * 12 : 0;
+        const sessGoal = 100;
 
         return {
           frequency: `${sessCount} sessions/yr`,
-          attendance: 96,
-          attendanceSub: '248/260 Days',
+          attendance: attendanceRate,
+          attendanceSub: `${sessCount}/${sessGoal} Sessions`,
           calories: calAmount,
           caloriesDisplay: `${(calAmount / 1000).toFixed(1)}k Kcal`,
           caloriesGoal: calGoal,
           caloriesProgress: calProg,
           caloriesSub: 'Annual Total',
-          consistency: 90,
+          consistency: Math.min(100, Math.max(70, streak * 16)),
           recovery: Math.min(96, dbRecovery + 2),
           recoverySub: 'Annual Baseline',
           sessions: sessCount,
           sessionsGoal: sessGoal,
           sessionsProgress: Math.min(1.0, sessCount / sessGoal),
-          sessionsSub: 'Goal: 200/yr',
+          sessionsSub: `Goal: ${sessGoal}/yr`,
           // Trainer Stats
-          trainerRating: '4.98',
+          trainerRating: computedTrainerRating,
           trainerRatingProgress: 0.996,
-          trainerRatingSub: '214 Reviews (Yr)',
-          trainerCompletion: '99%',
-          trainerCompletionProgress: 0.99,
+          trainerRatingSub: `${completedJobs.length * 48} Reviews (Yr)`,
+          trainerCompletion: `${attendanceRate}%`,
+          trainerCompletionProgress: attendanceRate / 100,
           trainerCompletionSub: 'Target 95%',
-          trainerVisits: `${Math.max(totalUpcoming * 48, 192)}`,
-          trainerVisitsProgress: Math.min(1.0, Math.max(totalUpcoming * 48, 192) / 200),
-          trainerVisitsSub: '200 Visits / Yr',
-          trainerPayoutVal: '92%',
+          trainerVisits: `${Math.max(totalUpcoming * 48, 0)}`,
+          trainerVisitsProgress: Math.min(1.0, (totalUpcoming * 48) / 200),
+          trainerVisitsSub: '200 Target / Yr',
+          trainerPayoutVal: monthlyEarnings > 0 ? `₹${(monthlyEarnings * 12).toLocaleString()}` : '92%',
           trainerPayoutProgress: 0.92,
-          trainerPayoutSub: '₹6.6L / ₹7.2L Goal',
+          trainerPayoutSub: 'Target: ₹7.2L/yr',
           chartData: [
-            { label: 'Q1', val: 82, cap: 'Active' },
-            { label: 'Q2', val: 94, cap: 'Active' },
-            { label: 'Q3', val: 76, cap: 'Active' },
-            { label: 'Q4', val: 90, cap: 'Active' }
+            { label: 'Q1', val: sessCount >= 20 ? 82 : 35, cap: 'Active' },
+            { label: 'Q2', val: sessCount >= 40 ? 94 : 50, cap: 'Active' },
+            { label: 'Q3', val: sessCount >= 60 ? 76 : 40, cap: 'Active' },
+            { label: 'Q4', val: sessCount >= 80 ? 90 : 45, cap: 'Active' }
           ]
         };
       }
@@ -229,15 +232,74 @@ export default function ProgressScreen() {
 
   const currentStats = getStats();
 
-  const achievements = [
-    { id: 'a-1', icon: '🥇', title: 'Apex Forge', desc: 'Completed 10 high-intensity workouts' },
-    { id: 'a-2', icon: '🏆', title: 'Wellness Master', desc: 'Perfect attendance for 4 weeks' },
-    { id: 'a-3', icon: '🔥', title: 'Unstoppable', desc: 'Maintained a 5-day active workout streak' },
-    { id: 'a-4', icon: '⭐', title: 'Zen Flow Specialist', desc: 'Completed 5 yoga and meditation classes' },
-    { id: 'a-5', icon: '💎', title: 'Elite Status', desc: 'Earned all core seasonal badges' }
-  ];
+  const achievements = useMemo(() => {
+    return [
+      {
+        id: 'a-1',
+        icon: '🥇',
+        title: 'First Workout',
+        desc: 'Completed your first in-home coaching session',
+        unlocked: effectiveSessions >= 1,
+        progress: Math.min(1, effectiveSessions / 1),
+        progressText: `${Math.min(effectiveSessions, 1)}/1 Session`,
+        tag: 'Pioneer',
+      },
+      {
+        id: 'a-2',
+        icon: '🏆',
+        title: '5 Sessions Club',
+        desc: 'Completed 5 dedicated workout slots',
+        unlocked: effectiveSessions >= 5,
+        progress: Math.min(1, effectiveSessions / 5),
+        progressText: `${Math.min(effectiveSessions, 5)}/5 Sessions`,
+        tag: 'Gold Tier',
+      },
+      {
+        id: 'a-3',
+        icon: '🔥',
+        title: 'Consistency Streak',
+        desc: 'Maintained a 5-day active workout streak',
+        unlocked: streak >= 5 || effectiveSessions >= 5,
+        progress: Math.min(1, Math.max(streak, effectiveSessions) / 5),
+        progressText: `${Math.min(Math.max(streak, effectiveSessions), 5)}/5 Days`,
+        tag: '5-Day Streak',
+      },
+      {
+        id: 'a-4',
+        icon: '⭐',
+        title: 'Apex 10 Master',
+        desc: 'Logged 10 complete personal training workouts',
+        unlocked: effectiveSessions >= 10,
+        progress: Math.min(1, effectiveSessions / 10),
+        progressText: `${Math.min(effectiveSessions, 10)}/10 Sessions`,
+        tag: 'Mastery',
+      },
+      {
+        id: 'a-5',
+        icon: '💎',
+        title: 'Elite Centenary',
+        desc: 'Completed 25+ in-home personal training sessions',
+        unlocked: effectiveSessions >= 25,
+        progress: Math.min(1, effectiveSessions / 25),
+        progressText: `${Math.min(effectiveSessions, 25)}/25 Sessions`,
+        tag: 'Seasonal Elite',
+      },
+    ];
+  }, [effectiveSessions, streak]);
 
-  const getMedallionTheme = (id: string) => {
+  const unlockedCount = achievements.filter((a) => a.unlocked).length;
+
+  const getMedallionTheme = (id: string, unlocked: boolean) => {
+    if (!unlocked) {
+      return {
+        bg: '#F1F5F9',
+        border: '#CBD5E1',
+        glow: 'transparent',
+        chipBg: '#F1F5F9',
+        chipText: '#64748B',
+        tag: 'Locked',
+      };
+    }
     switch (id) {
       case 'a-1':
         return {
@@ -246,16 +308,16 @@ export default function ProgressScreen() {
           glow: '#F59E0B',
           chipBg: '#FEF3C7',
           chipText: '#B45309',
-          tag: 'Gold Tier',
+          tag: 'Pioneer',
         };
       case 'a-2':
         return {
-          bg: '#ECFDF5',
-          border: '#10B981',
-          glow: '#10B981',
-          chipBg: '#D1FAE5',
-          chipText: '#047857',
-          tag: 'Mastery',
+          bg: '#FEF3C7',
+          border: '#F59E0B',
+          glow: '#F59E0B',
+          chipBg: '#FEF3C7',
+          chipText: '#B45309',
+          tag: 'Gold Tier',
         };
       case 'a-3':
         return {
@@ -268,12 +330,12 @@ export default function ProgressScreen() {
         };
       case 'a-4':
         return {
-          bg: '#F5F3FF',
-          border: '#8B5CF6',
-          glow: '#8B5CF6',
-          chipBg: '#EDE9FE',
-          chipText: '#6D28D9',
-          tag: 'Zen Master',
+          bg: '#ECFDF5',
+          border: '#10B981',
+          glow: '#10B981',
+          chipBg: '#D1FAE5',
+          chipText: '#047857',
+          tag: 'Mastery',
         };
       case 'a-5':
       default:
@@ -316,23 +378,40 @@ export default function ProgressScreen() {
               </TouchableOpacity>
 
               <View className="flex-1">
-                <Text className="text-[#101828] text-3xl font-black tracking-tight">
+                <Text className="text-[#101828] text-2xl font-bold tracking-tight">
                   {role === 'trainer' ? 'Performance' : 'My Progress'}
                 </Text>
-                <Text className="text-[#6B7280] text-xs font-extrabold uppercase tracking-widest mt-1">
-                  {role === 'trainer' ? 'PARTNER INSIGHTS' : 'Analytics & Metrics'}
+                <Text className="text-[#6B7280] text-[11px] font-semibold uppercase tracking-wider mt-0.5">
+                  {role === 'trainer' ? 'Partner Insights & Metrics' : 'Analytics & Daily Metrics'}
                 </Text>
               </View>
             </View>
 
             {role !== 'trainer' && (
               <TouchableOpacity 
-                activeOpacity={0.8}
+                activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 onPress={() => setSimulateEmpty(!simulateEmpty)}
-                className="bg-[#101828] px-3 py-1.5 rounded-lg mb-1"
+                style={{
+                  backgroundColor: isEmpty ? '#4F46E5' : '#101828',
+                  shadowColor: isEmpty ? '#4F46E5' : '#101828',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.22,
+                  shadowRadius: 5,
+                  elevation: 3,
+                }}
+                className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full mt-1 border border-white/10"
               >
-                <Text className="text-amber-400 text-[8px] font-black uppercase tracking-wider">
-                  {isEmpty ? 'Show Progress' : 'Simulate Empty'}
+                <Feather 
+                  name={isEmpty ? 'refresh-cw' : 'sliders'} 
+                  size={11} 
+                  color={isEmpty ? '#FFFFFF' : '#F59E0B'} 
+                />
+                <Text 
+                  style={{ color: isEmpty ? '#FFFFFF' : '#FBBF24' }} 
+                  className="text-[9.5px] font-bold uppercase tracking-wider"
+                >
+                  {isEmpty ? 'Restore Data' : 'Simulate Empty'}
                 </Text>
               </TouchableOpacity>
             )}
@@ -351,7 +430,7 @@ export default function ProgressScreen() {
                       key={r}
                       activeOpacity={0.7}
                       onPress={() => setActiveRange(r)}
-                      className="flex-1 py-3.5 rounded-xl items-center justify-center"
+                      className="flex-1 py-3 rounded-xl items-center justify-center"
                       style={{
                         backgroundColor: isActive ? '#101828' : 'transparent',
                         shadowColor: '#101828',
@@ -362,7 +441,7 @@ export default function ProgressScreen() {
                       }}
                     >
                       <Text
-                        className="text-[10px] font-black uppercase tracking-wider"
+                        className="text-[11px] font-bold uppercase tracking-wider"
                         style={{
                           color: isActive ? '#FFFFFF' : '#6B7280',
                         }}
@@ -374,228 +453,97 @@ export default function ProgressScreen() {
                 })}
               </View>
 
-              {/* Performance indicators */}
-              <Animated.View style={{ opacity: fadeAnim }}>
-                <LuxuryCard 
-                  className="p-5 gap-5" 
-                  interactive={false}
-                  style={{
-                    borderTopWidth: 1.5,
-                    borderLeftWidth: 1.5,
-                    borderTopColor: '#FFFFFF',
-                    borderLeftColor: '#FFFFFF',
-                    borderRightWidth: 1.5,
-                    borderBottomWidth: 3.5,
-                    borderRightColor: '#E2E8F0',
-                    borderBottomColor: '#CBD5E1',
-                    shadowColor: '#0F172A',
-                    shadowOffset: { width: 0, height: 10 },
-                    shadowOpacity: 0.08,
-                    shadowRadius: 16,
-                    elevation: 5,
-                  }}
-                >
-                  <View className="flex-row justify-between items-center pb-3 border-b border-zinc-100">
-                    <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">
-                      Performance Indicators
-                    </Text>
-                    <View className="flex-row items-center gap-1.5 px-2.5 py-1 bg-emerald-50 rounded-full border border-emerald-200/60">
-                      <View className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <Text className="text-emerald-700 text-[9px] font-black uppercase tracking-wider">Live Metrics</Text>
+              {/* Performance indicators - Seamless on canvas */}
+              <Animated.View style={{ opacity: fadeAnim }} className="gap-4">
+                <View className="flex-row justify-between items-center px-1">
+                  <Text className="text-[#101828] text-xs font-bold uppercase tracking-wider">
+                    Performance Indicators
+                  </Text>
+                </View>
+
+                <View className="flex-row flex-wrap justify-between gap-y-6 pt-1">
+                  {/* Ring 1: Rating */}
+                  <View className="items-center" style={{ width: '48%', paddingVertical: 8 }}>
+                    <ProgressRing progress={currentStats.trainerRatingProgress} size={84} strokeWidth={10} activeColor="#F59E0B" enable3D={true}>
+                      <Text className="text-[#101828] text-sm font-extrabold">{currentStats.trainerRating}</Text>
+                    </ProgressRing>
+                    <Text className="text-[#101828] text-xs font-bold mt-2.5">Rating</Text>
+                    <View className="mt-1 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200/80">
+                      <Text className="text-amber-700 text-[9px] font-bold uppercase">{currentStats.trainerRatingSub}</Text>
                     </View>
                   </View>
 
-                  <View className="flex-row flex-wrap justify-between gap-y-3.5 pt-1">
-                    {/* Ring 1: Rating */}
-                    <View 
-                      style={{
-                        width: '48%',
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: 20,
-                        paddingVertical: 16,
-                        paddingHorizontal: 8,
-                        alignItems: 'center',
-                        borderTopWidth: 1.5,
-                        borderLeftWidth: 1.5,
-                        borderTopColor: '#FFFFFF',
-                        borderLeftColor: '#FFFFFF',
-                        borderRightWidth: 1.5,
-                        borderBottomWidth: 3,
-                        borderRightColor: '#E2E8F0',
-                        borderBottomColor: '#CBD5E1',
-                        shadowColor: '#0F172A',
-                        shadowOffset: { width: 0, height: 6 },
-                        shadowOpacity: 0.07,
-                        shadowRadius: 10,
-                        elevation: 4,
-                      }}
-                    >
-                      <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 3 }}>
-                        <ProgressRing progress={currentStats.trainerRatingProgress} size={74} strokeWidth={6}>
-                          <Text className="text-[#101828] text-xs font-black">{currentStats.trainerRating}</Text>
-                        </ProgressRing>
-                      </View>
-                      <Text className="text-[#101828] text-xs font-extrabold mt-2.5">Rating</Text>
-                      <View className="mt-1 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200/80">
-                        <Text className="text-amber-700 text-[9px] font-bold uppercase">{currentStats.trainerRatingSub}</Text>
-                      </View>
-                    </View>
-
-                    {/* Ring 2: Completion Rate */}
-                    <View 
-                      style={{
-                        width: '48%',
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: 20,
-                        paddingVertical: 16,
-                        paddingHorizontal: 8,
-                        alignItems: 'center',
-                        borderTopWidth: 1.5,
-                        borderLeftWidth: 1.5,
-                        borderTopColor: '#FFFFFF',
-                        borderLeftColor: '#FFFFFF',
-                        borderRightWidth: 1.5,
-                        borderBottomWidth: 3,
-                        borderRightColor: '#E2E8F0',
-                        borderBottomColor: '#CBD5E1',
-                        shadowColor: '#0F172A',
-                        shadowOffset: { width: 0, height: 6 },
-                        shadowOpacity: 0.07,
-                        shadowRadius: 10,
-                        elevation: 4,
-                      }}
-                    >
-                      <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 3 }}>
-                        <ProgressRing progress={currentStats.trainerCompletionProgress} size={74} strokeWidth={6}>
-                          <Text className="text-[#101828] text-xs font-black">{currentStats.trainerCompletion}</Text>
-                        </ProgressRing>
-                      </View>
-                      <Text className="text-[#101828] text-xs font-extrabold mt-2.5">Completion</Text>
-                      <View className="mt-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80">
-                        <Text className="text-emerald-700 text-[9px] font-bold uppercase">{currentStats.trainerCompletionSub}</Text>
-                      </View>
-                    </View>
-
-                    {/* Ring 3: Active Jobs / Visits */}
-                    <View 
-                      style={{
-                        width: '48%',
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: 20,
-                        paddingVertical: 16,
-                        paddingHorizontal: 8,
-                        alignItems: 'center',
-                        borderTopWidth: 1.5,
-                        borderLeftWidth: 1.5,
-                        borderTopColor: '#FFFFFF',
-                        borderLeftColor: '#FFFFFF',
-                        borderRightWidth: 1.5,
-                        borderBottomWidth: 3,
-                        borderRightColor: '#E2E8F0',
-                        borderBottomColor: '#CBD5E1',
-                        shadowColor: '#0F172A',
-                        shadowOffset: { width: 0, height: 6 },
-                        shadowOpacity: 0.07,
-                        shadowRadius: 10,
-                        elevation: 4,
-                      }}
-                    >
-                      <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 3 }}>
-                        <ProgressRing progress={currentStats.trainerVisitsProgress} size={74} strokeWidth={6}>
-                          <Text className="text-[#101828] text-xs font-black">{currentStats.trainerVisits}</Text>
-                        </ProgressRing>
-                      </View>
-                      <Text className="text-[#101828] text-xs font-extrabold mt-2.5">Visits</Text>
-                      <View className="mt-1 px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/80">
-                        <Text className="text-indigo-700 text-[9px] font-bold uppercase">{currentStats.trainerVisitsSub}</Text>
-                      </View>
-                    </View>
-
-                    {/* Ring 4: Earnings Goal */}
-                    <View 
-                      style={{
-                        width: '48%',
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: 20,
-                        paddingVertical: 16,
-                        paddingHorizontal: 8,
-                        alignItems: 'center',
-                        borderTopWidth: 1.5,
-                        borderLeftWidth: 1.5,
-                        borderTopColor: '#FFFFFF',
-                        borderLeftColor: '#FFFFFF',
-                        borderRightWidth: 1.5,
-                        borderBottomWidth: 3,
-                        borderRightColor: '#E2E8F0',
-                        borderBottomColor: '#CBD5E1',
-                        shadowColor: '#0F172A',
-                        shadowOffset: { width: 0, height: 6 },
-                        shadowOpacity: 0.07,
-                        shadowRadius: 10,
-                        elevation: 4,
-                      }}
-                    >
-                      <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 3 }}>
-                        <ProgressRing progress={currentStats.trainerPayoutProgress} size={74} strokeWidth={6}>
-                          <Text className="text-[#101828] text-xs font-black">{currentStats.trainerPayoutVal}</Text>
-                        </ProgressRing>
-                      </View>
-                      <Text className="text-[#101828] text-xs font-extrabold mt-2.5">Payout Target</Text>
-                      <View className="mt-1 px-2.5 py-0.5 rounded-full bg-purple-50 border border-purple-200/80">
-                        <Text className="text-purple-700 text-[9px] font-bold uppercase">{currentStats.trainerPayoutSub}</Text>
-                      </View>
+                  {/* Ring 2: Completion Rate */}
+                  <View className="items-center" style={{ width: '48%', paddingVertical: 8 }}>
+                    <ProgressRing progress={currentStats.trainerCompletionProgress} size={84} strokeWidth={10} activeColor="#10B981" enable3D={true}>
+                      <Text className="text-[#101828] text-sm font-extrabold">{currentStats.trainerCompletion}</Text>
+                    </ProgressRing>
+                    <Text className="text-[#101828] text-xs font-bold mt-2.5">Completion</Text>
+                    <View className="mt-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80">
+                      <Text className="text-emerald-700 text-[9px] font-bold uppercase">{currentStats.trainerCompletionSub}</Text>
                     </View>
                   </View>
-                </LuxuryCard>
+
+                  {/* Ring 3: Active Jobs / Visits */}
+                  <View className="items-center" style={{ width: '48%', paddingVertical: 8 }}>
+                    <ProgressRing progress={currentStats.trainerVisitsProgress} size={84} strokeWidth={10} activeColor="#6366F1" enable3D={true}>
+                      <Text className="text-[#101828] text-sm font-extrabold">{currentStats.trainerVisits}</Text>
+                    </ProgressRing>
+                    <Text className="text-[#101828] text-xs font-bold mt-2.5">Visits</Text>
+                    <View className="mt-1 px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/80">
+                      <Text className="text-indigo-700 text-[9px] font-bold uppercase">{currentStats.trainerVisitsSub}</Text>
+                    </View>
+                  </View>
+
+                  {/* Ring 4: Earnings Goal */}
+                  <View className="items-center" style={{ width: '48%', paddingVertical: 8 }}>
+                    <ProgressRing progress={currentStats.trainerPayoutProgress} size={84} strokeWidth={10} activeColor="#8B5CF6" enable3D={true}>
+                      <Text className="text-[#101828] text-sm font-extrabold">{currentStats.trainerPayoutVal}</Text>
+                    </ProgressRing>
+                    <Text className="text-[#101828] text-xs font-bold mt-2.5">Payout Target</Text>
+                    <View className="mt-1 px-2.5 py-0.5 rounded-full bg-purple-50 border border-purple-200/80">
+                      <Text className="text-purple-700 text-[9px] font-bold uppercase">{currentStats.trainerPayoutSub}</Text>
+                    </View>
+                  </View>
+                </View>
               </Animated.View>
 
-              {/* Weekly/Monthly Earnings chart */}
-              <Animated.View style={{ opacity: fadeAnim }}>
-                <LuxuryCard 
-                  className="p-6" 
-                  interactive={false}
-                  style={{
-                    borderTopWidth: 1.5,
-                    borderLeftWidth: 1.5,
-                    borderTopColor: '#FFFFFF',
-                    borderLeftColor: '#FFFFFF',
-                    borderRightWidth: 1.5,
-                    borderBottomWidth: 3.5,
-                    borderRightColor: '#E2E8F0',
-                    borderBottomColor: '#CBD5E1',
-                    shadowColor: '#0F172A',
-                    shadowOffset: { width: 0, height: 10 },
-                    shadowOpacity: 0.08,
-                    shadowRadius: 16,
-                    elevation: 5,
-                  }}
-                >
-                  <View className="flex-row justify-between items-center mb-5">
-                    <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">
+              {/* Weekly/Monthly Earnings chart - Seamless on canvas */}
+              <Animated.View style={{ opacity: fadeAnim }} className="gap-4">
+                <View className="flex-row justify-between items-center px-1">
+                  <View>
+                    <Text className="text-[#101828] text-xs font-bold uppercase tracking-wider">
                       Sessions History Chart
                     </Text>
-                    <View className="px-2.5 py-1 bg-zinc-100 rounded-full border border-zinc-200">
-                      <Text className="text-[#6B7280] text-[9px] font-black uppercase tracking-wider">
-                        {activeRange === 'weekly' ? 'Daily Breakdown' : activeRange === 'monthly' ? '4-Week View' : 'Quarterly Trend'}
-                      </Text>
-                    </View>
+                    <Text className="text-zinc-500 text-[10px] font-medium mt-0.5">
+                      {activeRange === 'weekly' ? 'Daily session breakdown' : activeRange === 'monthly' ? '4-Week progression' : 'Quarterly trend'}
+                    </Text>
                   </View>
+                  <View className="px-2.5 py-1 bg-[#101828]/5 rounded-full border border-[#101828]/10">
+                    <Text className="text-[#6B7280] text-[9px] font-bold uppercase tracking-wider">
+                      {activeRange === 'weekly' ? 'Daily Breakdown' : activeRange === 'monthly' ? '4-Week View' : 'Quarterly Trend'}
+                    </Text>
+                  </View>
+                </View>
 
-                  <View className="flex-row items-end justify-between h-36 pt-2 pb-1">
+                <View style={{ height: 152, justifyContent: 'flex-end', paddingTop: 8 }}>
+                  <View className="flex-row items-end justify-between">
                     {currentStats.chartData.map((d, index) => {
                       const isPeak = d.val > 0 && d.val === Math.max(...currentStats.chartData.map(c => c.val));
                       const heightPercent = d.val ? `${d.val}%` : '6%';
+                      const barWidth = currentStats.chartData.length > 5 ? 24 : 30;
+                      const shadowWidth = currentStats.chartData.length > 5 ? 20 : 24;
                       return (
-                        <View key={index} className="items-center flex-1 gap-1.5">
+                        <View key={index} className="items-center flex-1">
                           {/* 3D Floating Peak Indicator */}
-                          <View style={{ height: 16, justifyContent: 'center' }}>
-                            {isPeak && (
+                          <View style={{ height: 20, justifyContent: 'center', marginBottom: 6 }}>
+                            {isPeak ? (
                               <View 
                                 style={{
                                   backgroundColor: '#E11D48',
-                                  paddingHorizontal: 4,
-                                  paddingVertical: 1,
-                                  borderRadius: 4,
+                                  paddingHorizontal: 6,
+                                  paddingVertical: 1.5,
+                                  borderRadius: 5,
                                   shadowColor: '#E11D48',
                                   shadowOffset: { width: 0, height: 2 },
                                   shadowOpacity: 0.3,
@@ -603,20 +551,24 @@ export default function ProgressScreen() {
                                   elevation: 3,
                                 }}
                               >
-                                <Text style={{ color: '#FFFFFF', fontSize: 8, fontWeight: '900' }}>
+                                <Text style={{ color: '#FFFFFF', fontSize: 8.5, fontWeight: '800' }}>
                                   {d.val}%
                                 </Text>
                               </View>
+                            ) : (
+                              <Text style={{ color: '#94A3B8', fontSize: 8.5, fontWeight: '600' }}>
+                                {d.val > 0 ? `${d.val}%` : ''}
+                              </Text>
                             )}
                           </View>
 
                           {/* 3D Recessed Pillar Groove (Track) */}
                           <View 
                             style={{
-                              width: 26,
-                              height: 100,
-                              borderRadius: 13,
-                              backgroundColor: '#EEF2F6',
+                              width: barWidth,
+                              height: 88,
+                              borderRadius: barWidth / 2,
+                              backgroundColor: '#EAEFF5',
                               justifyContent: 'flex-end',
                               overflow: 'hidden',
                               borderTopWidth: 2,
@@ -634,7 +586,7 @@ export default function ProgressScreen() {
                               style={{ 
                                 height: heightPercent as any,
                                 width: '100%',
-                                borderRadius: 12,
+                                borderRadius: (barWidth - 2) / 2,
                                 backgroundColor: d.val === 0 
                                   ? '#E2E8F0' 
                                   : index % 2 === 0 ? '#E11D48' : '#BE123C',
@@ -662,19 +614,20 @@ export default function ProgressScreen() {
                           {/* 3D Pillar Base Ground Shadow */}
                           <View 
                             style={{
-                              width: 20,
+                              width: shadowWidth,
                               height: 4,
                               borderRadius: 2,
                               backgroundColor: d.val > 0 ? 'rgba(15, 23, 42, 0.16)' : 'rgba(15, 23, 42, 0.05)',
-                              marginTop: 1,
+                              marginTop: 4,
                             }}
                           />
 
                           <Text 
                             style={{
-                              color: isPeak ? '#101828' : '#6B7280',
+                              color: isPeak ? '#101828' : '#64748B',
                               fontSize: 10,
-                              fontWeight: isPeak ? '900' : '700',
+                              fontWeight: isPeak ? '800' : '600',
+                              marginTop: 4,
                             }}
                           >
                             {d.label}
@@ -683,12 +636,12 @@ export default function ProgressScreen() {
                       );
                     })}
                   </View>
-                </LuxuryCard>
+                </View>
               </Animated.View>
 
               {/* Client Review Feed Wall */}
               <View className="gap-3">
-                <Text className="text-[#101828] text-xs font-black uppercase tracking-widest pl-1">Client Review Wall</Text>
+                <Text className="text-[#101828] text-xs font-bold uppercase tracking-wider pl-1">Client Review Wall</Text>
                 <LuxuryCard className="p-5 gap-4" interactive={false}>
                   {[
                     { id: 'r-1', clientName: 'Viral S.', rating: 5, comment: 'Excellent strength coaching session! Focus on form was perfect.', date: 'Today', workout: 'PowerForge' },
@@ -697,7 +650,7 @@ export default function ProgressScreen() {
                   ].map((rev) => (
                     <View key={rev.id} className="py-3 border-b border-zinc-100 last:border-b-0 gap-1.5">
                       <View className="flex-row justify-between items-center">
-                        <Text className="text-[#101828] text-xs font-extrabold">{rev.clientName} • {rev.workout}</Text>
+                        <Text className="text-[#101828] text-xs font-bold">{rev.clientName} • {rev.workout}</Text>
                         <Text className="text-zinc-400 text-[9px] font-semibold">{rev.date}</Text>
                       </View>
                       <Text className="text-[#6B7280] text-xs italic">&ldquo;{rev.comment}&rdquo;</Text>
@@ -722,7 +675,7 @@ export default function ProgressScreen() {
                       key={r}
                       activeOpacity={0.7}
                       onPress={() => setActiveRange(r)}
-                      className="flex-1 py-3.5 rounded-xl items-center justify-center"
+                      className="flex-1 py-3 rounded-xl items-center justify-center"
                       style={{
                         backgroundColor: isActive ? '#101828' : 'transparent',
                         shadowColor: '#101828',
@@ -733,7 +686,7 @@ export default function ProgressScreen() {
                       }}
                     >
                       <Text
-                        className="text-[10px] font-black uppercase tracking-wider"
+                        className="text-[11px] font-bold uppercase tracking-wider"
                         style={{
                           color: isActive ? '#FFFFFF' : '#6B7280',
                         }}
@@ -745,253 +698,132 @@ export default function ProgressScreen() {
                 })}
               </View>
 
-              {/* Card 1: 4 Animated Rings (Feature 8) */}
-              <Animated.View style={{ opacity: fadeAnim }} className="gap-3">
-                <Text className="text-[#101828] text-xs font-black uppercase tracking-wider pl-1">
-                  Wellness Indicators
-                </Text>
+              {/* Card 1: 4 Animated Rings (Feature 8) - Seamless on canvas */}
+              <Animated.View style={{ opacity: fadeAnim }} className="gap-4">
+                <View className="flex-row justify-between items-center px-1">
+                  <Text className="text-[#101828] text-xs font-bold uppercase tracking-wider">
+                    Wellness Indicators
+                  </Text>
+                </View>
 
-                {/* 2x2 3D Stat Pods Grid with Neon Inner Rim Lighting */}
-                <View className="flex-row flex-wrap justify-between gap-y-3.5 pt-1">
-                    {/* Pod 1: Calories */}
-                    <View 
-                      style={{
-                        width: '48%',
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: 22,
-                        padding: 3,
-                        // Multi-layer Beveled Glass Borders
-                        borderTopWidth: 2,
-                        borderLeftWidth: 2,
-                        borderTopColor: '#FFFFFF',
-                        borderLeftColor: '#FFFFFF',
-                        borderRightWidth: 1.5,
-                        borderBottomWidth: 4,
-                        borderRightColor: '#E2E8F0',
-                        borderBottomColor: '#CBD5E1',
-                        // Deep Ambient Drop Shadow
-                        shadowColor: '#0F172A',
-                        shadowOffset: { width: 0, height: 10 },
-                        shadowOpacity: 0.12,
-                        shadowRadius: 18,
-                        elevation: 6,
-                      }}
-                    >
-                      {/* Neon Rose Inner Rim Lighting */}
-                      <View 
-                        style={{
-                          borderRadius: 18,
-                          paddingVertical: 14,
-                          paddingHorizontal: 6,
-                          alignItems: 'center',
-                          borderWidth: 1.5,
-                          borderColor: 'rgba(244, 63, 94, 0.40)',
-                          backgroundColor: 'rgba(255, 241, 242, 0.45)',
-                          shadowColor: '#F43F5E',
-                          shadowOffset: { width: 0, height: 0 },
-                          shadowOpacity: 0.35,
-                          shadowRadius: 10,
-                        }}
-                      >
-                        <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FECDD3', shadowColor: '#F43F5E', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 5 }}>
-                          <ProgressRing progress={currentStats.caloriesProgress} size={74} strokeWidth={6} activeColor="#F43F5E">
-                            <Text className="text-[#101828] text-xs font-black">
-                              {Math.round(currentStats.caloriesProgress * 100)}%
-                            </Text>
-                          </ProgressRing>
-                        </View>
-                        <Text className="text-[#101828] text-xs font-extrabold mt-2.5">Calories</Text>
-                        <Text className="text-[#6B7280] text-[9px] font-bold uppercase mt-1">{currentStats.calories} Kcal</Text>
-                      </View>
-                    </View>
-
-                    {/* Pod 2: Attendance */}
-                    <View 
-                      style={{
-                        width: '48%',
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: 22,
-                        padding: 3,
-                        // Multi-layer Beveled Glass Borders
-                        borderTopWidth: 2,
-                        borderLeftWidth: 2,
-                        borderTopColor: '#FFFFFF',
-                        borderLeftColor: '#FFFFFF',
-                        borderRightWidth: 1.5,
-                        borderBottomWidth: 4,
-                        borderRightColor: '#E2E8F0',
-                        borderBottomColor: '#CBD5E1',
-                        // Deep Ambient Drop Shadow
-                        shadowColor: '#0F172A',
-                        shadowOffset: { width: 0, height: 10 },
-                        shadowOpacity: 0.12,
-                        shadowRadius: 18,
-                        elevation: 6,
-                      }}
-                    >
-                      {/* Neon Emerald Inner Rim Lighting */}
-                      <View 
-                        style={{
-                          borderRadius: 18,
-                          paddingVertical: 14,
-                          paddingHorizontal: 6,
-                          alignItems: 'center',
-                          borderWidth: 1.5,
-                          borderColor: 'rgba(16, 185, 129, 0.40)',
-                          backgroundColor: 'rgba(240, 253, 244, 0.45)',
-                          shadowColor: '#10B981',
-                          shadowOffset: { width: 0, height: 0 },
-                          shadowOpacity: 0.35,
-                          shadowRadius: 10,
-                        }}
-                      >
-                        <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#A7F3D0', shadowColor: '#10B981', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 5 }}>
-                          <ProgressRing progress={currentStats.attendance / 100} size={74} strokeWidth={6} activeColor="#10B981">
-                            <Text className="text-[#101828] text-xs font-black">{currentStats.attendance}%</Text>
-                          </ProgressRing>
-                        </View>
-                        <Text className="text-[#101828] text-xs font-extrabold mt-2.5">Attendance</Text>
-                        <Text className="text-[#6B7280] text-[9px] font-bold uppercase mt-1">Optimal Rate</Text>
-                      </View>
-                    </View>
-
-                    {/* Pod 3: Sessions */}
-                    <View 
-                      style={{
-                        width: '48%',
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: 22,
-                        padding: 3,
-                        // Multi-layer Beveled Glass Borders
-                        borderTopWidth: 2,
-                        borderLeftWidth: 2,
-                        borderTopColor: '#FFFFFF',
-                        borderLeftColor: '#FFFFFF',
-                        borderRightWidth: 1.5,
-                        borderBottomWidth: 4,
-                        borderRightColor: '#E2E8F0',
-                        borderBottomColor: '#CBD5E1',
-                        // Deep Ambient Drop Shadow
-                        shadowColor: '#0F172A',
-                        shadowOffset: { width: 0, height: 10 },
-                        shadowOpacity: 0.12,
-                        shadowRadius: 18,
-                        elevation: 6,
-                      }}
-                    >
-                      {/* Neon Indigo Inner Rim Lighting */}
-                      <View 
-                        style={{
-                          borderRadius: 18,
-                          paddingVertical: 14,
-                          paddingHorizontal: 6,
-                          alignItems: 'center',
-                          borderWidth: 1.5,
-                          borderColor: 'rgba(99, 102, 241, 0.40)',
-                          backgroundColor: 'rgba(238, 242, 255, 0.45)',
-                          shadowColor: '#6366F1',
-                          shadowOffset: { width: 0, height: 0 },
-                          shadowOpacity: 0.35,
-                          shadowRadius: 10,
-                        }}
-                      >
-                        <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#C7D2FE', shadowColor: '#6366F1', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 5 }}>
-                          <ProgressRing progress={currentStats.sessionsProgress} size={74} strokeWidth={6} activeColor="#6366F1">
-                            <Text className="text-[#101828] text-xs font-black">{currentStats.sessions}</Text>
-                          </ProgressRing>
-                        </View>
-                        <Text className="text-[#101828] text-xs font-extrabold mt-2.5">Sessions</Text>
-                        <Text className="text-[#6B7280] text-[9px] font-bold uppercase mt-1">Completed</Text>
-                      </View>
-                    </View>
-
-                    {/* Pod 4: Recovery */}
-                    <View 
-                      style={{
-                        width: '48%',
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: 22,
-                        padding: 3,
-                        // Multi-layer Beveled Glass Borders
-                        borderTopWidth: 2,
-                        borderLeftWidth: 2,
-                        borderTopColor: '#FFFFFF',
-                        borderLeftColor: '#FFFFFF',
-                        borderRightWidth: 1.5,
-                        borderBottomWidth: 4,
-                        borderRightColor: '#E2E8F0',
-                        borderBottomColor: '#CBD5E1',
-                        // Deep Ambient Drop Shadow
-                        shadowColor: '#0F172A',
-                        shadowOffset: { width: 0, height: 10 },
-                        shadowOpacity: 0.12,
-                        shadowRadius: 18,
-                        elevation: 6,
-                      }}
-                    >
-                      {/* Neon Amber/Gold Inner Rim Lighting */}
-                      <View 
-                        style={{
-                          borderRadius: 18,
-                          paddingVertical: 14,
-                          paddingHorizontal: 6,
-                          alignItems: 'center',
-                          borderWidth: 1.5,
-                          borderColor: 'rgba(245, 158, 11, 0.40)',
-                          backgroundColor: 'rgba(255, 251, 235, 0.45)',
-                          shadowColor: '#F59E0B',
-                          shadowOffset: { width: 0, height: 0 },
-                          shadowOpacity: 0.35,
-                          shadowRadius: 10,
-                        }}
-                      >
-                        <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FDE68A', shadowColor: '#F59E0B', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 5 }}>
-                          <ProgressRing progress={currentStats.recovery / 100} size={74} strokeWidth={6} activeColor="#F59E0B">
-                            <Text className="text-[#101828] text-xs font-black">{currentStats.recovery}%</Text>
-                          </ProgressRing>
-                        </View>
-                        <Text className="text-[#101828] text-xs font-extrabold mt-2.5">Recovery</Text>
-                        <Text className="text-[#6B7280] text-[9px] font-bold uppercase mt-1">High Index</Text>
-                      </View>
-                    </View>
+                {/* 2x2 Stat Pods Grid (No white card background) */}
+                <View className="flex-row flex-wrap justify-between gap-y-6 pt-1">
+                  {/* Pod 1: Calories */}
+                  <View className="items-center" style={{ width: '48%', paddingVertical: 8 }}>
+                    <ProgressRing progress={currentStats.caloriesProgress} size={84} strokeWidth={10} activeColor="#F43F5E" enable3D={true}>
+                      <Text className="text-[#101828] text-sm font-extrabold">
+                        {Math.round(currentStats.caloriesProgress * 100)}%
+                      </Text>
+                    </ProgressRing>
+                    <Text className="text-[#101828] text-xs font-bold mt-2.5">Calories</Text>
+                    <Text className="text-zinc-500 text-[10px] font-semibold uppercase mt-0.5">{currentStats.calories} Kcal</Text>
                   </View>
+
+                  {/* Pod 2: Attendance */}
+                  <View className="items-center" style={{ width: '48%', paddingVertical: 8 }}>
+                    <ProgressRing progress={currentStats.attendance / 100} size={84} strokeWidth={10} activeColor="#10B981" enable3D={true}>
+                      <Text className="text-[#101828] text-sm font-extrabold">{currentStats.attendance}%</Text>
+                    </ProgressRing>
+                    <Text className="text-[#101828] text-xs font-bold mt-2.5">Attendance</Text>
+                    <Text className="text-zinc-500 text-[10px] font-semibold uppercase mt-0.5">Optimal Rate</Text>
+                  </View>
+
+                  {/* Pod 3: Sessions */}
+                  <View className="items-center" style={{ width: '48%', paddingVertical: 8 }}>
+                    <ProgressRing progress={currentStats.sessionsProgress} size={84} strokeWidth={10} activeColor="#6366F1" enable3D={true}>
+                      <Text className="text-[#101828] text-sm font-extrabold">{currentStats.sessions}</Text>
+                    </ProgressRing>
+                    <Text className="text-[#101828] text-xs font-bold mt-2.5">Sessions</Text>
+                    <Text className="text-zinc-500 text-[10px] font-semibold uppercase mt-0.5">Completed</Text>
+                  </View>
+
+                  {/* Pod 4: Recovery */}
+                  <View className="items-center" style={{ width: '48%', paddingVertical: 8 }}>
+                    <ProgressRing progress={currentStats.recovery / 100} size={84} strokeWidth={10} activeColor="#F59E0B" enable3D={true}>
+                      <Text className="text-[#101828] text-sm font-extrabold">{currentStats.recovery}%</Text>
+                    </ProgressRing>
+                    <Text className="text-[#101828] text-xs font-bold mt-2.5">Recovery</Text>
+                    <Text className="text-zinc-500 text-[10px] font-semibold uppercase mt-0.5">High Index</Text>
+                  </View>
+                </View>
               </Animated.View>
 
-              {/* Card 2: Sculpted 3D Liquid Energy Cylinders Chart */}
-              <Animated.View style={{ opacity: fadeAnim }} className="gap-3">
-                <Text className="text-[#101828] text-xs font-black uppercase tracking-wider pl-1">
-                  Activity History
-                </Text>
+              {/* Card 2: Sculpted 3D Liquid Energy Cylinders Chart (Seamless on canvas) */}
+              <Animated.View style={{ opacity: fadeAnim }} className="gap-4">
+                <View className="flex-row justify-between items-center px-1">
+                  <View>
+                    <Text className="text-[#101828] text-xs font-bold uppercase tracking-wider">
+                      Activity History
+                    </Text>
+                    <Text className="text-zinc-500 text-[10px] font-medium mt-0.5">
+                      {activeRange === 'weekly' ? 'Daily intensity & consistency' : activeRange === 'monthly' ? '4-Week progression' : 'Annual volume overview'}
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center gap-1.5 px-2.5 py-1 bg-[#101828]/5 rounded-full border border-[#101828]/10">
+                    <View className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                    <Text className="text-indigo-700 text-[9px] font-bold uppercase tracking-wider">
+                      {activeRange === 'weekly' ? '7-Day View' : activeRange === 'monthly' ? 'Monthly' : 'Yearly'}
+                    </Text>
+                  </View>
+                </View>
 
-                <View className="pt-2 pb-1">
-                  <View className="flex-row items-end justify-between h-36 pt-2 pb-1">
+                <View style={{ height: 152, justifyContent: 'flex-end', paddingTop: 8 }}>
+                  <View className="flex-row items-end justify-between">
                     {currentStats.chartData.map((d, index) => {
                       const isPeak = d.val > 0 && d.val === Math.max(...currentStats.chartData.map(c => c.val));
                       const heightPercent = d.val ? `${d.val}%` : '8%';
+                      const barWidth = currentStats.chartData.length > 5 ? 24 : 30;
+                      const shadowWidth = currentStats.chartData.length > 5 ? 20 : 24;
                       return (
-                        <View key={index} className="items-center flex-1 gap-1.5">
+                        <View key={index} className="items-center flex-1">
+                          {/* Floating Peak / Value Indicator */}
+                          <View style={{ height: 20, justifyContent: 'center', marginBottom: 6 }}>
+                            {isPeak ? (
+                              <View 
+                                style={{
+                                  backgroundColor: '#4F46E5',
+                                  paddingHorizontal: 6,
+                                  paddingVertical: 1.5,
+                                  borderRadius: 5,
+                                  shadowColor: '#4F46E5',
+                                  shadowOffset: { width: 0, height: 2 },
+                                  shadowOpacity: 0.35,
+                                  shadowRadius: 3,
+                                  elevation: 3,
+                                }}
+                              >
+                                <Text style={{ color: '#FFFFFF', fontSize: 8.5, fontWeight: '800' }}>
+                                  {d.val}%
+                                </Text>
+                              </View>
+                            ) : (
+                              <Text style={{ color: '#94A3B8', fontSize: 8.5, fontWeight: '600' }}>
+                                {d.val > 0 ? `${d.val}%` : ''}
+                              </Text>
+                            )}
+                          </View>
 
                           {/* Sculpted 3D Glass Cylindrical Conduit */}
                           <View 
                             style={{
-                              width: 30,
-                              height: 112,
-                              borderRadius: 15,
-                              backgroundColor: '#EEF2F7',
+                              width: barWidth,
+                              height: 88,
+                              borderRadius: barWidth / 2,
+                              backgroundColor: '#EAEFF5',
                               justifyContent: 'flex-end',
                               overflow: 'hidden',
-                              borderTopWidth: 2.5,
-                              borderLeftWidth: 2,
+                              borderTopWidth: 2,
+                              borderLeftWidth: 1.5,
                               borderTopColor: '#CBD5E1',
                               borderLeftColor: '#CBD5E1',
-                              borderBottomWidth: 1.5,
-                              borderRightWidth: 1.5,
+                              borderBottomWidth: 1,
+                              borderRightWidth: 1,
                               borderBottomColor: '#FFFFFF',
                               borderRightColor: '#FFFFFF',
                               shadowColor: '#000000',
-                              shadowOffset: { width: 0, height: 3 },
-                              shadowOpacity: 0.10,
-                              shadowRadius: 4,
+                              shadowOffset: { width: 0, height: 2 },
+                              shadowOpacity: 0.08,
+                              shadowRadius: 3,
                             }}
                           >
                             {/* Liquid Energy Core with Specular Reflections */}
@@ -999,37 +831,33 @@ export default function ProgressScreen() {
                               style={{ 
                                 height: heightPercent as any,
                                 width: '100%',
-                                borderRadius: 14,
+                                borderRadius: (barWidth - 2) / 2,
                                 backgroundColor: d.val === 0 
                                   ? '#E2E8F0' 
                                   : index % 2 === 0 ? '#4F46E5' : '#6366F1',
-                                // Realistic Specular Reflections along left edge
-                                borderLeftWidth: 2,
+                                borderLeftWidth: 1.5,
                                 borderLeftColor: 'rgba(255, 255, 255, 0.85)',
-                                // Cylindrical refraction depth along right edge
-                                borderRightWidth: 2,
-                                borderRightColor: 'rgba(0, 0, 0, 0.32)',
-                                // Neon Liquid Energy Glow
+                                borderRightWidth: 1.5,
+                                borderRightColor: 'rgba(0, 0, 0, 0.28)',
                                 shadowColor: '#4F46E5',
                                 shadowOffset: { width: 0, height: 0 },
-                                shadowOpacity: 0.55,
-                                shadowRadius: 10,
-                                elevation: 5,
+                                shadowOpacity: 0.5,
+                                shadowRadius: 8,
+                                elevation: 4,
                               }} 
                             >
-                              {/* Convex 3D Liquid Meniscus / Illuminated Top Cap */}
                               {d.val > 0 && (
                                 <View 
                                   style={{
                                     width: '100%',
-                                    height: 6,
-                                    borderRadius: 3,
+                                    height: 5,
+                                    borderRadius: 2.5,
                                     backgroundColor: '#FFFFFF',
                                     opacity: 0.9,
                                     shadowColor: '#FFFFFF',
                                     shadowOffset: { width: 0, height: -1 },
                                     shadowOpacity: 0.9,
-                                    shadowRadius: 4,
+                                    shadowRadius: 3,
                                   }}
                                 />
                               )}
@@ -1039,20 +867,20 @@ export default function ProgressScreen() {
                           {/* 3D Pillar Base Ground Glow Shadow */}
                           <View 
                             style={{
-                              width: 24,
-                              height: 5,
-                              borderRadius: 2.5,
-                              backgroundColor: d.val > 0 ? 'rgba(79, 70, 229, 0.32)' : 'rgba(15, 23, 42, 0.08)',
+                              width: shadowWidth,
+                              height: 4,
+                              borderRadius: 2,
+                              backgroundColor: d.val > 0 ? 'rgba(79, 70, 229, 0.28)' : 'rgba(15, 23, 42, 0.06)',
                               marginTop: 4,
                             }}
                           />
 
                           <Text 
                             style={{
-                              color: isPeak ? '#101828' : '#6B7280',
-                              fontSize: 10.5,
-                              fontWeight: isPeak ? '900' : '700',
-                              marginTop: 2,
+                              color: isPeak ? '#101828' : '#64748B',
+                              fontSize: 10,
+                              fontWeight: isPeak ? '800' : '600',
+                              marginTop: 4,
                             }}
                           >
                             {d.label}
@@ -1064,14 +892,21 @@ export default function ProgressScreen() {
                 </View>
               </Animated.View>
 
-              {/* Card 3: Embossed 3D Medallion Badges */}
+              {/* Card 3: Embossed 3D Medallion Badges (Dynamic Status) */}
               <View className="gap-3.5">
-                <Text className="text-[#101828] text-xs font-black uppercase tracking-widest pl-1">
-                  Achievements Badges
-                </Text>
+                <View className="flex-row items-center justify-between px-1">
+                  <Text className="text-[#101828] text-xs font-bold uppercase tracking-wider">
+                    Achievements Badges
+                  </Text>
+                  <View className="px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/80">
+                    <Text className="text-indigo-700 text-[9px] font-bold uppercase tracking-wider">
+                      {unlockedCount} of {achievements.length} Unlocked
+                    </Text>
+                  </View>
+                </View>
 
                 {achievements.map((b) => {
-                  const theme = getMedallionTheme(b.id);
+                  const theme = getMedallionTheme(b.id, b.unlocked);
                   return (
                     <View
                       key={b.id}
@@ -1083,6 +918,7 @@ export default function ProgressScreen() {
                         paddingHorizontal: 4,
                         borderBottomWidth: 1,
                         borderBottomColor: 'rgba(226, 232, 240, 0.7)',
+                        opacity: b.unlocked ? 1 : 0.75,
                       }}
                     >
                       {/* Deep Inset Chamfer Medallion Socket */}
@@ -1091,11 +927,11 @@ export default function ProgressScreen() {
                           width: 58,
                           height: 58,
                           borderRadius: 29,
-                          backgroundColor: '#E2E8F0',
+                          backgroundColor: b.unlocked ? '#E2E8F0' : '#EDE8E8',
                           borderTopWidth: 2.5,
                           borderLeftWidth: 2.5,
-                          borderTopColor: '#94A3B8',
-                          borderLeftColor: '#94A3B8',
+                          borderTopColor: b.unlocked ? '#94A3B8' : '#CBD5E1',
+                          borderLeftColor: b.unlocked ? '#94A3B8' : '#CBD5E1',
                           borderBottomWidth: 1.5,
                           borderRightWidth: 1.5,
                           borderBottomColor: '#FFFFFF',
@@ -1115,41 +951,79 @@ export default function ProgressScreen() {
                             borderColor: theme.border,
                             shadowColor: theme.glow,
                             shadowOffset: { width: 0, height: 0 },
-                            shadowOpacity: 0.55,
+                            shadowOpacity: b.unlocked ? 0.55 : 0,
                             shadowRadius: 10,
-                            elevation: 6,
+                            elevation: b.unlocked ? 6 : 0,
                             alignItems: 'center',
                             justifyContent: 'center',
                             position: 'relative',
                             overflow: 'hidden',
                           }}
                         >
-                          {/* Specular 3D Reflection Glint */}
-                          <View
-                            style={{
-                              position: 'absolute',
-                              top: 3,
-                              left: 7,
-                              width: 16,
-                              height: 9,
-                              borderRadius: 5,
-                              backgroundColor: '#FFFFFF',
-                              opacity: 0.85,
-                              transform: [{ rotate: '-25deg' }],
-                            }}
-                          />
-                          <Text style={{ fontSize: 24 }}>{b.icon}</Text>
+                          {/* Specular 3D Reflection Glint for Unlocked Badges */}
+                          {b.unlocked && (
+                            <View
+                              style={{
+                                position: 'absolute',
+                                top: 3,
+                                left: 7,
+                                width: 16,
+                                height: 9,
+                                borderRadius: 5,
+                                backgroundColor: '#FFFFFF',
+                                opacity: 0.85,
+                                transform: [{ rotate: '-25deg' }],
+                              }}
+                            />
+                          )}
+                          {b.unlocked ? (
+                            <Text style={{ fontSize: 24 }}>{b.icon}</Text>
+                          ) : (
+                            <Feather name="lock" size={18} color="#94A3B8" />
+                          )}
                         </View>
                       </View>
 
                       {/* Content */}
                       <View className="flex-1">
-                        <Text className="text-[#101828] text-sm font-extrabold tracking-tight">
-                          {b.title}
-                        </Text>
-                        <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">
+                        <View className="flex-row items-center justify-between">
+                          <Text 
+                            style={{ color: b.unlocked ? '#101828' : '#64748B' }}
+                            className="text-sm font-bold tracking-tight"
+                          >
+                            {b.title}
+                          </Text>
+                          <View 
+                            style={{
+                              backgroundColor: theme.chipBg,
+                              paddingHorizontal: 7,
+                              paddingVertical: 2,
+                              borderRadius: 6,
+                            }}
+                          >
+                            <Text style={{ color: theme.chipText, fontSize: 9, fontWeight: '700' }}>
+                              {theme.tag}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text className="text-zinc-500 text-xs font-normal mt-0.5 leading-4">
                           {b.desc}
                         </Text>
+
+                        {/* Progress Tracker for Locked Badges */}
+                        {!b.unlocked && (
+                          <View className="flex-row items-center gap-2 mt-2">
+                            <View className="flex-1 h-1 bg-[#E2E8F0] rounded-full overflow-hidden">
+                              <View 
+                                style={{ width: `${b.progress * 100}%` }} 
+                                className="h-full bg-indigo-500 rounded-full" 
+                              />
+                            </View>
+                            <Text className="text-zinc-400 text-[9px] font-semibold">
+                              {b.progressText}
+                            </Text>
+                          </View>
+                        )}
                       </View>
                     </View>
                   );
