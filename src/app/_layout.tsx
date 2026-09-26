@@ -8,6 +8,8 @@ import { LogBox } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PushNotificationService } from '../services/PushNotificationService';
 import { useUserStore } from '../store/userStore';
+import { TopToastNotification } from '../components/TopToastNotification';
+import { useToastStore } from '../store/toastStore';
 import '../global.css';
 
 // Suppress known upstream React Native Fabric / Expo Router useLinking race condition warning
@@ -25,6 +27,7 @@ export default function RootLayout() {
 
     let isMounted = true;
     let responseSubscription: any = null;
+    let notificationReceivedSubscription: any = null;
     let urlSubscription: any = null;
 
     // 0. Deferred Deep-Link Handling: Capture 'ref' parameter from invite URLs
@@ -58,15 +61,28 @@ export default function RootLayout() {
       try {
         const Notifications = require('expo-notifications');
 
-        // Configure default presentation handler for foreground notifications
+        // Configure presentation handler: disable native system banner in foreground to show custom Top Toast!
         Notifications.setNotificationHandler({
           handleNotification: async () => ({
-            shouldShowAlert: true,
+            shouldShowAlert: false,
             shouldPlaySound: true,
             shouldSetBadge: true,
-            shouldShowBanner: true,
+            shouldShowBanner: false,
             shouldShowList: true,
           }),
+        });
+
+        // Listen for notifications received while app is in foreground and show custom Top Toast
+        notificationReceivedSubscription = Notifications.addNotificationReceivedListener((notification: any) => {
+          const content = notification?.request?.content;
+          if (content) {
+            useToastStore.getState().showToast({
+              title: content.title || 'VIRLA Notification',
+              message: content.body || '',
+              deepLink: content.data?.deepLink,
+              type: content.data?.type || 'info',
+            });
+          }
         });
 
         // 1. Configure Android notification channels
@@ -120,6 +136,9 @@ export default function RootLayout() {
       if (responseSubscription) {
         responseSubscription.remove();
       }
+      if (notificationReceivedSubscription) {
+        notificationReceivedSubscription.remove();
+      }
       if (urlSubscription) {
         urlSubscription.remove();
       }
@@ -130,6 +149,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }} />
+      <TopToastNotification />
     </SafeAreaProvider>
   );
 }

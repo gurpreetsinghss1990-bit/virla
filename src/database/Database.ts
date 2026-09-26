@@ -2961,33 +2961,34 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
 
   // Streaks calculation
   getStreak(userId: string): number {
-    const completedDates = this.schema.bookings
-      .filter(b => b.status === 'completed')
-      .map(b => b.date);
+    const completedDates = new Set(
+      this.schema.bookings
+        .filter(b => b.status === 'completed' && (b.clientId === userId || b.trainerId === userId))
+        .map(b => b.date)
+    );
 
-    if (completedDates.length === 0) return 0;
+    if (completedDates.size === 0) return 0;
 
-    const uniqueDates = Array.from(new Set(completedDates)).map(d => new Date(d));
-    uniqueDates.sort((a, b) => b.getTime() - a.getTime());
-
-    let streak = 0;
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toLocaleDateString('en-CA');
 
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    const yesterdayStr = yesterday.toLocaleDateString('en-CA');
+
+    // If workout done today, start checking from today; otherwise start from yesterday
     let checkDate = new Date(today);
-
-    let workoutFound = uniqueDates.some(d => d.toDateString() === today.toDateString());
-    if (!workoutFound) {
-      checkDate.setDate(today.getDate() - 1);
-      workoutFound = uniqueDates.some(d => d.toDateString() === checkDate.toDateString());
+    if (!completedDates.has(todayStr)) {
+      if (!completedDates.has(yesterdayStr)) {
+        return 0; // Streak broken if neither today nor yesterday has a workout
+      }
+      checkDate = yesterday;
     }
 
-    if (!workoutFound) return 0;
-
-    let safetyCounter = 0;
-    while (safetyCounter++ < 3650) {
-      const match = uniqueDates.some(d => d.toDateString() === checkDate.toDateString());
-      if (match) {
+    let streak = 0;
+    while (streak < 3650) {
+      const dateStr = checkDate.toLocaleDateString('en-CA');
+      if (completedDates.has(dateStr)) {
         streak++;
         checkDate.setDate(checkDate.getDate() - 1);
       } else {
@@ -3000,7 +3001,9 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
 
   // Recovery Score Calculation
   getRecoveryScore(userId: string, date: string): number | null {
-    const workoutsCount = this.schema.bookings.filter(b => b.status === 'completed').length;
+    const workoutsCount = this.schema.bookings.filter(
+      b => b.status === 'completed' && (b.clientId === userId || b.trainerId === userId)
+    ).length;
     const waterToday = this.getHydration(userId, date);
 
     if (workoutsCount === 0 && waterToday === 0) {

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { NotificationItem } from '../types';
 import { Database } from '../database/Database';
+import { useToastStore } from './toastStore';
 
 interface NotificationState {
   notifications: NotificationItem[];
@@ -42,6 +43,18 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     if (userId) {
       Database.addNotification(userId, n);
       get().syncFromDB();
+
+      // Trigger custom in-app Top Toast banner
+      try {
+        useToastStore.getState().showToast({
+          title: n.title,
+          message: n.body,
+          deepLink: n.deepLink,
+          type: (n.type?.toLowerCase().includes('booking') ? 'booking' : 'info') as any,
+        });
+      } catch (err) {
+        console.warn('[NOTIFICATION STORE] Failed to trigger toast:', err);
+      }
     }
   },
   deleteNotification: (id) => {

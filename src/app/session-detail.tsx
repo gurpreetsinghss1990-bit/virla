@@ -1110,8 +1110,8 @@ export default function SessionDetailScreen() {
         <View className="h-14 flex-row items-center px-5 justify-between">
           <TouchableOpacity 
             onPress={() => router.back()} 
-            activeOpacity={0.7}
-            className="w-9 h-9 items-center justify-center rounded-full bg-zinc-100/80 border border-zinc-200/60"
+            activeOpacity={0.6}
+            className="w-9 h-9 items-center justify-center active:opacity-60"
           >
             <Ionicons name="arrow-back" size={18} color="#09090B" />
           </TouchableOpacity>

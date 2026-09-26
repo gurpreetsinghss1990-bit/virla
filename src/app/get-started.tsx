@@ -885,15 +885,16 @@ export default function GetStartedScreen() {
                   </Text>
                   <View className="flex-row gap-2 w-full items-center">
                     <View className="flex-1 flex-row items-center bg-[#1A1A1E] border border-white/10 rounded-2xl px-4 py-1">
-                      <Text className="text-[#E11D48] font-black text-base mr-2">+91</Text>
+                      <Text className="text-[#E11D48] font-black mr-2" style={{ fontSize: 17 }}>+91</Text>
                       <TextInput
-                        placeholder="98765 43210"
+                        placeholder="XXXXX XXXXX"
                         placeholderTextColor="#666666"
                         keyboardType="phone-pad"
                         value={formattedPhone}
                         onChangeText={handlePhoneChange}
                         editable={!isLoading}
-                        className="flex-1 py-3.5 text-white text-base font-semibold"
+                        className="flex-1 py-3.5 text-white font-bold"
+                        style={{ fontSize: 16 }}
                       />
                     </View>
                     <TouchableOpacity

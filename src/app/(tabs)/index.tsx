@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Alert, Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet, AppState, AppStateStatus, Vibration, Linking } from 'react-native';
 import Svg, { Rect, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +21,8 @@ import { Database, getCurrentServerTime, getISTDateInfo, isSessionGenuinelyActiv
 import { AddPartnerModal } from '../../components/AddPartnerModal';
 import { CommunicationCenterModal } from '../../components/CommunicationCenterModal';
 import { TrainerStatusModal } from '../../components/TrainerStatusModal';
+import { LogMetricsModal } from '../../components/LogMetricsModal';
+import { useToastStore } from '../../store/toastStore';
 import { supabase } from '../../database/supabaseClient';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { useAIWellnessStore } from '../../store/aiWellnessStore';
@@ -313,12 +315,15 @@ export default function HomeScreen() {
   const { user, role } = useUserStore();
   const { totalEarnings, earningsList, coaches } = useCoachStore();
   const { savedPlan } = useAIWellnessStore();
+  const profile = useUserProfileStore();
 
   const [partnerModalVisible, setPartnerModalVisible] = useState(false);
   const [activePartnerBookingId, setActivePartnerBookingId] = useState('');
   const [communicationModalVisible, setCommunicationModalVisible] = useState(false);
   const [trainerStatusModalVisible, setTrainerStatusModalVisible] = useState(false);
   const [pendingStatusTarget, setPendingStatusTarget] = useState<'online' | 'offline'>('offline');
+  const [logMetricsModalVisible, setLogMetricsModalVisible] = useState(false);
+  const [logMetricsType, setLogMetricsType] = useState<'hydration' | 'calories'>('hydration');
 
   const handleHiddenAdminAccess = async () => {
     const userId = Database.getCurrentUserId();
@@ -834,11 +839,45 @@ export default function HomeScreen() {
     return serverNow.getTime() <= range.end.getTime();
   });
 
-  // Hydration state
+  // Hydration & Calorie state
   const [waterMl, setWaterMl] = useState(0);
   const [caloriesToday, setCaloriesToday] = useState(0);
-  const waterGoal = 2500;
-  const caloriesGoal = 600;
+
+  // Dynamic user-personalized goals (calculated from profile metrics and AI wellness plan, no hardcoded constants)
+  const weightVal = parseFloat(profile.weight) || 70;
+
+  const waterGoal = useMemo(() => {
+    if (savedPlan?.hydrationGoal) {
+      const match = savedPlan.hydrationGoal.match(/([\d.]+)/);
+      if (match) {
+        const parsedLiters = parseFloat(match[1]);
+        if (!isNaN(parsedLiters) && parsedLiters > 0) {
+          return Math.round(parsedLiters * 1000);
+        }
+      }
+    }
+    return Math.round(weightVal * 35);
+  }, [savedPlan?.hydrationGoal, weightVal]);
+
+  const caloriesGoal = useMemo(() => {
+    if (savedPlan?.dailyCalories && savedPlan.dailyCalories > 0) {
+      return Math.round(savedPlan.dailyCalories * 0.28);
+    }
+    const goalMultiplier = (profile.targetGoal === 'Fat Loss' || profile.targetGoal === 'Weight Loss') ? 8.5 : 7.5;
+    return Math.round(weightVal * goalMultiplier);
+  }, [savedPlan?.dailyCalories, profile.targetGoal, weightVal]);
+
+  const weeklyStreakGoal = useMemo(() => {
+    if (savedPlan?.workoutFrequency) {
+      const freq = savedPlan.workoutFrequency.toLowerCase();
+      if (freq.includes('daily') || freq.includes('7')) return 7;
+      if (freq.includes('6')) return 6;
+      if (freq.includes('5')) return 5;
+      if (freq.includes('4')) return 4;
+      if (freq.includes('3')) return 3;
+    }
+    return 5;
+  }, [savedPlan?.workoutFrequency]);
 
   // Animations
   const [fadeAnim] = useState(() => new Animated.Value(0));
@@ -944,15 +983,72 @@ export default function HomeScreen() {
   const trainerEarningsList = user.id ? Database.getEarnings(user.id) : [];
   const monthlyEarnings = trainerEarningsList.reduce((acc, earn) => acc + (earn.amount > 0 ? earn.amount : 0), 0);
 
-  const handleLogWater = () => {
-    if (user.id) {
-      const dateStr = new Date().toLocaleDateString('en-CA');
-      const newWater = Database.logHydration(user.id, dateStr, 250);
-      setWaterMl(newWater);
-      Alert.alert('Hydration Logged', '+250ml added! Stay hydrated to maximize recovery index.');
-    } else {
-      Alert.alert('Authentication Required', 'Please register or log in first');
+  const getRecoveryStatus = (score: number | null) => {
+    if (score === null) {
+      return { title: 'No Logs Today', desc: 'Log water or workouts to compute recovery index.' };
     }
+    if (score >= 80) {
+      return { title: 'Optimal Recovery', desc: 'Peak condition for high-intensity training today.' };
+    }
+    if (score >= 60) {
+      return { title: 'Good Recovery', desc: 'Ready for strength and conditioning today.' };
+    }
+    if (score >= 40) {
+      return { title: 'Moderate Recovery', desc: 'Consider active recovery or light mobility.' };
+    }
+    return { title: 'Rest Recommended', desc: 'Focus on rest, hydration, and gentle stretching.' };
+  };
+
+  const recoveryStatus = getRecoveryStatus(userRecovery);
+
+  const logWaterAmount = (amount: number) => {
+    if (!user.id) return;
+    const dateStr = new Date().toLocaleDateString('en-CA');
+    const newWater = Database.logHydration(user.id, dateStr, amount);
+    setWaterMl(newWater);
+    useToastStore.getState().showToast({
+      title: 'Hydration Logged',
+      message: `+${amount}ml recorded! Stay hydrated to optimize recovery.`,
+      type: 'success',
+    });
+  };
+
+  const handleLogWater = () => {
+    if (!user.id) {
+      useToastStore.getState().showToast({
+        title: 'Authentication Required',
+        message: 'Please register or log in first.',
+        type: 'warning',
+      });
+      return;
+    }
+    setLogMetricsType('hydration');
+    setLogMetricsModalVisible(true);
+  };
+
+  const logCaloriesAmount = (amount: number) => {
+    if (!user.id) return;
+    const dateStr = new Date().toLocaleDateString('en-CA');
+    const newCal = Database.logCalories(user.id, dateStr, amount);
+    setCaloriesToday(newCal);
+    useToastStore.getState().showToast({
+      title: 'Activity Logged',
+      message: `+${amount} kcal added to today's active burn!`,
+      type: 'success',
+    });
+  };
+
+  const handleLogCalories = () => {
+    if (!user.id) {
+      useToastStore.getState().showToast({
+        title: 'Authentication Required',
+        message: 'Please register or log in first.',
+        type: 'warning',
+      });
+      return;
+    }
+    setLogMetricsType('calories');
+    setLogMetricsModalVisible(true);
   };
 
   const handleSupport = () => {
@@ -1219,14 +1315,16 @@ export default function HomeScreen() {
                     <View className="flex-1 gap-1.5 justify-center">
                       <Text className="text-[#E11D48] text-[13px] font-semibold tracking-wider uppercase">Recovery Score</Text>
                       <Text className="text-[#101828] text-[20px] font-semibold tracking-tight">
-                        {user.id ? (userRecovery !== null ? (userRecovery >= 80 ? 'Excellent Recovery' : 'Good Recovery') : 'No Logs Today') : 'Unauthenticated'}
+                        {user.id ? recoveryStatus.title : 'Unauthenticated'}
                       </Text>
                       <Text className="text-zinc-500 text-[15px] font-normal leading-snug">
-                        {user.id ? (userRecovery !== null ? 'Ready for Strength Training Today.' : 'Log water or workouts to compute recovery index.') : 'Please log in to track recovery.'}
+                        {user.id ? recoveryStatus.desc : 'Please log in to track recovery.'}
                       </Text>
                       <View className="flex-row mt-1">
                         <View className="bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full flex-row items-center gap-1">
-                          <Text className="text-amber-600 text-[9px] font-semibold tracking-wider">★ ELITE STATUS</Text>
+                          <Text className="text-amber-600 text-[9px] font-semibold tracking-wider">
+                            ★ {(membership.tier || 'MEMBER').toUpperCase()} STATUS
+                          </Text>
                         </View>
                       </View>
                     </View>
@@ -1493,10 +1591,17 @@ export default function HomeScreen() {
 
                 <View className="flex-row flex-wrap justify-between gap-y-4">
                   {/* Calories Widget */}
-                  <View className="w-[47%] h-[148px] p-5 rounded-[28px] bg-[#FFF5F5] border border-[#FFE4E6] justify-between">
-                    <View className="flex-row items-center gap-2">
-                      <Text className="text-base">🔥</Text>
-                      <Text className="text-zinc-500 text-[11px] font-semibold uppercase tracking-wider">Calories</Text>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={handleLogCalories}
+                    className="w-[47%] h-[148px] p-5 rounded-[28px] bg-[#FFF5F5] border border-[#FFE4E6] justify-between"
+                  >
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-row items-center gap-2">
+                        <Text className="text-base">🔥</Text>
+                        <Text className="text-zinc-500 text-[11px] font-semibold uppercase tracking-wider">Calories</Text>
+                      </View>
+                      <Text className="text-rose-500 text-[9px] font-bold uppercase tracking-widest">+ LOG</Text>
                     </View>
                     <View>
                       <Text className="text-[#101828] text-[32px] font-bold tracking-tighter">{caloriesToday}</Text>
@@ -1506,7 +1611,7 @@ export default function HomeScreen() {
                     <View className="w-full h-1.5 bg-[#FFE4E6] rounded-full overflow-hidden">
                       <View className="h-full bg-rose-500 rounded-full" style={{ width: `${Math.min(100, (caloriesToday / caloriesGoal) * 100)}%` }} />
                     </View>
-                  </View>
+                  </TouchableOpacity>
 
                   {/* Hydration Widget */}
                   <TouchableOpacity
@@ -1519,7 +1624,7 @@ export default function HomeScreen() {
                         <Text className="text-base">💧</Text>
                         <Text className="text-zinc-500 text-[11px] font-semibold uppercase tracking-wider">Hydration</Text>
                       </View>
-                      <Text className="text-[#06B6D4] text-[9px] font-bold uppercase tracking-widest">+250ml</Text>
+                      <Text className="text-[#06B6D4] text-[9px] font-bold uppercase tracking-widest">+ LOG</Text>
                     </View>
                     <View>
                       <Text className="text-[#101828] text-[32px] font-bold tracking-tighter">{waterMl}</Text>
@@ -1547,25 +1652,32 @@ export default function HomeScreen() {
                     </View>
                     {/* Progress Bar */}
                     <View className="w-full h-1.5 bg-[#EDE9FE] rounded-full overflow-hidden">
-                      <View className="h-full bg-violet-600 rounded-full" style={{ width: `${Math.min(100, (membership.availableCredits / Math.max(1, membership.totalCredits)) * 100)}%` }} />
+                      <View className="h-full bg-violet-600 rounded-full" style={{ width: `${Math.min(100, (membership.availableCredits / Math.max(membership.totalCredits, membership.availableCredits, 1)) * 100)}%` }} />
                     </View>
                   </TouchableOpacity>
 
                   {/* Workout Streak Widget */}
-                  <View className="w-[47%] h-[148px] p-5 rounded-[28px] bg-[#FFF1F2] border border-[#FFE4E6] justify-between">
-                    <View className="flex-row items-center gap-2">
-                      <Text className="text-base">⚡</Text>
-                      <Text className="text-zinc-500 text-[11px] font-semibold uppercase tracking-wider">Workout Streak</Text>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => navigateSafely('/(tabs)/progress')}
+                    className="w-[47%] h-[148px] p-5 rounded-[28px] bg-[#FFF1F2] border border-[#FFE4E6] justify-between"
+                  >
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-row items-center gap-2">
+                        <Text className="text-base">⚡</Text>
+                        <Text className="text-zinc-500 text-[11px] font-semibold uppercase tracking-wider">Workout Streak</Text>
+                      </View>
+                      <Feather name="chevron-right" size={13} color="#FDA4AF" />
                     </View>
                     <View>
                       <Text className="text-[#101828] text-[32px] font-bold tracking-tighter">{streak}</Text>
-                      <Text className="text-zinc-400 text-[13px] font-medium mt-0.5">Active Days</Text>
+                      <Text className="text-zinc-400 text-[13px] font-medium mt-0.5">/{weeklyStreakGoal} days this week</Text>
                     </View>
                     {/* Progress Bar */}
                     <View className="w-full h-1.5 bg-[#FFE4E6] rounded-full overflow-hidden">
-                      <View className="h-full bg-[#EC4899] rounded-full" style={{ width: `${Math.min(100, (streak / 7) * 100)}%` }} />
+                      <View className="h-full bg-[#EC4899] rounded-full" style={{ width: `${Math.min(100, (streak / weeklyStreakGoal) * 100)}%` }} />
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -1601,15 +1713,15 @@ export default function HomeScreen() {
 
                     {/* Sparkling Center Star */}
                     <View className="absolute z-10 w-9 h-9 rounded-full bg-white/10 items-center justify-center border border-white/20">
-                      <Text className="text-white text-xs">✦</Text>
+                      <Feather name="zap" size={13} color="#FFFFFF" />
                     </View>
                   </View>
 
                   {/* Left content */}
-                  <View className="z-10 gap-5 pr-20">
+                  <View className="z-10 gap-4 pr-16">
                     <View className="flex-row items-center gap-1.5 pl-0.5">
-                      <Text className="text-[#EC4899] text-xs">✦</Text>
-                      <Text className="text-white/60 text-[11px] font-semibold uppercase tracking-widest">
+                      <Feather name="zap" size={11} color="#EC4899" />
+                      <Text className="text-white/70 text-xs font-bold uppercase">
                         {savedPlan ? 'My AI Wellness Plan' : 'AI Wellness Coach'}
                       </Text>
                     </View>
@@ -1618,22 +1730,22 @@ export default function HomeScreen() {
                       <View className="gap-3.5">
                         <View className="flex-row justify-between flex-wrap gap-y-2.5">
                           <View className="w-[48%] gap-0.5">
-                            <Text className="text-white/50 text-[9px] font-bold uppercase">Calories Goal</Text>
-                            <Text className="text-white text-xs font-black">{savedPlan.dailyCalories} kcal</Text>
+                            <Text className="text-white/50 text-[10px] font-bold uppercase">Calories Goal</Text>
+                            <Text className="text-white text-xs font-bold">{savedPlan.dailyCalories} kcal</Text>
                           </View>
                           <View className="w-[48%] gap-0.5">
-                            <Text className="text-white/50 text-[9px] font-bold uppercase">Protein Goal</Text>
-                            <Text className="text-white text-xs font-black">{savedPlan.proteinTarget}g</Text>
+                            <Text className="text-white/50 text-[10px] font-bold uppercase">Protein Goal</Text>
+                            <Text className="text-white text-xs font-bold">{savedPlan.proteinTarget}g</Text>
                           </View>
                           <View className="w-[48%] gap-0.5">
-                            <Text className="text-white/50 text-[9px] font-bold uppercase">Water Goal</Text>
-                            <Text className="text-white text-xs font-black" numberOfLines={1}>
+                            <Text className="text-white/50 text-[10px] font-bold uppercase">Water Goal</Text>
+                            <Text className="text-white text-xs font-bold" numberOfLines={1}>
                               {savedPlan.hydrationGoal ? savedPlan.hydrationGoal.split(' ')[0] : '2'} L
                             </Text>
                           </View>
                           <View className="w-[48%] gap-0.5">
-                            <Text className="text-white/50 text-[9px] font-bold uppercase">Next Session</Text>
-                            <Text className="text-white text-xs font-black" numberOfLines={1}>
+                            <Text className="text-white/50 text-[10px] font-bold uppercase">Next Session</Text>
+                            <Text className="text-white text-xs font-bold" numberOfLines={1}>
                               {upcomingBookings.length > 0 && upcomingBookings[0]?.date
                                 ? `${formatToDDMMYYYY(upcomingBookings[0].date)} @ ${upcomingBookings[0].time}`
                                 : 'None scheduled'}
@@ -1642,18 +1754,18 @@ export default function HomeScreen() {
                         </View>
                         
                         <View className="gap-0.5">
-                          <Text className="text-white/50 text-[9px] font-bold uppercase">{"Today's"} Workout</Text>
-                          <Text className="text-white text-[11px] font-semibold leading-relaxed pr-6" numberOfLines={1}>
+                          <Text className="text-white/50 text-[10px] font-bold uppercase">{"Today's"} Workout</Text>
+                          <Text className="text-white text-xs font-medium leading-relaxed pr-4" numberOfLines={1}>
                             {savedPlan.workoutRecommendation}
                           </Text>
                         </View>
                       </View>
                     ) : (
-                      <View className="gap-1">
-                        <Text className="text-white text-[15px] font-semibold tracking-tight leading-relaxed">
+                      <View className="gap-1.5">
+                        <Text className="text-white text-base font-bold">
                           Create Your AI Wellness Plan
                         </Text>
-                        <Text className="text-white/70 text-[13px] font-normal leading-relaxed pr-4">
+                        <Text className="text-white/75 text-xs font-normal leading-relaxed pr-2">
                           Answer a few questions so VIRLA AI can create a personalized wellness plan.
                         </Text>
                       </View>
@@ -1662,17 +1774,16 @@ export default function HomeScreen() {
                     <TouchableOpacity
                       activeOpacity={0.85}
                       onPress={() => navigateSafely('/virla-ai')}
-                      className="h-11 bg-[#E11D48] rounded-[18px] justify-between items-center px-5 flex-row self-start gap-3 mt-1"
+                      className="bg-[#E11D48] rounded-2xl py-3 px-4 flex-row items-center self-start gap-2.5 mt-1"
                       style={{
-                        minHeight: 44,
                         shadowColor: '#E11D48',
-                        shadowOffset: { width: 0, height: 6 },
-                        shadowOpacity: 0.15,
-                        shadowRadius: 12,
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.2,
+                        shadowRadius: 8,
                         elevation: 3,
                       }}
                     >
-                      <Text className="text-white text-[11px] font-bold uppercase tracking-wider">
+                      <Text className="text-white text-xs font-bold uppercase">
                         {savedPlan ? 'My AI Wellness Plan' : 'Get Started'}
                       </Text>
                       <View className="w-5 h-5 rounded-full bg-white items-center justify-center">
@@ -2364,6 +2475,18 @@ export default function HomeScreen() {
         targetStatus={pendingStatusTarget}
         onClose={() => setTrainerStatusModalVisible(false)}
         onConfirm={handleConfirmTrainerStatus}
+      />
+      <LogMetricsModal
+        visible={logMetricsModalVisible}
+        type={logMetricsType}
+        onClose={() => setLogMetricsModalVisible(false)}
+        onSelect={(amount) => {
+          if (logMetricsType === 'hydration') {
+            logWaterAmount(amount);
+          } else {
+            logCaloriesAmount(amount);
+          }
+        }}
       />
     </SafeAreaViewWrapper>
   );

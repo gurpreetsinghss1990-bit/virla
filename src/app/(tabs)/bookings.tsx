@@ -10,7 +10,7 @@ import { useUserStore } from '../../store/userStore';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../../database/Database';
 import { useCoachStore, generateMonthlySlots } from '../../store/coachStore';
 import { normalizeDate, canonicalizeTimeRange, formatToDDMMYYYY, getBookingISTDateRange } from '../../utils/date';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 
 type FilterType = 'upcoming' | 'completed' | 'cancelled' | 'today' | 'past';
 type TrainerTabType = 'today' | 'tomorrow' | 'weekly' | 'history';
@@ -454,15 +454,36 @@ export default function BookingsScreen() {
           >
             {/* Page Header */}
             <View className="mb-6">
-              <Text className="text-[#6B7280] text-xs font-extrabold uppercase tracking-widest">
-                PRO CONSOLE
-              </Text>
-              <Text className="text-[#101828] text-3xl font-black tracking-tight mt-1">
-                My Schedule
-              </Text>
-              <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed mt-1">
-                Manage your slots, availability limits, and client visits.
-              </Text>
+              <View className="flex-row items-start gap-5">
+                <TouchableOpacity
+                  activeOpacity={0.6}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  onPress={() => {
+                    if (router.canGoBack()) {
+                      router.back();
+                    } else {
+                      router.replace('/(tabs)');
+                    }
+                  }}
+                  className="w-8 h-8 items-center justify-center active:opacity-60 mt-1"
+                  accessibilityRole="button"
+                  accessibilityLabel="Back"
+                >
+                  <Ionicons name="chevron-back" size={28} color="#101828" />
+                </TouchableOpacity>
+
+                <View className="flex-1">
+                  <Text className="text-[#101828] text-3xl font-black tracking-tight">
+                    My Schedule
+                  </Text>
+                  <Text className="text-[#6B7280] text-xs font-extrabold uppercase tracking-widest mt-1">
+                    PRO CONSOLE
+                  </Text>
+                  <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed mt-0.5">
+                    Manage your slots, availability limits, and client visits.
+                  </Text>
+                </View>
+              </View>
             </View>
 
             {/* Calendar Card Visual Grid */}
@@ -1064,15 +1085,36 @@ export default function BookingsScreen() {
         >
         {/* Page Header */}
         <View className="mb-6">
-          <Text className="text-[#6B7280] text-xs font-extrabold uppercase tracking-widest">
-            MY SCHEDULE
-          </Text>
-          <Text className="text-[#101828] text-3xl font-black tracking-tight mt-1">
-            Booked Sessions
-          </Text>
-          <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed mt-1">
-            Track and manage all your scheduled home wellness visits.
-          </Text>
+          <View className="flex-row items-start gap-5">
+            <TouchableOpacity
+              activeOpacity={0.6}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(tabs)');
+                }
+              }}
+              className="w-8 h-8 items-center justify-center active:opacity-60 mt-1"
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+            >
+              <Ionicons name="chevron-back" size={28} color="#101828" />
+            </TouchableOpacity>
+
+            <View className="flex-1">
+              <Text className="text-[#101828] text-3xl font-black tracking-tight">
+                Booked Sessions
+              </Text>
+              <Text className="text-[#6B7280] text-xs font-extrabold uppercase tracking-widest mt-1">
+                MY SCHEDULE
+              </Text>
+              <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed mt-0.5">
+                Track and manage all your scheduled home wellness visits.
+              </Text>
+            </View>
+          </View>
         </View>
 
         {/* Filter Capsule Selector Tabs */}
