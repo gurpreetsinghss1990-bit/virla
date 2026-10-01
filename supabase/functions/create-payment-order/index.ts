@@ -150,12 +150,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    const merchantId = Deno.env.get('PAYPHI_MERCHANT_ID') || '100000000007164';
+    const merchantId = Deno.env.get('PAYPHI_MERCHANT_ID') || '100000000527739';
     const appId = Deno.env.get('PAYPHI_APP_ID') || '80bc18249511f868';
     const secretKey = Deno.env.get('PAYPHI_SECRET_KEY') || 'db06cca0-838b-4e01-8b20-6ac446ffb6bd';
     const currencyCode = '356';
-    const aggregatorId = Deno.env.get('PAYPHI_AGGREGATOR_ID') || 'A100000000007164';
-    const merchantName = Deno.env.get('PAYPHI_MERCHANT_NAME') || 'Sapphire Test';
+    const aggregatorId = Deno.env.get('PAYPHI_AGGREGATOR_ID') || '100000000527739';
+    const merchantName = Deno.env.get('PAYPHI_MERCHANT_NAME') || 'NAMRATHA JAUNI';
     const envType = Deno.env.get('PAYPHI_ENV') || 'INT';
 
     // Generate unique authoritative transaction number

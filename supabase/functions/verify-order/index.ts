@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
     lastInquiryByTxn.set(merchantTxnNo, now);
 
     // 5. Active Inquiry: Call PayPhi Status Inquiry API Server-to-Server
-    const merchantId = Deno.env.get('PAYPHI_MERCHANT_ID') || '100000000007164';
+    const merchantId = Deno.env.get('PAYPHI_MERCHANT_ID') || '100000000527739';
     const secretKey = Deno.env.get('PAYPHI_SECRET_KEY') || 'db06cca0-838b-4e01-8b20-6ac446ffb6bd';
     const envType = Deno.env.get('PAYPHI_ENV') || 'INT';
 
