@@ -239,7 +239,7 @@ Deno.serve(async (req) => {
     const envType = Deno.env.get('PAYPHI_ENV') || 'PROD';
 
     const payphiBaseUrl = (envType === 'PRD' || envType === 'PROD') 
-      ? 'https://phicommerce.com/pg' 
+      ? 'https://pgpay.icicibank.com/pg' 
       : 'https://qa.phicommerce.com/pg';
 
     let gatewaySuccess = false;

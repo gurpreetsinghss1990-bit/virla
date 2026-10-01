@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
     const envType = Deno.env.get('PAYPHI_ENV') || 'PROD';
 
     const payphiBaseUrl = (envType === 'PRD' || envType === 'PROD')
-      ? 'https://phicommerce.com/pg'
+      ? 'https://pgpay.icicibank.com/pg'
       : 'https://qa.phicommerce.com/pg';
 
     // 1. Fetch pending purchase transactions created more than 5 minutes ago
