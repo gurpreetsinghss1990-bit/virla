@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { AssignmentLog, Booking, Coach, Invoice, NotificationItem, ScheduleSlot, TrainerEarning, TrainerWorkoutAssignment, User, Workout } from '../types';
 import { canonicalizeTimeRange, getBookingISTDateRange, normalizeDate } from '../utils/date';
 import { setClientUserId, supabase } from './supabaseClient';
@@ -1105,7 +1106,7 @@ class DatabaseClient {
     this.schema.calories = [];
     this.schema.earnings = [];
 
-    if (typeof AsyncStorage !== 'undefined') {
+    if (typeof AsyncStorage !== 'undefined' && (Platform.OS !== 'web' || typeof window !== 'undefined')) {
       try {
         await AsyncStorage.removeItem(STORAGE_KEY);
       } catch (err) {
@@ -1227,16 +1228,18 @@ class DatabaseClient {
       console.log('[DEBUG-DB] Database.load() error caught. Falling back. Error:', err);
       console.error('[DB ERROR] Failed to load database from Supabase, trying AsyncStorage fallback:', err);
       // Fallback to AsyncStorage cache if offline/error
-      const data = await AsyncStorage.getItem(STORAGE_KEY);
-      if (data) {
-        const parsed = JSON.parse(data);
-        this.schema = {
-          ...this.schema,
-          ...parsed,
-          trainer_applications: parsed.trainer_applications || [],
-          client_disputes: parsed.client_disputes || [],
-          kit_requests: parsed.kit_requests || []
-        };
+      if (Platform.OS !== 'web' || typeof window !== 'undefined') {
+        const data = await AsyncStorage.getItem(STORAGE_KEY);
+        if (data) {
+          const parsed = JSON.parse(data);
+          this.schema = {
+            ...this.schema,
+            ...parsed,
+            trainer_applications: parsed.trainer_applications || [],
+            client_disputes: parsed.client_disputes || [],
+            kit_requests: parsed.kit_requests || []
+          };
+        }
       }
       this.syncCoachesWithAssignments();
       this.isLoaded = true;
@@ -1348,6 +1351,9 @@ class DatabaseClient {
   }
 
   private async save(): Promise<void> {
+    if (Platform.OS === 'web' && typeof window === 'undefined') {
+      return;
+    }
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(this.schema));
     } catch (err) {
