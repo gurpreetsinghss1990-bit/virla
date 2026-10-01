@@ -66,10 +66,10 @@ export default function GetStartedScreen() {
   const [resendCountdown, setResendCountdown] = useState(0);
   const [resendCount, setResendCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [otpStatusMessage, setOtpStatusMessage] = useState<string>('');
   const [isOtpSuccessAnimating, setIsOtpSuccessAnimating] = useState(false);
   const [authenticatedUserName, setAuthenticatedUserName] = useState('');
   const spinAnim = useRef(new Animated.Value(0)).current;
-  const logoPulseAnim = useRef(new Animated.Value(0)).current;
   const bgAuraAnim = useRef(new Animated.Value(0)).current;
   const otpInputRef = useRef<TextInput>(null);
 
@@ -166,7 +166,7 @@ export default function GetStartedScreen() {
     checkResumeState();
   }, []);
 
-  // Ambient background and VIRLA logo breathing animation
+  // Ambient background animation
   useEffect(() => {
     const isNative = Platform.OS !== 'web';
 
@@ -185,29 +185,11 @@ export default function GetStartedScreen() {
       ])
     );
 
-    const logoLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(logoPulseAnim, {
-          toValue: 1,
-          duration: 2400,
-          useNativeDriver: isNative,
-        }),
-        Animated.timing(logoPulseAnim, {
-          toValue: 0,
-          duration: 2400,
-          useNativeDriver: isNative,
-        }),
-      ])
-    );
-
     bgLoop.start();
-    logoLoop.start();
 
     return () => {
       bgLoop.stop();
-      logoLoop.stop();
       bgAuraAnim.stopAnimation();
-      logoPulseAnim.stopAnimation();
     };
   }, []);
 
@@ -472,11 +454,12 @@ export default function GetStartedScreen() {
     }
 
     if (!phone) {
-      Alert.alert('Phone Required', 'Please enter your mobile number to receive an OTP.');
+      setOtpStatusMessage('Please enter your mobile number');
       return;
     }
 
     setIsLoading(true);
+    setOtpStatusMessage('');
     try {
       console.log('[DEBUG] Calling OTPService.sendOTP...');
       const res = await OTPService.sendOTP(phone);
@@ -484,10 +467,10 @@ export default function GetStartedScreen() {
         setReqId(res.reqId);
         setOtpSent(true);
         setResendCountdown(10); // Start 10s resend timer
+        setOtpStatusMessage('OTP sent to mobile number');
         setTimeout(() => {
           otpInputRef.current?.focus();
         }, 300);
-        Alert.alert('OTP Sent', 'OTP has been sent to your mobile number.');
       } else {
         let friendlyMsg = 'We couldn\'t send the OTP. Please try again.';
         if (res.error && (res.error.includes('AuthenticationFailure') || res.error.includes('authkey') || res.error.includes('credentials'))) {
@@ -495,11 +478,11 @@ export default function GetStartedScreen() {
         } else if (res.error) {
           friendlyMsg = res.error;
         }
-        Alert.alert('Send Failure', friendlyMsg);
+        setOtpStatusMessage(friendlyMsg);
       }
     } catch (e: any) {
       console.error('[DEBUG ERROR] Send OTP failed:', e);
-      Alert.alert('Error', e.message || 'We couldn\'t send the OTP. Please try again.');
+      setOtpStatusMessage(e.message || 'We couldn\'t send the OTP. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -510,18 +493,19 @@ export default function GetStartedScreen() {
       return;
     }
     if (resendCount >= 2) {
-      Alert.alert('Limit Reached', 'Too many attempts. Please try again later.');
+      setOtpStatusMessage('Too many attempts. Please try again later.');
       return;
     }
 
     setIsLoading(true);
+    setOtpStatusMessage('');
     try {
       console.log('[DEBUG] Calling OTPService.retryOTP...');
       const res = await OTPService.retryOTP(phone, reqId);
       if (res.success) {
         setResendCountdown(10);
         setResendCount(prev => prev + 1);
-        Alert.alert('OTP Resent', 'OTP has been resent successfully.');
+        setOtpStatusMessage('OTP resent to mobile number');
       } else {
         let friendlyMsg = 'OTP resend failed. Please try again.';
         if (res.error && (res.error.includes('AuthenticationFailure') || res.error.includes('authkey') || res.error.includes('credentials'))) {
@@ -529,11 +513,11 @@ export default function GetStartedScreen() {
         } else if (res.error) {
           friendlyMsg = res.error;
         }
-        Alert.alert('Resend Failure', friendlyMsg);
+        setOtpStatusMessage(friendlyMsg);
       }
     } catch (e: any) {
       console.error('[DEBUG ERROR] Resend OTP failed:', e);
-      Alert.alert('Error', e.message || 'OTP resend failed. Please try again.');
+      setOtpStatusMessage(e.message || 'OTP resend failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -660,15 +644,6 @@ export default function GetStartedScreen() {
     outputRange: [0.82, 1],
   });
 
-  const logoScale = logoPulseAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [1, 1.035, 1],
-  });
-  const logoOpacity = logoPulseAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.93, 1, 0.93],
-  });
-
   return (
     <TouchableWithoutFeedback onPress={Platform.OS === 'web' ? undefined : Keyboard.dismiss}>
       <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 16) }}>
@@ -720,16 +695,11 @@ export default function GetStartedScreen() {
             contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 24 }}
             className="flex-1 z-10"
           >
-            {/* Top Header Logo with Animated Breathing Glow */}
+            {/* Top Header Logo */}
             <View className="items-center mt-6">
-              <Animated.View
-                style={{
-                  transform: [{ scale: logoScale }],
-                  opacity: logoOpacity,
-                }}
-              >
+              <View>
                 <AppLogo size="large" />
-              </Animated.View>
+              </View>
               <Heading className="mt-8 mb-2">
                 {newUserIdToRegister !== null
                   ? (setupStep === 0 ? 'Welcome!' : `Welcome back, ${tempUserObj?.name && tempUserObj.name !== 'Complete your profile' ? tempUserObj.name.split(' ')[0] : 'User'}!`)
@@ -908,6 +878,17 @@ export default function GetStartedScreen() {
                       </Text>
                     </TouchableOpacity>
                   </View>
+                  {otpStatusMessage ? (
+                    <Text
+                      className={`text-xs font-semibold pl-1 ${
+                        otpStatusMessage.toLowerCase().includes('otp sent') || otpStatusMessage.toLowerCase().includes('otp resent')
+                          ? 'text-emerald-400'
+                          : 'text-[#E11D48]'
+                      }`}
+                    >
+                      {otpStatusMessage}
+                    </Text>
+                  ) : null}
                 </View>
 
                 {/* 6-Digit Animated OTP Entry & Success Sequence Component */}

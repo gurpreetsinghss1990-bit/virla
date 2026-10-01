@@ -1,0 +1,750 @@
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { View, Text, TouchableOpacity, Animated, PanResponder, Easing, Platform, StatusBar as RNStatusBar } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import Svg, { Circle, Path, Rect, Defs, LinearGradient, RadialGradient, Stop, Text as SvgText } from 'react-native-svg';
+import { useUserStore } from '../store/userStore';
+import { PageIndicator } from '../presentation/components/PageIndicator';
+
+export default function OnboardingScreen() {
+  const insets = useSafeAreaInsets();
+  const { setCompletedOnboarding } = useUserStore();
+
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [doorOpened, setDoorOpened] = useState(false);
+  const slideRef = useRef(0);
+  slideRef.current = currentSlide;
+
+  // Animation values using useMemo to avoid render-phase ref reads
+  const floatAnim = useMemo(() => new Animated.Value(0), []);
+  const fadeContentAnim = useMemo(() => new Animated.Value(1), []);
+  const fadeTextAnim = useMemo(() => new Animated.Value(1), []);
+  const dragAnim = useMemo(() => new Animated.Value(0), []);
+  const buttonScaleAnim = useMemo(() => new Animated.Value(1), []);
+  const buttonFadeAnim = useMemo(() => new Animated.Value(1), []);
+  const swipeHintPulse = useMemo(() => new Animated.Value(0), []);
+  const doorOpenAnim = useMemo(() => new Animated.Value(0), []); // 0 = fully closed, 1 = fully open
+  const doorLightAnim = useMemo(() => new Animated.Value(0), []); // golden light burst through opening
+  const pageIntroFade = useMemo(() => new Animated.Value(0), []); // text & rest of UI fade in after door opens
+  const pageIntroSlideY = useMemo(() => new Animated.Value(24), []); // text slides up gently on reveal
+  const tapPromptPulse = useMemo(() => new Animated.Value(1), []);
+  const tapPromptFade = useMemo(() => new Animated.Value(1), []);
+
+  // Gracefully transition background to a softer, subtle dull tone when door opens
+  const screenBgColor = doorOpenAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['#ffffff', '#F4F5F7'],
+  });
+
+  const handleOpenDoor = () => {
+    if (doorOpened) return;
+    setDoorOpened(true);
+
+    // Fade out tap prompt
+    Animated.timing(tapPromptFade, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+
+    // 3D Door swing & golden light beam with slow, lightweight, graceful easing
+    Animated.parallel([
+      Animated.timing(doorOpenAnim, {
+        toValue: 1,
+        duration: 1600, // slower, lightweight, smooth
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+        useNativeDriver: false,
+      }),
+      Animated.timing(doorLightAnim, {
+        toValue: 1,
+        duration: 1600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }),
+      Animated.sequence([
+        Animated.delay(450),
+        Animated.parallel([
+          Animated.timing(pageIntroFade, {
+            toValue: 1,
+            duration: 1000,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: false,
+          }),
+          Animated.spring(pageIntroSlideY, {
+            toValue: 0,
+            friction: 8,
+            tension: 35,
+            useNativeDriver: false,
+          }),
+        ]),
+      ]),
+    ]).start();
+  };
+
+  useEffect(() => {
+    // 0. Modern Android Edge-to-Edge System Bar
+    if (Platform.OS === 'android') {
+      RNStatusBar.setTranslucent(true);
+      RNStatusBar.setBackgroundColor('transparent');
+    }
+
+    // 1. Gently floating illustration loop
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: -8,
+          duration: 1800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnim, {
+          toValue: 0,
+          duration: 1800,
+          useNativeDriver: true,
+        })
+      ])
+    ).start();
+
+    // 2. Subtle swipe hint pulse animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(swipeHintPulse, {
+          toValue: 6,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(swipeHintPulse, {
+          toValue: 0,
+          duration: 900,
+          useNativeDriver: true,
+        })
+      ])
+    ).start();
+
+    // 3. Tap door prompt pulse
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(tapPromptPulse, {
+          toValue: 1.08,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(tapPromptPulse, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: true,
+        })
+      ])
+    ).start();
+  }, [floatAnim, swipeHintPulse, tapPromptPulse]);
+
+  // Animate button entry when landing on 3rd slide
+  useEffect(() => {
+    if (currentSlide === 2) {
+      buttonScaleAnim.setValue(0.92);
+      buttonFadeAnim.setValue(0);
+      Animated.parallel([
+        Animated.spring(buttonScaleAnim, {
+          toValue: 1,
+          friction: 6,
+          tension: 50,
+          useNativeDriver: true,
+        }),
+        Animated.timing(buttonFadeAnim, {
+          toValue: 1,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      buttonScaleAnim.setValue(1);
+      buttonFadeAnim.setValue(1);
+    }
+  }, [currentSlide, buttonScaleAnim, buttonFadeAnim]);
+
+  const goToSlide = (nextIndex: number) => {
+    if (!doorOpened) {
+      setDoorOpened(true);
+      doorOpenAnim.setValue(1);
+      doorLightAnim.setValue(1);
+      pageIntroFade.setValue(1);
+      pageIntroSlideY.setValue(0);
+      tapPromptFade.setValue(0);
+    }
+
+    if (nextIndex === slideRef.current || nextIndex < 0 || nextIndex > 2) {
+      // Bounce back to center
+      Animated.spring(dragAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        bounciness: 4,
+      }).start();
+      return;
+    }
+
+    const direction = nextIndex > slideRef.current ? -120 : 120;
+    
+    Animated.parallel([
+      Animated.timing(fadeContentAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeTextAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(dragAnim, {
+        toValue: direction,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setCurrentSlide(nextIndex);
+      dragAnim.setValue(direction * -0.5);
+      Animated.parallel([
+        Animated.timing(fadeContentAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeTextAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.spring(dragAnim, {
+          toValue: 0,
+          friction: 7,
+          tension: 60,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    });
+  };
+
+  const handleNext = () => {
+    if (currentSlide < 2) {
+      goToSlide(currentSlide + 1);
+    } else {
+      handleFinishOnboarding();
+    }
+  };
+
+  const handleFinishOnboarding = () => {
+    setCompletedOnboarding(true);
+    router.replace('/get-started' as any);
+  };
+
+  // PanResponder to handle horizontal swipe gestures with live interactive drag & fade
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_, gestureState) => {
+          return Math.abs(gestureState.dx) > 12 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.2;
+        },
+        onPanResponderMove: (_, gestureState) => {
+          // Drag resistance at edges
+          let dx = gestureState.dx;
+          if ((slideRef.current === 0 && dx > 0) || (slideRef.current === 2 && dx < 0)) {
+            dx = dx * 0.25;
+          }
+          dragAnim.setValue(dx);
+          // Interactive live text fade as user does mock swipe (drops smoothly to 0.4 opacity)
+          const dragRatio = Math.min(Math.abs(gestureState.dx) / 120, 1);
+          fadeTextAnim.setValue(1 - dragRatio * 0.6);
+          fadeContentAnim.setValue(1 - dragRatio * 0.25);
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dx < -50) {
+            // Swiped left -> next slide
+            if (slideRef.current < 2) {
+              goToSlide(slideRef.current + 1);
+            } else {
+              // Bounce back
+              Animated.parallel([
+                Animated.spring(dragAnim, { toValue: 0, useNativeDriver: true }),
+                Animated.timing(fadeContentAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+                Animated.timing(fadeTextAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+              ]).start();
+            }
+          } else if (gestureState.dx > 50) {
+            // Swiped right -> previous slide
+            if (slideRef.current > 0) {
+              goToSlide(slideRef.current - 1);
+            } else {
+              // Bounce back
+              Animated.parallel([
+                Animated.spring(dragAnim, { toValue: 0, useNativeDriver: true }),
+                Animated.timing(fadeContentAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+                Animated.timing(fadeTextAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+              ]).start();
+            }
+          } else {
+            // Did not cross threshold, restore smoothly
+            Animated.parallel([
+              Animated.spring(dragAnim, { toValue: 0, friction: 6, tension: 50, useNativeDriver: true }),
+              Animated.timing(fadeContentAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+              Animated.timing(fadeTextAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+            ]).start();
+          }
+        },
+      }),
+    [dragAnim, fadeContentAnim, fadeTextAnim, buttonScaleAnim, buttonFadeAnim]
+  );
+
+  // Render SVG Illustrations per slide
+  const renderIllustration = (index: number) => {
+    switch (index) {
+      case 0:
+        // Door swinging calculations based on doorOpenAnim (0 -> 1)
+        const leftDoorWidth = doorOpenAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [53, 14],
+        });
+        const leftDoorSkew = doorOpenAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -12],
+        });
+        const rightDoorWidth = doorOpenAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [53, 14],
+        });
+        const rightDoorSkew = doorOpenAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, 12],
+        });
+        const rightDoorTranslateX = doorOpenAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, 39],
+        });
+
+        const AnimatedRect = Animated.createAnimatedComponent(Rect);
+        const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+        return (
+          <TouchableOpacity
+            activeOpacity={doorOpened ? 1 : 0.9}
+            onPress={handleOpenDoor}
+            disabled={doorOpened}
+            style={{ width: '100%', height: '100%' }}
+          >
+            <Svg width="100%" height="100%" viewBox="0 0 280 200" fill="none">
+              <Defs>
+                <LinearGradient id="doorFrameGrad" x1="0" y1="0" x2="100%" y2="0">
+                  <Stop offset="0%" stopColor="#0F172A" />
+                  <Stop offset="100%" stopColor="#1E293B" />
+                </LinearGradient>
+                <LinearGradient id="interiorWarm" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0%" stopColor="#FEF3C7" />
+                  <Stop offset="40%" stopColor="#FDE68A" />
+                  <Stop offset="100%" stopColor="#F59E0B" />
+                </LinearGradient>
+                <LinearGradient id="goldGrad" x1="0" y1="0" x2="100%" y2="0">
+                  <Stop offset="0%" stopColor="#F5B942" />
+                  <Stop offset="100%" stopColor="#D97706" />
+                </LinearGradient>
+              </Defs>
+
+              {/* Outer Door Frame Arch - Clean, Architectural & Minimalist */}
+              <Rect x="84" y="10" width="112" height="154" fill="#0F172A" rx="8" />
+              <Rect x="86" y="12" width="108" height="150" fill="none" stroke="#334155" strokeWidth="1.5" rx="6" />
+
+              {/* Warm Golden Room Interior (Revealed when door opens) */}
+              <Rect x="88" y="14" width="104" height="148" fill="url(#interiorWarm)" rx="4" />
+
+              {/* Doorstep / Threshold at bottom */}
+              <Rect x="78" y="163" width="124" height="4" rx="2" fill="#1E293B" />
+              <Rect x="82" y="163" width="116" height="1.5" rx="0.75" fill="#F5B942" opacity="0.8" />
+            </Svg>
+
+            {/* ANIMATED DOUBLE DOORS LAYER (Opens outwards in 3D perspective) */}
+            {/* Left Door Panel */}
+            <Animated.View
+              style={{
+                position: 'absolute',
+                left: '31.4%', // aligns with x=88 on 280-width viewBox
+                top: '7%',    // aligns with y=14 on 200-height viewBox
+                width: '18.6%', // 52 / 280
+                height: '74.5%', // 149 / 200
+                backgroundColor: '#0F172A',
+                borderTopLeftRadius: 5,
+                borderBottomLeftRadius: 2,
+                borderWidth: 1.5,
+                borderColor: '#F5B942',
+                transformOrigin: 'left center',
+                transform: [
+                  {
+                    perspective: 450,
+                  },
+                  {
+                    rotateY: doorOpenAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0deg', '-78deg'],
+                    }),
+                  },
+                ],
+                shadowColor: '#000',
+                shadowOffset: { width: -3, height: 4 },
+                shadowOpacity: 0.5,
+                shadowRadius: 5,
+                elevation: 6,
+              }}
+            >
+              {/* Inner Door Panel Glass Inset */}
+              <View 
+                style={{
+                  position: 'absolute',
+                  top: '12%',
+                  left: '18%',
+                  width: '64%',
+                  height: '35%',
+                  backgroundColor: '#E2E8F0',
+                  opacity: 0.15,
+                  borderRadius: 4,
+                  borderWidth: 1,
+                  borderColor: '#F5B942',
+                }}
+              />
+              {/* Gold Door Handle */}
+              <View 
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  right: 4,
+                  width: 3.5,
+                  height: 22,
+                  backgroundColor: '#F5B942',
+                  borderRadius: 2,
+                }}
+              />
+            </Animated.View>
+
+            {/* Right Door Panel */}
+            <Animated.View
+              style={{
+                position: 'absolute',
+                right: '31.4%', // aligns with x=192 on 280-width viewBox
+                top: '7%',
+                width: '18.6%',
+                height: '74.5%',
+                backgroundColor: '#0F172A',
+                borderTopRightRadius: 5,
+                borderBottomRightRadius: 2,
+                borderWidth: 1.5,
+                borderColor: '#F5B942',
+                transformOrigin: 'right center',
+                transform: [
+                  {
+                    perspective: 450,
+                  },
+                  {
+                    rotateY: doorOpenAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0deg', '78deg'],
+                    }),
+                  },
+                ],
+                shadowColor: '#000',
+                shadowOffset: { width: 3, height: 4 },
+                shadowOpacity: 0.5,
+                shadowRadius: 5,
+                elevation: 6,
+              }}
+            >
+              {/* Inner Door Panel Glass Inset */}
+              <View 
+                style={{
+                  position: 'absolute',
+                  top: '12%',
+                  right: '18%',
+                  width: '64%',
+                  height: '35%',
+                  backgroundColor: '#E2E8F0',
+                  opacity: 0.15,
+                  borderRadius: 4,
+                  borderWidth: 1,
+                  borderColor: '#F5B942',
+                }}
+              />
+              {/* Gold Door Handle */}
+              <View 
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: 4,
+                  width: 3.5,
+                  height: 22,
+                  backgroundColor: '#F5B942',
+                  borderRadius: 2,
+                }}
+              />
+            </Animated.View>
+
+            {/* Glowing Golden Light Beam (Fades in softly as door opens) */}
+            <Animated.View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                top: '10%',
+                left: '28%',
+                right: '28%',
+                bottom: '22%',
+                backgroundColor: '#FEF08A',
+                opacity: doorLightAnim.interpolate({
+                  inputRange: [0, 0.4, 1],
+                  outputRange: [0, 0.45, 0.15],
+                }),
+                borderRadius: 16,
+              }}
+            />
+
+            {/* Tap Prompt Badge when door is closed (positioned lower, cleanly below door) */}
+            {!doorOpened && (
+              <Animated.View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  bottom: 2,
+                  alignSelf: 'center',
+                  opacity: tapPromptFade,
+                  transform: [{ scale: tapPromptPulse }],
+                }}
+                className="bg-[#0F172A]/90 px-4 py-2 rounded-full border border-[#F5B942]/70 shadow-lg flex-row items-center gap-1.5"
+              >
+                <Text className="text-[#F5B942] text-xs font-black tracking-wide">
+                  ✨ Tap door to open
+                </Text>
+              </Animated.View>
+            )}
+          </TouchableOpacity>
+        );
+      case 1:
+        return (
+          <Svg width="100%" height="100%" viewBox="0 0 280 200" fill="none">
+            <Defs>
+              <RadialGradient id="softAura1" cx="50%" cy="50%" r="50%">
+                <Stop offset="0%" stopColor="#BAE6FD" stopOpacity="0.4" />
+                <Stop offset="70%" stopColor="#E0F2FE" stopOpacity="0.15" />
+                <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+              </RadialGradient>
+              <LinearGradient id="woodGrad" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0%" stopColor="#F5E0C3" />
+                <Stop offset="100%" stopColor="#E3C49D" />
+              </LinearGradient>
+            </Defs>
+
+            {/* Seamless Soft Aura merged into screen background */}
+            <Circle cx="140" cy="100" r="95" fill="url(#softAura1)" />
+            
+            {/* Wooden Floor Platform */}
+            <Path d="M15 152 L265 152" stroke="#E2E8F0" strokeWidth="2" strokeLinecap="round" />
+            <Rect x="20" y="152" width="240" height="24" rx="6" fill="url(#woodGrad)" opacity="0.85" />
+            <Path d="M60 152 V176 M110 152 V176 M170 152 V176 M220 152 V176" stroke="#D1B084" strokeWidth="1" />
+            
+            {/* High Rise Window Grid Silhouette */}
+            <Path d="M35 30 H245 M35 85 H245 M90 15 V152 M190 15 V152" stroke="#CBD5E1" strokeWidth="2" strokeDasharray="3 3" opacity="0.35" />
+            
+            {/* Distant Skyscrapers subtle skyline */}
+            <Rect x="50" y="95" width="24" height="55" fill="#E2E8F0" opacity="0.65" rx="3" />
+            <Rect x="78" y="110" width="18" height="40" fill="#E2E8F0" opacity="0.45" rx="3" />
+            <Rect x="195" y="80" width="28" height="70" fill="#E2E8F0" opacity="0.55" rx="3" />
+            
+            {/* Premium Yoga Mat */}
+            <Rect x="60" y="145" width="160" height="15" rx="7.5" fill="#4F46E5" />
+            <Rect x="65" y="147" width="150" height="11" rx="5.5" fill="none" stroke="#F5B942" strokeWidth="1.5" />
+            
+            {/* Subtle Sun Rays */}
+            <Path d="M20 20 L135 145 L165 145 L50 20 Z" fill="#FEF3C7" opacity="0.25" />
+            
+            {/* Stylized Yoga practitioner */}
+            <Circle cx={140} cy={100} r={12} fill="#101828" />
+            <Path d="M140 112 C135 125, 120 132, 100 146" stroke="#101828" strokeWidth={7} strokeLinecap="round" />
+            <Path d="M140 112 C148 125, 160 132, 180 146" stroke="#101828" strokeWidth={7} strokeLinecap="round" />
+            <Path d="M130 120 L110 105" stroke="#4F46E5" strokeWidth={5} strokeLinecap="round" />
+            <Path d="M150 120 L170 105" stroke="#4F46E5" strokeWidth={5} strokeLinecap="round" />
+          </Svg>
+        );
+      case 2:
+        return (
+          <Svg width="100%" height="100%" viewBox="0 0 280 200" fill="none">
+            <Defs>
+              <RadialGradient id="softAura2" cx="50%" cy="50%" r="50%">
+                <Stop offset="0%" stopColor="#DDD6FE" stopOpacity="0.4" />
+                <Stop offset="70%" stopColor="#EDE9FE" stopOpacity="0.15" />
+                <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+              </RadialGradient>
+              <LinearGradient id="barbellGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <Stop offset="0%" stopColor="#4F46E5" />
+                <Stop offset="100%" stopColor="#06B6D4" />
+              </LinearGradient>
+            </Defs>
+
+            {/* Seamless Soft Aura merged into screen background */}
+            <Circle cx="140" cy="100" r="95" fill="url(#softAura2)" />
+            
+            {/* Luxury Gym Floor Platform */}
+            <Path d="M15 162 L265 162" stroke="#E2E8F0" strokeWidth="2" strokeLinecap="round" />
+            <Rect x="20" y="146" width="240" height="34" rx="8" fill="#0F172A" opacity="0.9" />
+            <Rect x="24" y="150" width="232" height="26" rx="6" fill="none" stroke="#F5B942" strokeWidth="1" opacity="0.35" />
+            
+            {/* Barbell weights representation */}
+            <Path d="M50 160 H230" stroke="#64748B" strokeWidth={4} />
+            <Circle cx={60} cy={160} r={15} fill="url(#barbellGrad)" />
+            <Circle cx={70} cy={160} r={15} fill="url(#barbellGrad)" />
+            <Circle cx={210} cy={160} r={15} fill="url(#barbellGrad)" />
+            <Circle cx={220} cy={160} r={15} fill="url(#barbellGrad)" />
+            
+            {/* Client (lifting stance) */}
+            <Circle cx={120} cy={95} r={10} fill="#101828" />
+            <Path d="M120 105 L120 135 L105 160" stroke="#101828" strokeWidth={7} strokeLinecap="round" />
+            <Path d="M120 135 L135 160" stroke="#101828" strokeWidth={7} strokeLinecap="round" />
+            <Path d="M120 115 L100 112" stroke="#101828" strokeWidth={5} strokeLinecap="round" />
+            
+            {/* Strength Coach (standing stance, check posture) */}
+            <Circle cx={170} cy={85} r={10} fill="#6D5EF7" />
+            <Path d="M170 95 L170 130 L160 160" stroke="#6D5EF7" strokeWidth={7} strokeLinecap="round" />
+            <Path d="M170 130 L180 160" stroke="#6D5EF7" strokeWidth={7} strokeLinecap="round" />
+            {/* Arm reaching out guiding */}
+            <Path d="M170 105 L142 108" stroke="#6D5EF7" strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" />
+            
+            {/* Floating Gold Check Stars */}
+            <Path d="M95 50 L98 56 L104 57 L100 61 L101 67 L95 64 L89 67 L90 61 L86 57 L92 56 Z" fill="#F5B942" />
+            <Path d="M195 40 L197 44 L201 45 L198 48 L199 52 L195 50 L191 52 L192 48 L189 45 L193 44 Z" fill="#F5B942" opacity="0.7" />
+          </Svg>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const slides = [
+    {
+      title: 'Personal Fitness.\nAt Your Doorstep.',
+      description: 'Book ACE/ISSA certified fitness coaches for Yoga, Strength, Boxing, Dance, and Rehabilitation. We bring all required gear straight to your home.',
+    },
+    {
+      title: 'Flexible Spacing.\nSeamless Booking.',
+      description: 'Train wherever you are comfortable: home, society gym, outdoor parks, or office. Select convenient morning or evening time slots that fit your day.',
+    },
+    {
+      title: 'Verified & Secure.\nPeace of Mind.',
+      description: 'Enjoy professional service with live travel arrival maps, secure customer OTP check-ins, and direct one-tap emergency SOS support.',
+    }
+  ];
+
+  return (
+    <Animated.View 
+      style={{ 
+        flex: 1, 
+        backgroundColor: screenBgColor, 
+        paddingTop: insets.top, 
+        paddingBottom: Math.max(insets.bottom, 16) 
+      }}
+    >
+      {/* Modern Edge-to-Edge System Bar */}
+      <StatusBar style="dark" />
+
+      {/* Top Header Navigation Row */}
+      <View className="h-12 flex-row justify-end items-center px-6 z-10">
+        <TouchableOpacity onPress={handleFinishOnboarding} activeOpacity={0.6} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Text className="text-[#6B7280] text-xs font-black uppercase tracking-widest">
+            Skip
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Main slide content area with horizontal swipe gestures */}
+      <View className="flex-1 justify-between px-6 pb-2" {...panResponder.panHandlers}>
+        <Animated.View 
+          style={{ 
+            opacity: fadeContentAnim,
+            transform: [{ translateX: dragAnim }],
+          }} 
+          className="flex-1 justify-center gap-6"
+        >
+          {/* Animated SVG Illustration wrapper */}
+          <Animated.View 
+            style={{ transform: [{ translateY: floatAnim }] }} 
+            className="w-full aspect-[4/3] items-center justify-center relative overflow-hidden"
+          >
+            {renderIllustration(currentSlide)}
+          </Animated.View>
+
+          {/* Texts with interactive live fade on mock swipe and graceful entrance as door opens */}
+          <Animated.View 
+            style={{ 
+              opacity: Animated.multiply(fadeTextAnim, pageIntroFade),
+              transform: [{ translateY: pageIntroSlideY }],
+            }} 
+            className="gap-3 px-2"
+          >
+            <Text className="text-[#101828] text-[30px] font-black tracking-tight leading-[38px]">
+              {slides[currentSlide].title}
+            </Text>
+            <Text className="text-[#6B7280] text-[15px] font-semibold leading-relaxed">
+              {slides[currentSlide].description}
+            </Text>
+          </Animated.View>
+        </Animated.View>
+
+        {/* Footer controls: Page indicator, Swipe Indication, & Primary action */}
+        <Animated.View style={{ opacity: pageIntroFade }} className="gap-4 mt-4 px-2">
+          {/* Custom Page indicator */}
+          <PageIndicator activeIndex={currentSlide} total={3} />
+
+          {/* Interactive Swipe Hint Indication in Blue for slides 1 & 2 */}
+          {currentSlide < 2 && (
+            <Animated.View 
+              style={{ transform: [{ translateX: swipeHintPulse }] }}
+              className="flex-row items-center justify-center gap-1.5 py-1"
+            >
+              <Text className="text-[#2563EB] text-[11px] font-black uppercase tracking-wider">
+                Swipe left to explore
+              </Text>
+              <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <Path 
+                  d="M5 12H19M19 12L13 6M19 12L13 18" 
+                  stroke="#2563EB" 
+                  strokeWidth="2.5" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                />
+              </Svg>
+            </Animated.View>
+          )}
+
+          {/* Main CTA button: Smooth transition between Disabled hint on slides 1-2 & Active Get Started on slide 3 */}
+          {currentSlide === 2 ? (
+            <Animated.View
+              style={{
+                opacity: buttonFadeAnim,
+                transform: [{ scale: buttonScaleAnim }],
+              }}
+            >
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={handleFinishOnboarding}
+                className="w-full bg-[#101828] py-3.5 rounded-full items-center justify-center shadow-lg"
+              >
+                <Text className="text-white text-xs font-black uppercase tracking-widest">
+                  Get Started
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
+          ) : (
+            <View
+              className="w-full bg-[#E5E7EB] py-3.5 rounded-full items-center justify-center border border-[#D1D5DB]"
+            >
+              <Text className="text-[#6B7280] text-xs font-black uppercase tracking-widest">
+                Swipe to Continue
+              </Text>
+            </View>
+          )}
+        </Animated.View>
+      </View>
+    </Animated.View>
+  );
+}

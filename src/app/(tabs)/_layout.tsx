@@ -2,27 +2,49 @@ import React, { useEffect } from 'react';
 import { BackHandler } from 'react-native';
 import { Tabs, useRouter, useSegments } from 'expo-router';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { useTabHistoryStore } from '@/store/tabHistoryStore';
 
 export default function TabsLayout() {
   const router = useRouter();
   const segments = useSegments();
+  const { pushTab, popTab } = useTabHistoryStore();
 
-  // ponytail: Android system back on a non-home tab goes home instead of killing the app.
+  // Track active tab changes
   useEffect(() => {
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+    const atTabRoot = segments[0] === '(tabs)' && segments.length === 2;
+    if (atTabRoot) {
+      const current = segments[1] as string;
+      pushTab(current);
+    }
+  }, [segments, pushTab]);
+
+  // Android hardware back: navigate to previous tab in history before exiting app
+  useEffect(() => {
+    const onBackPress = () => {
       const atTabRoot = segments[0] === '(tabs)' && segments.length === 2;
-      const current = segments[segments.length - 1] as string;
-      if (atTabRoot && current !== 'index') {
-        router.navigate('/(tabs)' as any);
+      if (!atTabRoot) return false;
+
+      const previousTab = popTab();
+      if (previousTab) {
+        if (previousTab === 'index') {
+          router.navigate('/(tabs)' as any);
+        } else {
+          router.navigate(`/(tabs)/${previousTab}` as any);
+        }
         return true;
       }
+
+      // If at root and no more history, allow default behavior (exit app)
       return false;
-    });
+    };
+
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => sub.remove();
-  }, [segments, router]);
+  }, [segments, router, popTab]);
 
   return (
     <Tabs
+      backBehavior="history"
       tabBar={(props) => <BottomNavigation {...props} />}
       screenOptions={{
         headerShown: false,

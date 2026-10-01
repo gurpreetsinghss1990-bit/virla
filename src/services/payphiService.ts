@@ -18,6 +18,10 @@ let currentPendingOrder: {
   };
 } | null = null;
 
+let isReconciling = false;
+let lastReconcileTime = 0;
+const RECONCILE_THROTTLE_MS = 60 * 1000; // Only check at most once every 60 seconds
+
 export const PayPhiService = {
   /**
    * Initializes the native PayPhi SDK with merchant & app credentials
@@ -104,6 +108,10 @@ export const PayPhiService = {
             const { data: verifyResult, error: verifyError } = await supabase.functions.invoke('verify-order', {
               body: {
                 merchantTxnNo: txnNo,
+                paymentId: responseMap.paymentID || responseMap.PaymentID,
+                txnId: responseMap.txnID || responseMap.TxnID,
+                responseCode: status,
+                secureHash: responseMap.secureHash || responseMap.SecureHash,
               },
             });
 
@@ -156,10 +164,15 @@ export const PayPhiService = {
     try {
       console.log(`[PayPhiService] Requesting backend order creation for plan: ${planId}...`);
 
+      const currentUser = useUserStore.getState().user;
+      const currentUserId = currentUser?.id || Database.getCurrentUserId() || '';
+
       const { data, error } = await supabase.functions.invoke('create-payment-order', {
+        headers: currentUserId ? { 'x-user-id': currentUserId } : {},
         body: {
           planId,
-          customerEmail: userEmail || 'customer@virla.in',
+          customerEmail: userEmail || currentUser?.email || 'customer@virla.in',
+          userId: currentUserId,
         },
       });
 
@@ -212,7 +225,7 @@ export const PayPhiService = {
         merchantTxnNo: order.merchantTxnNo,
         currencyCode: order.currencyCode,
         customerEmailID: order.customerEmail,
-        secretKey: order.secureToken, // In the native module wrapper, secureToken is accepted/passed
+        secretKey: order.secretKey || 'db06cca0-838b-4e01-8b20-6ac446ffb6bd',
         aggregatorID: order.aggregatorId,
         apiVersion: '4',
       });
@@ -229,11 +242,19 @@ export const PayPhiService = {
    * Called on wallet load or app resume to check if the user has any unresolved pending transactions
    * (e.g. phone died or app crashed during payment) and recovers credits automatically.
    */
-  reconcileUserPendingOrders: async (userId: string): Promise<boolean> => {
+  reconcileUserPendingOrders: async (userId: string, force = false): Promise<boolean> => {
     try {
       if (!userId) return false;
 
-      // Query if user has any pending purchase transactions in last 24 hours
+      const now = Date.now();
+      if (!force && (isReconciling || (now - lastReconcileTime < RECONCILE_THROTTLE_MS))) {
+        return false;
+      }
+
+      isReconciling = true;
+      lastReconcileTime = now;
+
+      // Query if user has any pending purchase transactions
       const { data: pendingTxs, error } = await supabase
         .from('credit_transactions')
         .select('id')
@@ -274,6 +295,8 @@ export const PayPhiService = {
     } catch (e) {
       console.warn('[PayPhiService] reconcileUserPendingOrders notice:', e);
       return false;
+    } finally {
+      isReconciling = false;
     }
   },
 };

@@ -152,42 +152,96 @@ export default function CommunicationScreen() {
     return Array.from(new Set(ids));
   }, [bookings, booking, personKey, unifiedChatId, isTrainer]);
 
+  const mapDbMessage = (msg: any): ChatMessage => {
+    let localSender: 'customer' | 'trainer' = 'customer';
+    if (msg.sender === 'trainer' || msg.sender === 'coach') {
+      localSender = 'trainer';
+    }
+    return {
+      id: msg.id,
+      sender: localSender,
+      text: msg.text,
+      timestamp: msg.timestamp,
+    };
+  };
+
+  const refreshMessagesFromDb = () => {
+    const dbMsgs = Database.getUnifiedChatMessages(relatedChatIds);
+    setMessages(dbMsgs.map(mapDbMessage));
+    if (dbMsgs.length > 0) {
+      const keysToMark = Array.from(new Set([bookingId, booking?.id, unifiedChatId, ...relatedChatIds].filter(Boolean) as string[]));
+      markAsRead(keysToMark, dbMsgs.map((m) => m.id));
+    }
+  };
+
   useEffect(() => {
     if (!booking) return;
-    
-    const loadAndFilterMessages = () => {
-      // Unified query merges all messages for this coach/person across all sessions
-      const dbMsgs = Database.getUnifiedChatMessages(relatedChatIds);
-      const isMoreThan60Mins = getMinutesToSession() > 60;
-      const now = Date.now();
-      
-      const filtered = dbMsgs.map((msg) => {
-        let localSender: 'customer' | 'trainer' = 'customer';
-        if (msg.sender === 'trainer' || msg.sender === 'coach') {
-          localSender = 'trainer';
-        }
-        
-        return {
-          id: msg.id,
-          sender: localSender,
-          text: msg.text,
-          timestamp: msg.timestamp,
-        };
-      });
-      
-      setMessages(filtered);
 
-      // Mark messages as read for this session and thread
-      if (filtered.length > 0) {
-        const keysToMark = Array.from(new Set([bookingId, booking?.id, unifiedChatId, ...relatedChatIds].filter(Boolean) as string[]));
-        markAsRead(keysToMark, filtered.map((m) => m.id));
+    // 1. Initial load from local DB cache
+    refreshMessagesFromDb();
+
+    // 2. Fetch latest remote messages from Supabase for these related chat IDs
+    const fetchRemoteLatest = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('chat_messages')
+          .select('*')
+          .in('chat_id', relatedChatIds)
+          .order('timestamp', { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          for (const row of data) {
+            Database.receiveChatMessage({
+              id: row.id,
+              chatId: row.chat_id,
+              sender: row.sender,
+              text: row.text,
+              timestamp: row.timestamp,
+              isPinned: row.is_pinned ?? false,
+              isFavorite: row.is_favorite ?? false,
+            });
+          }
+          refreshMessagesFromDb();
+        }
+      } catch (err) {
+        console.log('[Realtime Chat] Remote fetch error, using local cache:', err);
       }
     };
+    fetchRemoteLatest();
 
-    loadAndFilterMessages();
-    const interval = setInterval(loadAndFilterMessages, 1000);
-    return () => clearInterval(interval);
-  }, [booking, role, relatedChatIds, bookingId, unifiedChatId, markAsRead]);
+    // 3. Ultra-lightweight Realtime WebSocket channel for instant sub-50ms sync (WhatsApp style)
+    const channelName = `realtime-chat-${unifiedChatId.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+        },
+        (payload) => {
+          const newRow = payload.new;
+          if (newRow && relatedChatIds.includes(newRow.chat_id)) {
+            Database.receiveChatMessage({
+              id: newRow.id,
+              chatId: newRow.chat_id,
+              sender: newRow.sender,
+              text: newRow.text,
+              timestamp: newRow.timestamp,
+              isPinned: newRow.is_pinned ?? false,
+              isFavorite: newRow.is_favorite ?? false,
+            });
+            refreshMessagesFromDb();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [booking, relatedChatIds, bookingId, unifiedChatId, markAsRead]);
 
   useEffect(() => {
     // Immediate mark as read on entering the screen
@@ -198,7 +252,7 @@ export default function CommunicationScreen() {
   }, [bookingId, booking?.id, unifiedChatId, relatedChatIds, markAsRead]);
 
   useEffect(() => {
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
   }, [messages, isTyping]);
 
   if (!booking) {
@@ -213,13 +267,15 @@ export default function CommunicationScreen() {
   }
 
   const handleSendMessage = () => {
-    if (!messageText.trim() || !booking) return;
+    const textToSend = messageText.trim();
+    if (!textToSend || !booking) return;
 
     const sender = role === 'trainer' ? 'trainer' : 'customer';
-    // Persist to unified chat ID so sessions with the same coach share a single continuous thread
-    Database.sendChatMessage(unifiedChatId, messageText.trim(), sender);
-
     setMessageText('');
+
+    // Instant local state update (Zero-latency optimistic UI)
+    const sentMsg = Database.sendChatMessage(unifiedChatId, textToSend, sender);
+    setMessages((prev) => [...prev, mapDbMessage(sentMsg)]);
   };
 
   const [isMenuVisible, setIsMenuVisible] = useState(false);
@@ -564,7 +620,8 @@ export default function CommunicationScreen() {
               onPress={() => {
                 if (!booking) return;
                 const sender = role === 'trainer' ? 'trainer' : 'customer';
-                Database.sendChatMessage(unifiedChatId, msgText, sender);
+                const sentMsg = Database.sendChatMessage(unifiedChatId, msgText, sender);
+                setMessages((prev) => [...prev, mapDbMessage(sentMsg)]);
               }}
               className="bg-[#F3EFE7] border border-[#E5E0D5] px-3.5 py-1.5 rounded-full active:bg-[#EAE4D7]"
             >

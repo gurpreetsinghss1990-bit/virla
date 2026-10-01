@@ -3,15 +3,7 @@ import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Invoice } from '../types';
 import { Database } from '../database/Database';
-import { useUserProfileStore } from './userProfileStore';
-import { useBookingStore } from './bookingStore';
-import { useCoachStore } from './coachStore';
-import { useWorkoutStore } from './workoutStore';
-import { useWalletStore } from './walletStore';
-import { useMembershipStore } from './membershipStore';
-import { useNotificationStore } from './notificationStore';
-import { useAIStore } from './aiStore';
-import { useAddressStore } from './addressStore';
+import { syncAllDomainStores } from './syncAllStores';
 import { PushNotificationService } from '../services/PushNotificationService';
 
 let SecureStore: any = null;
@@ -138,15 +130,7 @@ export const useUserStore = create<UserState>()(
             PushNotificationService.syncTokenWithBackend(userId).then();
           }
 
-          useUserProfileStore.getState().syncFromDB();
-          useBookingStore.getState().syncFromDB();
-          useCoachStore.getState().syncFromDB();
-          useWorkoutStore.getState().syncFromDB();
-          useWalletStore.getState().syncFromDB();
-          useMembershipStore.getState().syncFromDB();
-          useNotificationStore.getState().syncFromDB();
-          useAIStore.getState().syncFromDB();
-          useAddressStore.getState().syncFromDB();
+          syncAllDomainStores();
         } else {
           // Remove push token on logout before local data wipes
           const userId = Database.getCurrentUserId();
@@ -161,15 +145,7 @@ export const useUserStore = create<UserState>()(
           } catch (e) {
             console.error('Failed to clear local caches on logout:', e);
           }
-          useUserProfileStore.getState().syncFromDB();
-          useBookingStore.getState().syncFromDB();
-          useCoachStore.getState().syncFromDB();
-          useWorkoutStore.getState().syncFromDB();
-          useWalletStore.getState().syncFromDB();
-          useMembershipStore.getState().syncFromDB();
-          useNotificationStore.getState().syncFromDB();
-          useAIStore.getState().syncFromDB();
-          useAddressStore.getState().syncFromDB();
+          syncAllDomainStores();
         }
       },
       setCompletedOnboarding: (completed) => set({ hasCompletedOnboarding: completed }),

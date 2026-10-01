@@ -169,10 +169,32 @@ export default function MembershipScreen() {
   const slideUpAnim = useMemo(() => new Animated.Value(600), []);
   const overlayOpacity = useMemo(() => new Animated.Value(0), []);
   const progressAnim = useMemo(() => new Animated.Value(0), []);
+  const spinAnim = useMemo(() => new Animated.Value(0), []);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [showDemoPayment, setShowDemoPayment] = useState(false);
+
+  // Revolving spinning animation for the loader ring
+  useEffect(() => {
+    let animation: Animated.CompositeAnimation | null = null;
+    if (isProcessing) {
+      spinAnim.setValue(0);
+      animation = Animated.loop(
+        Animated.timing(spinAnim, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: true,
+        })
+      );
+      animation.start();
+    } else {
+      spinAnim.setValue(0);
+    }
+    return () => {
+      if (animation) animation.stop();
+    };
+  }, [isProcessing, spinAnim]);
 
   // Hardware back button: close payment modal instead of navigating away
   useEffect(() => {
@@ -861,10 +883,26 @@ export default function MembershipScreen() {
             {isProcessing && (
               <View className="items-center justify-center py-16 gap-6 min-h-[400px]">
                 <View className="relative w-16 h-16 items-center justify-center">
-                  <Svg width={64} height={64} viewBox="0 0 64 64" className="absolute">
-                    <Circle cx={32} cy={32} r={28} stroke="#E5E7EB" strokeWidth={4} fill="none" />
-                    <Circle cx={32} cy={32} r={28} stroke="#4F46E5" strokeWidth={4} fill="none" strokeDasharray="176" strokeDashoffset="44" strokeLinecap="round" />
-                  </Svg>
+                  <Animated.View
+                    style={{
+                      position: 'absolute',
+                      width: 64,
+                      height: 64,
+                      transform: [
+                        {
+                          rotate: spinAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['0deg', '360deg'],
+                          }),
+                        },
+                      ],
+                    }}
+                  >
+                    <Svg width={64} height={64} viewBox="0 0 64 64">
+                      <Circle cx={32} cy={32} r={28} stroke="#E5E7EB" strokeWidth={4} fill="none" />
+                      <Circle cx={32} cy={32} r={28} stroke="#4F46E5" strokeWidth={4} fill="none" strokeDasharray="176" strokeDashoffset="44" strokeLinecap="round" />
+                    </Svg>
+                  </Animated.View>
                   <Feather name="lock" size={20} color="#4F46E5" />
                 </View>
                 <View className="items-center gap-1">

@@ -3414,6 +3414,16 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     return msg;
   }
 
+  receiveChatMessage(msg: ChatMessage): void {
+    if (!msg || !msg.id) return;
+    const exists = this.schema.messages.some(m => m.id === msg.id);
+    if (!exists) {
+      this.schema.messages.push(msg);
+      this.save();
+      this.log('ReceiveMessage', `Realtime message received: "${msg.text}" in chat ${msg.chatId}`);
+    }
+  }
+
   private getLastChatMessage(chatId: string): string | null {
     const list = this.getChatMessages(chatId);
     return list.length > 0 ? list[list.length - 1].text : null;

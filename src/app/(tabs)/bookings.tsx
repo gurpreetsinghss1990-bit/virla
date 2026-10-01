@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useTransition } from 'react';
 import { useRouter } from 'expo-router';
 import { View, Text, ScrollView, TouchableOpacity, Platform, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { useUserStore } from '../../store/userStore';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../../database/Database';
+import { syncAllDomainStores } from '../../store/syncAllStores';
 import { useCoachStore, generateMonthlySlots } from '../../store/coachStore';
 import { normalizeDate, canonicalizeTimeRange, formatToDDMMYYYY, getBookingISTDateRange } from '../../utils/date';
 import { Feather, Ionicons } from '@expo/vector-icons';
@@ -117,7 +118,8 @@ export default function BookingsScreen() {
   const [prevRole, setPrevRole] = useState(role);
   const [activeFilter, setActiveFilter] = useState<FilterType>(role === 'trainer' ? 'today' : 'upcoming');
   const [cancelledDateFilter, setCancelledDateFilter] = useState<'all' | 'today' | 'yesterday' | 'older'>('all');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !Database.getIsLoaded());
+  const [isSwitchingTab, setIsSwitchingTab] = useState(false);
 
   // Trainer States
   const [today, setToday] = useState(() => getCurrentServerTime());
@@ -181,11 +183,15 @@ export default function BookingsScreen() {
         Database.setCurrentUserId(userId);
       }
 
-      try {
+      const isAlreadyLoaded = Database.getIsLoaded();
+      if (!isAlreadyLoaded) {
         setLoading(true);
-        console.log('[BOOKINGS TAB] Reloading database from Supabase on mount...');
+      }
+
+      try {
+        console.log('[BOOKINGS TAB] Syncing database from Supabase in background...');
         await Database.reload();
-        useCoachStore.getState().syncFromDB();
+        syncAllDomainStores();
         console.log('[BOOKINGS TAB] Database reloaded and synced.');
       } catch (err) {
         console.warn('Failed to load database in bookings tab:', err);
@@ -387,48 +393,50 @@ export default function BookingsScreen() {
     return [];
   };
 
-  // Regular Customer Bookings list filter
-  const filteredBookings = bookings.filter((b) => {
+  // Regular Customer Bookings list filter (Memoized for high performance)
+  const filteredBookings = useMemo(() => {
+    const list = bookings.filter((b) => {
+      if (activeFilter === 'upcoming') {
+        const serverNow = getCurrentServerTime();
+        return b.status === 'upcoming' && getBookingISTDateRange(b).start.getTime() > serverNow.getTime();
+      }
+      if (activeFilter === 'cancelled') {
+        const isCancelledOrMissed = b.status === 'cancelled' || b.status === 'client_no_show' || b.status === 'trainer_no_show' || b.status === 'missed_session_not_started';
+        if (!isCancelledOrMissed) return false;
+
+        if (cancelledDateFilter === 'all') return true;
+
+        const bDateStr = normalizeDate(getBookingDateObj(b.date));
+        const now = getCurrentServerTime();
+        const todayStr = normalizeDate(now);
+        const yesterdayDate = new Date(now);
+        yesterdayDate.setDate(now.getDate() - 1);
+        const yesterdayStr = normalizeDate(yesterdayDate);
+
+        if (cancelledDateFilter === 'today') {
+          return bDateStr === todayStr;
+        }
+        if (cancelledDateFilter === 'yesterday') {
+          return bDateStr === yesterdayStr;
+        }
+        if (cancelledDateFilter === 'older') {
+          return bDateStr !== todayStr && bDateStr !== yesterdayStr;
+        }
+        return true;
+      }
+      return b.status === activeFilter;
+    });
+
     if (activeFilter === 'upcoming') {
-      const serverNow = getCurrentServerTime();
-      return b.status === 'upcoming' && getBookingISTDateRange(b).start.getTime() > serverNow.getTime();
+      return list.sort((a, b) => {
+        return getBookingISTDateRange(a).start.getTime() - getBookingISTDateRange(b).start.getTime();
+      });
+    } else {
+      return list.sort((a, b) => {
+        return getBookingISTDateRange(b).start.getTime() - getBookingISTDateRange(a).start.getTime();
+      });
     }
-    if (activeFilter === 'cancelled') {
-      const isCancelledOrMissed = b.status === 'cancelled' || b.status === 'client_no_show' || b.status === 'trainer_no_show' || b.status === 'missed_session_not_started';
-      if (!isCancelledOrMissed) return false;
-
-      if (cancelledDateFilter === 'all') return true;
-
-      const bDateStr = normalizeDate(getBookingDateObj(b.date));
-      const now = getCurrentServerTime();
-      const todayStr = normalizeDate(now);
-      const yesterdayDate = new Date(now);
-      yesterdayDate.setDate(now.getDate() - 1);
-      const yesterdayStr = normalizeDate(yesterdayDate);
-
-      if (cancelledDateFilter === 'today') {
-        return bDateStr === todayStr;
-      }
-      if (cancelledDateFilter === 'yesterday') {
-        return bDateStr === yesterdayStr;
-      }
-      if (cancelledDateFilter === 'older') {
-        return bDateStr !== todayStr && bDateStr !== yesterdayStr;
-      }
-      return true;
-    }
-    return b.status === activeFilter;
-  });
-
-  if (activeFilter === 'upcoming') {
-    filteredBookings.sort((a, b) => {
-      return getBookingISTDateRange(a).start.getTime() - getBookingISTDateRange(b).start.getTime();
-    });
-  } else {
-    filteredBookings.sort((a, b) => {
-      return getBookingISTDateRange(b).start.getTime() - getBookingISTDateRange(a).start.getTime();
-    });
-  }
+  }, [bookings, activeFilter, cancelledDateFilter]);
 
   const getFilterLabel = (type: FilterType) => {
     switch (type) {
@@ -1126,8 +1134,14 @@ export default function BookingsScreen() {
                 key={opt}
                 activeOpacity={0.8}
                 onPress={() => {
+                  if (activeFilter === opt) return;
+                  setIsSwitchingTab(true);
                   setActiveFilter(opt);
                   setCancelledDateFilter('all');
+                  // Let the UI immediately switch the tab button and show spinner, then yield to render cards
+                  setTimeout(() => {
+                    setIsSwitchingTab(false);
+                  }, 60);
                 }}
                 className={`flex-1 py-3.5 rounded-xl items-center justify-center ${
                   isActive ? 'bg-[#101828]' : ''
@@ -1188,8 +1202,15 @@ export default function BookingsScreen() {
         )}
 
         {/* Bookings Render List */}
-        <View>
-          {filteredBookings.length > 0 ? (
+        <View className="min-h-[220px]">
+          {isSwitchingTab ? (
+            <View className="py-16 items-center justify-center">
+              <ActivityIndicator size="small" color="#101828" />
+              <Text className="text-zinc-500 text-xs font-semibold mt-3 tracking-wide">
+                Loading sessions...
+              </Text>
+            </View>
+          ) : filteredBookings.length > 0 ? (
             filteredBookings.map((booking) => (
               <BookingCard key={booking.id} booking={booking} />
             ))

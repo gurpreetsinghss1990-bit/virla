@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, ActivityIndicator, Linking, Share } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, ActivityIndicator, Linking, Share, InteractionManager } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -8,6 +8,7 @@ import { useBookingStore } from '../store/bookingStore';
 import { useMembershipStore } from '../store/membershipStore';
 import { useUserStore } from '../store/userStore';
 import { Database } from '../database/Database';
+import { syncAllDomainStores } from '../store/syncAllStores';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
 import { ScreenHeader } from '../components/ScreenHeader';
@@ -38,21 +39,35 @@ export default function WalletScreen() {
         Database.setCurrentUserId(storedUser.id);
       }
       
-      Database.load().then(async () => {
-        useWalletStore.getState().syncFromDB();
-        useMembershipStore.getState().syncFromDB();
-        useBookingStore.getState().syncFromDB();
+      // 1. Instant sync from local store state - zero screen freeze
+      useWalletStore.getState().syncFromDB();
+      useMembershipStore.getState().syncFromDB();
+      useBookingStore.getState().syncFromDB();
 
-        // Passive Self-Healing: Check if user has any orphan pending payments (phone died/crash)
-        const currentUid = Database.getCurrentUserId();
-        if (currentUid) {
-          PayPhiService.reconcileUserPendingOrders(currentUid).then((recovered) => {
-            if (recovered) {
-              Alert.alert('Payment Recovered 🎉', 'Your pending payment was confirmed by the payment gateway and credits have been credited to your wallet!');
-            }
-          });
-        }
+      // 2. Perform background async sync & self-healing reconciliation after screen transition
+      const task = InteractionManager.runAfterInteractions(() => {
+        Database.load().then(async () => {
+          syncAllDomainStores();
+
+          // Passive Self-Healing: Check if user has any orphan pending payments in background
+          const currentUid = Database.getCurrentUserId();
+          if (currentUid) {
+            PayPhiService.reconcileUserPendingOrders(currentUid).then((recovered) => {
+              if (recovered) {
+                Alert.alert('Payment Recovered 🎉', 'Your pending payment was confirmed by the payment gateway and credits have been credited to your wallet!');
+              }
+            }).catch((err) => {
+              console.warn('[Wallet] Background reconciliation notice:', err);
+            });
+          }
+        }).catch((err) => {
+          console.warn('[Wallet] Background database load notice:', err);
+        });
       });
+
+      return () => {
+        task.cancel();
+      };
     }, [])
   );
 

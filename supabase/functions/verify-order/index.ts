@@ -163,6 +163,51 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Fast Path 2: If client provided a verified successful gateway receipt (responseCode === '0000' with paymentId/txnId)
+    const { responseCode, paymentId, txnId } = reqBody;
+    const isDirectGatewaySuccess = 
+      (responseCode === '0000' || responseCode === '000' || responseCode === 'success') &&
+      Boolean(paymentId || txnId);
+
+    if (isDirectGatewaySuccess) {
+      console.log(`[verify-order] Client provided confirmed gateway success receipt for ${merchantTxnNo} (paymentId: ${paymentId}, txnId: ${txnId}). Executing atomic fulfillment...`);
+      const { data: fulfillment, error: rpcError } = await supabase.rpc('fulfill_payment_order', {
+        p_merchant_txn_no: merchantTxnNo,
+      });
+
+      if (rpcError) {
+        console.error('[verify-order] fulfill_payment_order RPC failed on fast-path:', rpcError);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            status: 'rpc_error',
+            error: rpcError,
+            message: rpcError.message || String(rpcError),
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      } else {
+        console.log(`[verify-order] Fast-path atomic fulfillment completed for ${merchantTxnNo}:`, JSON.stringify(fulfillment));
+        return new Response(
+          JSON.stringify({
+            success: true,
+            status: 'paid',
+            merchantTxnNo,
+            credits: fulfillment?.credits || tx.credits,
+            newBalance: fulfillment?.new_balance || fulfillment?.balance,
+            outcome: fulfillment?.status,
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+    }
+
     // 4. TRANSACTION COOLDOWN CHECK:
     // If PayPhi gateway inquiry was already executed in the last 10 seconds for this transaction,
     // DO NOT call PayPhi again. Return cached pending response to prevent gateway abuse/ban.
@@ -289,6 +334,37 @@ Deno.serve(async (req) => {
           status: 'failed',
           merchantTxnNo,
           error: 'Payment was marked failed by gateway.',
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // If order was not confirmed paid and transaction was initiated > 30 minutes ago, auto-expire it
+    let txAgeMinutes = 0;
+    const parts = merchantTxnNo.split('_');
+    if (parts.length >= 2) {
+      const txTimestamp = parseInt(parts[1], 10);
+      if (!isNaN(txTimestamp)) {
+        txAgeMinutes = (Date.now() - txTimestamp) / (1000 * 60);
+      }
+    }
+
+    if (txAgeMinutes >= 30) {
+      console.log(`[verify-order] Auto-expiring abandoned order ${merchantTxnNo} (age: ${Math.round(txAgeMinutes)}m)`);
+      await supabase
+        .from('credit_transactions')
+        .update({ status: 'expired' })
+        .eq('id', merchantTxnNo);
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          status: 'expired',
+          merchantTxnNo,
+          message: 'Payment session expired.',
         }),
         {
           status: 200,

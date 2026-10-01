@@ -1083,9 +1083,19 @@ export default function HomeScreen() {
             onPressOut={handlePressOut}
             className="pr-4 py-2"
           >
-            <Text className="text-2xl font-bold tracking-[0.2em] text-[#E11D48]">
-              {role === 'trainer' ? 'VIRLA PRO' : 'VIRLA'}
-            </Text>
+            <View className="flex-row items-center">
+              <Image
+                source={require('../../../assets/images/splash-icon.png')}
+                style={{
+                  width: 24,
+                  height: 24,
+                  resizeMode: 'contain',
+                }}
+              />
+              <Text className="text-2xl font-black tracking-[0.2em] text-[#101828] ml-1">
+                {role === 'trainer' ? 'IRLA PRO' : 'IRLA'}
+              </Text>
+            </View>
             <Text className="text-[10px] font-medium tracking-[0.25em] text-zinc-500 uppercase mt-1">
               Wellness At Your Doorstep
             </Text>
@@ -1262,7 +1272,7 @@ export default function HomeScreen() {
                 {/* Athlete Image on the right */}
                 <View className="absolute right-0 top-0 bottom-0 w-[52%] z-0">
                   <Image 
-                    source={require('../../../assets/images/athlete_hero.png')} 
+                    source={require('../../../assets/images/athlete_hero.webp')} 
                     className="w-full h-full" 
                     resizeMode="cover"
                   />

@@ -122,9 +122,9 @@ Deno.serve(async (req) => {
 
   try {
     const reqBody = await req.json().catch(() => ({}));
-    const { planId, customerEmail } = reqBody;
+    const { planId, customerEmail, userId: bodyUserId } = reqBody;
 
-    const userId = getRequestUserId(req);
+    const userId = getRequestUserId(req) || bodyUserId || null;
     console.log(`[create-payment-order] Incoming request for plan: ${planId}, caller: ${userId}`);
 
     if (!userId) {
@@ -201,6 +201,7 @@ Deno.serve(async (req) => {
           appId,
           customerEmail: customerEmail || 'customer@virla.in',
           secureToken,
+          secretKey,
           plan: {
             id: planId,
             name: plan.name,

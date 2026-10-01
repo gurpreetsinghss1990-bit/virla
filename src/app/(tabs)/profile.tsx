@@ -11,6 +11,7 @@ import { useCoachStore } from '../../store/coachStore';
 import { useWalletStore } from '../../store/walletStore';
 import { useUserProfileStore } from '../../store/userProfileStore';
 import { Database, TrainerApplication } from '../../database/Database';
+import { syncAllDomainStores } from '../../store/syncAllStores';
 import { AutocompleteSuggestion, fetchGooglePlacesAutocomplete, reverseGeocodeCoords } from '../../utils/distance';
 import { LuxuryCard } from '../../components/LuxuryCard';
 import { SignOutConfirmationModal } from '../../components/SignOutConfirmationModal';
@@ -315,27 +316,29 @@ export default function ProfileScreen() {
   const [isEditingTrainer, setIsEditingTrainer] = useState(false);
 
   // ── Hardware back button (Android) ──────────────────────────────────────
-  // Intercept back press so it closes panels/modals instead of exiting the app.
-  useEffect(() => {
-    const onBackPress = () => {
-      if (isSignOutModalVisible) {
-        setIsSignOutModalVisible(false);
-        return true;
-      }
-      if (isEditingProfile) {
-        setIsEditingProfile(false);
-        return true;
-      }
-      if (isEditingTrainer) {
-        setIsEditingTrainer(false);
-        return true;
-      }
-      // Root tab screen – prevent accidental app exit
-      return true;
-    };
-    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-    return () => sub.remove();
-  }, [isSignOutModalVisible, isEditingProfile, isEditingTrainer]);
+  // Intercept back press so it closes panels/modals first only when Profile is focused.
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        if (isSignOutModalVisible) {
+          setIsSignOutModalVisible(false);
+          return true;
+        }
+        if (isEditingProfile) {
+          setIsEditingProfile(false);
+          return true;
+        }
+        if (isEditingTrainer) {
+          setIsEditingTrainer(false);
+          return true;
+        }
+        // Modals closed: return false so Tabs layout BackHandler navigates to previous tab
+        return false;
+      };
+      const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => sub.remove();
+    }, [isSignOutModalVisible, isEditingProfile, isEditingTrainer])
+  );
   const [trainerBio, setTrainerBio] = useState(coach?.shortBio || '');
   const [trainerName, setTrainerName] = useState(coach?.name || user?.name || '');
   const [trainerEmail, setTrainerEmail] = useState(user?.email || '');
@@ -410,21 +413,37 @@ export default function ProfileScreen() {
         Database.setCurrentUserId(storedUser.id);
       }
 
-      Database.load().then(() => {
-        useUserStore.getState().syncFromDB();
-        useUserProfileStore.getState().syncFromDB();
-        useCoachStore.getState().syncFromDB();
-        useWalletStore.getState().syncFromDB();
-        useMembershipStore.getState().syncFromDB();
-        reloadDynamicLists();
-        const latestCoach = Database.schema.coaches.find((c: any) => c.name === user.name || c.id === user.id);
-        if (latestCoach) {
-          setTrainerName(latestCoach.name || '');
-          setTrainerGender(latestCoach.gender || '');
-          setTrainerBio(latestCoach.shortBio || '');
-        }
+      // 1. Instant sync from local cache so profile tab renders immediately with zero lag
+      syncAllDomainStores();
+      useUserStore.getState().syncFromDB();
+      const cachedCoach = Database.schema.coaches.find((c: any) => c.name === user.name || c.id === user.id);
+      if (cachedCoach) {
+        setTrainerName(cachedCoach.name || '');
+        setTrainerGender(cachedCoach.gender || '');
+        setTrainerBio(cachedCoach.shortBio || '');
+      }
+
+      // 2. Perform background async sync after screen transition finishes
+      const task = InteractionManager.runAfterInteractions(() => {
+        Database.load().then(() => {
+          syncAllDomainStores();
+          useUserStore.getState().syncFromDB();
+          reloadDynamicLists();
+          const latestCoach = Database.schema.coaches.find((c: any) => c.name === user.name || c.id === user.id);
+          if (latestCoach) {
+            setTrainerName(latestCoach.name || '');
+            setTrainerGender(latestCoach.gender || '');
+            setTrainerBio(latestCoach.shortBio || '');
+          }
+        }).catch((err) => {
+          console.warn('[Profile Tab] Background database sync warning:', err);
+        });
       });
-    }, [])
+
+      return () => {
+        task.cancel();
+      };
+    }, [user.name, user.id])
   );
 
   useEffect(() => {
