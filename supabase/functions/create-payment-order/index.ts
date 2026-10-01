@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
     const currencyCode = '356';
     const aggregatorId = Deno.env.get('PAYPHI_AGGREGATOR_ID') || '100000000527739';
     const merchantName = Deno.env.get('PAYPHI_MERCHANT_NAME') || 'NAMRATHA JAUNI';
-    const envType = Deno.env.get('PAYPHI_ENV') || 'INT';
+    const envType = Deno.env.get('PAYPHI_ENV') || 'PROD';
 
     // Generate unique authoritative transaction number
     const merchantTxnNo = `TXN_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
