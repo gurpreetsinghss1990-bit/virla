@@ -6,6 +6,7 @@ import { useUserProfileStore } from '../store/userProfileStore';
 import { useWalletStore } from '../store/walletStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { CalculatedTargetsCard } from '../components/CalculatedTargetsCard';
 import Svg, { Rect, Line } from 'react-native-svg';
 
 export default function PersonalStatisticsScreen() {
@@ -38,6 +39,9 @@ export default function PersonalStatisticsScreen() {
               Track your performance summaries, calories burned, and booking statistics.
             </Text>
           </View>
+
+          {/* Calculated Targets Hero Card */}
+          <CalculatedTargetsCard />
 
           {/* Grid list of stats cards (Feature 10) */}
           <View className="flex-row flex-wrap justify-between gap-y-4">

@@ -155,18 +155,20 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
               <React.Fragment key="group-center">
                 <View className="items-center justify-center flex-1 py-1 z-20 relative" style={{ minHeight: 44 }}>
                   <TouchableOpacity
-                    activeOpacity={0.88}
+                    activeOpacity={0.9}
                     onPress={handlePlusPress}
-                    style={styles.dimensionalSphereFab}
+                    className="w-12 h-12 rounded-full bg-[#E11D48] items-center justify-center"
+                    style={{
+                      minHeight: 48,
+                      minWidth: 48,
+                      shadowColor: '#E11D48',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 8,
+                      elevation: 4,
+                    }}
                   >
-                    <View style={styles.sphereCore}>
-                      {/* Top-Left Specular highlight lens */}
-                      <View style={styles.specularHighlight} />
-                      <View style={styles.secondaryReflection} />
-                      {/* Bottom ambient bounce refraction */}
-                      <View style={styles.bottomBounceGlow} />
-                      <Feather name="plus" size={24} color="#FFFFFF" style={styles.fabIcon} />
-                    </View>
+                    <Feather name="plus" size={24} color="white" />
                   </TouchableOpacity>
                 </View>
                 {tabElement}
@@ -209,70 +211,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 6,
     position: 'relative',
-  },
-  dimensionalSphereFab: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    marginTop: -20,
-    backgroundColor: '#BE123C',
-    shadowColor: '#E11D48',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.65,
-    shadowRadius: 16,
-    elevation: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderTopWidth: 2,
-    borderLeftWidth: 1.5,
-    borderRightWidth: 1,
-    borderBottomWidth: 3,
-    borderTopColor: 'rgba(255, 255, 255, 0.95)',
-    borderLeftColor: 'rgba(255, 255, 255, 0.65)',
-    borderRightColor: 'rgba(159, 18, 57, 0.85)',
-    borderBottomColor: 'rgba(136, 19, 55, 0.98)',
-  },
-  sphereCore: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 26,
-    backgroundColor: '#E11D48',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  specularHighlight: {
-    position: 'absolute',
-    top: 5,
-    left: 8,
-    width: 18,
-    height: 10,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.78)',
-    transform: [{ rotate: '-28deg' }],
-  },
-  secondaryReflection: {
-    position: 'absolute',
-    top: 6,
-    left: 11,
-    width: 7,
-    height: 4,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-  },
-  bottomBounceGlow: {
-    position: 'absolute',
-    bottom: 3,
-    width: 22,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.32)',
-  },
-  fabIcon: {
-    textShadowColor: 'rgba(0, 0, 0, 0.35)',
-    textShadowOffset: { width: 0, height: 1.5 },
-    textShadowRadius: 2,
   },
   redDot: {
     position: 'absolute',

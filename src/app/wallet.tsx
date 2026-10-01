@@ -294,14 +294,14 @@ export default function WalletScreen() {
       return (
         <View className="flex-row justify-between items-center py-1">
           <Text className="text-zinc-500 text-[11px] font-bold uppercase">Original Expiry</Text>
-          <Text className="text-zinc-900 text-xs font-black">{formatToDDMMYYYY(breakdown[0].official_expiry_date)}</Text>
+          <Text className="text-zinc-900 text-xs font-bold">{formatToDDMMYYYY(breakdown[0].official_expiry_date)}</Text>
         </View>
       );
     }
 
     return (
       <View className="border-t border-zinc-100 pt-3.5 gap-2">
-        <Text className="text-zinc-500 text-[10px] font-black uppercase tracking-wider mb-1">Credit Expiry Breakdown</Text>
+        <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1">Credit Expiry Breakdown</Text>
         {breakdown.map((item, idx) => (
           <View key={idx} className="flex-row justify-between items-center py-0.5">
             <Text className="text-zinc-800 text-xs font-bold">{item.amount} {item.amount === 1 ? 'Credit' : 'Credits'}</Text>
@@ -384,6 +384,12 @@ export default function WalletScreen() {
     return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   }, [activeLots]);
 
+  // ponytail: ring shows remaining share of lifetime credits (display only)
+  const gaugeRatio = useMemo(() => {
+    if (!lifetimePurchased || lifetimePurchased <= 0) return 0.06;
+    return Math.min(1, Math.max(0.06, creditBalance / lifetimePurchased));
+  }, [creditBalance, lifetimePurchased]);
+
   const filteredLedger = useMemo(() => {
     if (ledgerFilter === 'all') return ledger;
     return ledger.filter(tx => tx.type === ledgerFilter);
@@ -406,114 +412,92 @@ export default function WalletScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F5F7FB' }}>
-      {/* Top Header */}
-      <View 
-        style={{ paddingTop: Math.max(insets.top, 14) }} 
-        className="px-5 pb-3 bg-[#F5F7FB]"
-      >
-        <View className="flex-row items-center justify-between relative h-10">
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.replace('/(tabs)/profile');
-              }
-            }}
-            className="w-9 h-9 items-center justify-center z-10"
-          >
-            <Ionicons name="chevron-back" size={24} color="#101828" />
-          </TouchableOpacity>
+      {/* Top Header — bleeds into page: same bg, no border/seam */}
+      <ScreenHeader
+        title="Credit Wallet"
+        category="UNIVERSAL SESSION PASS"
+        backgroundColor="#F5F7FB"
+        showBorder={false}
+        titleClassName="text-zinc-950 text-base font-bold mt-0.5"
+        onBack={() => {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace('/(tabs)/profile');
+          }
+        }}
+      />
 
-          {/* Centered Large Header Title */}
-          <View pointerEvents="none" className="absolute left-0 right-0 top-0 bottom-0 items-center justify-center">
-            <Text className="text-zinc-950 text-lg font-black tracking-tight">Credit Wallet</Text>
-          </View>
-
-          {/* Invoices button commented out
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => router.push('/payment-history' as any)}
-            className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-zinc-200/80 shadow-2xs z-10"
-          >
-            <Feather name="file-text" size={13} color="#E11D48" />
-            <Text className="text-[#101828] text-xs font-bold">Invoices</Text>
-          </TouchableOpacity>
-          */}
-        </View>
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 px-5 pt-2" contentContainerStyle={{ paddingBottom: Math.max((insets.bottom || 0) + 40, 110) }}>
-        <View className="gap-4">
+      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 px-4 pt-0" contentContainerStyle={{ paddingBottom: Math.max((insets.bottom || 0) + 40, 110) }}>
+        <View className="gap-4 pt-3">
 
           {/* Dynamic Notice Banner */}
           {!dismissPriorityNotice && (
             isExpired() ? (
-              <View className="bg-red-50 p-3.5 rounded-2xl flex-row items-center justify-between border border-red-100 shadow-2xs">
+              <View className="bg-red-50 p-3.5 rounded-2xl flex-row items-center justify-between border border-red-100 shadow-sm">
                 <View className="flex-row items-center gap-3 flex-1 mr-2">
                   <View className="w-9 h-9 rounded-full bg-red-100 items-center justify-center">
                     <Feather name="alert-triangle" size={16} color="#EF4444" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-red-800 text-[9px] font-black uppercase tracking-wider">Wallet Expired ⚠️</Text>
+                    <Text className="text-red-800 text-[10px] font-bold uppercase">Wallet Expired ⚠️</Text>
                     <Text className="text-red-700 text-xs font-medium mt-0.5">Please recharge to reactivate session check-ins.</Text>
                   </View>
                 </View>
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={() => router.push('/membership' as any)}
-                  className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-2xs"
+                  className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-sm"
                 >
-                  <Text className="text-white text-[10px] font-black uppercase tracking-wider">RECHARGE</Text>
+                  <Text className="text-white text-[10px] font-bold uppercase">RECHARGE</Text>
                 </TouchableOpacity>
               </View>
             ) : role !== 'trainer' && creditBalance === 0 ? (
-              <View className="bg-rose-50 p-3.5 rounded-2xl flex-row items-center justify-between border border-rose-100 shadow-2xs">
+              <View className="bg-rose-50 p-3.5 rounded-2xl flex-row items-center justify-between border border-rose-100 shadow-sm">
                 <View className="flex-row items-center gap-3 flex-1 mr-2">
                   <View className="w-9 h-9 rounded-full bg-rose-100 items-center justify-center">
                     <Feather name="alert-circle" size={16} color="#E11D48" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-[#E11D48] text-[9px] font-black uppercase tracking-wider">You&apos;re out of credits ⚠️</Text>
+                    <Text className="text-[#E11D48] text-[10px] font-bold uppercase">You&apos;re out of credits ⚠️</Text>
                     <Text className="text-rose-700 text-xs font-medium mt-0.5">Recharge your wallet to book wellness sessions.</Text>
                   </View>
                 </View>
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={() => router.push('/membership' as any)}
-                  className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-2xs"
+                  className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-sm"
                 >
-                  <Text className="text-white text-[10px] font-black uppercase tracking-wider">RECHARGE</Text>
+                  <Text className="text-white text-[10px] font-bold uppercase">RECHARGE</Text>
                 </TouchableOpacity>
               </View>
             ) : role !== 'trainer' && creditBalance <= 2 ? (
-              <View className="bg-amber-50 p-3.5 rounded-2xl flex-row items-center justify-between border border-amber-100 shadow-2xs">
+              <View className="bg-amber-50 p-3.5 rounded-2xl flex-row items-center justify-between border border-amber-100 shadow-sm">
                 <View className="flex-row items-center gap-3 flex-1 mr-2">
                   <View className="w-9 h-9 rounded-full bg-amber-100 items-center justify-center">
                     <Feather name="zap" size={16} color="#D97706" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-amber-800 text-[9px] font-black uppercase tracking-wider">Running low on credits ⚡</Text>
+                    <Text className="text-amber-800 text-[10px] font-bold uppercase">Running low on credits ⚡</Text>
                     <Text className="text-amber-700 text-xs font-medium mt-0.5">Recharge your wallet to keep training.</Text>
                   </View>
                 </View>
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={() => router.push('/membership' as any)}
-                  className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-2xs"
+                  className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-sm"
                 >
-                  <Text className="text-white text-[10px] font-black uppercase tracking-wider">RECHARGE</Text>
+                  <Text className="text-white text-[10px] font-bold uppercase">RECHARGE</Text>
                 </TouchableOpacity>
               </View>
             ) : approachingLots.length > 0 ? (
-              <View className="bg-[#EEF4FF] p-3.5 rounded-2xl flex-row items-center justify-between border border-blue-100/60 shadow-2xs">
+              <View className="bg-[#EEF4FF] p-3.5 rounded-2xl flex-row items-center justify-between border border-blue-100/60 shadow-sm">
                 <View className="flex-row items-center gap-3 flex-1 mr-2">
                   <View className="w-9 h-9 rounded-full bg-[#FFE4E6] items-center justify-center">
                     <Ionicons name="hourglass-outline" size={16} color="#E11D48" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-[#E11D48] text-[9px] font-black uppercase tracking-wider">
+                    <Text className="text-[#E11D48] text-[10px] font-bold uppercase">
                       Expiring Soon ⚠️ • Lot #{activeLots[0]?.id?.slice(-3) || '1'}
                     </Text>
                     <Text className="text-zinc-800 text-xs font-bold mt-0.5" numberOfLines={1}>
@@ -525,9 +509,9 @@ export default function WalletScreen() {
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={() => router.push('/membership' as any)}
-                    className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-2xs"
+                    className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-sm"
                   >
-                    <Text className="text-white text-[10px] font-black uppercase tracking-wider">EXTEND</Text>
+                    <Text className="text-white text-[10px] font-bold uppercase">EXTEND</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                     activeOpacity={0.7}
@@ -542,12 +526,7 @@ export default function WalletScreen() {
           )}
 
           {/* Universal Session Pass Card */}
-          <View className="bg-white rounded-[32px] p-6 shadow-sm border border-zinc-100/80 items-center gap-3">
-            <View className="flex-row items-center gap-1.5">
-              <View className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
-              <Text className="text-zinc-700 text-[10px] font-black uppercase tracking-widest">UNIVERSAL SESSION PASS</Text>
-              <View className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
-            </View>
+          <View className="bg-white rounded-3xl p-5 shadow-sm border border-zinc-100/80 items-center gap-3">
 
             {/* Circular Gauge */}
             <View className="relative w-[180px] h-[180px] items-center justify-center my-1">
@@ -569,7 +548,7 @@ export default function WalletScreen() {
                   stroke="#E11D48"
                   strokeWidth="8"
                   fill="none"
-                  strokeDasharray={`${0.58 * 452.4} ${452.4}`}
+                  strokeDasharray={`${(gaugeRatio * 452.4).toFixed(1)} 452.4`}
                   strokeLinecap="round"
                   transform="rotate(-65 90 90)"
                 />
@@ -583,11 +562,11 @@ export default function WalletScreen() {
               </Svg>
 
               <View className="absolute inset-0 items-center justify-center">
-                <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest">AVAILABLE BALANCE</Text>
-                <Text className="text-zinc-950 text-4xl font-black tracking-tight my-0.5">
+                <Text className="text-zinc-400 text-[10px] font-bold uppercase">AVAILABLE BALANCE</Text>
+                <Text className="text-zinc-950 text-4xl font-bold my-0.5">
                   {creditBalance}<Text className="text-[#E11D48]">.</Text>
                 </Text>
-                <Text className="text-zinc-700 text-[10px] font-bold uppercase tracking-wider">AVAILABLE CREDITS</Text>
+                <Text className="text-zinc-700 text-[10px] font-bold uppercase">AVAILABLE CREDITS</Text>
               </View>
             </View>
 
@@ -597,7 +576,7 @@ export default function WalletScreen() {
                 <Feather name="shield" size={12} color="#E11D48" />
                 <Text className="text-zinc-800 text-xs font-bold">Valid until {membership.renewalDate || '14 Sep 2027'}</Text>
               </View>
-              <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">
+              <Text className="text-zinc-400 text-[10px] font-bold uppercase mt-0.5">
                 CARD HOLDER: {userName ? userName.toUpperCase() : 'VIRAL'}
               </Text>
             </View>
@@ -611,7 +590,7 @@ export default function WalletScreen() {
                   className="flex-1 bg-black py-3.5 rounded-2xl items-center justify-center flex-row gap-2 shadow-sm"
                 >
                   <Feather name="plus-circle" size={16} color="white" />
-                  <Text className="text-white text-xs font-black uppercase tracking-wider">Recharge Wallet</Text>
+                  <Text className="text-white text-xs font-bold uppercase">Recharge Wallet</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
@@ -620,15 +599,15 @@ export default function WalletScreen() {
                 className="flex-1 bg-black py-3.5 rounded-2xl items-center justify-center flex-row gap-2 shadow-sm"
               >
                 <Feather name="send" size={15} color="white" />
-                <Text className="text-white text-xs font-black uppercase tracking-wider">Transfer Credits</Text>
+                <Text className="text-white text-xs font-bold uppercase">Transfer Credits</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Quick Stats 3-Column Card */}
-          <View className="bg-white rounded-2xl p-4 shadow-xs border border-zinc-100/80 flex-row justify-between items-center">
+          <View className="bg-white rounded-3xl p-5 shadow-sm border border-zinc-100/80 flex-row justify-between items-center">
             <View className="flex-1 items-center">
-              <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">PURCHASED</Text>
+              <Text className="text-zinc-400 text-[10px] font-bold uppercase">PURCHASED</Text>
               <Text className="text-zinc-950 text-2xl font-bold mt-0.5">{lifetimePurchased}</Text>
               <Text className="text-zinc-400 text-xs font-medium mt-0.5">Lifetime</Text>
             </View>
@@ -636,7 +615,7 @@ export default function WalletScreen() {
             <View className="w-[1px] h-9 bg-zinc-100" />
 
             <View className="flex-1 items-center">
-              <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">CONSUMED</Text>
+              <Text className="text-zinc-400 text-[10px] font-bold uppercase">CONSUMED</Text>
               <Text className="text-zinc-950 text-2xl font-bold mt-0.5">{creditsUsed}</Text>
               <Text className="text-[#E11D48] text-xs font-semibold mt-0.5">{consumptionRate}% Rate</Text>
             </View>
@@ -648,15 +627,16 @@ export default function WalletScreen() {
               onPress={handleUpcomingBookingsPress}
               className="flex-1 items-center"
             >
-              <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">NEXT SESSION</Text>
-              <Text className="text-zinc-950 text-[13px] font-bold mt-1" numberOfLines={1}>
+              <Text className="text-zinc-400 text-[10px] font-bold uppercase">NEXT</Text>
+              <Text className="text-zinc-950 text-sm font-bold mt-1" numberOfLines={1}>
                 {nextRitual ? formatToDDMMYYYY(nextRitual.date) : 'No Sessions'}
               </Text>
+              <Text className="text-zinc-400 text-xs font-medium mt-0.5">{upcomingCount} Upcoming</Text>
             </TouchableOpacity>
           </View>
 
           {/* Line Tab Switch */}
-          <View className="flex-row border-b border-zinc-200 mt-3 mb-1">
+          <View className="flex-row border-b border-zinc-200 mt-2">
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => setActiveTab('lots')}
@@ -666,45 +646,45 @@ export default function WalletScreen() {
             >
               <Text 
                 numberOfLines={1}
-                className={`text-xs font-bold uppercase tracking-wide ${
+                className={`text-[11px] font-bold uppercase ${
                   activeTab === 'lots' ? 'text-zinc-950' : 'text-zinc-400'
                 }`}
               >
-                CREDIT LOTS
+                LOTS
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => setActiveTab('transfer')}
-              className={`flex-[1.1] py-3 items-center justify-center border-b-2 ${
+              className={`flex-1 py-3 items-center justify-center border-b-2 ${
                 activeTab === 'transfer' ? 'border-zinc-950 -mb-[1px]' : 'border-transparent'
               }`}
             >
               <Text 
                 numberOfLines={1}
-                className={`text-xs font-bold uppercase tracking-wide ${
+                className={`text-[11px] font-bold uppercase ${
                   activeTab === 'transfer' ? 'text-zinc-950' : 'text-zinc-400'
                 }`}
               >
-                TRANSFER CREDITS
+                TRANSFER
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => setActiveTab('ledger')}
-              className={`flex-[1.3] py-3 items-center justify-center border-b-2 ${
+              className={`flex-1 py-3 items-center justify-center border-b-2 ${
                 activeTab === 'ledger' ? 'border-zinc-950 -mb-[1px]' : 'border-transparent'
               }`}
             >
               <Text 
                 numberOfLines={1}
-                className={`text-xs font-bold uppercase tracking-wide ${
+                className={`text-[11px] font-bold uppercase ${
                   activeTab === 'ledger' ? 'text-zinc-950' : 'text-zinc-400'
                 }`}
               >
-                TRANSACTION LEDGER
+                LEDGER
               </Text>
             </TouchableOpacity>
           </View>
@@ -712,20 +692,20 @@ export default function WalletScreen() {
           {/* Tab 1: Credit Lots */}
           {activeTab === 'lots' && (
             <View className="gap-3">
-              <View className="flex-row items-center justify-between">
-                <View>
-                  <Text className="text-zinc-950 text-sm font-black tracking-tight">Credit Expiry Breakdown</Text>
-                  <Text className="text-zinc-500 text-[11px] font-medium mt-0.5">Credits consume strictly in chronological order</Text>
+              <View className="flex-row items-center justify-between px-1">
+                <View className="flex-1 pr-2">
+                  <Text className="text-zinc-950 text-[15px] font-bold">Credit Expiry Breakdown</Text>
+                  <Text className="text-zinc-500 text-xs font-medium mt-0.5">Credits consume in chronological order</Text>
                 </View>
                 <View className="bg-[#FEE2E2] px-2.5 py-1 rounded-full">
-                  <Text className="text-[#E11D48] text-[9px] font-black uppercase tracking-wider">
-                    {activeLots.length} ACTIVE LOTS
+                  <Text className="text-[#E11D48] text-[10px] font-bold uppercase">
+                    {activeLots.length} ACTIVE
                   </Text>
                 </View>
               </View>
 
               {/* 3-Queue Visual Card */}
-              <View className="bg-white rounded-[28px] p-5 shadow-xs border border-zinc-100/80 relative">
+              <View className="bg-white rounded-3xl p-5 shadow-sm border border-zinc-100/80 relative">
                 {/* Connecting horizontal line */}
                 <View 
                   className="absolute h-[2px] bg-[#E11D48]" 
@@ -741,62 +721,62 @@ export default function WalletScreen() {
                 <View className="flex-row justify-between items-start">
                   {/* Node 1: Burning Now */}
                   <View className="items-center flex-1">
-                    <View className="w-10 h-10 rounded-full bg-[#E11D48] items-center justify-center shadow-xs">
-                      <Text className="text-white text-sm font-black">
+                    <View className="w-10 h-10 rounded-full bg-[#E11D48] items-center justify-center shadow-sm">
+                      <Text className="text-white text-sm font-bold">
                         {activeLots[0]?.remaining_credits || 0}
                       </Text>
                     </View>
-                    <Text className="text-[#E11D48] text-[9px] font-black uppercase mt-2">EXPIRING SOON</Text>
-                    <Text className="text-zinc-900 text-xs font-black mt-0.5">
+                    <Text className="text-[#E11D48] text-[10px] font-bold uppercase mt-2">EXPIRING SOON</Text>
+                    <Text className="text-zinc-900 text-xs font-bold mt-0.5">
                       Lot #{activeLots[0]?.id?.slice(-3) || '1'}
                     </Text>
-                    <Text className="text-[#E11D48] text-[10px] font-black mt-0.5">{burningDaysLeft}d left</Text>
-                    <Text className="text-zinc-400 text-[9px] font-medium mt-0.5">
+                    <Text className="text-[#E11D48] text-[10px] font-bold mt-0.5">{burningDaysLeft}d left</Text>
+                    <Text className="text-zinc-400 text-[10px] font-medium mt-0.5">
                       Exp: {activeLots[0] ? formatToDDMMYYYY(activeLots[0].official_expiry_date) : '-'}
                     </Text>
                     <TouchableOpacity
                       activeOpacity={0.8}
                       onPress={() => router.push('/membership' as any)}
-                      className="mt-2.5 bg-[#E11D48] px-3.5 py-1.5 rounded-full items-center justify-center shadow-xs"
+                      className="mt-2.5 bg-[#E11D48] px-3.5 py-1.5 rounded-full items-center justify-center shadow-sm"
                     >
-                      <Text className="text-white text-[10px] font-black uppercase tracking-wider">EXTEND</Text>
+                      <Text className="text-white text-[10px] font-bold uppercase">EXTEND</Text>
                     </TouchableOpacity>
                   </View>
 
                   {/* Node 2: Next in Line */}
                   <View className="items-center flex-1">
                     <View className="w-10 h-10 rounded-full bg-[#E0EDFD] items-center justify-center">
-                      <Text className="text-[#1E293B] text-sm font-black">
+                      <Text className="text-[#1E293B] text-sm font-bold">
                         {activeLots[1]?.remaining_credits || 0}
                       </Text>
                     </View>
-                    <Text className="text-zinc-500 text-[9px] font-black uppercase mt-2">NEXT IN LINE</Text>
-                    <Text className="text-zinc-900 text-xs font-black mt-0.5">
+                    <Text className="text-zinc-500 text-[10px] font-bold uppercase mt-2">NEXT IN LINE</Text>
+                    <Text className="text-zinc-900 text-xs font-bold mt-0.5">
                       Lot #{activeLots[1]?.id?.slice(-3) || '2'}
                     </Text>
                     <Text className="text-zinc-700 text-[10px] font-bold mt-0.5">Safe</Text>
-                    <Text className="text-zinc-400 text-[9px] font-medium mt-0.5">
+                    <Text className="text-zinc-400 text-[10px] font-medium mt-0.5">
                       Exp: {activeLots[1] ? formatToDDMMYYYY(activeLots[1].official_expiry_date) : '-'}
                     </Text>
-                    <Text className="text-zinc-400 text-[8px] font-black uppercase mt-1.5 tracking-wider">QUEUE 02</Text>
+                    <Text className="text-zinc-400 text-[10px] font-bold uppercase mt-1.5">QUEUE 02</Text>
                   </View>
 
                   {/* Node 3: Dormant */}
                   <View className="items-center flex-1">
                     <View className="w-10 h-10 rounded-full bg-[#E0EDFD] items-center justify-center">
-                      <Text className="text-[#1E293B] text-sm font-black">
+                      <Text className="text-[#1E293B] text-sm font-bold">
                         {activeLots[2]?.remaining_credits || 0}
                       </Text>
                     </View>
-                    <Text className="text-zinc-500 text-[9px] font-black uppercase mt-2">RESERVE</Text>
-                    <Text className="text-zinc-900 text-xs font-black mt-0.5">
+                    <Text className="text-zinc-500 text-[10px] font-bold uppercase mt-2">RESERVE</Text>
+                    <Text className="text-zinc-900 text-xs font-bold mt-0.5">
                       Lot #{activeLots[2]?.id?.slice(-3) || '3'}
                     </Text>
                     <Text className="text-zinc-700 text-[10px] font-bold mt-0.5">Safe</Text>
-                    <Text className="text-zinc-400 text-[9px] font-medium mt-0.5">
+                    <Text className="text-zinc-400 text-[10px] font-medium mt-0.5">
                       Exp: {activeLots[2] ? formatToDDMMYYYY(activeLots[2].official_expiry_date) : '-'}
                     </Text>
-                    <Text className="text-zinc-400 text-[8px] font-black uppercase mt-1.5 tracking-wider">QUEUE 03</Text>
+                    <Text className="text-zinc-400 text-[10px] font-bold uppercase mt-1.5">QUEUE 03</Text>
                   </View>
                 </View>
 
@@ -808,7 +788,7 @@ export default function WalletScreen() {
                       onPress={() => setShowAllLots(!showAllLots)}
                       className="items-center justify-center"
                     >
-                      <Text className="text-zinc-600 text-[11px] font-black uppercase tracking-wider">
+                      <Text className="text-zinc-600 text-[11px] font-bold uppercase">
                         {showAllLots ? 'Show Less' : `View All ${activeLots.length} Lots`}
                       </Text>
                     </TouchableOpacity>
@@ -834,7 +814,7 @@ export default function WalletScreen() {
                     <Ionicons name="heart-outline" size={17} color="#E11D48" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-zinc-950 text-xs font-black">A special benefit for you ❤️</Text>
+                    <Text className="text-zinc-950 text-xs font-bold">A special benefit for you ❤️</Text>
                     <Text className="text-zinc-600 text-xs font-medium mt-1 leading-relaxed">
                       Your credits are approaching their expiry date. Because you&apos;re a premium Virla client, we&apos;re giving you an additional 7 days to use your remaining credits.
                     </Text>
@@ -846,7 +826,7 @@ export default function WalletScreen() {
                     <Ionicons name="information-circle-outline" size={17} color="#E11D48" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-zinc-950 text-xs font-black">Transfer-Only Credits</Text>
+                    <Text className="text-zinc-950 text-xs font-bold">Transfer-Only Credits</Text>
                     <Text className="text-zinc-600 text-xs font-medium mt-1 leading-relaxed">
                       As a trainer, you can receive and transfer credits, but you cannot use credits to book sessions for yourself.
                     </Text>
@@ -858,7 +838,7 @@ export default function WalletScreen() {
                     <Ionicons name="bulb-outline" size={17} color="#E11D48" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-zinc-950 text-xs font-black">Session Scheduling Tip</Text>
+                    <Text className="text-zinc-950 text-xs font-bold">Session Scheduling Tip</Text>
                     <Text className="text-zinc-600 text-xs font-medium mt-1 leading-relaxed">
                       Schedule your workout sessions in advance to ensure your available credits are utilized effectively before expiration.
                     </Text>
@@ -871,20 +851,20 @@ export default function WalletScreen() {
           {/* Tab 2: P2P Transfer */}
           {activeTab === 'transfer' && (
             <View className="gap-3">
-              <View>
-                <Text className="text-zinc-950 text-sm font-black tracking-tight">Peer-to-Peer Transfer</Text>
-                <Text className="text-zinc-500 text-[11px] font-medium mt-0.5">
+              <View className="px-1">
+                <Text className="text-zinc-950 text-[15px] font-bold">Peer-to-Peer Transfer</Text>
+                <Text className="text-zinc-500 text-xs font-medium mt-0.5">
                   Instantly share booking credits with friends or family on Virla.
                 </Text>
               </View>
 
-              <View className="bg-white rounded-[28px] p-5 shadow-xs border border-zinc-100/80 gap-4">
+              <View className="bg-white rounded-3xl p-5 shadow-sm border border-zinc-100/80 gap-4">
                 <View className="gap-3.5">
                   <View>
-                    <Text className="text-zinc-500 text-[10px] font-black uppercase tracking-wider mb-1.5">Recipient Phone Number</Text>
+                    <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1.5">Recipient Phone Number</Text>
                     <View className="flex-row gap-2">
                       <View className="bg-zinc-100 border border-zinc-200 px-3.5 py-3 rounded-xl justify-center">
-                        <Text className="text-zinc-700 text-xs font-black">+91</Text>
+                        <Text className="text-zinc-700 text-xs font-bold">+91</Text>
                       </View>
                       <TextInput
                         placeholder="Enter 10-digit mobile number"
@@ -906,9 +886,9 @@ export default function WalletScreen() {
                       <TouchableOpacity
                         activeOpacity={0.8}
                         onPress={handleVerifyRecipient}
-                        className="bg-indigo-600 px-4 rounded-xl items-center justify-center shadow-xs"
+                        className="bg-zinc-950 px-4 rounded-xl items-center justify-center shadow-sm"
                       >
-                        <Text className="text-white text-[10px] font-black uppercase">Verify</Text>
+                        <Text className="text-white text-[10px] font-bold uppercase">Verify</Text>
                       </TouchableOpacity>
                     </View>
 
@@ -932,12 +912,12 @@ export default function WalletScreen() {
                           <TouchableOpacity
                             activeOpacity={0.85}
                             onPress={handleInviteWhatsApp}
-                            className={`flex-1 py-2.5 px-3 rounded-xl items-center justify-center flex-row gap-1.5 shadow-2xs ${
+                            className={`flex-1 py-2.5 px-3 rounded-xl items-center justify-center flex-row gap-1.5 shadow-sm ${
                               isInviteSent ? 'bg-[#1EBE5D]' : 'bg-[#25D366]'
                             }`}
                           >
                             <Ionicons name="logo-whatsapp" size={15} color="white" />
-                            <Text className="text-white text-[11px] font-black uppercase tracking-wider">
+                            <Text className="text-white text-[11px] font-bold uppercase">
                               {isInviteSent ? t('wallet.invited_whatsapp', 'Invited on WhatsApp ✓') : t('wallet.invite_whatsapp', 'Invite via WhatsApp')}
                             </Text>
                           </TouchableOpacity>
@@ -945,7 +925,7 @@ export default function WalletScreen() {
                           <TouchableOpacity
                             activeOpacity={0.8}
                             onPress={handleShareMoreOptions}
-                            className="bg-white border border-zinc-300 py-2.5 px-3 rounded-xl items-center justify-center flex-row gap-1.5 shadow-2xs"
+                            className="bg-white border border-zinc-300 py-2.5 px-3 rounded-xl items-center justify-center flex-row gap-1.5 shadow-sm"
                           >
                             <Feather name="share-2" size={13} color="#374151" />
                             <Text className="text-zinc-700 text-[11px] font-bold">
@@ -956,14 +936,14 @@ export default function WalletScreen() {
                       </View>
                     )}
                     {recipientStatus === 'self' && (
-                      <Text className="text-rose-600 text-[10px] font-black uppercase mt-2 ml-1">
+                      <Text className="text-rose-600 text-[10px] font-bold uppercase mt-2 ml-1">
                         You cannot transfer credits to yourself.
                       </Text>
                     )}
                     {recipientStatus === 'found' && (
                       <View className="flex-row items-center gap-1.5 mt-2.5 ml-1">
                         <Feather name="check-circle" size={13} color="#059669" />
-                        <Text className="text-emerald-700 text-xs font-black uppercase tracking-wider">
+                        <Text className="text-emerald-700 text-xs font-bold uppercase">
                           Verified: {recipientName}
                         </Text>
                       </View>
@@ -971,7 +951,7 @@ export default function WalletScreen() {
                   </View>
 
                   <View>
-                    <Text className="text-zinc-500 text-[10px] font-black uppercase tracking-wider mb-1.5">Credits Amount</Text>
+                    <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1.5">Credits Amount</Text>
                     <TextInput
                       placeholder="Number of credits to send"
                       placeholderTextColor="#9CA3AF"
@@ -987,9 +967,9 @@ export default function WalletScreen() {
                     activeOpacity={0.85}
                     onPress={handleTransfer}
                     disabled={recipientStatus !== 'found'}
-                    className={`w-full py-3.5 rounded-xl items-center justify-center mt-1 shadow-xs ${recipientStatus === 'found' ? 'bg-[#E11D48]' : 'bg-zinc-200'}`}
+                    className={`w-full py-3.5 rounded-xl items-center justify-center mt-1 shadow-sm ${recipientStatus === 'found' ? 'bg-[#E11D48]' : 'bg-zinc-200'}`}
                   >
-                    <Text className={`text-xs font-black uppercase tracking-wider ${recipientStatus === 'found' ? 'text-white' : 'text-zinc-400'}`}>
+                    <Text className={`text-xs font-bold uppercase ${recipientStatus === 'found' ? 'text-white' : 'text-zinc-400'}`}>
                       Transfer Credits
                     </Text>
                   </TouchableOpacity>
@@ -1000,11 +980,11 @@ export default function WalletScreen() {
 
           {/* Tab 3: Ledger Audit */}
           {activeTab === 'ledger' && (
-            <View className="gap-3.5 mt-1">
+            <View className="gap-3 mt-1">
               <View className="flex-row items-center justify-between px-1">
-                <View>
-                  <Text className="text-zinc-950 text-base font-bold tracking-tight">Transaction Ledger Audit</Text>
-                  <Text className="text-zinc-500 text-xs font-normal mt-0.5">Complete record of session debits & credit top-ups</Text>
+                <View className="flex-1 pr-2">
+                  <Text className="text-zinc-950 text-[15px] font-bold">Transaction Ledger</Text>
+                  <Text className="text-zinc-500 text-xs font-medium mt-0.5">Session debits & credit top-ups</Text>
                 </View>
                 <View className="bg-zinc-100 px-3 py-1 rounded-full">
                   <Text className="text-zinc-500 text-xs font-semibold">{ledger.length} Total</Text>
@@ -1012,19 +992,19 @@ export default function WalletScreen() {
               </View>
 
               {/* Filter Chips */}
-              <View className="flex-row gap-2.5 my-2">
+              <View className="flex-row gap-2 my-1">
                 {(['all', 'booking', 'purchase', 'refund'] as const).map((filter) => (
                   <TouchableOpacity
                     key={filter}
                     activeOpacity={0.7}
                     onPress={() => setLedgerFilter(filter)}
-                    className={`px-4 py-2.5 rounded-full border ${
+                    className={`px-4 py-2 rounded-full border ${
                       ledgerFilter === filter
                         ? 'bg-zinc-900 border-zinc-900'
                         : 'bg-zinc-50 border-zinc-200'
                     }`}
                   >
-                    <Text className={`text-sm font-semibold ${
+                    <Text className={`text-xs font-bold ${
                       ledgerFilter === filter ? 'text-white' : 'text-zinc-600'
                     }`}>
                       {filter === 'all' ? 'All' : filter === 'booking' ? 'Sessions' : filter === 'purchase' ? 'Purchases' : 'Refunds'}
@@ -1033,11 +1013,11 @@ export default function WalletScreen() {
                 ))}
               </View>
               
-              <View className="bg-white rounded-[28px] p-5 shadow-xs border border-zinc-100/80">
+              <View className="bg-white rounded-3xl p-5 shadow-sm border border-zinc-100/80">
                 {filteredLedger.length === 0 ? (
                   <View className="py-8 items-center justify-center gap-2">
                     <Feather name="inbox" size={26} color="#D1D5DB" />
-                    <Text className="text-zinc-400 text-sm font-semibold uppercase">No transactions found</Text>
+                    <Text className="text-zinc-400 text-sm font-semibold">No transactions found</Text>
                   </View>
                 ) : (
                   filteredLedger.map((tx) => {
@@ -1083,16 +1063,16 @@ export default function WalletScreen() {
           className="absolute top-0 left-0 right-0 bottom-0 bg-black/60 items-center justify-center z-50 px-6"
           style={{ position: 'absolute', elevation: 10 }}
         >
-          <View className="w-full bg-white rounded-[28px] p-6 border border-zinc-200 gap-5 shadow-2xl">
+          <View className="w-full bg-white rounded-3xl p-5 border border-zinc-200 gap-5 shadow-2xl">
             <View className="flex-row items-center gap-2.5 border-b border-zinc-100 pb-3">
               <Feather name="alert-circle" size={18} color="#E11D48" />
-              <Text className="text-[#101828] text-sm font-black uppercase tracking-wider">Transfer Credits?</Text>
+              <Text className="text-[#101828] text-sm font-bold uppercase">Transfer Credits?</Text>
             </View>
 
             <View className="gap-3.5">
               <View className="flex-row justify-between items-center py-1">
                 <Text className="text-zinc-500 text-[11px] font-bold uppercase">Recipient</Text>
-                <Text className="text-zinc-900 text-xs font-black">{recipientName}</Text>
+                <Text className="text-zinc-900 text-xs font-bold">{recipientName}</Text>
               </View>
               <View className="flex-row justify-between items-center py-1">
                 <Text className="text-zinc-500 text-[11px] font-bold uppercase">Phone Number</Text>
@@ -1100,15 +1080,15 @@ export default function WalletScreen() {
               </View>
               <View className="flex-row justify-between items-center py-1">
                 <Text className="text-zinc-500 text-[11px] font-bold uppercase">Transfer Amount</Text>
-                <Text className="text-[#E11D48] text-xs font-black">{transferAmount} Credits</Text>
+                <Text className="text-[#E11D48] text-xs font-bold">{transferAmount} Credits</Text>
               </View>
               <View className="flex-row justify-between items-center py-1">
                 <Text className="text-zinc-500 text-[11px] font-bold uppercase">Remaining Balance</Text>
-                <Text className="text-zinc-900 text-xs font-black">{creditBalance - parseInt(transferAmount, 10)} Credits</Text>
+                <Text className="text-zinc-900 text-xs font-bold">{creditBalance - parseInt(transferAmount, 10)} Credits</Text>
               </View>
               {renderExpirySection()}
               {isEliteUser && (
-                <Text className="text-indigo-800 text-[9px] font-bold uppercase mt-1 leading-relaxed text-center">
+                <Text className="text-indigo-800 text-[10px] font-bold uppercase mt-1 leading-relaxed text-center">
                   *Transferred credits preserve premium 7-day grace extension after expiry.
                 </Text>
               )}
@@ -1120,14 +1100,14 @@ export default function WalletScreen() {
                 onPress={() => setShowConfirmModal(false)}
                 className="flex-1 bg-zinc-100 py-3.5 rounded-xl items-center justify-center"
               >
-                <Text className="text-zinc-700 text-xs font-black uppercase">Cancel</Text>
+                <Text className="text-zinc-700 text-xs font-bold uppercase">Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={handleTransferConfirm}
-                className="flex-1 bg-[#E11D48] py-3.5 rounded-xl items-center justify-center shadow-xs"
+                className="flex-1 bg-[#E11D48] py-3.5 rounded-xl items-center justify-center shadow-sm"
               >
-                <Text className="text-white text-xs font-black uppercase">Confirm</Text>
+                <Text className="text-white text-xs font-bold uppercase">Confirm</Text>
               </TouchableOpacity>
             </View>
           </View>

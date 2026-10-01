@@ -1711,16 +1711,23 @@ export default function HomeScreen() {
                       <Circle cx="50" cy="50" r="10" fill="#EC4899" opacity={0.7} />
                     </Svg>
 
-                    {/* Sparkling Center Star */}
                     <View className="absolute z-10 w-9 h-9 rounded-full bg-white/10 items-center justify-center border border-white/20">
-                      <Feather name="zap" size={13} color="#FFFFFF" />
+                      <Image
+                        source={require('../../../assets/images/ai-coach-emblem.png')}
+                        style={{ width: 22, height: 22 }}
+                        resizeMode="contain"
+                      />
                     </View>
                   </View>
 
                   {/* Left content */}
                   <View className="z-10 gap-4 pr-16">
                     <View className="flex-row items-center gap-1.5 pl-0.5">
-                      <Feather name="zap" size={11} color="#EC4899" />
+                      <Image
+                        source={require('../../../assets/images/ai-coach-emblem.png')}
+                        style={{ width: 14, height: 14 }}
+                        resizeMode="contain"
+                      />
                       <Text className="text-white/70 text-xs font-bold uppercase">
                         {savedPlan ? 'My AI Wellness Plan' : 'AI Wellness Coach'}
                       </Text>

@@ -1,6 +1,7 @@
 import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
+import * as Font from 'expo-font';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -24,6 +25,11 @@ export default function RootLayout() {
   useEffect(() => {
     // Hide splash screen immediately since we handle the premium splash layout in index.tsx
     SplashScreen.hideAsync();
+
+    // Brand display font for AI Wellness Coach headers (bundled, no network at runtime)
+    Font.loadAsync({
+      PlaywriteCAGuides: require('../../assets/fonts/PlaywriteCAGuides-Regular.ttf'),
+    }).catch((e) => console.warn('[Fonts] Playwrite CA Guides failed to load:', e));
 
     let isMounted = true;
     let responseSubscription: any = null;

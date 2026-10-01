@@ -11,7 +11,9 @@ type RangeType = 'weekly' | 'monthly' | 'yearly';
 
 import { useUserProfileStore } from '../../store/userProfileStore';
 import { useUserStore } from '../../store/userStore';
+import { useAIWellnessStore } from '../../store/aiWellnessStore';
 import { Database } from '../../database/Database';
+import { CalculatedTargetsCard } from '../../components/CalculatedTargetsCard';
 
 export default function ProgressScreen() {
   const router = useRouter();
@@ -32,6 +34,7 @@ export default function ProgressScreen() {
 
   const { totalSessions, totalCalories, currentStreak } = useUserProfileStore();
   const { user, role } = useUserStore();
+  const { savedPlan } = useAIWellnessStore();
 
   const bookings = user.id 
     ? (role === 'trainer'
@@ -84,7 +87,9 @@ export default function ProgressScreen() {
 
     switch (activeRange) {
       case 'weekly': {
-        const calGoal = 3500;
+        const calGoal = savedPlan?.dailyCalories && savedPlan.dailyCalories > 0 
+          ? Math.round(savedPlan.dailyCalories * 0.28 * 7) 
+          : 3500;
         const calAmount = caloriesBurned > 0 
           ? caloriesBurned + (effectiveSessions > 0 ? effectiveSessions * 450 : 0)
           : (effectiveSessions > 0 ? effectiveSessions * 450 : 0);
@@ -134,7 +139,9 @@ export default function ProgressScreen() {
         };
       }
       case 'monthly': {
-        const calGoal = 14000;
+        const calGoal = savedPlan?.dailyCalories && savedPlan.dailyCalories > 0 
+          ? Math.round(savedPlan.dailyCalories * 0.28 * 30) 
+          : 14000;
         const calAmount = caloriesBurned > 0 
           ? caloriesBurned * 4 + (effectiveSessions > 0 ? effectiveSessions * 1800 : 0)
           : (effectiveSessions > 0 ? effectiveSessions * 1800 : 0);
@@ -697,6 +704,11 @@ export default function ProgressScreen() {
                   );
                 })}
               </View>
+
+              {/* Calculated Targets Hero Card */}
+              <Animated.View style={{ opacity: fadeAnim }}>
+                <CalculatedTargetsCard />
+              </Animated.View>
 
               {/* Card 1: 4 Animated Rings (Feature 8) - Seamless on canvas */}
               <Animated.View style={{ opacity: fadeAnim }} className="gap-4">

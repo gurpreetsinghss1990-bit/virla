@@ -48,7 +48,7 @@ export function ScreenHeader({
       <StatusBar style="dark" />
       <View 
         style={{ paddingTop: insets.top, backgroundColor: backgroundColor || undefined }} 
-        className={`${backgroundColor ? '' : 'bg-white'} ${showBorder ? 'border-b border-zinc-100 shadow-xs' : ''}`}
+        className={`${backgroundColor ? '' : 'bg-white'} ${showBorder ? 'border-b border-zinc-100 shadow-sm' : ''}`}
       >
         <View className="h-14 flex-row items-center px-5 justify-between">
           {showBack ? (
@@ -77,9 +77,7 @@ export function ScreenHeader({
                   className="w-1.5 h-1.5 rounded-full" 
                 />
                 <Text 
-                  style={{ letterSpacing: 2.2 }}
-                  className="text-zinc-500 text-[9.5px] font-bold uppercase"
-                  numberOfLines={1}
+                  className="text-zinc-500 text-[10px] font-semibold uppercase"
                 >
                   {category}
                 </Text>
@@ -87,12 +85,12 @@ export function ScreenHeader({
             )}
             <Text 
               numberOfLines={1}
-              className={titleClassName || "text-zinc-950 text-base font-extrabold tracking-tight mt-0.5"}
+              className={titleClassName || "text-zinc-950 text-base font-bold mt-0.5"}
             >
               {title}
             </Text>
             {subtitle ? (
-              <Text className="text-indigo-600 text-[9px] font-black uppercase tracking-widest mt-0.5">
+              <Text className="text-indigo-600 text-[10px] font-bold uppercase mt-0.5">
                 {subtitle}
               </Text>
             ) : null}

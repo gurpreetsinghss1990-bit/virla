@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Animated, Platform, BackHandler } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Animated, Platform, BackHandler, LayoutAnimation, UIManager } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useWalletStore } from '../store/walletStore';
@@ -141,11 +141,29 @@ export default function MembershipScreen() {
     }
   ];
 
-  const activePlans = plans.filter((p) => p.category === activeCategory);
+  const activePlans = useMemo(() => {
+    return plans.filter((p) => p.category === activeCategory);
+  }, [activeCategory]);
 
-  // Selection states
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  // Selection states - default to the popular Active Pack (plan-ind-3) matching design
+  const [selectedPlan, setSelectedPlan] = useState<Plan>(() => {
+    return plans.find((p) => p.id === 'plan-ind-3') || plans[0];
+  });
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [checkoutActive, setCheckoutActive] = useState(false);
+  const [isBenefitsExpanded, setIsBenefitsExpanded] = useState(false);
+
+  const toggleBenefits = () => {
+    setIsBenefitsExpanded((prev) => !prev);
+  };
+
+  const handleSelectCategory = (cat: 'individual' | 'couple') => {
+    setActiveCategory(cat);
+    const defaultForCat = plans.find((p) => p.category === cat && p.popular) || plans.find((p) => p.category === cat);
+    if (defaultForCat) {
+      setSelectedPlan(defaultForCat);
+    }
+  };
 
   // Animations using useMemo to avoid render-phase ref reads
   const slideUpAnim = useMemo(() => new Animated.Value(600), []);
@@ -159,7 +177,7 @@ export default function MembershipScreen() {
   // Hardware back button: close payment modal instead of navigating away
   useEffect(() => {
     const onBackPress = () => {
-      if (selectedPlan) {
+      if (isModalOpen) {
         if (showDemoPayment) {
           // Go back from demo payment step to plan details step
           setShowDemoPayment(false);
@@ -172,10 +190,11 @@ export default function MembershipScreen() {
     };
     const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => sub.remove();
-  }, [selectedPlan, showDemoPayment]);
+  }, [isModalOpen, showDemoPayment]);
 
   const openPlanDetails = (plan: Plan) => {
     setSelectedPlan(plan);
+    setIsModalOpen(true);
     setCheckoutActive(false);
     setIsProcessing(false);
     setIsSuccess(false);
@@ -192,7 +211,7 @@ export default function MembershipScreen() {
       Animated.timing(overlayOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
       Animated.timing(slideUpAnim, { toValue: 600, duration: 200, useNativeDriver: true })
     ]).start(() => {
-      setSelectedPlan(null);
+      setIsModalOpen(false);
       setShowDemoPayment(false);
     });
   };
@@ -267,229 +286,346 @@ export default function MembershipScreen() {
 
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
-      {/* Header */}
-      <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
-        <TouchableOpacity 
-          onPress={() => {
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace('/(tabs)/profile');
-            }
-          }} 
-          className="w-8 h-8 items-center justify-center"
-        >
-          <Ionicons name="arrow-back" size={20} color="#101828" />
-        </TouchableOpacity>
-        <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
-          VIRLA Credits
-        </Text>
-      </View>
+    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      {/* Top Header — matching screenshot exactly */}
+      <View 
+        style={{ paddingTop: insets.top, backgroundColor: '#FFFFFF' }}
+        className="px-5 pb-2"
+      >
+        <View className="h-12 flex-row items-center justify-between">
+          {/* Circular Back Button */}
+          <TouchableOpacity 
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace('/(tabs)/profile');
+              }
+            }}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            className="w-10 h-10 rounded-full border border-zinc-200 bg-white items-center justify-center"
+          >
+            <Feather name="arrow-left" size={18} color="#18181B" />
+          </TouchableOpacity>
 
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 px-6 pt-6" contentContainerStyle={{ paddingBottom: 140 }}>
-        <View className="gap-6">
-          
-          <View>
-            <Text className="text-zinc-900 text-2xl font-black tracking-tight leading-tight">Select Credits Pack</Text>
-            <Text className="text-zinc-500 text-xs font-semibold mt-1 leading-relaxed">
-              Book wellness sessions instantly with top-tier private coaches.
+          {/* Centered Editorial Title */}
+          <View className="items-center justify-center">
+            <View className="flex-row items-center gap-1.5">
+              <View className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
+              <Text className="text-zinc-400 text-[10px] font-bold tracking-[0.8px] uppercase">
+                MEMBERSHIP & PACKS
+              </Text>
+            </View>
+            <Text className="text-zinc-950 text-[15px] font-extrabold tracking-tight mt-0.5">
+              VIRLA Credits
             </Text>
           </View>
 
-          {/* Segmented Switcher Category Selector */}
-          <View className="flex-row border border-zinc-200/80 p-1.5 rounded-[22px] bg-zinc-50">
-            {[
-              { id: 'individual', label: 'Individual (1 Person)' },
-              { id: 'couple', label: 'Train Together' }
-            ].map((cat) => {
-              const isCatActive = activeCategory === cat.id;
-              return (
-                <TouchableOpacity
-                  key={cat.id}
-                  activeOpacity={0.85}
-                  onPress={() => setActiveCategory(cat.id as any)}
-                  className={`flex-1 py-3 rounded-[16px] items-center justify-center`}
-                  style={isCatActive ? {
-                    backgroundColor: '#101828',
-                    shadowColor: '#101828',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 4,
-                    elevation: 2,
-                  } : undefined}
-                >
-                  <Text className={`text-[10px] font-black uppercase tracking-wider ${isCatActive ? 'text-white' : 'text-[#6B7280]'}`}>
-                    {cat.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          {/* Circular Help Button */}
+          <TouchableOpacity 
+            activeOpacity={0.7} 
+            onPress={() => router.push('/help-support' as any)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            className="w-10 h-10 rounded-full border border-zinc-200 bg-white items-center justify-center"
+          >
+            <Text className="text-zinc-700 text-sm font-semibold">?</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-          {/* Subtitle Description */}
-          {activeCategory === 'couple' && (
-            <View className="bg-indigo-50/50 border border-indigo-100/50 p-4.5 rounded-[20px] -mt-2">
-              <Text className="text-zinc-600 text-xs font-semibold leading-relaxed text-center">
-                🧘 Perfect for couples, friends or family members training together in the same session.
-              </Text>
-            </View>
-          )}
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        className="flex-1" 
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 24 }}
+      >
+        {/* Hero Title */}
+        <View className="mb-4">
+          <Text className="text-zinc-950 text-[28px] font-extrabold tracking-[-0.6px] leading-[34px]">Select Credits Pack</Text>
+          <Text className="text-zinc-500 text-[13px] font-normal leading-[19px] mt-1.5">
+            Book wellness sessions instantly with top-tier private coaches.
+          </Text>
+        </View>
 
-          {/* Plan cards */}
-          <View className="gap-4">
-            {activePlans.map((plan) => {
-              const isHero = plan.popular;
+        {/* Segmented Switcher Category Selector */}
+        <View className="bg-[#F2F2F5] p-1 rounded-2xl flex-row mb-5">
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => handleSelectCategory('individual')}
+            className={`flex-1 py-3 rounded-xl items-center justify-center ${
+              activeCategory === 'individual' ? 'bg-[#141416] shadow-sm' : ''
+            }`}
+          >
+            <Text className={`text-[13px] font-bold ${activeCategory === 'individual' ? 'text-white' : 'text-zinc-500'}`}>
+              Individual (1 Person)
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => handleSelectCategory('couple')}
+            className={`flex-1 py-3 rounded-xl items-center justify-center ${
+              activeCategory === 'couple' ? 'bg-[#141416] shadow-sm' : ''
+            }`}
+          >
+            <Text className={`text-[13px] font-bold ${activeCategory === 'couple' ? 'text-white' : 'text-zinc-500'}`}>
+              Train Together
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Available Packs Header */}
+        <View className="flex-row justify-between items-center mb-2.5 px-0.5">
+          <Text className="text-zinc-400 text-[11px] font-bold tracking-[0.6px] uppercase">AVAILABLE PACKS</Text>
+          <Text className="text-zinc-400 text-[12px] font-normal">Instant Activation</Text>
+        </View>
+
+        {/* Plan Cards */}
+        <View>
+          {activePlans.map((plan) => {
+            const isSelected = selectedPlan?.id === plan.id;
+            const displayName = plan.name === 'Active Pack' ? 'Active' : plan.name;
+
+            if (isSelected) {
               return (
                 <TouchableOpacity
                   key={plan.id}
-                  activeOpacity={0.95}
+                  activeOpacity={0.92}
                   onPress={() => openPlanDetails(plan)}
-                  className={`bg-white border rounded-[28px] flex-row justify-between items-center relative ${
-                    isHero ? 'border-indigo-600 p-6' : 'border-[#E5E7EB] p-5'
-                  }`}
-                  style={isHero ? {
+                  className="bg-[#0B0C15] rounded-[20px] p-[18px] mb-3 border border-indigo-950/60 shadow-lg relative"
+                  style={{
                     shadowColor: '#4F46E5',
-                    shadowOffset: { width: 0, height: 8 },
-                    shadowOpacity: 0.08,
-                    shadowRadius: 20,
-                    elevation: 4,
-                    transform: [{ scale: 1.01 }],
-                    marginTop: 4,
-                    marginBottom: 4,
-                  } : {
-                    shadowColor: '#101828',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.02,
-                    shadowRadius: 4,
-                    elevation: 1,
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.18,
+                    shadowRadius: 18,
+                    elevation: 6,
                   }}
                 >
-                  {isHero && plan.ribbon && (
-                    <View className="absolute top-0 right-6 -translate-y-1/2 bg-indigo-600 px-3 py-1 rounded-full shadow-xs">
-                      <Text className="text-white text-[8px] font-black uppercase tracking-widest">{plan.ribbon}</Text>
-                    </View>
-                  )}
-
-                  <View className="flex-1 pr-4 gap-1">
-                    <View className="flex-row items-center gap-1.5 flex-wrap">
-                      <Text className="text-zinc-950 text-base font-black">{plan.name}</Text>
-                      {isHero && (
-                        <View className="bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-md">
-                          <Text className="text-[#4F46E5] text-[7px] font-black uppercase tracking-widest">Most Popular</Text>
+                  {/* Badges */}
+                  {(plan.badge || plan.ribbon) && (
+                    <View className="flex-row items-center gap-2 mb-3">
+                      {plan.badge && (
+                        <View className="bg-[#1E1F38] border border-indigo-500/30 px-2.5 py-1 rounded-[6px]">
+                          <Text className="text-[#818CF8] text-[10px] font-extrabold uppercase">{plan.badge}</Text>
+                        </View>
+                      )}
+                      {plan.ribbon && (
+                        <View className="bg-white px-2.5 py-1 rounded-[6px]">
+                          <Text className="text-zinc-950 text-[10px] font-extrabold uppercase">{plan.ribbon}</Text>
                         </View>
                       )}
                     </View>
-                    <Text className="text-zinc-500 text-[10px] font-semibold">{plan.credits} Booking Credits Included</Text>
-                    <Text className="text-zinc-400 text-[8px] font-bold mt-1 uppercase tracking-wider">{plan.idealFor}</Text>
-                  </View>
+                  )}
 
-                  <View className="items-end gap-2.5">
-                    <View className="items-end">
-                      {plan.originalPrice && (
-                        <Text className="text-zinc-400 text-[10px] line-through font-bold">{plan.originalPrice}</Text>
-                      )}
-                      <Text className="text-zinc-950 text-xl font-black tracking-tight">{plan.price}</Text>
+                  <View className="flex-row items-start justify-between">
+                    <View className="flex-row items-start gap-3.5 flex-1 pr-3">
+                      <View className="w-[22px] h-[22px] rounded-full bg-[#4F46E5] items-center justify-center mt-0.5">
+                        <Feather name="check" size={13} color="white" />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-white text-[16px] font-bold tracking-tight">{displayName}</Text>
+                        <View className="flex-row items-center gap-1.5 mt-1">
+                          <Feather name="zap" size={11} color="#FB7185" />
+                          <Text className="text-[#FB7185] text-[12px] font-semibold">
+                            {plan.credits} {plan.credits === 1 ? 'Credit' : 'Credits'} Included
+                          </Text>
+                        </View>
+                        <Text className="text-zinc-400 text-[12px] font-normal leading-[17px] mt-1">
+                          {plan.idealFor}
+                        </Text>
+                      </View>
                     </View>
-                    <View className="bg-zinc-950 px-4 py-2.5 rounded-xl border border-zinc-800 flex-row items-center gap-1.5 min-h-[44px] justify-center min-w-[90px]">
-                      <Text className="text-white text-[9px] font-black uppercase tracking-wider">Continue</Text>
-                      <Feather name="arrow-right" size={10} color="white" />
+
+                    <View className="items-end justify-start">
+                      {plan.originalPrice && (
+                        <Text className="text-zinc-400 text-[11.5px] line-through font-medium mb-0.5">{plan.originalPrice}</Text>
+                      )}
+                      <Text className="text-white text-[22px] font-extrabold tracking-tight">{plan.price}</Text>
                     </View>
                   </View>
                 </TouchableOpacity>
               );
-            })}
+            }
+
+            return (
+              <TouchableOpacity
+                key={plan.id}
+                activeOpacity={0.85}
+                onPress={() => openPlanDetails(plan)}
+                className="bg-white rounded-[20px] p-[18px] mb-3 border border-zinc-200/90 shadow-sm"
+              >
+                <View className="flex-row items-start justify-between">
+                  <View className="flex-row items-start gap-3.5 flex-1 pr-3">
+                    <View className="w-[22px] h-[22px] rounded-full border-[1.5px] border-zinc-300 bg-white items-center justify-center mt-0.5" />
+                    <View className="flex-1">
+                      <Text className="text-zinc-950 text-[16px] font-bold tracking-tight">{displayName}</Text>
+                      <View className="flex-row items-center gap-1.5 mt-1">
+                        <Feather name="zap" size={11} color="#E11D48" />
+                        <Text className="text-[#E11D48] text-[12px] font-semibold">
+                          {plan.credits} {plan.credits === 1 ? 'Credit' : 'Credits'} Included
+                        </Text>
+                      </View>
+                      <Text className="text-zinc-400 text-[12px] font-normal leading-[17px] mt-1">
+                        {plan.idealFor}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View className="items-end justify-start">
+                    <Text className="text-zinc-950 text-[17px] font-bold tracking-tight mt-0.5">
+                      {plan.price}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* GOOD TO KNOW — Clean Seamless Section */}
+        <View className="mt-5 mb-4 px-0.5">
+          <View className="flex-row items-center gap-2 mb-3">
+            <Feather name="info" size={14} color="#18181B" />
+            <Text className="text-zinc-950 text-xs font-bold uppercase tracking-wider">GOOD TO KNOW</Text>
           </View>
 
-          {/* Important Information Card (Good to Know) */}
-          <View 
-            className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-5"
-            style={{
-              shadowColor: '#101828',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.03,
-              shadowRadius: 12,
-              elevation: 2,
-            }}
+          <View className="gap-2.5">
+            {[
+              'Each credit equals one 60-minute training session.',
+              'Credits can be used for any available workout category.',
+              'Credits can be shared with your friends and family.',
+              'Individual packages are valid for one participant per session.',
+              'Couple packages are valid for two participants training together in the same session.',
+              'Unused credits follow the VIRLA renewal policy.'
+            ].map((text, idx) => (
+              <View key={idx} className="flex-row items-start gap-2.5">
+                <View className="w-1.5 h-1.5 rounded-full bg-zinc-400 mt-2" />
+                <Text className="text-zinc-700 text-[13px] font-normal leading-[19px] flex-1">
+                  {text}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* PREMIUM BENEFITS — Seamless Collapsible Dropdown */}
+        <View className="mt-4 mb-4 px-0.5">
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={toggleBenefits}
+            className="flex-row items-center justify-between mb-3"
           >
-            <View className="flex-row items-center gap-2.5 border-b border-zinc-100 pb-3.5">
-              <Feather name="info" size={14} color="#101828" />
-              <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-0.5">Good to Know</Text>
+            <View>
+              <View className="flex-row items-center gap-2">
+                <Text className="text-zinc-950 text-xs font-bold uppercase tracking-wider">PREMIUM BENEFITS</Text>
+                <View className="bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+                  <Text className="text-[#4F46E5] text-[10px] font-bold">7 Perks</Text>
+                </View>
+              </View>
+              <Text className="text-zinc-500 text-[12px] font-normal mt-0.5">
+                {isBenefitsExpanded ? 'Tap to collapse perks' : 'Tap to view all VIP perks included'}
+              </Text>
             </View>
 
-            <View className="gap-4">
+            <View className="w-7 h-7 rounded-full bg-zinc-100 items-center justify-center">
+              <Feather name={isBenefitsExpanded ? "chevron-up" : "chevron-down"} size={14} color="#18181B" />
+            </View>
+          </TouchableOpacity>
+
+          {isBenefitsExpanded && (
+            <View className="gap-3 pt-1">
               {[
-                { text: 'Each credit equals one 60-minute training session.', icon: 'clock' },
-                { text: 'Credits can be used for any available workout category.', icon: 'award' },
-                { text: 'Credits can be shared with your friends and family.', icon: 'share-2' },
-                { text: 'Individual packages are valid for one participant per session.', icon: 'user' },
-                { text: 'Couple packages are valid for two participants training together in the same session.', icon: 'users' },
-                { text: 'Unused credits follow the VIRLA renewal policy.', icon: 'refresh-cw' }
+                { title: 'KYC Verified Trainers', desc: 'Secure, professional background checks.' },
+                { title: 'Live Trainer Tracking', desc: 'Real-time GPS routing to your doorstep.' },
+                { title: 'Flexible Scheduling', desc: 'Reschedule or cancel instantly anytime.' },
+                { title: 'AI Wellness Support', desc: 'Custom AI recovery recommendations.' },
+                { title: 'Easy Credit Sharing', desc: 'Share credits with family at zero fees.' },
+                { title: 'Premium Support', desc: 'Dedicated 24/7 VIP concierge.' },
+                { title: 'Secure Cashless Pay', desc: 'Encrypted Apple Pay and card checkouts.' }
               ].map((item, idx) => (
-                <View key={idx} className="flex-row gap-3.5 items-start pl-0.5">
-                  <View className="w-6.5 h-6.5 rounded-lg bg-zinc-50 border border-zinc-150 items-center justify-center mt-0.5">
-                    <Feather name={item.icon as any} size={11} color="#6B7280" />
+                <View key={idx} className="flex-row items-start gap-2.5">
+                  <View className="w-1.5 h-1.5 rounded-full bg-zinc-400 mt-2" />
+                  <View className="flex-1">
+                    <Text className="text-zinc-900 text-[13px] font-semibold leading-[18px]">{item.title}</Text>
+                    <Text className="text-zinc-500 text-[12px] font-normal mt-0.5 leading-[17px]">{item.desc}</Text>
                   </View>
-                  <Text className="text-zinc-600 text-xs font-semibold leading-relaxed flex-1">{item.text}</Text>
                 </View>
               ))}
             </View>
-          </View>
+          )}
+        </View>
 
-          {/* Premium Benefits Grid (Feature 8 Redesign) */}
-          <View 
-            className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-5"
-            style={{
-              shadowColor: '#101828',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.03,
-              shadowRadius: 12,
-              elevation: 2,
-            }}
-          >
-            <View className="flex-row items-center gap-2.5 border-b border-zinc-100 pb-3.5">
-              <Feather name="shield" size={14} color="#101828" />
-              <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-0.5">Premium Benefits</Text>
-            </View>
-
-            <View className="flex-row flex-wrap justify-between gap-y-4">
-              {[
-                { title: 'KYC Verified Trainers', desc: 'Secure, professional background checks.', icon: 'check-circle' },
-                { title: 'Live Trainer Tracking', desc: 'Real-time GPS routing to your doorstep.', icon: 'map-pin' },
-                { title: 'Flexible Scheduling', desc: 'Reschedule or cancel instantly anytime.', icon: 'calendar' },
-                { title: 'AI Wellness Support', desc: 'Custom AI recovery recommendations.', icon: 'cpu' },
-                { title: 'Easy Credit Sharing', desc: 'Share credits with family at zero fees.', icon: 'share-2' },
-                { title: 'Premium Support', desc: 'Dedicated 24/7 VIP wellness concierge.', icon: 'headphones' },
-                { title: 'Secure Cashless Pay', desc: 'Encrypted Apple Pay and card checkouts.', icon: 'credit-card' }
-              ].map((item, idx) => (
-                <View key={idx} className="w-[47%] gap-2 bg-zinc-50/50 border border-zinc-150/40 p-3.5 rounded-2xl">
-                  <View className="w-7.5 h-7.5 rounded-xl bg-indigo-50 border border-indigo-100 items-center justify-center">
-                    <Feather name={item.icon as any} size={13} color="#4F46E5" />
-                  </View>
-                  <View className="gap-0.5">
-                    <Text className="text-[#101828] text-[10px] font-black tracking-tight">{item.title}</Text>
-                    <Text className="text-zinc-500 text-[8px] font-bold leading-normal">{item.desc}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          {/* Pricing Disclaimers */}
-          <View className="px-1 gap-1.5">
-            <Text className="text-zinc-400 text-[9px] font-semibold leading-relaxed">
-              * Prices shown include all applicable taxes.
-            </Text>
-            <Text className="text-zinc-400 text-[9px] font-semibold leading-relaxed">
-              * First-time discount is applicable only on the first purchase of the 12 Credit Active Pack.
-            </Text>
-          </View>
-
+        {/* Pricing Disclaimers */}
+        <View className="mt-6 mb-8 gap-1">
+          <Text className="text-zinc-400 text-[10px] font-normal leading-[15px]">
+            * Prices shown include all applicable taxes.
+          </Text>
+          <Text className="text-zinc-400 text-[10px] font-normal leading-[15px]">
+            * First-time discount is applicable only on the first purchase of the 12 Credit Active Pack.
+          </Text>
         </View>
       </ScrollView>
 
-      {/* Details & Checkout Overlay Modal (Feature 2) */}
+      {/* Sticky Bottom Bar */}
       {selectedPlan && (
+        <View 
+          style={{ 
+            paddingBottom: Math.max((insets.bottom || 0), 14),
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -3 },
+            shadowOpacity: 0.04,
+            shadowRadius: 8,
+            elevation: 6,
+          }}
+          className="border-t border-zinc-200 bg-white px-4 pt-3 flex-row items-center justify-between"
+        >
+          <View className="gap-0.5">
+            <Text className="text-zinc-400 text-[9.5px] font-bold uppercase tracking-[0.8px] mb-0.5">
+              SELECTED PLAN
+            </Text>
+            {(() => {
+              const rawName = selectedPlan.name === 'Active Pack' ? 'Active Pack' : selectedPlan.name;
+              const [firstWord, ...restWords] = rawName.split(' ');
+              const secondWord = restWords.join(' ');
+              return (
+                <View>
+                  <Text className="text-zinc-950 text-[16px] font-extrabold leading-tight">
+                    {firstWord}
+                  </Text>
+                  <View className="flex-row items-center gap-1.5">
+                    {Boolean(secondWord) && (
+                      <Text className="text-zinc-950 text-[16px] font-extrabold leading-tight">
+                        {secondWord}
+                      </Text>
+                    )}
+                    <Text className="text-zinc-400 text-[12px] font-medium">
+                      • {selectedPlan.credits} Credits
+                    </Text>
+                  </View>
+                </View>
+              );
+            })()}
+          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => openPlanDetails(selectedPlan)}
+            className="bg-[#121214] rounded-2xl px-5 py-3 flex-row items-center gap-3.5 shadow-sm"
+          >
+            <Text className="text-white text-[11.5px] font-bold leading-[14px]">
+              Continue to{'\n'}Checkout
+            </Text>
+            <View className="flex-row items-center gap-1 pl-1">
+              <Text className="text-white text-[15px] font-extrabold">
+                {selectedPlan.price}
+              </Text>
+              <Feather name="arrow-right" size={14} color="white" />
+            </View>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Details & Checkout Overlay Modal (Feature 2) */}
+      {isModalOpen && selectedPlan && (
         <Animated.View 
           style={{ opacity: overlayOpacity }}
           className="absolute top-0 left-0 right-0 bottom-0 bg-black/60 z-50 justify-end"
@@ -520,24 +656,24 @@ export default function MembershipScreen() {
                   <View className="gap-6 py-2">
                     <View className="flex-row justify-between items-center border-b border-zinc-100 pb-4">
                       <View className="gap-0.5">
-                        <Text className="text-zinc-400 text-[8px] font-black uppercase">Sandbox Gateway</Text>
-                        <Text className="text-zinc-950 text-base font-black uppercase tracking-wider pl-0.5">Test Payment Gateway</Text>
+                        <Text className="text-zinc-400 text-[10px] font-extrabold uppercase">Sandbox Gateway</Text>
+                        <Text className="text-zinc-950 text-base font-extrabold uppercase pl-0.5">Test Payment Gateway</Text>
                       </View>
                       <TouchableOpacity 
                         onPress={() => {
                           setShowDemoPayment(false);
                         }} 
-                        className="w-8 h-8 rounded-full bg-zinc-50 items-center justify-center border border-zinc-150"
+                        className="w-8 h-8 rounded-full bg-zinc-50 items-center justify-center border border-zinc-200"
                       >
                         <Feather name="arrow-left" size={14} color="#101828" />
                       </TouchableOpacity>
                     </View>
 
                     {/* Warning banner */}
-                    <View className="bg-amber-50 border border-amber-100 p-4.5 rounded-2xl gap-2">
+                    <View className="bg-amber-50 border border-amber-100 p-[18px] rounded-2xl gap-2">
                       <View className="flex-row items-center gap-2">
                         <Feather name="alert-triangle" size={14} color="#D97706" />
-                        <Text className="text-amber-800 text-[10px] font-black uppercase">DEMO MODE ACTIVE</Text>
+                        <Text className="text-amber-800 text-[10px] font-extrabold uppercase">DEMO MODE ACTIVE</Text>
                       </View>
                       <Text className="text-amber-700 text-[10px] font-semibold leading-relaxed">
                         This is a sandbox test transaction simulator. No real money will be charged.
@@ -545,7 +681,7 @@ export default function MembershipScreen() {
                     </View>
 
                     {/* Cost Summary details */}
-                    <View className="bg-zinc-50 border border-zinc-100 p-4.5 rounded-2xl gap-3">
+                    <View className="bg-zinc-50 border border-zinc-100 p-[18px] rounded-2xl gap-3">
                       <View className="flex-row justify-between items-center">
                         <Text className="text-zinc-500 text-xs font-semibold">Selected Pack</Text>
                         <Text className="text-zinc-900 text-xs font-extrabold">{selectedPlan.name}</Text>
@@ -554,7 +690,7 @@ export default function MembershipScreen() {
                         <Text className="text-zinc-500 text-xs font-semibold">Credits Included</Text>
                         <Text className="text-zinc-900 text-xs font-extrabold">+{selectedPlan.credits} Credits</Text>
                       </View>
-                      <View className="h-[1px] bg-zinc-150 my-0.5" />
+                      <View className="h-[1px] bg-zinc-100 my-0.5" />
                       <View className="flex-row justify-between items-center">
                         <Text className="text-zinc-500 text-xs font-semibold">Subtotal Price</Text>
                         <Text className="text-zinc-900 text-xs font-extrabold">{selectedPlan.amountVal}</Text>
@@ -563,10 +699,10 @@ export default function MembershipScreen() {
                         <Text className="text-zinc-500 text-xs font-semibold">GST (18% Sandbox Tax)</Text>
                         <Text className="text-zinc-900 text-xs font-extrabold">{selectedPlan.gstVal}</Text>
                       </View>
-                      <View className="h-[1px] bg-zinc-150 my-0.5" />
+                      <View className="h-[1px] bg-zinc-100 my-0.5" />
                       <View className="flex-row justify-between items-center">
-                        <Text className="text-zinc-950 text-xs font-black">Total Paid amount</Text>
-                        <Text className="text-[#4F46E5] text-sm font-black">{selectedPlan.price}</Text>
+                        <Text className="text-zinc-950 text-xs font-extrabold">Total Paid amount</Text>
+                        <Text className="text-[#4F46E5] text-sm font-extrabold">{selectedPlan.price}</Text>
                       </View>
                     </View>
 
@@ -581,7 +717,7 @@ export default function MembershipScreen() {
                         className="w-full bg-[#10B981] rounded-2xl items-center justify-center shadow-md"
                         style={{ height: 56 }}
                       >
-                        <Text className="text-white text-xs font-black uppercase tracking-wider">Pay {selectedPlan.price} (Sandbox Test)</Text>
+                        <Text className="text-white text-xs font-extrabold uppercase">Pay {selectedPlan.price} (Sandbox Test)</Text>
                       </TouchableOpacity>
                       
                       <TouchableOpacity
@@ -589,10 +725,10 @@ export default function MembershipScreen() {
                         onPress={() => {
                           setShowDemoPayment(false);
                         }}
-                        className="w-full bg-zinc-50 border border-zinc-150 rounded-2xl items-center justify-center"
+                        className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl items-center justify-center"
                         style={{ height: 56 }}
                       >
-                        <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">Cancel</Text>
+                        <Text className="text-zinc-600 text-xs font-extrabold uppercase">Cancel</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -601,11 +737,11 @@ export default function MembershipScreen() {
                   <View className="gap-5">
                     <View className="flex-row justify-between items-center border-b border-zinc-100 pb-4">
                       <View className="gap-1 flex-1 pr-3">
-                        <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">Plan Selected</Text>
-                        <Text className="text-zinc-950 text-xl font-black mt-0.5">{selectedPlan.name}</Text>
+                        <Text className="text-zinc-400 text-[10px] font-bold uppercase">Plan Selected</Text>
+                        <Text className="text-zinc-950 text-lg font-bold mt-0.5">{selectedPlan.name}</Text>
                         <View className="flex-row items-center gap-1.5 mt-1.5">
                           <Feather name="tag" size={11} color="#4F46E5" />
-                          <Text className="text-[#4F46E5] text-[10px] font-bold">GST Tax Note: {selectedPlan.gstText}</Text>
+                          <Text className="text-[#4F46E5] text-[10px] font-semibold">GST Tax Note: {selectedPlan.gstText}</Text>
                         </View>
                       </View>
                       <TouchableOpacity onPress={closeDetails} className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center">
@@ -613,15 +749,15 @@ export default function MembershipScreen() {
                       </TouchableOpacity>
                     </View>
 
-                    <View className="gap-2">
-                      <Text className="text-zinc-950 text-[10px] font-black uppercase tracking-widest">Plan overview</Text>
-                      <Text className="text-zinc-500 text-xs font-medium leading-relaxed pl-0.5">
+                    <View className="gap-1.5">
+                      <Text className="text-zinc-950 text-[10px] font-bold uppercase">Plan overview</Text>
+                      <Text className="text-zinc-500 text-xs font-normal leading-relaxed pl-0.5">
                         {selectedPlan.idealFor}
                       </Text>
                     </View>
 
-                    <View className="gap-3">
-                      <Text className="text-zinc-950 text-[10px] font-black uppercase tracking-widest">What&apos;s included</Text>
+                    <View className="gap-2.5">
+                      <Text className="text-zinc-950 text-[10px] font-bold uppercase">What&apos;s included</Text>
                       {[
                         'Book any workout category (Strength, Flow, Cardio, Reset, Combat)',
                         'Pause anytime options (up to validity limits)',
@@ -641,23 +777,23 @@ export default function MembershipScreen() {
                     <TouchableOpacity
                       activeOpacity={0.8}
                       onPress={startCheckout}
-                      className="bg-zinc-950 rounded-2xl items-center justify-center mt-3 shadow-md"
-                      style={{ height: 56 }}
+                      className="bg-zinc-950 rounded-2xl items-center justify-center mt-3 shadow-sm"
+                      style={{ height: 52 }}
                     >
-                      <Text className="text-white text-xs font-black uppercase tracking-wider">Continue →</Text>
+                      <Text className="text-white text-xs font-bold uppercase">Continue →</Text>
                     </TouchableOpacity>
                   </View>
                 ) : (
                   // Slide To Purchase Checkout Slider (Feature 5)
-                  <View className="gap-6 py-2">
+                  <View className="gap-5 py-2">
                     <View className="flex-row justify-between items-center border-b border-zinc-100 pb-4">
-                      <Text className="text-zinc-950 text-base font-black uppercase tracking-wider pl-1">Apple Checkout</Text>
+                      <Text className="text-zinc-950 text-base font-bold uppercase pl-1">Checkout</Text>
                       <TouchableOpacity onPress={() => setCheckoutActive(false)} className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center">
                         <Feather name="arrow-left" size={14} color="#101828" />
                       </TouchableOpacity>
                     </View>
 
-                    <View className="bg-zinc-50 border border-zinc-100 p-4.5 rounded-2xl gap-3">
+                    <View className="bg-zinc-50 border border-zinc-100 p-[18px] rounded-2xl gap-3">
                       <View className="flex-row justify-between items-center">
                         <Text className="text-zinc-500 text-xs font-semibold">Subtotal Price</Text>
                         <Text className="text-zinc-900 text-xs font-extrabold">{selectedPlan.amountVal}</Text>
@@ -668,8 +804,8 @@ export default function MembershipScreen() {
                       </View>
                       <View className="h-[1px] bg-zinc-100 my-1" />
                       <View className="flex-row justify-between items-center">
-                        <Text className="text-zinc-950 text-sm font-black">Total Paid amount</Text>
-                        <Text className="text-[#4F46E5] text-sm font-black">{selectedPlan.price}</Text>
+                        <Text className="text-zinc-950 text-sm font-extrabold">Total Paid amount</Text>
+                        <Text className="text-[#4F46E5] text-sm font-extrabold">{selectedPlan.price}</Text>
                       </View>
                     </View>
 
@@ -678,7 +814,7 @@ export default function MembershipScreen() {
                       <View className="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl gap-1">
                         <View className="flex-row items-center gap-1.5">
                           <Feather name="info" size={13} color="#D97706" />
-                          <Text className="text-amber-800 text-[10px] font-black uppercase tracking-wider">Demo Simulator Note</Text>
+                          <Text className="text-amber-800 text-[10px] font-extrabold uppercase">Demo Simulator Note</Text>
                         </View>
                         <Text className="text-amber-700 text-[10px] font-semibold leading-relaxed">
                           This is just a demo payment simulator for testing. No real money will be charged.
@@ -696,7 +832,7 @@ export default function MembershipScreen() {
                           className="h-14 bg-[#4F46E5] rounded-2xl items-center justify-center shadow-md"
                           style={{ height: 54 }}
                         >
-                          <Text className="text-white text-xs font-black uppercase tracking-wider">
+                          <Text className="text-white text-xs font-extrabold uppercase">
                             Pay {selectedPlan.price} with PayPhi Gateway
                           </Text>
                         </TouchableOpacity>
@@ -710,7 +846,7 @@ export default function MembershipScreen() {
                           className="h-14 bg-[#4F46E5] rounded-2xl items-center justify-center shadow-md"
                           style={{ height: 54 }}
                         >
-                          <Text className="text-white text-xs font-black uppercase tracking-wider">
+                          <Text className="text-white text-xs font-extrabold uppercase">
                             Use Test Simulator (Demo)
                           </Text>
                         </TouchableOpacity>
@@ -732,8 +868,8 @@ export default function MembershipScreen() {
                   <Feather name="lock" size={20} color="#4F46E5" />
                 </View>
                 <View className="items-center gap-1">
-                  <Text className="text-zinc-900 text-sm font-black uppercase tracking-wider">Securing Checkout Payout</Text>
-                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Connecting to payment hub</Text>
+                  <Text className="text-zinc-900 text-sm font-extrabold uppercase">Securing Checkout Payout</Text>
+                  <Text className="text-zinc-500 text-[10px] font-bold uppercase">Connecting to payment hub</Text>
                 </View>
               </View>
             )}
@@ -746,8 +882,8 @@ export default function MembershipScreen() {
                 </View>
 
                 <View className="items-center gap-1.5 px-3">
-                  <Text className="text-[#10B981] text-[10px] font-black uppercase tracking-widest">Payment Successful</Text>
-                  <Text className="text-zinc-950 text-xl font-black mt-1 text-center">
+                  <Text className="text-[#10B981] text-[10px] font-extrabold uppercase">Payment Successful</Text>
+                  <Text className="text-zinc-950 text-xl font-extrabold mt-1 text-center">
                     +{selectedPlan.credits} {selectedPlan.credits === 1 ? 'Credit' : 'Credits'} Added
                   </Text>
                   <Text className="text-zinc-500 text-xs font-semibold text-center leading-relaxed max-w-[85%] mt-1">
@@ -765,7 +901,7 @@ export default function MembershipScreen() {
                     className="w-full bg-[#101828] h-14 rounded-2xl items-center justify-center shadow-md"
                     style={{ height: 54 }}
                   >
-                    <Text className="text-white text-sm font-black uppercase tracking-wider">View Wallet</Text>
+                    <Text className="text-white text-sm font-extrabold uppercase">View Wallet</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -776,7 +912,7 @@ export default function MembershipScreen() {
                     className="w-full bg-zinc-100 border border-zinc-200 h-14 rounded-2xl items-center justify-center"
                     style={{ height: 54 }}
                   >
-                    <Text className="text-zinc-700 text-sm font-black uppercase tracking-wider">Done</Text>
+                    <Text className="text-zinc-700 text-sm font-extrabold uppercase">Done</Text>
                   </TouchableOpacity>
                 </View>
               </View>
