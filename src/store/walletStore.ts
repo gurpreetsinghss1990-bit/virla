@@ -93,8 +93,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         return;
       }
 
-      // Authoritative scheduled reminders & expiries local safety run
-      await supabase.rpc('process_credit_expiries_and_reminders');
+      // ponytail: expiry cron owns process_credit_expiries_and_reminders (midnight job) —
+      // never block wallet sync on a global all-users sweep; it froze this page.
 
       await Database.refreshUserData(userId);
       const profile = Database.getProfile(userId);

@@ -25,6 +25,115 @@ interface Plan {
   category: 'individual' | 'couple';
 }
 
+const PLANS: Plan[] = [
+  // Individual Plans (1 Person)
+  {
+    id: 'plan-ind-1',
+    name: 'Single Session',
+    credits: 1,
+    price: '₹1,499',
+    savings: '0% Save',
+    gstText: '₹1,270 + 18% GST',
+    gstVal: '₹229',
+    amountVal: '₹1,270',
+    idealFor: 'Casual visits or trying out a new program workout.',
+    category: 'individual'
+  },
+  {
+    id: 'plan-ind-2',
+    name: 'Starter Pack',
+    credits: 8,
+    price: '₹10,999',
+    savings: '8% Savings',
+    gstText: '₹9,321 + 18% GST',
+    gstVal: '₹1,678',
+    amountVal: '₹9,321',
+    idealFor: 'Weekly wellness routines at home.',
+    category: 'individual'
+  },
+  {
+    id: 'plan-ind-3',
+    name: 'Active Pack',
+    credits: 12,
+    price: '₹11,999',
+    originalPrice: '₹14,999',
+    savings: '20% Savings',
+    gstText: '₹10,169 + 18% GST',
+    gstVal: '₹1,830',
+    amountVal: '₹10,169',
+    popular: true,
+    idealFor: 'Our most popular pack for serious fitness goals.',
+    badge: 'MOST POPULAR',
+    ribbon: 'FIRST TIME OFFER – SAVE 20%',
+    category: 'individual'
+  },
+  {
+    id: 'plan-ind-4',
+    name: 'Elite Pack',
+    credits: 15,
+    price: '₹17,999',
+    savings: '20% Savings',
+    gstText: '₹15,253 + 18% GST',
+    gstVal: '₹2,746',
+    amountVal: '₹15,253',
+    idealFor: 'Complete consistency with private home training.',
+    category: 'individual'
+  },
+  // Couple Plans (Train Together)
+  {
+    id: 'plan-cpl-1',
+    name: 'Couple Single Session',
+    credits: 1,
+    price: '₹2,499',
+    savings: '0% Save',
+    gstText: '₹2,118 + 18% GST',
+    gstVal: '₹381',
+    amountVal: '₹2,118',
+    idealFor: 'Single training session with your partner or friend.',
+    category: 'couple'
+  },
+  {
+    id: 'plan-cpl-2',
+    name: 'Couple Starter Pack',
+    credits: 8,
+    price: '₹17,999',
+    savings: '10% Savings',
+    gstText: '₹15,253 + 18% GST',
+    gstVal: '₹2,746',
+    amountVal: '₹15,253',
+    idealFor: 'Weekly routine for couples or training partners.',
+    category: 'couple'
+  },
+  {
+    id: 'plan-cpl-3',
+    name: 'Couple Active Pack',
+    credits: 12,
+    price: '₹19,199',
+    originalPrice: '₹23,988',
+    savings: '20% Savings',
+    gstText: '₹16,270 + 18% GST',
+    gstVal: '₹2,929',
+    amountVal: '₹16,270',
+    popular: true,
+    idealFor: 'Our hero couples package for regular training.',
+    badge: 'MOST POPULAR',
+    ribbon: 'FIRST TIME OFFER – SAVE 20%',
+    category: 'couple'
+  },
+  {
+    id: 'plan-cpl-4',
+    name: 'Couple Elite Pack',
+    credits: 15,
+    price: '₹29,999',
+    savings: '20% Savings',
+    gstText: '₹25,423 + 18% GST',
+    gstVal: '₹4,576',
+    amountVal: '₹25,423',
+    idealFor: 'Elite wellness consistency for partners.',
+    category: 'couple'
+  }
+];
+
 export default function MembershipScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -32,122 +141,13 @@ export default function MembershipScreen() {
 
   const [activeCategory, setActiveCategory] = useState<'individual' | 'couple'>('individual');
 
-  const plans: Plan[] = [
-    // Individual Plans (1 Person)
-    {
-      id: 'plan-ind-1',
-      name: 'Single Session',
-      credits: 1,
-      price: '₹1,499',
-      savings: '0% Save',
-      gstText: '₹1,270 + 18% GST',
-      gstVal: '₹229',
-      amountVal: '₹1,270',
-      idealFor: 'Casual visits or trying out a new program workout.',
-      category: 'individual'
-    },
-    {
-      id: 'plan-ind-2',
-      name: 'Starter Pack',
-      credits: 8,
-      price: '₹10,999',
-      savings: '8% Savings',
-      gstText: '₹9,321 + 18% GST',
-      gstVal: '₹1,678',
-      amountVal: '₹9,321',
-      idealFor: 'Weekly wellness routines at home.',
-      category: 'individual'
-    },
-    {
-      id: 'plan-ind-3',
-      name: 'Active Pack',
-      credits: 12,
-      price: '₹11,999',
-      originalPrice: '₹14,999',
-      savings: '20% Savings',
-      gstText: '₹10,169 + 18% GST',
-      gstVal: '₹1,830',
-      amountVal: '₹10,169',
-      popular: true,
-      idealFor: 'Our most popular pack for serious fitness goals.',
-      badge: 'MOST POPULAR',
-      ribbon: 'FIRST TIME OFFER – SAVE 20%',
-      category: 'individual'
-    },
-    {
-      id: 'plan-ind-4',
-      name: 'Elite Pack',
-      credits: 15,
-      price: '₹17,999',
-      savings: '20% Savings',
-      gstText: '₹15,253 + 18% GST',
-      gstVal: '₹2,746',
-      amountVal: '₹15,253',
-      idealFor: 'Complete consistency with private home training.',
-      category: 'individual'
-    },
-    // Couple Plans (Train Together)
-    {
-      id: 'plan-cpl-1',
-      name: 'Couple Single Session',
-      credits: 1,
-      price: '₹2,499',
-      savings: '0% Save',
-      gstText: '₹2,118 + 18% GST',
-      gstVal: '₹381',
-      amountVal: '₹2,118',
-      idealFor: 'Single training session with your partner or friend.',
-      category: 'couple'
-    },
-    {
-      id: 'plan-cpl-2',
-      name: 'Couple Starter Pack',
-      credits: 8,
-      price: '₹17,999',
-      savings: '10% Savings',
-      gstText: '₹15,253 + 18% GST',
-      gstVal: '₹2,746',
-      amountVal: '₹15,253',
-      idealFor: 'Weekly routine for couples or training partners.',
-      category: 'couple'
-    },
-    {
-      id: 'plan-cpl-3',
-      name: 'Couple Active Pack',
-      credits: 12,
-      price: '₹19,199',
-      originalPrice: '₹23,988',
-      savings: '20% Savings',
-      gstText: '₹16,270 + 18% GST',
-      gstVal: '₹2,929',
-      amountVal: '₹16,270',
-      popular: true,
-      idealFor: 'Our hero couples package for regular training.',
-      badge: 'MOST POPULAR',
-      ribbon: 'FIRST TIME OFFER – SAVE 20%',
-      category: 'couple'
-    },
-    {
-      id: 'plan-cpl-4',
-      name: 'Couple Elite Pack',
-      credits: 15,
-      price: '₹29,999',
-      savings: '20% Savings',
-      gstText: '₹25,423 + 18% GST',
-      gstVal: '₹4,576',
-      amountVal: '₹25,423',
-      idealFor: 'Elite wellness consistency for partners.',
-      category: 'couple'
-    }
-  ];
-
   const activePlans = useMemo(() => {
-    return plans.filter((p) => p.category === activeCategory);
+    return PLANS.filter((p) => p.category === activeCategory);
   }, [activeCategory]);
 
   // Selection states - default to the popular Active Pack (plan-ind-3) matching design
   const [selectedPlan, setSelectedPlan] = useState<Plan>(() => {
-    return plans.find((p) => p.id === 'plan-ind-3') || plans[0];
+    return PLANS.find((p) => p.id === 'plan-ind-3') || PLANS[0];
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [checkoutActive, setCheckoutActive] = useState(false);
@@ -157,9 +157,10 @@ export default function MembershipScreen() {
     setIsBenefitsExpanded((prev) => !prev);
   };
 
+
   const handleSelectCategory = (cat: 'individual' | 'couple') => {
     setActiveCategory(cat);
-    const defaultForCat = plans.find((p) => p.category === cat && p.popular) || plans.find((p) => p.category === cat);
+    const defaultForCat = PLANS.find((p) => p.category === cat && p.popular) || PLANS.find((p) => p.category === cat);
     if (defaultForCat) {
       setSelectedPlan(defaultForCat);
     }
@@ -370,26 +371,36 @@ export default function MembershipScreen() {
         </View>
 
         {/* Segmented Switcher Category Selector */}
-        <View className="bg-[#F2F2F5] p-1 rounded-2xl flex-row mb-5">
+        <View style={{ backgroundColor: '#F2F2F5', padding: 4, borderRadius: 16, flexDirection: 'row', marginBottom: 20 }}>
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={() => handleSelectCategory('individual')}
-            className={`flex-1 py-3 rounded-xl items-center justify-center ${
-              activeCategory === 'individual' ? 'bg-[#141416] shadow-sm' : ''
-            }`}
+            style={{
+              flex: 1,
+              paddingVertical: 12,
+              borderRadius: 12,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: activeCategory === 'individual' ? '#141416' : 'transparent',
+            }}
           >
-            <Text className={`text-[13px] font-bold ${activeCategory === 'individual' ? 'text-white' : 'text-zinc-500'}`}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: activeCategory === 'individual' ? '#FFFFFF' : '#71717A' }}>
               Individual (1 Person)
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={() => handleSelectCategory('couple')}
-            className={`flex-1 py-3 rounded-xl items-center justify-center ${
-              activeCategory === 'couple' ? 'bg-[#141416] shadow-sm' : ''
-            }`}
+            style={{
+              flex: 1,
+              paddingVertical: 12,
+              borderRadius: 12,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: activeCategory === 'couple' ? '#141416' : 'transparent',
+            }}
           >
-            <Text className={`text-[13px] font-bold ${activeCategory === 'couple' ? 'text-white' : 'text-zinc-500'}`}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: activeCategory === 'couple' ? '#FFFFFF' : '#71717A' }}>
               Train Together
             </Text>
           </TouchableOpacity>
@@ -403,23 +414,28 @@ export default function MembershipScreen() {
 
         {/* Plan Cards */}
         <View>
-          {activePlans.map((plan) => {
+          {activePlans.map((plan, idx) => {
             const isSelected = selectedPlan?.id === plan.id;
             const displayName = plan.name === 'Active Pack' ? 'Active' : plan.name;
 
             if (isSelected) {
               return (
                 <TouchableOpacity
-                  key={plan.id}
+                  key={`plan-card-${idx}`}
                   activeOpacity={0.92}
                   onPress={() => openPlanDetails(plan)}
-                  className="bg-[#0B0C15] rounded-[20px] p-[18px] mb-3 border border-indigo-950/60 shadow-lg relative"
                   style={{
+                    backgroundColor: '#0B0C15',
+                    borderRadius: 20,
+                    padding: 18,
+                    marginBottom: 12,
+                    borderWidth: 1,
+                    borderColor: 'rgba(49, 46, 129, 0.6)',
                     shadowColor: '#4F46E5',
-                    shadowOffset: { width: 0, height: 6 },
-                    shadowOpacity: 0.18,
-                    shadowRadius: 18,
-                    elevation: 6,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.16,
+                    shadowRadius: 12,
+                    elevation: 3,
                   }}
                 >
                   {/* Badges */}
@@ -470,10 +486,17 @@ export default function MembershipScreen() {
 
             return (
               <TouchableOpacity
-                key={plan.id}
+                key={`plan-card-${idx}`}
                 activeOpacity={0.85}
-                onPress={() => openPlanDetails(plan)}
-                className="bg-white rounded-[20px] p-[18px] mb-3 border border-zinc-200/90 shadow-sm"
+                onPress={() => setSelectedPlan(plan)}
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: 20,
+                  padding: 18,
+                  marginBottom: 12,
+                  borderWidth: 1,
+                  borderColor: '#E4E4E7',
+                }}
               >
                 <View className="flex-row items-start justify-between">
                   <View className="flex-row items-start gap-3.5 flex-1 pr-3">

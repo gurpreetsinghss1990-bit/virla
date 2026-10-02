@@ -1071,6 +1071,7 @@ class DatabaseClient {
 
   private currentUserId: string | null = null;
   private isLoaded = false;
+  private loadPromise: Promise<void> | null = null;
   public loadSource: 'supabase' | 'cache' | 'none' = 'none';
 
   constructor() {
@@ -1087,7 +1088,13 @@ class DatabaseClient {
 
   async reload(): Promise<void> {
     console.log('[DEBUG-DB] Database.reload() invoked. Resetting isLoaded and fetching fresh collections...');
+    // ponytail: drain in-flight load first so reload always fetches fresh (no overlap)
+    const ongoing = this.loadPromise;
+    if (ongoing) {
+      try { await ongoing; } catch { /* prior load already handled its own fallback */ }
+    }
     this.isLoaded = false;
+    this.loadPromise = null;
     await this.load();
   }
 
@@ -1095,6 +1102,7 @@ class DatabaseClient {
     console.log('[DEBUG-DB] Database.resetAndClearLocalOnly() called. Clearing session and local memory caches...');
     this.currentUserId = null;
     this.isLoaded = false;
+    this.loadPromise = null;
 
     // Clear only local cached collections
     this.schema.bookings = [];
@@ -1132,6 +1140,15 @@ class DatabaseClient {
   async load(): Promise<void> {
     console.log('[DEBUG-DB] Database.load() called. isLoaded:', this.isLoaded);
     if (this.isLoaded) return;
+    // ponytail: coalesce concurrent callers onto one in-flight 13-table fetch
+    if (this.loadPromise) return this.loadPromise;
+    this.loadPromise = this.doLoad().finally(() => {
+      this.loadPromise = null;
+    });
+    return this.loadPromise;
+  }
+
+  private async doLoad(): Promise<void> {
     try {
       this.log('LoadDatabase', 'Loading database collections from Supabase...');
 
