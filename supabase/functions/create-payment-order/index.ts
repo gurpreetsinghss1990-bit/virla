@@ -15,6 +15,14 @@ interface PlanDef {
 }
 
 const AUTHORIZED_PLANS: Record<string, PlanDef> = {
+  // Internal Dev Testing Plan (₹1 Real Gateway Verification)
+  'plan-dev-test': {
+    name: 'Dev Test 1 Rupee Verification',
+    credits: 1,
+    amountVal: '1.00',
+    gstVal: '0.00',
+    totalPrice: '1.00',
+  },
   'plan-ind-1': {
     name: 'Single Session',
     credits: 1,
@@ -150,13 +158,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    const merchantId = Deno.env.get('PAYPHI_MERCHANT_ID') || '100000000527739';
+    const envType = (Deno.env.get('PAYPHI_ENV') || 'PROD').toUpperCase();
+    const isProd = envType === 'PROD' || envType === 'PRD';
+
+    // Dual-environment credential resolution:
+    const merchantId = Deno.env.get('PAYPHI_MERCHANT_ID') || (isProd ? '100000000527739' : '100000000007164');
+    const aggregatorId = Deno.env.get('PAYPHI_AGGREGATOR_ID') || (isProd ? '100000000527739' : 'A100000000007164');
+    const merchantName = Deno.env.get('PAYPHI_MERCHANT_NAME') || (isProd ? 'NAMRATHA JAUNI' : 'Sapphire Test');
+    const secretKey = Deno.env.get('PAYPHI_SECRET_KEY') || (isProd ? '29037ef8-b1b3-4bc7-a887-02c8ad12c46c' : 'db06cca0-838b-4e01-8b20-6ac446ffb6bd');
     const appId = Deno.env.get('PAYPHI_APP_ID') || '80bc18249511f868';
-    const secretKey = Deno.env.get('PAYPHI_SECRET_KEY') || 'db06cca0-838b-4e01-8b20-6ac446ffb6bd';
     const currencyCode = '356';
-    const aggregatorId = Deno.env.get('PAYPHI_AGGREGATOR_ID') || '100000000527739';
-    const merchantName = Deno.env.get('PAYPHI_MERCHANT_NAME') || 'NAMRATHA JAUNI';
-    const envType = Deno.env.get('PAYPHI_ENV') || 'PROD';
 
     // Generate unique authoritative transaction number
     const merchantTxnNo = `TXN_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;

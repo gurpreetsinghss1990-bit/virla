@@ -83,19 +83,29 @@ Deno.serve(async (req) => {
       });
     }
 
-    const secretKey = Deno.env.get('PAYPHI_SECRET_KEY') || 'db06cca0-838b-4e01-8b20-6ac446ffb6bd';
+    const prodSecret = '29037ef8-b1b3-4bc7-a887-02c8ad12c46c';
+    const uatSecret = 'db06cca0-838b-4e01-8b20-6ac446ffb6bd';
+    const configuredSecret = Deno.env.get('PAYPHI_SECRET_KEY') || prodSecret;
 
-    // Multi-Candidate Checksum Verification (PayPhi HMAC variations)
+    // Multi-Candidate Checksum Verification (PayPhi HMAC variations supporting both prod and test)
     if (receivedChecksum && amount) {
-      const candidates = [
-        await computeHmacSHA256Hex(`${amount}${currencyCode}${merchantId}${merchantTxnNo}`, secretKey),
-        await computeHmacSHA256Hex(`${amount}${merchantTxnNo}`, secretKey),
-        await computeHmacSHA256Hex(`${merchantId}${merchantTxnNo}`, secretKey),
-      ];
+      const secretsToTest = Array.from(new Set([configuredSecret, prodSecret, uatSecret]));
+      let matchesAny = false;
 
-      const matchesAny = candidates.some(c => c.toLowerCase() === receivedChecksum.toLowerCase());
+      for (const key of secretsToTest) {
+        const candidates = [
+          await computeHmacSHA256Hex(`${amount}${currencyCode}${merchantId}${merchantTxnNo}`, key),
+          await computeHmacSHA256Hex(`${amount}${merchantTxnNo}`, key),
+          await computeHmacSHA256Hex(`${merchantId}${merchantTxnNo}`, key),
+        ];
+        if (candidates.some(c => c.toLowerCase() === receivedChecksum.toLowerCase())) {
+          matchesAny = true;
+          break;
+        }
+      }
+
       if (!matchesAny) {
-        console.warn(`[payphi-webhook] Non-fatal Checksum Notice. Received: ${receivedChecksum}. Candidate 0: ${candidates[0]}`);
+        console.warn(`[payphi-webhook] Non-fatal Checksum Notice. Received: ${receivedChecksum}. Verification did not match known candidates.`);
       }
     }
 
