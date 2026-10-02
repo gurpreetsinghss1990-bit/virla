@@ -36,11 +36,13 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const merchantId = Deno.env.get('PAYPHI_MERCHANT_ID') || '100000000527739';
-    const secretKey = Deno.env.get('PAYPHI_SECRET_KEY') || 'db06cca0-838b-4e01-8b20-6ac446ffb6bd';
-    const envType = Deno.env.get('PAYPHI_ENV') || 'PROD';
+    const envType = (Deno.env.get('PAYPHI_ENV') || 'PROD').toUpperCase();
+    const isProd = envType === 'PROD' || envType === 'PRD';
 
-    const payphiBaseUrl = (envType === 'PRD' || envType === 'PROD')
+    const merchantId = Deno.env.get('PAYPHI_MERCHANT_ID') || (isProd ? '100000000527739' : '100000000007164');
+    const secretKey = Deno.env.get('PAYPHI_SECRET_KEY') || (isProd ? '29037ef8-b1b3-4bc7-a887-02c8ad12c46c' : 'db06cca0-838b-4e01-8b20-6ac446ffb6bd');
+
+    const payphiBaseUrl = isProd
       ? 'https://pgpay.icicibank.com/pg'
       : 'https://qa.phicommerce.com/pg';
 

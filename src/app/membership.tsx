@@ -33,6 +33,20 @@ export default function MembershipScreen() {
   const [activeCategory, setActiveCategory] = useState<'individual' | 'couple'>('individual');
 
   const plans: Plan[] = [
+    // Internal Developer Test Plan (Only visible during __DEV__ development builds)
+    ...(__DEV__ ? [{
+      id: 'plan-dev-test',
+      name: 'Dev Test 1 Rupee Verification',
+      credits: 1,
+      price: '₹1',
+      savings: 'Live Gateway Verification',
+      gstText: '₹1.00 Incl. Taxes',
+      gstVal: '₹0',
+      amountVal: '₹1',
+      idealFor: 'Safe real bank & gateway verification without charges.',
+      category: 'individual' as const,
+      badge: 'DEV TEST (₹1)',
+    }] : []),
     // Individual Plans (1 Person)
     {
       id: 'plan-ind-1',
@@ -173,7 +187,6 @@ export default function MembershipScreen() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [showDemoPayment, setShowDemoPayment] = useState(false);
 
   // Revolving spinning animation for the loader ring
   useEffect(() => {
@@ -200,19 +213,14 @@ export default function MembershipScreen() {
   useEffect(() => {
     const onBackPress = () => {
       if (isModalOpen) {
-        if (showDemoPayment) {
-          // Go back from demo payment step to plan details step
-          setShowDemoPayment(false);
-        } else {
-          closeDetails();
-        }
+        closeDetails();
         return true; // consumed
       }
       return false; // let default back happen
     };
     const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => sub.remove();
-  }, [isModalOpen, showDemoPayment]);
+  }, [isModalOpen]);
 
   const openPlanDetails = (plan: Plan) => {
     setSelectedPlan(plan);
@@ -220,7 +228,6 @@ export default function MembershipScreen() {
     setCheckoutActive(false);
     setIsProcessing(false);
     setIsSuccess(false);
-    setShowDemoPayment(false);
     
     Animated.parallel([
       Animated.timing(overlayOpacity, { toValue: 1, duration: 250, useNativeDriver: true }),
@@ -234,7 +241,6 @@ export default function MembershipScreen() {
       Animated.timing(slideUpAnim, { toValue: 600, duration: 200, useNativeDriver: true })
     ]).start(() => {
       setIsModalOpen(false);
-      setShowDemoPayment(false);
     });
   };
 
@@ -277,32 +283,6 @@ export default function MembershipScreen() {
       setIsProcessing(false);
       Alert.alert('Payment Error', res.error || 'Failed to initialize payment gateway.');
     }
-  };
-
-  // Simulated Sandbox/Apple Pay Confirm Swipe
-  const handleConfirmPay = () => {
-    setIsProcessing(true);
-    progressAnim.setValue(0);
-
-    // Animate loader ring
-    Animated.timing(progressAnim, {
-      toValue: 1,
-      duration: 1500,
-      useNativeDriver: true
-    }).start(() => {
-      // Finalize transaction
-      if (selectedPlan) {
-        purchasePlan(
-          selectedPlan.name,
-          selectedPlan.credits,
-          selectedPlan.amountVal,
-          selectedPlan.price,
-          selectedPlan.gstVal
-        );
-      }
-      setIsProcessing(false);
-      setIsSuccess(true);
-    });
   };
 
 
@@ -673,88 +653,7 @@ export default function MembershipScreen() {
 
             {!isProcessing && !isSuccess && (
               <>
-                {showDemoPayment ? (
-                  /* Demo Payment screen */
-                  <View className="gap-6 py-2">
-                    <View className="flex-row justify-between items-center border-b border-zinc-100 pb-4">
-                      <View className="gap-0.5">
-                        <Text className="text-zinc-400 text-[10px] font-extrabold uppercase">Sandbox Gateway</Text>
-                        <Text className="text-zinc-950 text-base font-extrabold uppercase pl-0.5">Test Payment Gateway</Text>
-                      </View>
-                      <TouchableOpacity 
-                        onPress={() => {
-                          setShowDemoPayment(false);
-                        }} 
-                        className="w-8 h-8 rounded-full bg-zinc-50 items-center justify-center border border-zinc-200"
-                      >
-                        <Feather name="arrow-left" size={14} color="#101828" />
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* Warning banner */}
-                    <View className="bg-amber-50 border border-amber-100 p-[18px] rounded-2xl gap-2">
-                      <View className="flex-row items-center gap-2">
-                        <Feather name="alert-triangle" size={14} color="#D97706" />
-                        <Text className="text-amber-800 text-[10px] font-extrabold uppercase">DEMO MODE ACTIVE</Text>
-                      </View>
-                      <Text className="text-amber-700 text-[10px] font-semibold leading-relaxed">
-                        This is a sandbox test transaction simulator. No real money will be charged.
-                      </Text>
-                    </View>
-
-                    {/* Cost Summary details */}
-                    <View className="bg-zinc-50 border border-zinc-100 p-[18px] rounded-2xl gap-3">
-                      <View className="flex-row justify-between items-center">
-                        <Text className="text-zinc-500 text-xs font-semibold">Selected Pack</Text>
-                        <Text className="text-zinc-900 text-xs font-extrabold">{selectedPlan.name}</Text>
-                      </View>
-                      <View className="flex-row justify-between items-center">
-                        <Text className="text-zinc-500 text-xs font-semibold">Credits Included</Text>
-                        <Text className="text-zinc-900 text-xs font-extrabold">+{selectedPlan.credits} Credits</Text>
-                      </View>
-                      <View className="h-[1px] bg-zinc-100 my-0.5" />
-                      <View className="flex-row justify-between items-center">
-                        <Text className="text-zinc-500 text-xs font-semibold">Subtotal Price</Text>
-                        <Text className="text-zinc-900 text-xs font-extrabold">{selectedPlan.amountVal}</Text>
-                      </View>
-                      <View className="flex-row justify-between items-center">
-                        <Text className="text-zinc-500 text-xs font-semibold">GST (18% Sandbox Tax)</Text>
-                        <Text className="text-zinc-900 text-xs font-extrabold">{selectedPlan.gstVal}</Text>
-                      </View>
-                      <View className="h-[1px] bg-zinc-100 my-0.5" />
-                      <View className="flex-row justify-between items-center">
-                        <Text className="text-zinc-950 text-xs font-extrabold">Total Paid amount</Text>
-                        <Text className="text-[#4F46E5] text-sm font-extrabold">{selectedPlan.price}</Text>
-                      </View>
-                    </View>
-
-                    {/* Action buttons */}
-                    <View className="gap-3.5 mt-3">
-                      <TouchableOpacity
-                        activeOpacity={0.85}
-                        onPress={() => {
-                          setShowDemoPayment(false);
-                          handleConfirmPay();
-                        }}
-                        className="w-full bg-[#10B981] rounded-2xl items-center justify-center shadow-md"
-                        style={{ height: 56 }}
-                      >
-                        <Text className="text-white text-xs font-extrabold uppercase">Pay {selectedPlan.price} (Sandbox Test)</Text>
-                      </TouchableOpacity>
-                      
-                      <TouchableOpacity
-                        activeOpacity={0.8}
-                        onPress={() => {
-                          setShowDemoPayment(false);
-                        }}
-                        className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl items-center justify-center"
-                        style={{ height: 56 }}
-                      >
-                        <Text className="text-zinc-600 text-xs font-extrabold uppercase">Cancel</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ) : !checkoutActive ? (
+                {!checkoutActive ? (
                   // Plan details list (Feature 2)
                   <View className="gap-5">
                     <View className="flex-row justify-between items-center border-b border-zinc-100 pb-4">
@@ -806,7 +705,7 @@ export default function MembershipScreen() {
                     </TouchableOpacity>
                   </View>
                 ) : (
-                  // Slide To Purchase Checkout Slider (Feature 5)
+                  // Slide To Purchase Checkout (Feature 5)
                   <View className="gap-5 py-2">
                     <View className="flex-row justify-between items-center border-b border-zinc-100 pb-4">
                       <Text className="text-zinc-950 text-base font-bold uppercase pl-1">Checkout</Text>
@@ -831,48 +730,19 @@ export default function MembershipScreen() {
                       </View>
                     </View>
 
-                    {/* Demo simulator note banner for iOS */}
-                    {Platform.OS === 'ios' && (
-                      <View className="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl gap-1">
-                        <View className="flex-row items-center gap-1.5">
-                          <Feather name="info" size={13} color="#D97706" />
-                          <Text className="text-amber-800 text-[10px] font-extrabold uppercase">Demo Simulator Note</Text>
-                        </View>
-                        <Text className="text-amber-700 text-[10px] font-semibold leading-relaxed">
-                          This is just a demo payment simulator for testing. No real money will be charged.
-                        </Text>
-                      </View>
-                    )}
-
-                    {/* Purchase confirmation buttons */}
+                    {/* Universal Real Payment Gateway Button (Both iOS & Android) */}
                     <View className="gap-3 mt-2">
-                      {Platform.OS !== 'ios' && (
-                        <TouchableOpacity
-                          activeOpacity={0.85}
-                          disabled={isProcessing}
-                          onPress={handlePayPhiPayment}
-                          className="h-14 bg-[#4F46E5] rounded-2xl items-center justify-center shadow-md"
-                          style={{ height: 54 }}
-                        >
-                          <Text className="text-white text-xs font-extrabold uppercase">
-                            Pay {selectedPlan.price} with PayPhi Gateway
-                          </Text>
-                        </TouchableOpacity>
-                      )}
-
-                      {Platform.OS === 'ios' && (
-                        <TouchableOpacity
-                          activeOpacity={0.8}
-                          disabled={isProcessing}
-                          onPress={() => setShowDemoPayment(true)}
-                          className="h-14 bg-[#4F46E5] rounded-2xl items-center justify-center shadow-md"
-                          style={{ height: 54 }}
-                        >
-                          <Text className="text-white text-xs font-extrabold uppercase">
-                            Use Test Simulator (Demo)
-                          </Text>
-                        </TouchableOpacity>
-                      )}
+                      <TouchableOpacity
+                        activeOpacity={0.85}
+                        disabled={isProcessing}
+                        onPress={handlePayPhiPayment}
+                        className="h-14 bg-[#4F46E5] rounded-2xl items-center justify-center shadow-md"
+                        style={{ height: 54 }}
+                      >
+                        <Text className="text-white text-xs font-extrabold uppercase tracking-wide">
+                          Pay {selectedPlan.price} with Payment Gateway
+                        </Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                 )}
