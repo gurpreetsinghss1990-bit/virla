@@ -29,12 +29,20 @@ export const PayPhiService = {
   initSDK: async (env = 'PROD', merchantId = '100000000527739', appId = '80bc18249511f868', merchantName = 'NAMRATHA JAUNI'): Promise<{ success: boolean; code?: string; message?: string }> => {
     try {
       console.log(`[PayPhiService] Initializing SDK: env=${env}, mId=${merchantId}, appId=${appId}, merchantName=${merchantName}`);
-      const result = await PayphiSdk.setAppInfo(
-        env,
-        merchantId,
-        appId,
-        merchantName
-      );
+      
+      const timeoutPromise = new Promise<{ code: string; timeout: boolean }>((_, reject) => {
+        setTimeout(() => reject(new Error('Gateway initialization timed out after 12s. Please check your internet connection or try again.')), 12000);
+      });
+
+      const result = await Promise.race([
+        PayphiSdk.setAppInfo(
+          env,
+          merchantId,
+          appId,
+          merchantName
+        ),
+        timeoutPromise
+      ]);
 
       console.log(`[PayPhiService] setAppInfo returned:`, JSON.stringify(result));
 

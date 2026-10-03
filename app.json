@@ -16,6 +16,7 @@
         "aps-environment": "production"
       },
       "infoPlist": {
+        "AppIdentifierPrefix": "C2JVJ4VXRD",
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "Allow Virla to use your location to find nearby trainers and customize your experience.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow Virla to use your location to track travel and display real-time positions during active workouts, even in the background.",
