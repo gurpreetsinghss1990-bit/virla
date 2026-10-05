@@ -15,9 +15,10 @@ import { getDisplayWorkoutTitle, getBookingISTDateRange, formatToDDMMYYYY } from
 
 interface BookingCardProps {
   booking: Booking;
+  onOpenSupport?: (booking: Booking) => void;
 }
 
-export function BookingCard({ booking }: BookingCardProps) {
+export function BookingCard({ booking, onOpenSupport }: BookingCardProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { cancelSession, rescheduleSession } = useBookingStore();
@@ -551,11 +552,30 @@ export function BookingCard({ booking }: BookingCardProps) {
                 )}
               </>
             )}
+            {/* Support button for cancelled or completed sessions */}
+            {!isUpcoming && (booking.status === 'cancelled' || booking.status === 'client_no_show' || booking.status === 'trainer_no_show' || booking.status === 'completed' || booking.status === 'missed_session_not_started') && (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => {
+                  if (onOpenSupport) {
+                    onOpenSupport(booking);
+                  } else {
+                    router.push('/help-support');
+                  }
+                }}
+                className="flex-1 py-3 rounded-xl items-center justify-center bg-rose-50 border border-rose-200 flex-row gap-1.5"
+              >
+                <Feather name="help-circle" size={13} color="#E11D48" />
+                <Text className="text-rose-600 text-xs font-black uppercase tracking-wider">
+                  Support
+                </Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={handleViewDetails}
               className={`py-3 rounded-xl items-center justify-center bg-[#101828] border border-[#101828] ${
-                (isUpcoming && !isPast) ? 'px-5' : 'flex-1'
+                (isUpcoming && !isPast) ? 'px-5' : (!isUpcoming ? 'flex-1' : 'flex-1')
               }`}
             >
               <Text className="text-white text-xs font-black uppercase tracking-wider">

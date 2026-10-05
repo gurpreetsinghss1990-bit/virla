@@ -3,12 +3,13 @@ import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Pla
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
-import { Database, TrainerApplication, getCurrentServerTime, getISTDateInfo } from '../database/Database';
+import { Database, TrainerApplication, getCurrentServerTime, getISTDateInfo, SupportTicket } from '../database/Database';
 import { getBookingISTDateRange, getDisplayWorkoutTitle, normalizeDate, formatToDDMMYYYY } from '../utils/date';
 import { Booking, Coach } from '../types';
 import { LuxuryCard } from '../components/LuxuryCard';
 import { supabase } from '../database/supabaseClient';
 import { useBookingStore } from '../store/bookingStore';
+import { SupportChatModal } from '../components/SupportChatModal';
 
 export default function AdminPanelScreen() {
   const router = useRouter();
@@ -17,9 +18,12 @@ export default function AdminPanelScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isAdminAuthorized, setIsAdminAuthorized] = useState<boolean | null>(null);
   
-  const [activeTab, setActiveTab] = useState<'applications' | 'live' | 'locations' | 'acceptance' | 'disputes' | 'kits'>('applications');
+  const [activeTab, setActiveTab] = useState<'applications' | 'live' | 'locations' | 'acceptance' | 'disputes' | 'kits' | 'support'>('applications');
   const [disputes, setDisputes] = useState<any[]>([]);
   const [kitOrders, setKitOrders] = useState<any[]>([]);
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+  const [isLoadingSupportTickets, setIsLoadingSupportTickets] = useState<boolean>(false);
+  const [selectedSupportChatTicket, setSelectedSupportChatTicket] = useState<SupportTicket | null>(null);
   const [verificationDocs, setVerificationDocs] = useState<{[appId: string]: any}>({});
   const [hasLoadError, setHasLoadError] = useState<boolean>(false);
   const [isLoadingDisputesAndKits, setIsLoadingDisputesAndKits] = useState<boolean>(false);
@@ -122,6 +126,18 @@ export default function AdminPanelScreen() {
       }
     };
 
+    const loadSupportTickets = async () => {
+      setIsLoadingSupportTickets(true);
+      try {
+        const tickets = await Database.fetchAllSupportTickets();
+        setSupportTickets(tickets);
+      } catch (err: any) {
+        console.error('[Admin] loadSupportTickets error:', err.message);
+      } finally {
+        setIsLoadingSupportTickets(false);
+      }
+    };
+
     const handleApproveLocation = async (coachId: string) => {
       const coach = Database.schema.coaches.find(c => c.id === coachId);
       if (!coach || !coach.preferences?.addressChangeRequest) return;
@@ -171,6 +187,7 @@ export default function AdminPanelScreen() {
       Promise.resolve().then(() => {
         loadApplications();
         loadDisputesAndKits();
+        loadSupportTickets();
       });
     }
   }, [isAdminAuthorized, activeTab]);
@@ -333,6 +350,23 @@ export default function AdminPanelScreen() {
               className={`px-4 py-2 rounded-xl items-center justify-center ${activeTab === 'kits' ? 'bg-zinc-950' : 'bg-zinc-50 border border-zinc-200/50'}`}
             >
               <Text className={`text-[9px] font-black uppercase tracking-wider ${activeTab === 'kits' ? 'text-white' : 'text-zinc-500'}`}>Kits</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setActiveTab('support')}
+              className={`px-4 py-2 rounded-xl items-center justify-center flex-row gap-1.5 ${activeTab === 'support' ? 'bg-rose-600' : 'bg-rose-50 border border-rose-200/60'}`}
+            >
+              <Feather name="headphones" size={11} color={activeTab === 'support' ? '#FFFFFF' : '#E11D48'} />
+              <Text className={`text-[9px] font-black uppercase tracking-wider ${activeTab === 'support' ? 'text-white' : 'text-rose-600'}`}>
+                Client Support
+              </Text>
+              {supportTickets.filter(t => t.status === 'OPEN').length > 0 && (
+                <View className={`px-1.5 py-0.2 rounded-full ${activeTab === 'support' ? 'bg-white' : 'bg-rose-600'}`}>
+                  <Text className={`text-[8px] font-black ${activeTab === 'support' ? 'text-rose-600' : 'text-white'}`}>
+                    {supportTickets.filter(t => t.status === 'OPEN').length}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -1334,8 +1368,152 @@ export default function AdminPanelScreen() {
             </View>
           )}
 
+          {/* Client Support Tickets Tab */}
+          {activeTab === 'support' && (
+            <View className="gap-6">
+              <View className="flex-row justify-between items-center">
+                <View>
+                  <Text className="text-zinc-900 text-xl font-black tracking-tight uppercase">Client Concierge Support</Text>
+                  <Text className="text-[#6B7280] text-xs font-semibold mt-1">
+                    Live tickets & real-time chat with users.
+                  </Text>
+                </View>
+                <TouchableOpacity 
+                  onPress={loadSupportTickets} 
+                  className="bg-rose-50 border border-rose-150 px-3 py-1.5 rounded-xl flex-row items-center gap-1.5"
+                >
+                  <Feather name="refresh-cw" size={10} color="#E11D48" />
+                  <Text className="text-rose-650 text-[10px] font-black uppercase">Sync</Text>
+                </TouchableOpacity>
+              </View>
+
+              {isLoadingSupportTickets ? (
+                <Text className="text-zinc-500 text-xs text-center py-8 bg-zinc-50 border border-zinc-150 rounded-[28px] overflow-hidden">Loading support tickets...</Text>
+              ) : supportTickets.length > 0 ? (
+                <View className="gap-4">
+                  {supportTickets.map((t) => (
+                    <LuxuryCard key={t.id} className="p-5 gap-3.5 border border-zinc-200">
+                      <View className="flex-row justify-between items-start border-b border-zinc-100 pb-3 flex-wrap gap-2">
+                        <View className="flex-1 min-w-[120px]">
+                          <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Ticket ID</Text>
+                          <Text className="text-zinc-950 text-xs font-black uppercase mt-0.5">
+                            {t.ticket_id}
+                          </Text>
+                          <Text className="text-zinc-500 text-[9px] font-bold uppercase mt-1">
+                            Client: {t.user_name || 'Client'} ({t.user_phone || 'No Phone'})
+                          </Text>
+                        </View>
+                        <View className={`px-2.5 py-1 rounded-md align-self-start ${
+                          t.status === 'OPEN' ? 'bg-rose-50 border border-rose-150' :
+                          t.status === 'IN_PROGRESS' ? 'bg-amber-50 border border-amber-150' :
+                          'bg-emerald-50 border border-emerald-150'
+                        }`}>
+                          <Text className={`text-[8px] font-black uppercase ${
+                            t.status === 'OPEN' ? 'text-rose-600' :
+                            t.status === 'IN_PROGRESS' ? 'text-amber-600' :
+                            'text-emerald-600'
+                          }`}>{t.status}</Text>
+                        </View>
+                      </View>
+
+                      {/* Ticket Meta Details */}
+                      <View className="gap-2 bg-zinc-50 border border-zinc-150/60 p-3.5 rounded-2xl">
+                        <View className="flex-row justify-between">
+                          <Text className="text-zinc-450 text-[9px] font-bold uppercase">Category</Text>
+                          <Text className="text-zinc-900 text-[10px] font-black">{t.category}</Text>
+                        </View>
+                        <View className="flex-row justify-between">
+                          <Text className="text-zinc-450 text-[9px] font-bold uppercase">Reason</Text>
+                          <Text className="text-zinc-900 text-[10px] font-black">{t.reason}</Text>
+                        </View>
+                        <View className="flex-row justify-between">
+                          <Text className="text-zinc-450 text-[9px] font-bold uppercase">Target Resolution</Text>
+                          <Text className="text-rose-600 text-[10px] font-black">{t.preferred_resolution}</Text>
+                        </View>
+                        {t.booking_id ? (
+                          <View className="flex-row justify-between">
+                            <Text className="text-zinc-450 text-[9px] font-bold uppercase">Linked Booking ID</Text>
+                            <Text className="text-indigo-600 text-[10px] font-black">{t.booking_id}</Text>
+                          </View>
+                        ) : null}
+                        <View className="flex-row justify-between">
+                          <Text className="text-zinc-450 text-[9px] font-bold uppercase">Created At</Text>
+                          <Text className="text-zinc-900 text-[10px] font-semibold">{new Date(t.created_at).toLocaleString()}</Text>
+                        </View>
+                      </View>
+
+                      {/* Description */}
+                      <View className="gap-1">
+                        <Text className="text-zinc-400 text-[8px] font-black uppercase">Client Note</Text>
+                        <Text className="text-zinc-800 text-xs font-semibold leading-relaxed">
+                          {t.description}
+                        </Text>
+                      </View>
+
+                      {/* Action Row: Open Real-time Chat & Status Toggle */}
+                      <View className="border-t border-zinc-100 pt-3 gap-3">
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          onPress={() => setSelectedSupportChatTicket(t)}
+                          className="w-full bg-[#101828] py-3 rounded-xl items-center justify-center flex-row gap-2"
+                        >
+                          <Feather name="message-circle" size={15} color="#FFFFFF" />
+                          <Text className="text-white text-xs font-black uppercase tracking-wider">
+                            Open Realtime Support Chat
+                          </Text>
+                        </TouchableOpacity>
+
+                        <View className="gap-1.5">
+                          <Text className="text-zinc-450 text-[8px] font-black uppercase">Update Ticket Status</Text>
+                          <View className="flex-row gap-1.5">
+                            {(['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'] as const).map((st) => (
+                              <TouchableOpacity
+                                key={st}
+                                onPress={async () => {
+                                  try {
+                                    await Database.updateSupportTicketStatus(t.id, st);
+                                    Alert.alert('Status Updated', `Ticket status set to ${st}`);
+                                    loadSupportTickets();
+                                  } catch (err: any) {
+                                    Alert.alert('Error', err.message);
+                                  }
+                                }}
+                                className={`flex-1 py-2 border rounded-xl items-center ${
+                                  t.status === st ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-zinc-200'
+                                }`}
+                              >
+                                <Text className={`text-[8px] font-black ${t.status === st ? 'text-white' : 'text-zinc-650'}`}>
+                                  {st}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+                      </View>
+                    </LuxuryCard>
+                  ))}
+                </View>
+              ) : (
+                <Text className="text-zinc-450 text-xs text-center py-8 bg-white border border-[#E5E7EB] rounded-[28px] overflow-hidden">
+                  No client support tickets logged in system.
+                </Text>
+              )}
+            </View>
+          )}
+
         </ScrollView>
       </View>
+
+      {/* Real-time Admin Support Chat Modal */}
+      <SupportChatModal
+        visible={selectedSupportChatTicket !== null}
+        ticket={selectedSupportChatTicket}
+        currentRole="admin"
+        onClose={() => {
+          setSelectedSupportChatTicket(null);
+          loadSupportTickets();
+        }}
+      />
 
       {/* Detailed Audit Modal */}
       <Modal

@@ -173,6 +173,22 @@ export interface ChatMessage {
   isFavorite?: boolean;
 }
 
+export interface SupportTicket {
+  id: string;
+  ticket_id: string;
+  user_id: string;
+  user_name: string;
+  user_phone: string;
+  booking_id?: string;
+  category: string;
+  reason: string;
+  description: string;
+  preferred_resolution?: string;
+  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+  created_at: string;
+  updated_at: string;
+}
+
 export interface TrainerApplication {
   id: string;
   createdAt: string;
@@ -3146,6 +3162,91 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       .eq('id', orderId);
     if (error) {
       console.error('[DB ERROR] updateKitOrderStatus failed:', error);
+      throw error;
+    }
+  }
+
+  // Support Tickets (Client Concierge)
+  async createSupportTicket(ticket: {
+    userId: string;
+    bookingId?: string;
+    category: string;
+    reason: string;
+    description: string;
+    preferredResolution?: string;
+  }): Promise<SupportTicket> {
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('name, phone')
+      .eq('id', ticket.userId)
+      .single();
+
+    const insertPayload = {
+      user_id: ticket.userId,
+      user_name: userRow?.name || '',
+      user_phone: userRow?.phone || '',
+      booking_id: ticket.bookingId || null,
+      category: ticket.category,
+      reason: ticket.reason,
+      description: ticket.description,
+      preferred_resolution: ticket.preferredResolution || 'Resolution via Support Chat',
+      status: 'OPEN'
+    };
+
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .insert(insertPayload)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('[DB ERROR] createSupportTicket failed:', error);
+      throw error;
+    }
+
+    // Auto post initial greeting/diagnostic message into chat_messages for this ticket
+    const chatId = `support_ticket_${data.ticket_id || data.id}`;
+    const initialText = `[Concierge Ticket #${data.ticket_id}] Issue regarding ${ticket.category}: "${ticket.reason}". Client statement: "${ticket.description}". Concierge support agent will respond shortly.`;
+    this.sendChatMessage(chatId, initialText, 'virla' as any);
+
+    return data as SupportTicket;
+  }
+
+  async fetchUserSupportTickets(userId: string): Promise<SupportTicket[]> {
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[DB ERROR] fetchUserSupportTickets failed:', error);
+      return [];
+    }
+    return (data || []) as SupportTicket[];
+  }
+
+  async fetchAllSupportTickets(): Promise<SupportTicket[]> {
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[DB ERROR] fetchAllSupportTickets failed:', error);
+      return [];
+    }
+    return (data || []) as SupportTicket[];
+  }
+
+  async updateSupportTicketStatus(ticketId: string, status: string): Promise<void> {
+    const { error } = await supabase
+      .from('support_tickets')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', ticketId);
+
+    if (error) {
+      console.error('[DB ERROR] updateSupportTicketStatus failed:', error);
       throw error;
     }
   }
