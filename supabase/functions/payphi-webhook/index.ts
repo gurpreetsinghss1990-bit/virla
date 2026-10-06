@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     const receivedChecksum = extract(['secureToken', 'SecureToken', 'checksum', 'responseHash', 'secureHash']);
     const amount = extract(['amount', 'Amount']);
     const currencyCode = extract(['currencyCode', 'CurrencyCode'], '356');
-    const merchantId = extract(['merchantId', 'MerchantId'], Deno.env.get('PAYPHI_MERCHANT_ID') || '100000000527739');
+    const merchantId = extract(['merchantId', 'MerchantId'], Deno.env.get('PAYPHI_MERCHANT_ID') || '100000000527738');
 
     if (!merchantTxnNo) {
       console.warn('[payphi-webhook] Rejecting: Missing merchantTxnNo');
