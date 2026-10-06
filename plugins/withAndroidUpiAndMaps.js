@@ -79,17 +79,9 @@ module.exports = function withAndroidUpiAndMaps(config) {
     return config;
   });
 
-  // 3. android/build.gradle: add kotlinVersion & flatDir
+  // 3. android/build.gradle: add flatDir
   config = withProjectBuildGradle(config, async (config) => {
     let contents = config.modResults.contents;
-    if (!contents.includes('kotlinVersion')) {
-      if (contents.includes('buildscript {')) {
-        contents = contents.replace(
-          /buildscript\s*\{/,
-          `buildscript {\n  ext {\n    kotlinVersion = "2.2.0"\n  }`
-        );
-      }
-    }
     if (!contents.includes('react-native-payphi-sdk/android/libs')) {
       const flatDirSnippet = `    flatDir {\n      dirs "$rootDir/../node_modules/react-native-payphi-sdk/android/libs"\n    }\n`;
       if (contents.includes('repositories {')) {
