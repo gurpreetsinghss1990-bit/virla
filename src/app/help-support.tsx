@@ -1,19 +1,24 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Platform, KeyboardAvoidingView, Linking, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { ScreenHeader } from '../components/ScreenHeader';
 
+import { Database } from '../database/Database';
+import { useUserStore } from '../store/userStore';
+
 export default function HelpSupportScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useUserStore();
 
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [ticketCategory, setTicketCategory] = useState<string>('Credits / Wallet');
   const [ticketSubject, setTicketSubject] = useState('');
   const [ticketDetails, setTicketDetails] = useState('');
   const [showTicketForm, setShowTicketForm] = useState(false);
+  const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
 
   const categories = ['Credits / Wallet', 'Booking Issue', 'Coach Feedback', 'Other'];
 
@@ -36,23 +41,83 @@ export default function HelpSupportScreen() {
     }
   ];
 
-  const handleRaiseTicket = () => {
+  const handleRaiseTicket = async () => {
     if (!ticketSubject.trim() || !ticketDetails.trim()) {
       Alert.alert('Incomplete Fields', 'Please provide a subject summary and detailed description of the issue.');
       return;
     }
-    const ticketId = `TK-${Math.floor(1000 + Math.random() * 9000)}`;
-    Alert.alert(
-      'Support Ticket Submitted',
-      `Ticket #${ticketId} has been logged under "${ticketCategory}". Our senior concierge lead will respond within 15 minutes.`
-    );
-    setTicketSubject('');
-    setTicketDetails('');
-    setShowTicketForm(false);
+    const currentUserId = user?.id || Database.getCurrentUserId();
+    if (!currentUserId) {
+      Alert.alert('Authentication Required', 'Please log in to submit a support ticket.');
+      return;
+    }
+
+    setIsSubmittingTicket(true);
+    try {
+      await Database.addClientDispute(currentUserId, {
+        category: ticketCategory,
+        subject: ticketSubject.trim(),
+        description: ticketDetails.trim()
+      });
+
+      Alert.alert(
+        'Support Ticket Submitted',
+        `Your ticket under "${ticketCategory}" has been logged successfully and forwarded to the concierge desk. Our team will review and update you.`
+      );
+      setTicketSubject('');
+      setTicketDetails('');
+      setShowTicketForm(false);
+    } catch (err: any) {
+      console.error('[HelpSupport] Failed to submit ticket:', err);
+      Alert.alert('Submission Error', err?.message || 'Could not submit your ticket. Please try again.');
+    } finally {
+      setIsSubmittingTicket(false);
+    }
   };
 
-  const handleAction = (label: string, detail: string) => {
-    Alert.alert(label, detail);
+  const handleCallSupport = async () => {
+    const phoneNumber = '+919999988888';
+    try {
+      const url = `tel:${phoneNumber}`;
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Concierge Hotline', `Direct Call: ${phoneNumber}\nPlease dial from your phone.`);
+      }
+    } catch {
+      Alert.alert('Concierge Hotline', `Direct Call: ${phoneNumber}`);
+    }
+  };
+
+  const handleEmailSupport = async () => {
+    const email = 'support@virla.fit';
+    try {
+      const url = `mailto:${email}?subject=${encodeURIComponent('VIRLA Support Request')}`;
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Email Support', `Support Desk: ${email}\nPlease send an email from your email app.`);
+      }
+    } catch {
+      Alert.alert('Email Support', `Support Desk: ${email}`);
+    }
+  };
+
+  const handleSosCall = async () => {
+    const emergencyNumber = '112';
+    try {
+      const url = `tel:${emergencyNumber}`;
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Emergency Dispatch SOS', `Emergency Number: ${emergencyNumber}`);
+      }
+    } catch {
+      Alert.alert('Emergency Dispatch SOS', `Emergency Number: ${emergencyNumber}`);
+    }
   };
 
   return (
@@ -74,12 +139,6 @@ export default function HelpSupportScreen() {
         >
           {/* Hero Header */}
           <View style={{ marginBottom: 20 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' }} />
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#059669', letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                Concierge Active • 15m Response
-              </Text>
-            </View>
             <Text style={{ fontSize: 24, fontWeight: '800', color: '#09090B', letterSpacing: -0.5 }}>
               How can we help you?
             </Text>
@@ -93,7 +152,7 @@ export default function HelpSupportScreen() {
             {/* Call Support Card */}
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => handleAction('Secure Line', 'Connecting to client concierge hotline (+91 99999 88888)...')}
+              onPress={handleCallSupport}
               style={{
                 flex: 1,
                 backgroundColor: '#FFFFFF',
@@ -125,7 +184,7 @@ export default function HelpSupportScreen() {
             {/* Email Support Card */}
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => handleAction('Email Support', 'Opening email draft to support@virla.fit...')}
+              onPress={handleEmailSupport}
               style={{
                 flex: 1,
                 backgroundColor: '#FFFFFF',
@@ -295,6 +354,7 @@ export default function HelpSupportScreen() {
                 <TouchableOpacity
                   activeOpacity={0.88}
                   onPress={handleRaiseTicket}
+                  disabled={isSubmittingTicket}
                   style={{
                     backgroundColor: '#4F46E5',
                     borderRadius: 14,
@@ -304,12 +364,19 @@ export default function HelpSupportScreen() {
                     flexDirection: 'row',
                     gap: 8,
                     marginTop: 4,
+                    opacity: isSubmittingTicket ? 0.7 : 1,
                   }}
                 >
-                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
-                    Submit Ticket
-                  </Text>
-                  <Feather name="arrow-right" size={15} color="#FFFFFF" />
+                  {isSubmittingTicket ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
+                        Submit Ticket
+                      </Text>
+                      <Feather name="arrow-right" size={15} color="#FFFFFF" />
+                    </>
+                  )}
                 </TouchableOpacity>
               </View>
             )}
@@ -425,7 +492,7 @@ export default function HelpSupportScreen() {
 
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => handleAction('🚨 Emergency Hotline', 'Connecting dispatch hotline... emergency units will route GPS coordinates immediately.')}
+              onPress={handleSosCall}
               style={{
                 backgroundColor: '#E11D48',
                 borderRadius: 14,

@@ -19,6 +19,7 @@ export default function ProgressScreen() {
   const router = useRouter();
   const [activeRange, setActiveRange] = useState<RangeType>('weekly');
   const [simulateEmpty, setSimulateEmpty] = useState(false);
+  const [forceShowDemo, setForceShowDemo] = useState(false);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
 
   useEffect(() => {
@@ -46,14 +47,14 @@ export default function ProgressScreen() {
   const cancelledJobs = bookings.filter(b => b.status === 'cancelled');
   const totalCompleted = completedJobs.length;
   const totalUpcoming = upcomingJobs.length;
-  const effectiveSessions = Math.max(totalSessions || 0, totalCompleted || 0);
-  const streak = currentStreak || 0;
+  const rawEffectiveSessions = Math.max(totalSessions || 0, totalCompleted || 0);
+  const effectiveSessions = forceShowDemo && rawEffectiveSessions === 0 ? 3 : rawEffectiveSessions;
+  const streak = currentStreak || (forceShowDemo ? 4 : 0);
 
   const trainerEarningsList = user.id ? Database.getEarnings(user.id) : [];
   const monthlyEarnings = trainerEarningsList.reduce((acc, earn) => acc + (earn.amount > 0 ? earn.amount : 0), 0);
 
-  const isEmpty = useMemo(() => {
-    if (simulateEmpty) return true;
+  const isNaturallyEmpty = useMemo(() => {
     const userId = Database.getCurrentUserId();
     if (!userId) return true;
     const bookingsCount = role === 'trainer'
@@ -61,8 +62,14 @@ export default function ProgressScreen() {
       : Database.getBookings(userId).filter(b => b.status === 'completed').length;
     const dateStr = new Date().toLocaleDateString('en-CA');
     const hydrationLogged = Database.getHydration(userId, dateStr);
-    return role === 'trainer' ? bookingsCount === 0 : (bookingsCount === 0 && hydrationLogged === 0 && effectiveSessions === 0);
-  }, [totalSessions, totalCalories, effectiveSessions, user.id, simulateEmpty, role, user.name]);
+    return role === 'trainer' ? bookingsCount === 0 : (bookingsCount === 0 && hydrationLogged === 0 && rawEffectiveSessions === 0);
+  }, [user.id, role, user.name, rawEffectiveSessions]);
+
+  const isEmpty = useMemo(() => {
+    if (simulateEmpty) return true;
+    if (forceShowDemo) return false;
+    return isNaturallyEmpty;
+  }, [simulateEmpty, forceShowDemo, isNaturallyEmpty]);
 
   useEffect(() => {
     fadeAnim.setValue(0.3);
@@ -398,7 +405,17 @@ export default function ProgressScreen() {
               <TouchableOpacity 
                 activeOpacity={0.7}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                onPress={() => setSimulateEmpty(!simulateEmpty)}
+                onPress={() => {
+                  if (isEmpty) {
+                    // Restoring data: turn off simulateEmpty and turn on forceShowDemo
+                    setSimulateEmpty(false);
+                    setForceShowDemo(true);
+                  } else {
+                    // Simulating empty: turn on simulateEmpty and turn off forceShowDemo
+                    setSimulateEmpty(true);
+                    setForceShowDemo(false);
+                  }
+                }}
                 style={{
                   backgroundColor: isEmpty ? '#4F46E5' : '#101828',
                   shadowColor: isEmpty ? '#4F46E5' : '#101828',
@@ -425,7 +442,7 @@ export default function ProgressScreen() {
           </View>
 
           {isEmpty ? (
-            <EmptyState type="no-progress" />
+            <EmptyState type="no-progress" showCard={false} />
           ) : role === 'trainer' ? (
             <>
               {/* Trainer timeframe indicator */}
@@ -649,13 +666,13 @@ export default function ProgressScreen() {
               {/* Client Review Feed Wall */}
               <View className="gap-3">
                 <Text className="text-[#101828] text-xs font-bold uppercase tracking-wider pl-1">Client Review Wall</Text>
-                <LuxuryCard className="p-5 gap-4" interactive={false}>
+                <View className="py-2 gap-3">
                   {[
                     { id: 'r-1', clientName: 'Viral S.', rating: 5, comment: 'Excellent strength coaching session! Focus on form was perfect.', date: 'Today', workout: 'PowerForge' },
                     { id: 'r-2', clientName: 'Amit M.', rating: 5, comment: 'Punctual, friendly and adjusted intensity perfectly for my shoulder recovery.', date: '2 days ago', workout: 'Zen Yoga Flow' },
                     { id: 'r-3', clientName: 'Pooja K.', rating: 4, comment: 'Very intense HIIT session! Loved the energy and playlist recommendation.', date: 'Last week', workout: 'Apex HIIT' }
                   ].map((rev) => (
-                    <View key={rev.id} className="py-3 border-b border-zinc-100 last:border-b-0 gap-1.5">
+                    <View key={rev.id} className="py-3 border-b border-zinc-200/60 last:border-b-0 gap-1.5">
                       <View className="flex-row justify-between items-center">
                         <Text className="text-[#101828] text-xs font-bold">{rev.clientName} • {rev.workout}</Text>
                         <Text className="text-zinc-400 text-[9px] font-semibold">{rev.date}</Text>
@@ -668,7 +685,7 @@ export default function ProgressScreen() {
                       </View>
                     </View>
                   ))}
-                </LuxuryCard>
+                </View>
               </View>
             </>
           ) : (

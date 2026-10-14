@@ -480,17 +480,19 @@ export default function SessionDetailScreen() {
   };
 
   const timelineStages = useMemo(() => {
+    const currentIdx = stagesList.indexOf(currentStatus);
+    const validCurrentIdx = currentIdx >= 0 ? currentIdx : 0;
+    
     if (isMissed) {
-      const idx = stagesList.indexOf(currentStatus);
-      const past = stagesList.slice(0, Math.max(1, idx >= 0 ? idx + 1 : 1));
+      const past = stagesList.slice(0, validCurrentIdx + 1);
       return [...past, 'session_missed'];
     }
     if (isCancelled) {
-      const idx = stagesList.indexOf(currentStatus);
-      const past = stagesList.slice(0, Math.max(1, idx >= 0 ? idx + 1 : 1));
+      const past = stagesList.slice(0, validCurrentIdx + 1);
       return [...past, 'session_cancelled'];
     }
-    return stagesList;
+    // Only show real milestones that have actually occurred so far (up to the current status)
+    return stagesList.slice(0, validCurrentIdx + 1);
   }, [isMissed, isCancelled, currentStatus]);
 
   // Interpolate coordinates along the polyline path
@@ -1116,22 +1118,13 @@ export default function SessionDetailScreen() {
             <Ionicons name="arrow-back" size={18} color="#09090B" />
           </TouchableOpacity>
 
-          {/* Premium Editorial Header Title */}
+          {/* Header Title */}
           <View className="items-center flex-1 mx-2">
-            <View className="flex-row items-center gap-1.5">
-              <View className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
-              <Text 
-                style={{ letterSpacing: 2.2 }}
-                className="text-zinc-500 text-[9.5px] font-bold uppercase"
-              >
-                VIRLA CONCIERGE
-              </Text>
-            </View>
             <Text 
               numberOfLines={1}
-              className="text-zinc-950 text-base font-extrabold tracking-tight mt-0.5"
+              className="text-zinc-950 text-base font-extrabold tracking-tight"
             >
-              {role === 'trainer' ? 'Coach Console' : 'Premium Concierge Pass'}
+              {role === 'trainer' ? 'Coach Console' : 'Session Details'}
             </Text>
           </View>
 
@@ -1234,69 +1227,85 @@ export default function SessionDetailScreen() {
         <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-5" contentContainerStyle={{ paddingBottom: 100 }}>
           <View className="gap-5">
 
-            {/* Stage Banner Overlay */}
-            <View className="bg-zinc-950 border border-zinc-800 p-5 rounded-[26px] shadow-md gap-2.5">
-              <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center gap-2.5">
-                  <View className={`w-2.5 h-2.5 rounded-full ${isMissed ? 'bg-amber-500' : isCancelled ? 'bg-rose-500' : 'bg-[#E11D48]'}`} />
-                  <Text className={`text-xs font-black uppercase tracking-wider ${isMissed ? 'text-amber-400' : isCancelled ? 'text-rose-400' : 'text-rose-400'}`}>
-                    {isMissed || isCancelled ? 'Session Status' : 'Live Concierge Status'}
-                  </Text>
-                </View>
-                <View className={`border px-2.5 py-0.5 rounded-full ${
-                  isMissed 
-                    ? 'bg-amber-950/40 border-amber-800/50' 
-                    : isCancelled 
-                    ? 'bg-red-950/40 border-red-800/50' 
-                    : 'bg-zinc-900 border border-zinc-800'
-                }`}>
-                  <Text className={`text-[10px] font-extrabold uppercase tracking-wider ${
+            {/* Status Content (Direct content without black card for customer, dark card for trainer) */}
+            {role === 'trainer' ? (
+              <View className="bg-zinc-950 border border-zinc-800 p-5 rounded-[26px] shadow-md gap-2.5">
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center gap-2.5">
+                    <View className={`w-2.5 h-2.5 rounded-full ${isMissed ? 'bg-amber-500' : isCancelled ? 'bg-rose-500' : 'bg-[#E11D48]'}`} />
+                    <Text className={`text-xs font-black uppercase tracking-wider ${isMissed ? 'text-amber-400' : isCancelled ? 'text-rose-400' : 'text-rose-400'}`}>
+                      {isMissed || isCancelled ? 'Session Status' : 'Live Concierge Status'}
+                    </Text>
+                  </View>
+                  <View className={`border px-2.5 py-0.5 rounded-full ${
                     isMissed 
-                      ? 'text-amber-400' 
+                      ? 'bg-amber-950/40 border-amber-800/50' 
                       : isCancelled 
-                      ? 'text-rose-400' 
-                      : 'text-emerald-400'
+                      ? 'bg-red-950/40 border-red-800/50' 
+                      : 'bg-zinc-900 border border-zinc-800'
                   }`}>
-                    {isMissed ? 'Missed' : isCancelled ? 'Cancelled' : 'Live Active'}
-                  </Text>
+                    <Text className={`text-[10px] font-extrabold uppercase tracking-wider ${
+                      isMissed 
+                        ? 'text-amber-400' 
+                        : isCancelled 
+                        ? 'text-rose-400' 
+                        : 'text-emerald-400'
+                    }`}>
+                      {isMissed ? 'Missed' : isCancelled ? 'Cancelled' : 'Live Active'}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-              <Text className="text-white text-xl font-black tracking-tight">{getStatusText(currentStatus)}</Text>
-              {isMissed ? (
-                <Text className="text-zinc-400 text-xs font-medium leading-5">
-                  {booking.status === 'client_no_show' 
-                    ? 'This session was marked as missed due to client no-show.'
-                    : booking.status === 'trainer_no_show'
-                    ? 'This session was marked as missed due to coach no-show.'
-                    : 'This session was not started and has been marked as missed.'}
-                </Text>
-              ) : isCancelled ? (
-                <Text className="text-zinc-400 text-xs font-medium leading-5">
-                  {(booking as any)?.cancellationReason 
-                    ? `Cancellation reason: ${(booking as any).cancellationReason}`
-                    : 'This booking has been cancelled.'}
-                </Text>
-              ) : (
-                role === 'customer' && !isAccepted && (
+                <Text className="text-white text-xl font-black tracking-tight">{getStatusText(currentStatus)}</Text>
+                {isMissed ? (
                   <Text className="text-zinc-400 text-xs font-medium leading-5">
-                    Your session has been successfully booked. Sit back while we finalize and confirm your elite coach.
+                    {booking.status === 'client_no_show' 
+                      ? 'This session was marked as missed due to client no-show.'
+                      : booking.status === 'trainer_no_show'
+                      ? 'This session was marked as missed due to coach no-show.'
+                      : 'This session was not started and has been marked as missed.'}
                   </Text>
-                )
-              )}
-            </View>
+                ) : isCancelled ? (
+                  <Text className="text-zinc-400 text-xs font-medium leading-5">
+                    {(booking as any)?.cancellationReason 
+                      ? `Cancellation reason: ${(booking as any).cancellationReason}`
+                      : 'This booking has been cancelled.'}
+                  </Text>
+                ) : null}
+              </View>
+            ) : (
+              <View className="py-2 gap-2">
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center gap-2">
+                    <View className={`w-2 h-2 rounded-full ${isMissed ? 'bg-amber-500' : isCancelled ? 'bg-rose-500' : 'bg-[#E11D48]'}`} />
+                    <Text className={`text-xs font-black uppercase tracking-wider ${isMissed ? 'text-amber-600' : isCancelled ? 'text-rose-600' : 'text-[#E11D48]'}`}>
+                      {isMissed || isCancelled ? 'Session Status' : 'Live Concierge Status'}
+                    </Text>
+                  </View>
+                  <View className={`border px-2.5 py-0.5 rounded-full ${
+                    isMissed 
+                      ? 'bg-amber-50 border-amber-200' 
+                      : isCancelled 
+                      ? 'bg-red-50 border-red-200' 
+                      : 'bg-emerald-50 border-emerald-200'
+                  }`}>
+                    <Text className={`text-[10px] font-extrabold uppercase tracking-wider ${
+                      isMissed 
+                        ? 'text-amber-700' 
+                        : isCancelled 
+                        ? 'text-rose-600' 
+                        : 'text-emerald-700'
+                    }`}>
+                      {isMissed ? 'Missed' : isCancelled ? 'Cancelled' : 'Live Active'}
+                    </Text>
+                  </View>
+                </View>
+                <Text className="text-zinc-950 text-xl font-black tracking-tight">{getStatusText(currentStatus)}</Text>
+              </View>
+            )}
 
-            {/* Section 2: Booking Summary Card */}
+            {/* Section 2: Booking Summary (without white card container) */}
             {(role === 'customer' || role === 'trainer') && (
-              <View 
-                className="bg-white border border-zinc-200/90 p-5 rounded-[28px] shadow-sm gap-4"
-                style={{
-                  shadowColor: '#101828',
-                  shadowOffset: { width: 0, height: 3 },
-                  shadowOpacity: 0.05,
-                  shadowRadius: 8,
-                  elevation: 2,
-                }}
-              >
+              <View className="gap-4">
                 <View className="flex-row items-center justify-between pb-1 border-b border-zinc-100">
                   <Text className="text-zinc-950 text-sm font-black uppercase tracking-wider">Session Overview</Text>
                   <View className={`px-2.5 py-0.5 rounded-full ${
@@ -2148,23 +2157,14 @@ export default function SessionDetailScreen() {
             )}
 
             {/* Session Timeline tracker */}
-            <View 
-              className="bg-white border border-zinc-200/90 p-5 rounded-[28px] shadow-sm gap-4"
-              style={{
-                shadowColor: '#101828',
-                shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.05,
-                shadowRadius: 8,
-                elevation: 2,
-              }}
-            >
+            <View className="gap-4">
               <View className="flex-row items-center justify-between pb-3 border-b border-zinc-100">
                 <View>
                   <Text className="text-zinc-950 text-sm font-black uppercase tracking-wider">
-                    {isMissed ? 'Session Timeline' : isCancelled ? 'Session Timeline' : 'Live Concierge Milestones'}
+                    Session Timeline
                   </Text>
                   <Text className="text-zinc-500 text-[11px] font-semibold mt-0.5">
-                    {isMissed || isCancelled ? 'Complete status history of your appointment' : 'Real-time status of your appointment'}
+                    {isMissed || isCancelled ? 'Status history of your session' : 'Live progress of your session'}
                   </Text>
                 </View>
                 <View className={`px-2.5 py-1 rounded-full border flex-row items-center gap-1.5 ${

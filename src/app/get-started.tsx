@@ -854,7 +854,10 @@ export default function GetStartedScreen() {
                     Mobile Number
                   </Text>
                   <View className="flex-row gap-2 w-full items-center">
-                    <View className="flex-1 flex-row items-center bg-[#1A1A1E] border border-white/10 rounded-2xl px-4 py-1">
+                    <View 
+                      className="flex-1 flex-row items-center bg-[#1A1A1E] border border-white/10 rounded-2xl py-1"
+                      style={{ paddingHorizontal: Platform.OS === 'android' ? 12 : 16 }}
+                    >
                       <Text className="text-[#E11D48] font-black mr-2" style={{ fontSize: 17 }}>+91</Text>
                       <TextInput
                         placeholder="XXXXX XXXXX"
@@ -863,8 +866,14 @@ export default function GetStartedScreen() {
                         value={formattedPhone}
                         onChangeText={handlePhoneChange}
                         editable={!isLoading}
-                        className="flex-1 py-3.5 text-white font-bold"
-                        style={{ fontSize: 16 }}
+                        multiline={false}
+                        numberOfLines={1}
+                        className="flex-1 text-white font-bold"
+                        style={{ 
+                          fontSize: 16,
+                          paddingVertical: Platform.OS === 'android' ? 8 : 14,
+                          includeFontPadding: false,
+                        }}
                       />
                     </View>
                     <TouchableOpacity

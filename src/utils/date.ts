@@ -254,4 +254,32 @@ export function formatToDDMMYYYY(dateInput: string | Date | undefined | null): s
   return '';
 }
 
+/**
+ * Formats a Date object or standard date string into "D MMM YYYY" format (e.g., "19 Sep 2026").
+ */
+export function formatToDayMonthYear(dateInput: string | Date | undefined | null): string {
+  if (!dateInput) return '';
+
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  if (dateInput instanceof Date) {
+    const info = getISTDateInfo(dateInput);
+    return `${info.day} ${months[info.month - 1]} ${info.year}`;
+  }
+
+  const normalized = normalizeDate(dateInput);
+  if (!normalized) return String(dateInput);
+
+  const parts = normalized.split('-');
+  if (parts.length === 3) {
+    const y = parts[0];
+    const mIdx = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    return `${d} ${months[mIdx] || ''} ${y}`;
+  }
+
+  return String(dateInput);
+}
+
+
 

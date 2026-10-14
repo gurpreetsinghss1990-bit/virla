@@ -18,6 +18,7 @@ export default function AdminPanelScreen() {
   const [isAdminAuthorized, setIsAdminAuthorized] = useState<boolean | null>(null);
   
   const [activeTab, setActiveTab] = useState<'applications' | 'live' | 'locations' | 'acceptance' | 'disputes' | 'kits'>('applications');
+  const [disputeSection, setDisputeSection] = useState<'user' | 'trainer'>('user');
   const [disputes, setDisputes] = useState<any[]>([]);
   const [kitOrders, setKitOrders] = useState<any[]>([]);
   const [verificationDocs, setVerificationDocs] = useState<{[appId: string]: any}>({});
@@ -1116,106 +1117,160 @@ export default function AdminPanelScreen() {
             );
           })()}
 
-          {activeTab === 'disputes' && (
-            <View className="gap-6">
-              <View className="flex-row justify-between items-center">
-                <Text className="text-zinc-900 text-xl font-black tracking-tight uppercase">Dispute Management</Text>
-                <TouchableOpacity 
-                  onPress={loadDisputesAndKits} 
-                  className="bg-indigo-50 border border-indigo-150 px-3 py-1.5 rounded-xl flex-row items-center gap-1.5"
-                >
-                  <Feather name="refresh-cw" size={10} color="#4F46E5" />
-                  <Text className="text-indigo-650 text-[10px] font-black uppercase">Sync</Text>
-                </TouchableOpacity>
-              </View>
+          {activeTab === 'disputes' && (() => {
+            const userCategories = ['Credits / Wallet', 'Booking Issue', 'Coach Feedback', 'Other'];
+            const trainerCategories = ['payment', 'safety', 'behavior', 'cancellation_dispute'];
 
-              {isLoadingDisputesAndKits ? (
-                <Text className="text-zinc-500 text-xs text-center py-8 bg-zinc-50 border border-zinc-150 rounded-[28px] overflow-hidden">Loading disputes...</Text>
-              ) : hasLoadError ? (
-                <Text className="text-red-500 text-xs text-center py-8 bg-red-50 border border-red-200 rounded-[28px] overflow-hidden">Unable to load disputes. Please try again.</Text>
-              ) : disputes.length > 0 ? (
-                <View className="gap-4">
-                  {disputes.map((d) => (
-                    <LuxuryCard key={d.id} className="gap-3.5">
-                      <View className="flex-row justify-between items-center border-b border-zinc-100 pb-2">
-                        <View>
-                          <Text className="text-zinc-955 text-xs font-black uppercase">{d.ticket_id || d.id}</Text>
-                          <Text className="text-zinc-450 text-[8px] font-black uppercase mt-0.5">Category: {d.category.replace('_', ' ')}</Text>
-                        </View>
-                        <View className={`px-2.5 py-1 rounded-md ${
-                          d.status === 'OPEN' ? 'bg-rose-50 border border-rose-100' :
-                          d.status === 'IN REVIEW' ? 'bg-amber-50 border border-amber-100' :
-                          'bg-emerald-50 border border-emerald-100'
-                        }`}>
-                          <Text className={`text-[8px] font-black uppercase ${
-                            d.status === 'OPEN' ? 'text-rose-600' :
-                            d.status === 'IN REVIEW' ? 'text-amber-600' :
-                            'text-emerald-600'
-                          }`}>{d.status}</Text>
-                        </View>
-                      </View>
+            const isUserDispute = (d: any) => {
+              if (userCategories.includes(d.category)) return true;
+              if (trainerCategories.includes(d.category)) return false;
+              // Fallback check
+              const desc = (d.description || '').toLowerCase();
+              return desc.startsWith('[credits / wallet]') || desc.startsWith('[booking issue]') || desc.startsWith('[coach feedback]') || desc.startsWith('[other]');
+            };
 
-                      <View className="gap-2 bg-zinc-50 border border-zinc-150/50 p-3 rounded-2xl">
-                        <View className="flex-row justify-between">
-                          <Text className="text-zinc-455 text-[9px] font-bold uppercase">Trainer</Text>
-                          <Text className="text-zinc-900 text-[10px] font-black">{d.trainer_name} ({d.trainer_phone})</Text>
-                        </View>
-                        {d.client_name ? (
-                          <View className="flex-row justify-between">
-                            <Text className="text-zinc-450 text-[9px] font-bold uppercase">Client</Text>
-                            <Text className="text-zinc-900 text-[10px] font-black">{d.client_name} ({d.client_phone})</Text>
-                          </View>
-                        ) : null}
-                        {d.booking_id ? (
-                          <View className="flex-row justify-between">
-                            <Text className="text-zinc-455 text-[9px] font-bold uppercase">Booking ID</Text>
-                            <Text className="text-zinc-900 text-[10px] font-extrabold">{d.booking_id}</Text>
-                          </View>
-                        ) : null}
-                        <View className="flex-row justify-between">
-                          <Text className="text-zinc-450 text-[9px] font-bold uppercase">Date Created</Text>
-                          <Text className="text-zinc-900 text-[10px] font-black">{new Date(d.created_at).toLocaleString()}</Text>
-                        </View>
-                      </View>
+            const userDisputes = disputes.filter(d => isUserDispute(d));
+            const trainerDisputes = disputes.filter(d => !isUserDispute(d));
+            const displayedDisputes = disputeSection === 'user' ? userDisputes : trainerDisputes;
 
-                      <View className="gap-1 mt-1">
-                        <Text className="text-zinc-500 text-[8px] font-black uppercase">Trainer Description</Text>
-                        <Text className="text-zinc-800 text-xs font-semibold leading-relaxed">{d.description}</Text>
-                      </View>
-
-                      {/* Status Update Actions */}
-                      <View className="border-t border-zinc-100 pt-3 mt-1.5 gap-2">
-                        <Text className="text-zinc-450 text-[8px] font-black uppercase">Update Status</Text>
-                        <View className="flex-row gap-1.5 flex-wrap">
-                          {['OPEN', 'IN REVIEW', 'RESOLVED', 'CLOSED'].map((st) => (
-                            <TouchableOpacity
-                              key={st}
-                              onPress={async () => {
-                                try {
-                                  await Database.updateDisputeStatus(d.id, st);
-                                  Alert.alert('Status Updated', `Ticket status set to ${st}`);
-                                  loadDisputesAndKits();
-                                } catch (err: any) {
-                                  Alert.alert('Error', err.message);
-                                }
-                              }}
-                              className={`flex-1 py-2 border rounded-xl items-center ${
-                                d.status === st ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-zinc-200'
-                              }`}
-                            >
-                              <Text className={`text-[8px] font-black ${d.status === st ? 'text-white' : 'text-zinc-650'}`}>{st}</Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      </View>
-                    </LuxuryCard>
-                  ))}
+            return (
+              <View className="gap-6">
+                <View className="flex-row justify-between items-center">
+                  <Text className="text-zinc-900 text-xl font-black tracking-tight uppercase">Dispute Management</Text>
+                  <TouchableOpacity 
+                    onPress={loadDisputesAndKits} 
+                    className="bg-indigo-50 border border-indigo-150 px-3 py-1.5 rounded-xl flex-row items-center gap-1.5"
+                  >
+                    <Feather name="refresh-cw" size={10} color="#4F46E5" />
+                    <Text className="text-indigo-650 text-[10px] font-black uppercase">Sync</Text>
+                  </TouchableOpacity>
                 </View>
-              ) : (
-                <Text className="text-zinc-450 text-xs text-center py-8 bg-white border border-[#E5E7EB] rounded-[28px] overflow-hidden">No dispute tickets logged in system.</Text>
-              )}
-            </View>
-          )}
+
+                {/* Section Toggle: User vs Trainer */}
+                <View className="flex-row bg-zinc-100 p-1 rounded-2xl border border-zinc-200/60">
+                  <TouchableOpacity
+                    onPress={() => setDisputeSection('user')}
+                    className={`flex-1 py-2.5 rounded-xl items-center justify-center flex-row gap-2 ${
+                      disputeSection === 'user' ? 'bg-white shadow-sm' : 'bg-transparent'
+                    }`}
+                  >
+                    <Feather name="user" size={12} color={disputeSection === 'user' ? '#4F46E5' : '#71717A'} />
+                    <Text className={`text-[10px] font-black uppercase tracking-wider ${
+                      disputeSection === 'user' ? 'text-zinc-950 font-black' : 'text-zinc-500 font-bold'
+                    }`}>
+                      User Tickets ({userDisputes.length})
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => setDisputeSection('trainer')}
+                    className={`flex-1 py-2.5 rounded-xl items-center justify-center flex-row gap-2 ${
+                      disputeSection === 'trainer' ? 'bg-white shadow-sm' : 'bg-transparent'
+                    }`}
+                  >
+                    <Feather name="shield" size={12} color={disputeSection === 'trainer' ? '#4F46E5' : '#71717A'} />
+                    <Text className={`text-[10px] font-black uppercase tracking-wider ${
+                      disputeSection === 'trainer' ? 'text-zinc-950 font-black' : 'text-zinc-500 font-bold'
+                    }`}>
+                      Trainer Tickets ({trainerDisputes.length})
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {isLoadingDisputesAndKits ? (
+                  <Text className="text-zinc-500 text-xs text-center py-8 bg-zinc-50 border border-zinc-150 rounded-[28px] overflow-hidden">Loading disputes...</Text>
+                ) : hasLoadError ? (
+                  <Text className="text-red-500 text-xs text-center py-8 bg-red-50 border border-red-200 rounded-[28px] overflow-hidden">Unable to load disputes. Please try again.</Text>
+                ) : displayedDisputes.length > 0 ? (
+                  <View className="gap-4">
+                    {displayedDisputes.map((d) => (
+                      <LuxuryCard key={d.id} className="gap-3.5">
+                        <View className="flex-row justify-between items-center border-b border-zinc-100 pb-2">
+                          <View>
+                            <Text className="text-zinc-955 text-xs font-black uppercase">{d.ticket_id || d.id}</Text>
+                            <Text className="text-zinc-450 text-[8px] font-black uppercase mt-0.5">Category: {d.category.replace('_', ' ')}</Text>
+                          </View>
+                          <View className={`px-2.5 py-1 rounded-md ${
+                            d.status === 'OPEN' ? 'bg-rose-50 border border-rose-100' :
+                            d.status === 'IN REVIEW' ? 'bg-amber-50 border border-amber-100' :
+                            'bg-emerald-50 border border-emerald-100'
+                          }`}>
+                            <Text className={`text-[8px] font-black uppercase ${
+                              d.status === 'OPEN' ? 'text-rose-600' :
+                              d.status === 'IN REVIEW' ? 'text-amber-600' :
+                              'text-emerald-600'
+                            }`}>{d.status}</Text>
+                          </View>
+                        </View>
+
+                        <View className="gap-2 bg-zinc-50 border border-zinc-150/50 p-3 rounded-2xl">
+                          {d.trainer_name ? (
+                            <View className="flex-row justify-between">
+                              <Text className="text-zinc-455 text-[9px] font-bold uppercase">
+                                {disputeSection === 'user' ? 'Client / User' : 'Trainer'}
+                              </Text>
+                              <Text className="text-zinc-900 text-[10px] font-black">{d.trainer_name} {d.trainer_phone ? `(${d.trainer_phone})` : ''}</Text>
+                            </View>
+                          ) : null}
+                          {d.client_name ? (
+                            <View className="flex-row justify-between">
+                              <Text className="text-zinc-450 text-[9px] font-bold uppercase">Client</Text>
+                              <Text className="text-zinc-900 text-[10px] font-black">{d.client_name} {d.client_phone ? `(${d.client_phone})` : ''}</Text>
+                            </View>
+                          ) : null}
+                          {d.booking_id ? (
+                            <View className="flex-row justify-between">
+                              <Text className="text-zinc-455 text-[9px] font-bold uppercase">Booking ID</Text>
+                              <Text className="text-zinc-900 text-[10px] font-extrabold">{d.booking_id}</Text>
+                            </View>
+                          ) : null}
+                          <View className="flex-row justify-between">
+                            <Text className="text-zinc-450 text-[9px] font-bold uppercase">Date Created</Text>
+                            <Text className="text-zinc-900 text-[10px] font-black">{new Date(d.created_at).toLocaleString()}</Text>
+                          </View>
+                        </View>
+
+                        <View className="gap-1 mt-1">
+                          <Text className="text-zinc-500 text-[8px] font-black uppercase">Ticket Details</Text>
+                          <Text className="text-zinc-800 text-xs font-semibold leading-relaxed">{d.description}</Text>
+                        </View>
+
+                        {/* Status Update Actions */}
+                        <View className="border-t border-zinc-100 pt-3 mt-1.5 gap-2">
+                          <Text className="text-zinc-450 text-[8px] font-black uppercase">Update Status</Text>
+                          <View className="flex-row gap-1.5 flex-wrap">
+                            {['OPEN', 'IN REVIEW', 'RESOLVED', 'CLOSED'].map((st) => (
+                              <TouchableOpacity
+                                key={st}
+                                onPress={async () => {
+                                  try {
+                                    await Database.updateDisputeStatus(d.id, st);
+                                    Alert.alert('Status Updated', `Ticket status set to ${st}`);
+                                    loadDisputesAndKits();
+                                  } catch (err: any) {
+                                    Alert.alert('Error', err.message);
+                                  }
+                                }}
+                                className={`flex-1 py-2 border rounded-xl items-center ${
+                                  d.status === st ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-zinc-200'
+                                }`}
+                              >
+                                <Text className={`text-[8px] font-black ${d.status === st ? 'text-white' : 'text-zinc-650'}`}>{st}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+                      </LuxuryCard>
+                    ))}
+                  </View>
+                ) : (
+                  <Text className="text-zinc-450 text-xs text-center py-8 bg-white border border-[#E5E7EB] rounded-[28px] overflow-hidden">
+                    {disputeSection === 'user' ? 'No user support tickets logged in system.' : 'No trainer dispute tickets logged in system.'}
+                  </Text>
+                )}
+              </View>
+            );
+          })()}
 
           {activeTab === 'kits' && (
             <View className="gap-6">

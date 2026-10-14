@@ -307,9 +307,9 @@ export default function MembershipScreen() {
             }}
             activeOpacity={0.7}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            className="w-10 h-10 rounded-full border border-zinc-200 bg-white items-center justify-center"
+            className="w-10 h-10 rounded-full items-center justify-center"
           >
-            <Feather name="arrow-left" size={18} color="#18181B" />
+            <Feather name="arrow-left" size={20} color="#18181B" />
           </TouchableOpacity>
 
           {/* Centered Editorial Title */}
@@ -330,9 +330,9 @@ export default function MembershipScreen() {
             activeOpacity={0.7} 
             onPress={() => router.push('/help-support' as any)}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            className="w-10 h-10 rounded-full border border-zinc-200 bg-white items-center justify-center"
+            className="w-10 h-10 rounded-full items-center justify-center"
           >
-            <Text className="text-zinc-700 text-sm font-semibold">?</Text>
+            <Feather name="help-circle" size={20} color="#18181B" />
           </TouchableOpacity>
         </View>
       </View>

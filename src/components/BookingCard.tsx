@@ -11,7 +11,7 @@ import { SessionEngine } from '../services/SessionEngine';
 import { AddPartnerModal } from './AddPartnerModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
-import { getDisplayWorkoutTitle, getBookingISTDateRange, formatToDDMMYYYY } from '../utils/date';
+import { getDisplayWorkoutTitle, getBookingISTDateRange, formatToDDMMYYYY, formatToDayMonthYear } from '../utils/date';
 
 interface BookingCardProps {
   booking: Booking;
@@ -276,6 +276,323 @@ export function BookingCard({ booking }: BookingCardProps) {
   const isAccepted = booking.timelineStatus !== 'booked' && booking.timelineStatus !== 'trainer_assigned';
   const isCancelled = booking.status === 'cancelled' || booking.status === 'client_no_show' || booking.status === 'trainer_no_show' || booking.status === 'missed_session_not_started';
 
+  if (!isTrainer) {
+    const isCancelledOrMissed = isCancelled;
+    const isCompletedStatus = booking.status === 'completed';
+    const statusDotColor = isCompletedStatus
+      ? 'bg-zinc-400'
+      : isCancelledOrMissed
+      ? 'bg-rose-500'
+      : 'bg-emerald-600';
+
+    const statusTextColor = isCompletedStatus
+      ? 'text-zinc-500'
+      : isCancelledOrMissed
+      ? 'text-rose-500'
+      : 'text-emerald-700';
+
+    const statusLabel = isCompletedStatus
+      ? 'COMPLETED'
+      : isCancelledOrMissed
+      ? 'CANCELLED'
+      : 'UPCOMING';
+
+    return (
+      <View className="py-4 border-b border-zinc-200/80">
+        {/* Status indicator row */}
+        <View className="flex-row items-center gap-1.5 mb-3">
+          <View className={`w-2 h-2 rounded-full ${statusDotColor}`} />
+          <Text className={`text-[10px] font-black uppercase tracking-wider ${statusTextColor}`}>
+            {statusLabel}
+          </Text>
+        </View>
+
+        {/* Main Workout Block */}
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={handleViewDetails}
+          className="flex-row items-start gap-3.5"
+        >
+          {/* Workout Icon Circle */}
+          <View className="w-10 h-10 items-center justify-center flex-shrink-0">
+            <Feather name="layers" size={24} color="#101828" />
+          </View>
+
+          {/* Details Column */}
+          <View className="flex-1 pr-1">
+            {/* Title and Solo/Couple badge */}
+            <View className="flex-row items-center justify-between">
+              <Text className="text-[#101828] text-base font-extrabold tracking-tight flex-1 pr-2">
+                {getDisplayWorkoutTitle(booking.workoutTitle)}
+              </Text>
+              <View className="bg-zinc-100 px-2.5 py-0.5 rounded-full border border-zinc-200/60">
+                <Text className="text-zinc-700 text-[11px] font-semibold">
+                  {booking.sessionType === 'COUPLE' ? 'Couple' : 'Solo'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Session Subtitle */}
+            <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">
+              Concierge Wellness Session
+            </Text>
+
+            {/* Date & Time Row with chevron */}
+            <View className="flex-row items-center justify-between mt-2.5">
+              <View className="flex-row items-center gap-4 flex-1">
+                <View className="flex-row items-center gap-1.5">
+                  <Feather name="calendar" size={13} color="#6B7280" />
+                  <Text className="text-zinc-600 text-xs font-semibold">
+                    {formatToDayMonthYear(booking.date)}
+                  </Text>
+                </View>
+                <View className="flex-row items-center gap-1.5">
+                  <Feather name="clock" size={13} color="#6B7280" />
+                  <Text className="text-zinc-600 text-xs font-semibold">
+                    {booking.time}
+                  </Text>
+                </View>
+              </View>
+              <Feather name="chevron-right" size={18} color="#9CA3AF" />
+            </View>
+
+            {/* Address Row */}
+            <View className="flex-row items-center gap-1.5 mt-2">
+              <Feather name="map-pin" size={12} color="#6B7280" />
+              <Text className="text-zinc-600 text-xs font-semibold flex-1 leading-snug" numberOfLines={1}>
+                {booking.address || 'Laxmi Industrial Estate, Andheri West, Mumbai'}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* Coach Row (for upcoming sessions) */}
+        {isUpcoming && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={handleViewDetails}
+            className="flex-row items-center justify-between mt-3.5 pt-3 border-t border-zinc-100/80 pl-1"
+          >
+            <View className="flex-row items-center gap-3 flex-1 pr-2">
+              <Image
+                source={{
+                  uri: booking.trainerPhoto || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80',
+                }}
+                className="w-10 h-10 rounded-full border border-zinc-200"
+              />
+              <View className="flex-1">
+                <Text className="text-[#101828] text-xs font-bold">
+                  Coach: {booking.trainerName || 'Assigned Coach'}
+                </Text>
+                <Text className="text-[#6B7280] text-[11px] font-semibold mt-0.5">
+                  {isAccepted ? 'Your coach has been assigned.' : 'Matching in progress...'}
+                </Text>
+              </View>
+            </View>
+            <Feather name="chevron-right" size={16} color="#9CA3AF" />
+          </TouchableOpacity>
+        )}
+
+        {/* Modal attachments for customer flow */}
+        {booking.sessionType === 'COUPLE' && !!booking.partnerName && (
+          <View className="bg-emerald-50 border border-emerald-100 px-4 py-2.5 rounded-xl mt-3 flex-row items-center gap-2">
+            <Feather name="users" size={12} color="#10B981" />
+            <Text className="text-zinc-500 text-[10px] font-semibold flex-1 leading-snug">
+              Training with: <Text className="font-extrabold text-zinc-800">{booking.partnerName}</Text> (+91 {booking.partnerPhone})
+            </Text>
+          </View>
+        )}
+
+        <AddPartnerModal
+          visible={showPartnerModal}
+          bookingId={booking.id}
+          onClose={() => setShowPartnerModal(false)}
+          onSuccess={() => {
+            setShowPartnerModal(false);
+            useBookingStore.getState().syncFromDB();
+          }}
+        />
+
+        {/* Cancellation Warning Modal */}
+        <Modal
+          visible={showCancelWarningModal}
+          animationType="slide"
+          presentationStyle="fullScreen"
+        >
+          <View 
+            className="flex-1 bg-white justify-between px-6"
+            style={{
+              paddingTop: Math.max(insets.top + 20, 36),
+              paddingBottom: Math.max(insets.bottom + 28, 56),
+            }}
+          >
+            <View className="items-center justify-center flex-1 gap-6">
+              <View className="w-20 h-20 rounded-full bg-rose-50 border border-rose-100 items-center justify-center">
+                <Feather name="alert-triangle" size={40} color="#E11D48" />
+              </View>
+              <View className="items-center gap-3">
+                <Text className="text-[#101828] text-xl font-black text-center max-w-[85%]">
+                  Canceling this session within 2 hours
+                </Text>
+                <Text className="text-[#6B7280] text-sm font-medium leading-relaxed text-center max-w-[90%]">
+                  This session is scheduled within the next 2 hours.{"\n\n"}
+                  If you cancel now, {booking.sessionType === 'COUPLE' ? '2 full credits' : '1 full credit'} will be charged.
+                </Text>
+              </View>
+            </View>
+
+            <View className="gap-3 w-full">
+              <TouchableOpacity
+                activeOpacity={0.8}
+                disabled={isCancelling}
+                onPress={handleConfirmCancelWithinTwoHours}
+                className="w-full bg-[#E11D48] py-4 rounded-2xl items-center justify-center flex-row gap-2"
+              >
+                {isCancelling ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text className="text-white text-xs font-black uppercase tracking-wider">
+                    {booking.sessionType === 'COUPLE' ? 'Cancel & Forfeit 2 Credits' : 'Cancel & Forfeit 1 Credit'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.8}
+                disabled={isCancelling}
+                onPress={() => setShowCancelWarningModal(false)}
+                className="w-full bg-zinc-50 border border-zinc-150 py-4 rounded-2xl items-center justify-center"
+              >
+                <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Keep Session</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Reschedule Modal */}
+        <Modal
+          visible={showRescheduleModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowRescheduleModal(false)}
+        >
+          <View 
+            className="flex-1 bg-white justify-between px-6"
+            style={{
+              paddingTop: Math.max(insets.top + 16, 24),
+              paddingBottom: Math.max(insets.bottom + 20, 32),
+            }}
+          >
+            <View className="flex-1 gap-5">
+              <View className="flex-row justify-between items-center pb-4 border-b border-zinc-100">
+                <View>
+                  <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Reschedule Session</Text>
+                  <Text className="text-[#101828] text-xl font-black tracking-tight mt-0.5">Choose a new session time</Text>
+                </View>
+                <TouchableOpacity onPress={() => setShowRescheduleModal(false)} className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center">
+                  <Feather name="x" size={16} color="#101828" />
+                </TouchableOpacity>
+              </View>
+
+              <View>
+                <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest mb-2.5">Select Date</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {rescheduleDates.map((capsule) => {
+                    const isSelected = selectedRescheduleDate === capsule.ymd;
+                    return (
+                      <TouchableOpacity
+                        key={capsule.ymd}
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          setSelectedRescheduleDate(capsule.ymd);
+                          setSelectedRescheduleTime('');
+                        }}
+                        className={`px-4 py-3 rounded-2xl border items-center justify-center gap-1 ${
+                          isSelected ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-[#E5E7EB]'
+                        }`}
+                        style={{ minWidth: 80 }}
+                      >
+                        <Text className={`text-[9px] font-black uppercase tracking-wider ${isSelected ? 'text-white' : 'text-[#101828]'}`}>
+                          {capsule.label}
+                        </Text>
+                        <Text className={`text-[8px] font-bold ${isSelected ? 'text-zinc-400' : 'text-[#6B7280]'}`}>
+                          {capsule.sub}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              <View className="flex-1">
+                <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest mb-2.5">Available Slots</Text>
+                {availableSlots.length === 0 ? (
+                  <View className="flex-1 justify-center items-center p-8 bg-zinc-50 rounded-2xl border border-zinc-100">
+                    <Feather name="calendar" size={24} color="#9CA3AF" />
+                    <Text className="text-zinc-500 text-xs font-semibold text-center mt-2 leading-relaxed">
+                      No available slots on this day.{"\n"}Please select another date.
+                    </Text>
+                  </View>
+                ) : (
+                  <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+                    <View className="flex-row flex-wrap gap-2.5">
+                      {availableSlots.map((slot) => {
+                        const isSelected = selectedRescheduleTime === slot.time;
+                        return (
+                          <TouchableOpacity
+                            key={slot.time}
+                            activeOpacity={0.8}
+                            onPress={() => setSelectedRescheduleTime(slot.time)}
+                            className={`px-4 py-3.5 rounded-2xl border items-center justify-center ${
+                              isSelected ? 'bg-zinc-950 border-zinc-950' : 'bg-zinc-50 border-zinc-100'
+                            }`}
+                            style={{ width: '48%' }}
+                          >
+                            <Text className={`text-xs font-black tracking-tight ${isSelected ? 'text-white' : 'text-[#101828]'}`}>
+                              {slot.time}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </ScrollView>
+                )}
+              </View>
+            </View>
+
+            <View className="gap-3 w-full border-t border-zinc-100 pt-4">
+              <TouchableOpacity
+                activeOpacity={0.8}
+                disabled={isRescheduling || !selectedRescheduleDate || !selectedRescheduleTime}
+                onPress={handleConfirmReschedule}
+                className={`w-full py-4 rounded-2xl items-center justify-center flex-row gap-2 ${
+                  (!selectedRescheduleDate || !selectedRescheduleTime) ? 'bg-zinc-200' : 'bg-[#E11D48]'
+                }`}
+              >
+                {isRescheduling ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text className={`text-xs font-black uppercase tracking-wider ${
+                    (!selectedRescheduleDate || !selectedRescheduleTime) ? 'text-zinc-400' : 'text-white'
+                  }`}>Confirm Reschedule</Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.8}
+                disabled={isRescheduling}
+                onPress={() => setShowRescheduleModal(false)}
+                className="w-full bg-zinc-50 border border-zinc-150 py-4 rounded-2xl items-center justify-center"
+              >
+                <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Keep Current</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </View>
+    );
+  }
+
   if (isCancelled) {
     return (
       <View className="py-4 mb-3 border-b border-zinc-200/80">
@@ -432,7 +749,7 @@ export function BookingCard({ booking }: BookingCardProps) {
         );
       })()}
 
-      {isUpcoming && role === 'customer' && booking.sessionType === 'SINGLE' && booking.timelineStatus !== 'otp_verified' && booking.timelineStatus !== 'workout_started' && booking.timelineStatus !== 'workout_completed' && booking.timelineStatus !== 'session_closed' && (
+      {isUpcoming && !isTrainer && booking.sessionType === 'SINGLE' && booking.timelineStatus !== 'otp_verified' && booking.timelineStatus !== 'workout_started' && booking.timelineStatus !== 'workout_completed' && booking.timelineStatus !== 'session_closed' && (
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => setShowPartnerModal(true)}

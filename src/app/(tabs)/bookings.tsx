@@ -117,7 +117,7 @@ export default function BookingsScreen() {
   const { role, user } = useUserStore();
   const [prevRole, setPrevRole] = useState(role);
   const [activeFilter, setActiveFilter] = useState<FilterType>(role === 'trainer' ? 'today' : 'upcoming');
-  const [cancelledDateFilter, setCancelledDateFilter] = useState<'all' | 'today' | 'yesterday' | 'older'>('all');
+  const [clientDateFilter, setClientDateFilter] = useState<'all' | 'today' | 'this_week' | 'this_month'>('all');
   const [loading, setLoading] = useState(() => !Database.getIsLoaded());
   const [isSwitchingTab, setIsSwitchingTab] = useState(false);
 
@@ -396,35 +396,53 @@ export default function BookingsScreen() {
   // Regular Customer Bookings list filter (Memoized for high performance)
   const filteredBookings = useMemo(() => {
     const list = bookings.filter((b) => {
+      // 1. Status Filter
       if (activeFilter === 'upcoming') {
         const serverNow = getCurrentServerTime();
-        return b.status === 'upcoming' && getBookingISTDateRange(b).start.getTime() > serverNow.getTime();
-      }
-      if (activeFilter === 'cancelled') {
+        if (b.status !== 'upcoming' || getBookingISTDateRange(b).start.getTime() <= serverNow.getTime()) {
+          return false;
+        }
+      } else if (activeFilter === 'cancelled') {
         const isCancelledOrMissed = b.status === 'cancelled' || b.status === 'client_no_show' || b.status === 'trainer_no_show' || b.status === 'missed_session_not_started';
         if (!isCancelledOrMissed) return false;
-
-        if (cancelledDateFilter === 'all') return true;
-
-        const bDateStr = normalizeDate(getBookingDateObj(b.date));
-        const now = getCurrentServerTime();
-        const todayStr = normalizeDate(now);
-        const yesterdayDate = new Date(now);
-        yesterdayDate.setDate(now.getDate() - 1);
-        const yesterdayStr = normalizeDate(yesterdayDate);
-
-        if (cancelledDateFilter === 'today') {
-          return bDateStr === todayStr;
-        }
-        if (cancelledDateFilter === 'yesterday') {
-          return bDateStr === yesterdayStr;
-        }
-        if (cancelledDateFilter === 'older') {
-          return bDateStr !== todayStr && bDateStr !== yesterdayStr;
-        }
-        return true;
+      } else if (b.status !== activeFilter) {
+        return false;
       }
-      return b.status === activeFilter;
+
+      // 2. Date Range Filter (All, Today, This Week, This Month)
+      if (clientDateFilter === 'all') return true;
+
+      const bDateStr = normalizeDate(getBookingDateObj(b.date));
+      const now = getCurrentServerTime();
+      const todayStr = normalizeDate(now);
+
+      if (clientDateFilter === 'today') {
+        return bDateStr === todayStr;
+      }
+
+      if (clientDateFilter === 'this_week') {
+        const bookingDate = getBookingDateObj(b.date);
+        const startOfWeek = new Date(now);
+        const dayOfWeek = startOfWeek.getDay(); // 0 is Sunday
+        startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+
+        return bookingDate >= startOfWeek && bookingDate <= endOfWeek;
+      }
+
+      if (clientDateFilter === 'this_month') {
+        const bookingDate = getBookingDateObj(b.date);
+        return (
+          bookingDate.getMonth() === now.getMonth() &&
+          bookingDate.getFullYear() === now.getFullYear()
+        );
+      }
+
+      return true;
     });
 
     if (activeFilter === 'upcoming') {
@@ -436,7 +454,7 @@ export default function BookingsScreen() {
         return getBookingISTDateRange(b).start.getTime() - getBookingISTDateRange(a).start.getTime();
       });
     }
-  }, [bookings, activeFilter, cancelledDateFilter]);
+  }, [bookings, activeFilter, clientDateFilter]);
 
   const getFilterLabel = (type: FilterType) => {
     switch (type) {
@@ -1093,40 +1111,52 @@ export default function BookingsScreen() {
         >
         {/* Page Header */}
         <View className="mb-6">
-          <View className="flex-row items-start gap-5">
-            <TouchableOpacity
-              activeOpacity={0.6}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              onPress={() => {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/(tabs)');
-                }
-              }}
-              className="w-8 h-8 items-center justify-center active:opacity-60 mt-1"
-              accessibilityRole="button"
-              accessibilityLabel="Back"
-            >
-              <Ionicons name="chevron-back" size={28} color="#101828" />
-            </TouchableOpacity>
+          <View className="flex-row items-start justify-between">
+            <View className="flex-row items-start gap-3.5 flex-1 pr-2">
+              <TouchableOpacity
+                activeOpacity={0.6}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                onPress={() => {
+                  if (router.canGoBack()) {
+                    router.back();
+                  } else {
+                    router.replace('/(tabs)');
+                  }
+                }}
+                className="w-9 h-9 items-center justify-center -ml-1 mt-0.5"
+                accessibilityRole="button"
+                accessibilityLabel="Back"
+              >
+                <Feather name="arrow-left" size={24} color="#101828" />
+              </TouchableOpacity>
 
-            <View className="flex-1">
-              <Text className="text-[#101828] text-3xl font-black tracking-tight">
-                Booked Sessions
-              </Text>
-              <Text className="text-[#6B7280] text-xs font-extrabold uppercase tracking-widest mt-1">
-                MY SCHEDULE
-              </Text>
-              <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed mt-0.5">
-                Track and manage all your scheduled home wellness visits.
-              </Text>
+              <View className="flex-1">
+                <Text className="text-[#6B7280] text-xs font-extrabold uppercase tracking-widest">
+                  MY SCHEDULE
+                </Text>
+                <Text className="text-[#101828] text-3xl font-black tracking-tight mt-1">
+                  Booked Sessions
+                </Text>
+                <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed mt-1">
+                  Track and manage all your scheduled home wellness visits.
+                </Text>
+              </View>
             </View>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              className="w-10 h-10 rounded-full border border-zinc-200/80 bg-white items-center justify-center active:opacity-60 mt-0.5"
+              accessibilityRole="button"
+              accessibilityLabel="Filter"
+            >
+              <Feather name="sliders" size={18} color="#101828" />
+            </TouchableOpacity>
           </View>
         </View>
 
         {/* Filter Capsule Selector Tabs */}
-        <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1.5 rounded-2xl mb-4">
+        <View className="flex-row bg-[#E5E7EB]/50 p-1 rounded-full mb-4">
           {filterOptions.map((opt) => {
             const isActive = activeFilter === opt;
             return (
@@ -1137,25 +1167,25 @@ export default function BookingsScreen() {
                   if (activeFilter === opt) return;
                   setIsSwitchingTab(true);
                   setActiveFilter(opt);
-                  setCancelledDateFilter('all');
+                  setClientDateFilter('all');
                   // Let the UI immediately switch the tab button and show spinner, then yield to render cards
                   setTimeout(() => {
                     setIsSwitchingTab(false);
                   }, 60);
                 }}
-                className={`flex-1 py-3.5 rounded-xl items-center justify-center ${
+                className={`flex-1 py-2.5 rounded-full items-center justify-center ${
                   isActive ? 'bg-[#101828]' : ''
                 }`}
                 style={isActive ? {
                   shadowColor: '#101828',
                   shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
+                  shadowOpacity: 0.12,
                   shadowRadius: 4,
                   elevation: 2,
                 } : undefined}
               >
                 <Text 
-                  className={`text-[10px] font-black uppercase tracking-wider ${
+                  className={`text-xs font-bold ${
                     isActive ? 'text-white' : 'text-[#6B7280]'
                   }`}
                 >
@@ -1166,29 +1196,35 @@ export default function BookingsScreen() {
           })}
         </View>
 
-        {/* Date Filter Pills ONLY for Cancelled & Missed tab */}
-        {activeFilter === 'cancelled' && (
-          <View className="flex-row gap-2 mb-5 px-0.5">
-            {(['all', 'today', 'yesterday', 'older'] as const).map((filterKey) => {
-              const isActive = cancelledDateFilter === filterKey;
+        {/* Date Filter Pills (All / Today / This Week / This Month) */}
+        <View className="mb-5 -mx-6">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, paddingHorizontal: 24 }}
+          >
+            {(['all', 'today', 'this_week', 'this_month'] as const).map((filterKey) => {
+              const isActive = clientDateFilter === filterKey;
               const labels = {
                 all: 'All',
                 today: 'Today',
-                yesterday: 'Yesterday',
-                older: 'Older',
+                this_week: 'This Week',
+                this_month: 'This Month',
               };
               return (
                 <TouchableOpacity
                   key={filterKey}
                   activeOpacity={0.8}
-                  onPress={() => setCancelledDateFilter(filterKey)}
-                  className={`px-4 py-2 rounded-full border ${
+                  onPress={() => setClientDateFilter(filterKey)}
+                  className={`px-4 py-2 rounded-full border items-center justify-center flex-row ${
                     isActive
                       ? 'bg-[#101828] border-[#101828]'
-                      : 'bg-white border-zinc-200'
+                      : 'bg-white border-zinc-200/80'
                   }`}
+                  style={{ flexShrink: 0 }}
                 >
                   <Text
+                    numberOfLines={1}
                     className={`text-xs font-bold ${
                       isActive ? 'text-white' : 'text-zinc-600'
                     }`}
@@ -1198,8 +1234,8 @@ export default function BookingsScreen() {
                 </TouchableOpacity>
               );
             })}
-          </View>
-        )}
+          </ScrollView>
+        </View>
 
         {/* Bookings Render List */}
         <View className="min-h-[220px]">
@@ -1226,16 +1262,16 @@ export default function BookingsScreen() {
               }
               showCard={false}
               message={
-                activeFilter === 'cancelled' && cancelledDateFilter !== 'all'
-                  ? `No cancelled or missed visits found for ${cancelledDateFilter}.`
+                activeFilter === 'cancelled' && clientDateFilter !== 'all'
+                  ? `No cancelled or missed visits found for this period.`
                   : activeFilter === 'upcoming' 
                     ? 'Schedule your next premium at-home training session from the home dashboard.'
                     : activeFilter === 'cancelled'
                       ? 'You do not have any cancelled sessions logged in your profile.'
                       : `You do not have any ${activeFilter} visits logged in your profile.`
               }
-              actionText={activeFilter === 'cancelled' && cancelledDateFilter !== 'all' ? 'Show All' : undefined}
-              onAction={activeFilter === 'cancelled' && cancelledDateFilter !== 'all' ? () => setCancelledDateFilter('all') : undefined}
+              actionText={clientDateFilter !== 'all' ? 'Show All' : undefined}
+              onAction={clientDateFilter !== 'all' ? () => setClientDateFilter('all') : undefined}
             />
           )}
         </View>

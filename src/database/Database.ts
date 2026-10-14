@@ -3063,13 +3063,17 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
   }
 
   async addClientDispute(userId: string, dispute: any): Promise<void> {
+    const formattedDescription = dispute.subject
+      ? `[${dispute.subject}]\n\n${dispute.description}`
+      : dispute.description;
+
     const { error } = await supabase
       .from('disputes')
       .insert({
         trainer_id: userId,
         booking_id: dispute.bookingId || null,
         category: dispute.category,
-        description: dispute.description
+        description: formattedDescription
       });
     if (error) {
       console.error('[DB ERROR] addClientDispute failed:', error);

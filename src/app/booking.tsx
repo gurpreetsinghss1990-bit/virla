@@ -2008,18 +2008,18 @@ export default function BookingScreen() {
               onPress={handleBack} 
               activeOpacity={0.7}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} 
-              className="w-9 h-9 items-center justify-center rounded-full bg-zinc-100/80 border border-zinc-200/60"
+              className="w-9 h-9 items-center justify-center rounded-full"
             >
-              <Ionicons name="arrow-back" size={18} color="#09090B" />
+              <Ionicons name="arrow-back" size={20} color="#09090B" />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity 
               onPress={() => router.replace('/(tabs)')} 
               activeOpacity={0.7}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} 
-              className="w-9 h-9 items-center justify-center rounded-full bg-zinc-100/80 border border-zinc-200/60"
+              className="w-9 h-9 items-center justify-center rounded-full"
             >
-              <Ionicons name="arrow-back" size={18} color="#09090B" />
+              <Ionicons name="arrow-back" size={20} color="#09090B" />
             </TouchableOpacity>
           )}
 
@@ -2458,9 +2458,9 @@ export default function BookingScreen() {
                               onPress={() => setAddAddressStep(1)} 
                               activeOpacity={0.7}
                               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                              className="w-9 h-9 items-center justify-center rounded-full bg-zinc-100/80 border border-zinc-200/60"
+                              className="w-9 h-9 items-center justify-center rounded-full"
                             >
-                              <Ionicons name="arrow-back" size={18} color="#09090B" />
+                              <Ionicons name="arrow-back" size={20} color="#09090B" />
                             </TouchableOpacity>
                             <View className="items-center flex-1 mx-2">
                               <View className="flex-row items-center gap-1.5">
@@ -2595,9 +2595,9 @@ export default function BookingScreen() {
                                   onPress={() => setIsAddAddressModalVisible(false)} 
                                   activeOpacity={0.7}
                                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                  className="w-9 h-9 items-center justify-center rounded-full bg-zinc-100/80 border border-zinc-200/60"
+                                  className="w-9 h-9 items-center justify-center rounded-full"
                                 >
-                                  <Ionicons name="arrow-back" size={18} color="#09090B" />
+                                  <Ionicons name="arrow-back" size={20} color="#09090B" />
                                 </TouchableOpacity>
                                 <View className="items-center flex-1 mx-2">
                                   <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">
