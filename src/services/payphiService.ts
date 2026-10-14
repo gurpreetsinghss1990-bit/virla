@@ -26,7 +26,7 @@ export const PayPhiService = {
   /**
    * Initializes the native PayPhi SDK with merchant & app credentials
    */
-  initSDK: async (env = 'PROD', merchantId = '100000000527739', appId = '80bc18249511f868', merchantName = 'NAMRATHA JAUNI'): Promise<{ success: boolean; code?: string; message?: string }> => {
+  initSDK: async (env = 'PROD', merchantId = '100000000527738', appId = '80bc18249511f868', merchantName = 'NAMRATHA JAUNI'): Promise<{ success: boolean; code?: string; message?: string }> => {
     try {
       console.log(`[PayPhiService] Initializing SDK: env=${env}, mId=${merchantId}, appId=${appId}, merchantName=${merchantName}`);
       
@@ -212,7 +212,7 @@ export const PayPhiService = {
       if (!isInitialized) {
         const initRes = await PayPhiService.initSDK(
           order.envType || 'PROD',
-          order.aggregatorId || order.merchantId,
+          order.merchantId,
           order.appId,
           order.merchantName
         );

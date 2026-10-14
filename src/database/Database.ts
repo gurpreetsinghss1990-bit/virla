@@ -21,65 +21,19 @@ export function hashPassword(password: string): string {
 }
 
 // --- Authoritative NTP Clock & Timezone-Safe Asia/Kolkata (IST) Helpers ---
-let serverTimeOffset = 0;
+import {
+  syncServerTime,
+  getCurrentServerTime,
+  getISTDateInfo,
+  parseISTToUTCDate
+} from '../utils/clock';
 
-export async function syncServerTime(): Promise<void> {
-  try {
-    const start = Date.now();
-    const { data, error } = await supabase.rpc('get_server_time');
-    if (data && !error) {
-      const serverMs = new Date(data).getTime();
-      const end = Date.now();
-      const latency = (end - start) / 2;
-      serverTimeOffset = (serverMs + latency) - end;
-      console.log(`[NTP CLOCK] Synced with Supabase server. Offset: ${serverTimeOffset}ms (latency: ${latency}ms)`);
-    } else if (error) {
-      console.warn('[NTP CLOCK] get_server_time RPC error:', error);
-    }
-  } catch (e) {
-    console.error('[NTP CLOCK] Failed to sync server time:', e);
-  }
-}
-
-export function getCurrentServerTime(): Date {
-  return new Date(Date.now() + serverTimeOffset);
-}
-
-export function getISTDateInfo(date: Date) {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  });
-  const parts = formatter.formatToParts(date);
-  const info: any = {};
-  for (const part of parts) {
-    info[part.type] = part.value;
-  }
-
-  const year = parseInt(info.year, 10);
-  const month = parseInt(info.month, 10); // 1-12
-  const day = parseInt(info.day, 10);
-  const hour = parseInt(info.hour, 10);
-  const minute = parseInt(info.minute, 10);
-  const second = parseInt(info.second, 10);
-
-  const dateString = `${info.year}-${info.month}-${info.day}`;
-
-  return { year, month, day, hour, minute, second, dateString };
-}
-
-export function parseISTToUTCDate(year: number, month: number, day: number, hour: number, minute: number): Date {
-  // Construct Date assuming UTC components
-  const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
-  // Subtract Asia/Kolkata offset (+5:30 = 330 minutes)
-  return new Date(utcDate.getTime() - 330 * 60 * 1000);
-}
+export {
+  syncServerTime,
+  getCurrentServerTime,
+  getISTDateInfo,
+  parseISTToUTCDate
+};
 
 export function calculateDurationFromTime(timeStr: string): number {
   if (!timeStr) return 60;
@@ -171,6 +125,22 @@ export interface ChatMessage {
   timestamp: string;
   isPinned?: boolean;
   isFavorite?: boolean;
+}
+
+export interface SupportTicket {
+  id: string;
+  ticket_id: string;
+  user_id: string;
+  user_name: string;
+  user_phone: string;
+  booking_id?: string;
+  category: string;
+  reason: string;
+  description: string;
+  preferred_resolution?: string;
+  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+  created_at: string;
+  updated_at: string;
 }
 
 export interface TrainerApplication {
@@ -3150,6 +3120,91 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       .eq('id', orderId);
     if (error) {
       console.error('[DB ERROR] updateKitOrderStatus failed:', error);
+      throw error;
+    }
+  }
+
+  // Support Tickets (Client Concierge)
+  async createSupportTicket(ticket: {
+    userId: string;
+    bookingId?: string;
+    category: string;
+    reason: string;
+    description: string;
+    preferredResolution?: string;
+  }): Promise<SupportTicket> {
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('name, phone')
+      .eq('id', ticket.userId)
+      .single();
+
+    const insertPayload = {
+      user_id: ticket.userId,
+      user_name: userRow?.name || '',
+      user_phone: userRow?.phone || '',
+      booking_id: ticket.bookingId || null,
+      category: ticket.category,
+      reason: ticket.reason,
+      description: ticket.description,
+      preferred_resolution: ticket.preferredResolution || 'Resolution via Support Chat',
+      status: 'OPEN'
+    };
+
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .insert(insertPayload)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('[DB ERROR] createSupportTicket failed:', error);
+      throw error;
+    }
+
+    // Auto post initial greeting/diagnostic message into chat_messages for this ticket
+    const chatId = `support_ticket_${data.ticket_id || data.id}`;
+    const initialText = `[Concierge Ticket #${data.ticket_id}] Issue regarding ${ticket.category}: "${ticket.reason}". Client statement: "${ticket.description}". Concierge support agent will respond shortly.`;
+    this.sendChatMessage(chatId, initialText, 'virla' as any);
+
+    return data as SupportTicket;
+  }
+
+  async fetchUserSupportTickets(userId: string): Promise<SupportTicket[]> {
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[DB ERROR] fetchUserSupportTickets failed:', error);
+      return [];
+    }
+    return (data || []) as SupportTicket[];
+  }
+
+  async fetchAllSupportTickets(): Promise<SupportTicket[]> {
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[DB ERROR] fetchAllSupportTickets failed:', error);
+      return [];
+    }
+    return (data || []) as SupportTicket[];
+  }
+
+  async updateSupportTicketStatus(ticketId: string, status: string): Promise<void> {
+    const { error } = await supabase
+      .from('support_tickets')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', ticketId);
+
+    if (error) {
+      console.error('[DB ERROR] updateSupportTicketStatus failed:', error);
       throw error;
     }
   }

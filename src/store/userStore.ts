@@ -3,7 +3,6 @@ import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Invoice } from '../types';
 import { Database } from '../database/Database';
-import { syncAllDomainStores } from './syncAllStores';
 import { PushNotificationService } from '../services/PushNotificationService';
 
 let SecureStore: any = null;
@@ -130,6 +129,7 @@ export const useUserStore = create<UserState>()(
             PushNotificationService.syncTokenWithBackend(userId).then();
           }
 
+          const { syncAllDomainStores } = require('./syncAllStores');
           syncAllDomainStores();
         } else {
           // Remove push token on logout before local data wipes
@@ -145,6 +145,7 @@ export const useUserStore = create<UserState>()(
           } catch (e) {
             console.error('Failed to clear local caches on logout:', e);
           }
+          const { syncAllDomainStores } = require('./syncAllStores');
           syncAllDomainStores();
         }
       },

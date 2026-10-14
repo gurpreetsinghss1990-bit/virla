@@ -15,6 +15,7 @@ const SUPABASE_ANON_KEY =
 let clientUserId: string | null = null;
 
 export function setClientUserId(userId: string | null) {
+  if (clientUserId === userId) return;
   clientUserId = userId;
   console.log(`[Supabase Client] Set x-user-id header cache: ${userId}`);
 }

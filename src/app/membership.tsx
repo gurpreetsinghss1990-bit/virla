@@ -26,8 +26,8 @@ interface Plan {
 }
 
 const PLANS: Plan[] = [
-  // Internal Developer Test Plan (Only visible during __DEV__ development builds)
-  ...(__DEV__ ? [{
+  // Developer Test Plan (₹1 Verification)
+  {
     id: 'plan-dev-test',
     name: 'Dev Test 1 Rupee Verification',
     credits: 1,
@@ -37,9 +37,9 @@ const PLANS: Plan[] = [
     gstVal: '₹0',
     amountVal: '₹1',
     idealFor: 'Safe real bank & gateway verification without charges.',
-    category: 'individual' as const,
+    category: 'individual',
     badge: 'DEV TEST (₹1)',
-  }] : []),
+  },
   // Individual Plans (1 Person)
   {
     id: 'plan-ind-1',

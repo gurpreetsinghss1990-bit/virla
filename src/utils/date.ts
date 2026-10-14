@@ -1,4 +1,4 @@
-import { getCurrentServerTime, getISTDateInfo } from '../database/Database';
+import { getCurrentServerTime, getISTDateInfo } from './clock';
 
 /**
  * Normalizes a date representation from any of the formats:

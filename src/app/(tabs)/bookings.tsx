@@ -7,11 +7,15 @@ import { BookingCard } from '../../components/BookingCard';
 import { EmptyState } from '../../components/EmptyState';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { useUserStore } from '../../store/userStore';
-import { Database, getCurrentServerTime, getISTDateInfo } from '../../database/Database';
+import { Database, getCurrentServerTime, getISTDateInfo, SupportTicket } from '../../database/Database';
 import { syncAllDomainStores } from '../../store/syncAllStores';
 import { useCoachStore, generateMonthlySlots } from '../../store/coachStore';
 import { normalizeDate, canonicalizeTimeRange, formatToDDMMYYYY, getBookingISTDateRange } from '../../utils/date';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import { Booking } from '../../types';
+import { RaiseSupportTicketModal } from '../../components/RaiseSupportTicketModal';
+import { SupportChatModal } from '../../components/SupportChatModal';
+import { UserTicketsModal } from '../../components/UserTicketsModal';
 
 type FilterType = 'upcoming' | 'completed' | 'cancelled' | 'today' | 'past';
 type TrainerTabType = 'today' | 'tomorrow' | 'weekly' | 'history';
@@ -120,6 +124,13 @@ export default function BookingsScreen() {
   const [clientDateFilter, setClientDateFilter] = useState<'all' | 'today' | 'this_week' | 'this_month'>('all');
   const [loading, setLoading] = useState(() => !Database.getIsLoaded());
   const [isSwitchingTab, setIsSwitchingTab] = useState(false);
+
+  // Client Support States
+  const [supportBooking, setSupportBooking] = useState<Booking | null>(null);
+  const [showRaiseTicketModal, setShowRaiseTicketModal] = useState<boolean>(false);
+  const [showUserTicketsModal, setShowUserTicketsModal] = useState<boolean>(false);
+  const [activeChatTicket, setActiveChatTicket] = useState<SupportTicket | null>(null);
+  const [showSupportChatModal, setShowSupportChatModal] = useState<boolean>(false);
 
   // Trainer States
   const [today, setToday] = useState(() => getCurrentServerTime());
@@ -1143,14 +1154,13 @@ export default function BookingsScreen() {
               </View>
             </View>
 
+            {/* Support Tickets Notepad / History Button */}
             <TouchableOpacity
               activeOpacity={0.7}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              className="w-10 h-10 rounded-full border border-zinc-200/80 bg-white items-center justify-center active:opacity-60 mt-0.5"
-              accessibilityRole="button"
-              accessibilityLabel="Filter"
+              onPress={() => setShowUserTicketsModal(true)}
+              className="bg-white border border-[#E5E7EB] p-2.5 rounded-2xl items-center justify-center shadow-xs mt-1 flex-row gap-1"
             >
-              <Feather name="sliders" size={18} color="#101828" />
+              <Feather name="file-text" size={18} color="#101828" />
             </TouchableOpacity>
           </View>
         </View>
@@ -1248,7 +1258,14 @@ export default function BookingsScreen() {
             </View>
           ) : filteredBookings.length > 0 ? (
             filteredBookings.map((booking) => (
-              <BookingCard key={booking.id} booking={booking} />
+              <BookingCard 
+                key={booking.id} 
+                booking={booking} 
+                onOpenSupport={(b) => {
+                  setSupportBooking(b);
+                  setShowRaiseTicketModal(true);
+                }}
+              />
             ))
           ) : (
             <EmptyState 
@@ -1277,6 +1294,43 @@ export default function BookingsScreen() {
         </View>
         </ScrollView>
       )}
+
+      {/* 1. Raise Support Ticket Question Flow Modal */}
+      <RaiseSupportTicketModal
+        visible={showRaiseTicketModal}
+        booking={supportBooking}
+        userId={user.id}
+        onClose={() => {
+          setShowRaiseTicketModal(false);
+          setSupportBooking(null);
+        }}
+        onTicketCreated={(newTicket) => {
+          setActiveChatTicket(newTicket);
+          setShowSupportChatModal(true);
+        }}
+      />
+
+      {/* 2. User Ticket History Modal */}
+      <UserTicketsModal
+        visible={showUserTicketsModal}
+        userId={user.id}
+        onClose={() => setShowUserTicketsModal(false)}
+        onSelectTicket={(ticket) => {
+          setActiveChatTicket(ticket);
+          setShowSupportChatModal(true);
+        }}
+      />
+
+      {/* 3. Realtime User ↔ Admin Support Chat Modal */}
+      <SupportChatModal
+        visible={showSupportChatModal}
+        ticket={activeChatTicket}
+        currentRole="customer"
+        onClose={() => {
+          setShowSupportChatModal(false);
+          setActiveChatTicket(null);
+        }}
+      />
     </SafeAreaViewWrapper>
   );
 }
