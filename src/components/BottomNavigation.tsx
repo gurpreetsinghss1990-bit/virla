@@ -67,7 +67,7 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
       <Ionicons
         name={iconName}
         size={22}
-        color={isFocused ? '#E11D48' : '#1E293B'}
+        color={isFocused ? '#E11D48' : '#9CA3AF'}
       />
     );
   };
@@ -89,10 +89,6 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
     }
   };
 
-  // Visible routes indices
-  const currentRouteName = state.routes[state.index]?.name;
-  const activeRouteIndex = visibleRoutes.findIndex((r: any) => r.name === currentRouteName);
-
   return (
     <View
       style={[
@@ -104,14 +100,14 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
     >
       <View style={styles.navContainer}>
         {visibleRoutes.map((route: any, index: number) => {
-          const isFocused = currentRouteName === route.name;
+          const isFocused = state.routes[state.index]?.name === route.name;
 
           const onPress = () => {
             if (isTabPressingRef.current) return;
             isTabPressingRef.current = true;
             setTimeout(() => {
               isTabPressingRef.current = false;
-            }, 400);
+            }, 500);
 
             const event = navigation.emit({
               type: 'tabPress',
@@ -127,31 +123,29 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
           const tabElement = (
             <TouchableOpacity
               key={route.key}
-              activeOpacity={0.75}
+              activeOpacity={0.8}
               onPress={onPress}
-              className="items-center justify-center flex-1 py-1 z-10 relative"
-              style={{ minHeight: 44, zIndex: 10 }}
+              className="items-center justify-center flex-1 py-1 z-10 relative px-0.5"
+              style={{ minHeight: 44, zIndex: 10 }} // Apple HIG touch target
             >
-              <View className="items-center justify-center">
-                {/* Icon Wrapper */}
-                <View className="w-6 h-6 items-center justify-center mb-0.5 relative">
-                  {getIcon(route.name, isFocused)}
-                  {/* Red Dot indicator for tabs with unread messages */}
-                  {hasTabUnread(route.name) && (
-                    <View style={styles.redDot} />
-                  )}
-                </View>
-                <Text
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.8}
-                  className={`text-[8.5px] uppercase tracking-tight text-center ${
-                    isFocused ? 'text-[#E11D48] font-black' : 'text-[#334155] font-black'
-                  }`}
-                >
-                  {getLabel(route.name)}
-                </Text>
+              {/* Icon Wrapper */}
+              <View className="w-8 h-8 items-center justify-center mb-0.5 relative">
+                {getIcon(route.name, isFocused)}
+                {/* Red Dot indicator for tabs with unread messages */}
+                {hasTabUnread(route.name) && (
+                  <View style={styles.redDot} />
+                )}
               </View>
+              <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
+                className={`text-[8.5px] font-bold uppercase tracking-tight text-center ${
+                  isFocused ? 'text-[#E11D48]' : 'text-zinc-400'
+                }`}
+              >
+                {getLabel(route.name)}
+              </Text>
             </TouchableOpacity>
           );
 
@@ -159,22 +153,22 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
             // Render central '+' slot only for non-trainer roles
             return (
               <React.Fragment key="group-center">
-                <View className="items-center justify-center px-1 py-0.5 z-20 relative" style={{ minHeight: 46 }}>
+                <View className="items-center justify-center flex-1 py-1 z-20 relative" style={{ minHeight: 44 }}>
                   <TouchableOpacity
                     activeOpacity={0.9}
                     onPress={handlePlusPress}
-                    className="w-10 h-10 rounded-full bg-[#E11D48] items-center justify-center"
+                    className="w-12 h-12 rounded-full bg-[#E11D48] items-center justify-center"
                     style={{
-                      minHeight: 40,
-                      minWidth: 40,
+                      minHeight: 48,
+                      minWidth: 48,
                       shadowColor: '#E11D48',
-                      shadowOffset: { width: 0, height: 3 },
+                      shadowOffset: { width: 0, height: 4 },
                       shadowOpacity: 0.3,
-                      shadowRadius: 6,
+                      shadowRadius: 8,
                       elevation: 4,
                     }}
                   >
-                    <Feather name="plus" size={20} color="white" />
+                    <Feather name="plus" size={24} color="white" />
                   </TouchableOpacity>
                 </View>
                 {tabElement}
@@ -192,42 +186,47 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
 const styles = StyleSheet.create({
   shadowWrapper: {
     position: 'absolute',
-    left: 16,
-    right: 16,
+    left: 24,
+    right: 24,
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.16,
+    shadowRadius: 20,
+    elevation: 14,
     zIndex: 50,
   },
   navContainer: {
-    borderRadius: 30,
-    borderWidth: 1.2,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
-    // Glossy frosted solid base: solid high-opacity surface with subtle light reflectance
-    backgroundColor: 'rgba(253, 253, 254, 0.96)',
+    borderRadius: 32,
+    borderTopWidth: 2,
+    borderLeftWidth: 2,
+    borderTopColor: '#FFFFFF',
+    borderLeftColor: '#FFFFFF',
+    borderRightWidth: 1.5,
+    borderBottomWidth: 3.5,
+    borderRightColor: '#E2E8F0',
+    borderBottomColor: '#CBD5E1',
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 5,
+    paddingVertical: 12,
     paddingHorizontal: 6,
     position: 'relative',
   },
   redDot: {
     position: 'absolute',
-    top: -1,
-    right: -1,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    top: 1,
+    right: 3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: '#E11D48',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#FFFFFF',
     shadowColor: '#E11D48',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.45,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 3,
   },
 });
 
