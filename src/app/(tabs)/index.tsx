@@ -1096,7 +1096,7 @@ export default function HomeScreen() {
                 {role === 'trainer' ? 'IRLA PRO' : 'IRLA'}
               </Text>
             </View>
-            <Text className="text-[10px] font-medium tracking-[0.25em] text-zinc-500 uppercase mt-1">
+            <Text className="text-[11px] font-medium tracking-[0.18em] text-zinc-500 uppercase mt-1">
               Wellness At Your Doorstep
             </Text>
           </TouchableOpacity>
@@ -1978,10 +1978,10 @@ export default function HomeScreen() {
               <View className="mb-6">
                 <View className="flex-row justify-between items-center">
                   <View>
-                    <Text className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">
+                    <Text className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">
                       {getGreeting()}
                     </Text>
-                    <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1">
+                    <Text className="text-[#101828] text-2xl font-bold tracking-tight mt-1">
                       {user.name.split(' ')[0]} 👋
                     </Text>
                   </View>
@@ -1989,15 +1989,15 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={toggleOnlineStatus}
-                    className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-150 bg-white"
+                    className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-200 bg-white shadow-sm"
                   >
                     <View className={`w-2 h-2 rounded-full ${trainerOnlineStatus === 'online' ? 'bg-[#16C784]' : 'bg-red-500'}`} />
-                    <Text className={`text-[10px] font-black uppercase tracking-wider ${trainerOnlineStatus === 'online' ? 'text-[#16C784]' : 'text-red-500'}`}>
+                    <Text className={`text-[11px] font-semibold tracking-wide ${trainerOnlineStatus === 'online' ? 'text-[#16C784]' : 'text-red-500'}`}>
                       {trainerOnlineStatus === 'online' ? 'ONLINE' : 'OFFLINE'}
                     </Text>
                   </TouchableOpacity>
                 </View>
-                <Text className="text-zinc-450 text-[10px] font-semibold mt-2">
+                <Text className="text-zinc-500 text-xs font-medium mt-1.5">
                   {getFormattedToday()}
                 </Text>
               </View>
@@ -2013,7 +2013,7 @@ export default function HomeScreen() {
                 return (
                   <View className="gap-3 mb-6">
                     <View className="flex-row justify-between items-center pr-1">
-                      <Text className="text-amber-600 text-[10px] font-black uppercase tracking-widest pl-1">
+                      <Text className="text-amber-600 text-xs font-bold uppercase tracking-wider pl-1">
                         Auto-Accepted Requests • {pendingAcks.length}
                       </Text>
                     </View>
@@ -2039,7 +2039,7 @@ export default function HomeScreen() {
                 return (
                   <View className="gap-3 mb-6">
                     <View className="flex-row justify-between items-center pr-1">
-                      <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest pl-1">
+                      <Text className="text-zinc-400 text-xs font-bold uppercase tracking-wider pl-1">
                         New Session Requests • {requests.length}
                       </Text>
                       <TouchableOpacity 
@@ -2048,7 +2048,7 @@ export default function HomeScreen() {
                         className="bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-150 flex-row items-center gap-1.5"
                       >
                         <Feather name="refresh-cw" size={10} color="#4F46E5" />
-                        <Text className="text-[#4F46E5] text-[9px] font-black uppercase">
+                        <Text className="text-[#4F46E5] text-xs font-semibold uppercase">
                           {isRefreshing ? 'Syncing...' : 'Sync'}
                         </Text>
                       </TouchableOpacity>
@@ -2070,7 +2070,7 @@ export default function HomeScreen() {
               {/* Priority 2: Current Active Session */}
               {activeSession ? (
                 <View className="mb-6">
-                  <Text className="text-rose-500 text-[10px] font-black uppercase tracking-widest pl-1 mb-2.5">
+                  <Text className="text-rose-500 text-xs font-bold uppercase tracking-wider pl-1 mb-2.5">
                     Current Session
                   </Text>
                   <View
@@ -2086,7 +2086,7 @@ export default function HomeScreen() {
                     <View className="flex-row justify-between items-center">
                       <View className="bg-rose-50 border border-rose-100 px-3 py-1 rounded-full flex-row items-center gap-1.5">
                         <View className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                        <Text className="text-rose-600 text-[9px] font-black uppercase tracking-wider">
+                        <Text className="text-rose-600 text-[11px] font-semibold tracking-wide uppercase">
                           {(() => {
                             const range = getBookingISTDateRange(activeSession);
                             const now = getCurrentServerTime();
@@ -2102,17 +2102,17 @@ export default function HomeScreen() {
                           })()}
                         </Text>
                       </View>
-                      <Text className="text-zinc-450 text-[10px] font-bold">
+                      <Text className="text-zinc-500 text-xs font-semibold">
                         {activeSession.time}
                       </Text>
                     </View>
 
                     <View className="gap-1.5">
-                      <Text className="text-zinc-455 text-[9px] font-bold uppercase">Workout: {getDisplayWorkoutTitle(activeSession.workoutTitle)}</Text>
-                      <Text className="text-[#101828] text-base font-black tracking-tight mt-0.5">
+                      <Text className="text-zinc-500 text-xs font-semibold uppercase">Workout: {getDisplayWorkoutTitle(activeSession.workoutTitle)}</Text>
+                      <Text className="text-[#101828] text-base font-bold tracking-tight mt-0.5">
                         Client: {activeSession.clientName || 'Viral'}
                       </Text>
-                      <Text className="text-zinc-650 text-xs font-semibold leading-relaxed mt-1">
+                      <Text className="text-zinc-650 text-xs font-medium leading-relaxed mt-1">
                         📍 {activeSession.address ? activeSession.address.split(',')[0] : 'Home Session'}
                       </Text>
                     </View>
@@ -2128,7 +2128,7 @@ export default function HomeScreen() {
                         elevation: 2,
                       }}
                     >
-                      <Text className="text-white text-xs font-black uppercase tracking-wider">Open Session →</Text>
+                      <Text className="text-white text-xs font-bold uppercase tracking-wider">Open Session →</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -2136,7 +2136,7 @@ export default function HomeScreen() {
 
               {/* Priority 3: Next Session */}
               <View className="mb-6">
-                <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest pl-1 mb-2.5">
+                <Text className="text-zinc-400 text-xs font-bold uppercase tracking-wider pl-1 mb-2.5">
                   Next Session
                 </Text>
                 {nextSession ? (() => {
@@ -2156,12 +2156,12 @@ export default function HomeScreen() {
                       }}
                     >
                       <View className="flex-row justify-between items-center">
-                        <Text className="text-white text-sm font-black uppercase tracking-wider">
+                        <Text className="text-white text-sm font-bold uppercase tracking-wide">
                           {isToday ? 'Today' : isTomorrow ? 'Tomorrow' : formatToDDMMYYYY(nextSession.date)} • {nextSessionTime}
                         </Text>
                         {isToday && countdownText ? (
                           <View className="bg-indigo-500/10 border border-indigo-500/25 px-2.5 py-0.5 rounded-full">
-                            <Text className="text-indigo-400 text-[8px] font-black uppercase tracking-wider">
+                            <Text className="text-indigo-400 text-[10px] font-semibold uppercase tracking-wider">
                               {countdownText}
                             </Text>
                           </View>
@@ -2169,14 +2169,14 @@ export default function HomeScreen() {
                       </View>
 
                       <View className="gap-1">
-                        <Text className="text-zinc-500 text-[8px] font-black uppercase">Workout: {getDisplayWorkoutTitle(nextSession.workoutTitle)}</Text>
+                        <Text className="text-zinc-400 text-[11px] font-semibold uppercase">Workout: {getDisplayWorkoutTitle(nextSession.workoutTitle)}</Text>
                         <Text numberOfLines={1} className="text-white text-base font-semibold mt-1 leading-tight">
                           Client: {nextSession.clientName || 'Viral'}
                         </Text>
-                        <Text numberOfLines={1} className="text-zinc-400 text-[10px] font-medium mt-1">
+                        <Text numberOfLines={1} className="text-zinc-300 text-xs font-normal mt-1">
                           📍 Venue: {nextSession.address ? nextSession.address.split(',')[0] : 'Home Session'}
                         </Text>
-                        <Text numberOfLines={1} className="text-zinc-500 text-[9px] font-medium mt-0.5">
+                        <Text numberOfLines={1} className="text-zinc-400 text-xs font-normal mt-0.5">
                           ⏱ {nextSession.time} ({nextSession.durationMinutes || 60} mins)
                         </Text>
                       </View>
@@ -2193,10 +2193,10 @@ export default function HomeScreen() {
                               );
                             }
                           }}
-                          className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-850 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
+                          className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-800 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
                         >
-                          <Feather name="navigation" size={10} color="white" />
-                          <Text numberOfLines={1} className="text-white text-[8px] font-bold uppercase">Navigate</Text>
+                          <Feather name="navigation" size={12} color="white" />
+                          <Text numberOfLines={1} className="text-white text-[11px] font-semibold uppercase">Navigate</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -2207,22 +2207,22 @@ export default function HomeScreen() {
                               Alert.alert('Call Locked', 'Calling will be available 60 minutes before the session.');
                             }
                           }}
-                          className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-850 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
+                          className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-800 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
                         >
-                          <Feather name="phone" size={10} color="white" />
-                          <Text numberOfLines={1} className="text-white text-[8px] font-bold uppercase">Call Client</Text>
+                          <Feather name="phone" size={12} color="white" />
+                          <Text numberOfLines={1} className="text-white text-[11px] font-semibold uppercase">Call Client</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
                           onPress={() => navigateSafely({ pathname: '/communication', params: { id: nextSession.id } })}
-                          className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-850 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
+                          className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-800 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
                         >
-                          <Feather name="message-square" size={10} color="white" />
-                          <Text numberOfLines={1} className="text-white text-[8px] font-bold uppercase">Message</Text>
+                          <Feather name="message-square" size={12} color="white" />
+                          <Text numberOfLines={1} className="text-white text-[11px] font-semibold uppercase">Message</Text>
                         </TouchableOpacity>
                       </View>
 
-                      <View className="h-[1px] bg-zinc-855" />
+                      <View className="h-[1px] bg-zinc-800" />
 
                       {nextSession.timelineStatus === 'trainer_accepted' ? (
                         <TouchableOpacity
@@ -2241,7 +2241,7 @@ export default function HomeScreen() {
                           }}
                           className="w-full bg-indigo-600 py-3.5 rounded-xl items-center justify-center"
                         >
-                          <Text className="text-white text-xs font-black uppercase tracking-wider">Start Travel</Text>
+                          <Text className="text-white text-xs font-bold uppercase tracking-wider">Start Travel</Text>
                         </TouchableOpacity>
                       ) : nextSession.timelineStatus === 'trainer_travelling' ? (
                         <TouchableOpacity
@@ -2259,14 +2259,14 @@ export default function HomeScreen() {
                           }}
                           className="w-full bg-emerald-600 py-3.5 rounded-xl items-center justify-center"
                         >
-                          <Text className="text-white text-xs font-black uppercase tracking-wider">Reached Location</Text>
+                          <Text className="text-white text-xs font-bold uppercase tracking-wider">Reached Location</Text>
                         </TouchableOpacity>
                       ) : (
                         <TouchableOpacity
                           onPress={() => navigateSafely({ pathname: '/session-detail', params: { id: nextSession.id } })}
                           className="w-full bg-zinc-800 py-3.5 rounded-xl items-center justify-center"
                         >
-                          <Text className="text-white text-xs font-black uppercase tracking-wider">
+                          <Text className="text-white text-xs font-bold uppercase tracking-wider">
                             {nextSession.timelineStatus === 'trainer_arrived' ? 'Waiting client OTP check-in' : 'Open active console'}
                           </Text>
                         </TouchableOpacity>
@@ -2285,8 +2285,8 @@ export default function HomeScreen() {
                     }}
                   >
                     <Text className="text-3xl mt-1">👌</Text>
-                    <Text className="text-zinc-900 text-sm font-black mt-2">You&apos;re all clear today</Text>
-                    <Text className="text-zinc-400 text-[10px] font-semibold text-center mt-0.5">
+                    <Text className="text-zinc-900 text-base font-bold mt-1">You&apos;re all clear</Text>
+                    <Text className="text-zinc-500 text-xs font-normal text-center mt-0.5 leading-relaxed max-w-[280px]">
                       No upcoming bookings scheduled. Manage availability to get bookings.
                     </Text>
                   </View>
@@ -2296,11 +2296,11 @@ export default function HomeScreen() {
               {/* Priority 4: Today's Sessions */}
               <View className="mb-6">
                 <View className="flex-row justify-between items-center mb-2.5 pl-1 pr-1">
-                  <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">
+                  <Text className="text-zinc-400 text-xs font-bold uppercase tracking-wider">
                     Today&apos;s Sessions
                   </Text>
                   {todaySessionsCount > 0 ? (
-                    <Text className="text-zinc-500 text-[9px] font-black uppercase">
+                    <Text className="text-zinc-500 text-[11px] font-semibold uppercase">
                       {todaySessionsCount} {todaySessionsCount === 1 ? 'Session' : 'Sessions'} • {formattedTodayHours} hrs
                     </Text>
                   ) : null}
@@ -2327,20 +2327,20 @@ export default function HomeScreen() {
                             <Feather name="clock" size={14} color="#4F46E5" />
                           </View>
                           <View>
-                            <Text className="text-zinc-900 text-xs font-semibold">{getDisplayWorkoutTitle(booking.workoutTitle)}</Text>
-                            <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">
+                            <Text className="text-zinc-900 text-sm font-semibold">{getDisplayWorkoutTitle(booking.workoutTitle)}</Text>
+                            <Text className="text-zinc-500 text-[11px] font-medium mt-0.5">
                               {booking.time} • Client: {booking.clientName || 'Viral'}
                             </Text>
                           </View>
                         </View>
-                        <View className={`px-2 py-0.5 rounded-full ${
+                        <View className={`px-2.5 py-1 rounded-full ${
                           booking.timelineStatus === 'workout_completed' || booking.status === 'completed'
                             ? 'bg-emerald-50 border border-emerald-150'
                             : booking.status === 'cancelled'
                             ? 'bg-rose-50 border border-rose-150'
                             : 'bg-indigo-50 border border-indigo-150'
                         }`}>
-                          <Text className={`text-[7px] font-bold uppercase ${
+                          <Text className={`text-[10px] font-semibold tracking-wide uppercase ${
                             booking.timelineStatus === 'workout_completed' || booking.status === 'completed'
                               ? 'text-emerald-600'
                               : booking.status === 'cancelled'
@@ -2368,7 +2368,7 @@ export default function HomeScreen() {
 
               {/* Priority 5: Tomorrow */}
               <View className="mb-6">
-                <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest pl-1 mb-2.5">
+                <Text className="text-zinc-400 text-xs font-bold uppercase tracking-wider pl-1 mb-2.5">
                   Tomorrow&apos;s Schedule
                 </Text>
                 
@@ -2381,8 +2381,8 @@ export default function HomeScreen() {
                         <Feather name="slash" size={14} color="#6B7280" />
                       </View>
                       <View className="flex-1">
-                        <Text className="text-zinc-950 text-xs font-black uppercase">Schedule is Disabled</Text>
-                        <Text className="text-zinc-500 text-[9px] font-semibold mt-0.5">
+                        <Text className="text-zinc-950 text-sm font-bold">Schedule is Disabled</Text>
+                        <Text className="text-zinc-500 text-xs font-normal mt-0.5">
                           You have no slots available for tomorrow.
                         </Text>
                       </View>
@@ -2392,8 +2392,8 @@ export default function HomeScreen() {
                       onPress={() => navigateSafely('/bookings')}
                       className="bg-indigo-600 p-3 rounded-2xl items-center justify-center flex-row gap-1.5"
                     >
-                      <Feather name="calendar" size={12} color="white" />
-                      <Text className="text-white text-[10px] font-black uppercase tracking-wider">Manage availability →</Text>
+                      <Feather name="calendar" size={14} color="white" />
+                      <Text className="text-white text-xs font-semibold uppercase tracking-wider">Manage availability →</Text>
                     </TouchableOpacity>
                   </View>
                 ) : (
@@ -2410,11 +2410,11 @@ export default function HomeScreen() {
                     {tomorrowBookings.length > 0 ? (
                       <View className="gap-3">
                         <View className="flex-row justify-between items-center">
-                          <Text className="text-zinc-900 text-xs font-black uppercase">
+                          <Text className="text-zinc-900 text-xs font-bold uppercase">
                             {tomorrowBookings.length} {tomorrowBookings.length === 1 ? 'Session' : 'Sessions'} Scheduled
                           </Text>
                           <TouchableOpacity onPress={() => navigateSafely('/bookings')}>
-                            <Text className="text-indigo-600 text-[9px] font-black uppercase tracking-wider">View All →</Text>
+                            <Text className="text-indigo-600 text-xs font-bold uppercase tracking-wider">View All →</Text>
                           </TouchableOpacity>
                         </View>
                         
@@ -2422,10 +2422,10 @@ export default function HomeScreen() {
                           {tomorrowBookings.map((b) => (
                             <View key={b.id} className="flex-row justify-between items-center py-2 border-b border-zinc-50 last:border-b-0">
                               <View>
-                                <Text className="text-zinc-900 text-xs font-semibold">{getDisplayWorkoutTitle(b.workoutTitle)}</Text>
-                                <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{b.time} • {b.clientName || 'Client'}</Text>
+                                <Text className="text-zinc-900 text-sm font-semibold">{getDisplayWorkoutTitle(b.workoutTitle)}</Text>
+                                <Text className="text-zinc-500 text-[11px] font-medium mt-0.5">{b.time} • {b.clientName || 'Client'}</Text>
                               </View>
-                              <Feather name="chevron-right" size={12} color="#9CA3AF" />
+                              <Feather name="chevron-right" size={14} color="#9CA3AF" />
                             </View>
                           ))}
                         </View>
@@ -2437,8 +2437,8 @@ export default function HomeScreen() {
                             <Feather name="calendar" size={14} color="#059669" />
                           </View>
                           <View className="flex-1">
-                            <Text className="text-zinc-950 text-xs font-black uppercase">No sessions booked</Text>
-                            <Text className="text-zinc-500 text-[9px] font-semibold mt-0.5">
+                            <Text className="text-zinc-950 text-sm font-bold">No sessions booked</Text>
+                            <Text className="text-zinc-500 text-xs font-normal mt-0.5">
                               Your schedule is available for bookings.
                             </Text>
                           </View>
@@ -2449,7 +2449,7 @@ export default function HomeScreen() {
                           onPress={() => navigateSafely('/bookings')}
                           className="bg-zinc-950 py-2.5 px-4 rounded-xl"
                         >
-                          <Text className="text-white text-[9px] font-black uppercase tracking-wider">
+                          <Text className="text-white text-xs font-semibold tracking-wide">
                             Manage →
                           </Text>
                         </TouchableOpacity>
