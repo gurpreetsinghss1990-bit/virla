@@ -410,7 +410,13 @@ export default function BookingsScreen() {
       // 1. Status Filter
       if (activeFilter === 'upcoming') {
         const serverNow = getCurrentServerTime();
-        if (b.status !== 'upcoming' || getBookingISTDateRange(b).start.getTime() <= serverNow.getTime()) {
+        const activeTimelineStatuses = ['trainer_travelling', 'trainer_arrived', 'otp_verified', 'workout_started', 'workout_completed', 'trainer_report_submitted', 'customer_review_pending'];
+        const isOngoing = b.status === 'upcoming' && activeTimelineStatuses.includes(b.timelineStatus || '');
+        if (b.status !== 'upcoming') {
+          return false;
+        }
+        // Keep in list if ongoing OR if scheduled start is in the future
+        if (!isOngoing && getBookingISTDateRange(b).start.getTime() <= serverNow.getTime()) {
           return false;
         }
       } else if (activeFilter === 'cancelled') {
@@ -470,9 +476,11 @@ export default function BookingsScreen() {
   // Count bookings in the active tab ignoring the date filter — hides date pills when the tab is empty
   const activeTabCount = useMemo(() => {
     const serverNow = getCurrentServerTime();
+    const activeTimelineStatuses = ['trainer_travelling', 'trainer_arrived', 'otp_verified', 'workout_started', 'workout_completed', 'trainer_report_submitted', 'customer_review_pending'];
     return bookings.filter((b) => {
       if (activeFilter === 'upcoming') {
-        return b.status === 'upcoming' && getBookingISTDateRange(b).start.getTime() > serverNow.getTime();
+        const isOngoing = b.status === 'upcoming' && activeTimelineStatuses.includes(b.timelineStatus || '');
+        return b.status === 'upcoming' && (isOngoing || getBookingISTDateRange(b).start.getTime() > serverNow.getTime());
       } else if (activeFilter === 'cancelled') {
         return b.status === 'cancelled' || b.status === 'client_no_show' || b.status === 'trainer_no_show' || b.status === 'missed_session_not_started';
       }

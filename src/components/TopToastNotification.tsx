@@ -8,13 +8,12 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useToastStore, ToastData } from '../store/toastStore';
 
 export function TopToastNotification() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const { currentToast, hideToast } = useToastStore();
 
   const [activeToast, setActiveToast] = useState<ToastData | null>(null);

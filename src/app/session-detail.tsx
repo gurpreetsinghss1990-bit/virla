@@ -18,6 +18,7 @@ import * as Location from 'expo-location';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
 import { getBookingISTDateRange, getDisplayWorkoutTitle, formatToDDMMYYYY } from '../utils/date';
 import { locationTrackerService } from '../services/LocationTrackerService';
+import { supabase } from '../database/supabaseClient';
 import TrackingMap from '../components/TrackingMap';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { parseBookingAddress } from '../utils/LocationParser';
@@ -28,21 +29,14 @@ function formatToIndianDate(dateStr: string): string {
 
 function getClientGender(booking: any): string {
   if (!booking?.clientId) {
-    if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      console.log(`[CLIENT-GENDER-TRACE] bookingId: ${booking?.id || 'N/A'}, booking.clientId: empty, resolved profile ID: N/A, resolved profile gender: N/A, final displayed gender: Not specified`);
-    }
     return 'Not specified';
   }
   const profile = Database.getProfile(booking.clientId);
-  const rawGender = profile?.gender || 'N/A';
   let displayGender = 'Not specified';
   if (profile && profile.gender) {
     const g = profile.gender.toLowerCase().trim();
     if (g === 'male') displayGender = 'Male';
     else if (g === 'female') displayGender = 'Female';
-  }
-  if (typeof __DEV__ !== 'undefined' && __DEV__) {
-    console.log(`[CLIENT-GENDER-TRACE] bookingId: ${booking.id}, booking.clientId: ${booking.clientId}, resolved profile ID: ${profile?.id || 'null'}, resolved profile gender: ${rawGender}, final displayed gender: ${displayGender}`);
   }
   return displayGender;
 }
@@ -229,6 +223,45 @@ export default function SessionDetailScreen() {
       }
     };
   }, [bookingId, currentStatus, role]);
+
+  // Real-time timeline synchronization: updates screen instantly when either Trainer or User advances stage
+  useEffect(() => {
+    if (!bookingId) return;
+
+    // 1. Dedicated Supabase Realtime channel for this booking
+    const channelName = `realtime-session-${bookingId.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookings',
+          filter: `id=eq.${bookingId}`,
+        },
+        async (payload) => {
+          console.log('[Realtime Session] Booking update received:', payload);
+          await Database.refreshBookings();
+          syncFromDB();
+        }
+      )
+      .subscribe();
+
+    // 2. Active safety poll (every 3s while session is active) for instant updates without back navigation
+    let pollInterval: any = null;
+    if (currentStatus !== 'session_closed' && !isMissed && !isCancelled) {
+      pollInterval = setInterval(async () => {
+        await Database.refreshBookings();
+        syncFromDB();
+      }, 3000);
+    }
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+      supabase.removeChannel(channel);
+    };
+  }, [bookingId, currentStatus, isMissed, isCancelled, syncFromDB]);
 
   const calculateHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371; // km
@@ -491,8 +524,8 @@ export default function SessionDetailScreen() {
       const past = stagesList.slice(0, validCurrentIdx + 1);
       return [...past, 'session_cancelled'];
     }
-    // Only show real milestones that have actually occurred so far (up to the current status)
-    return stagesList.slice(0, validCurrentIdx + 1);
+    // Show full roadmap of all session milestones: completed, current active, and future pending stages
+    return stagesList;
   }, [isMissed, isCancelled, currentStatus]);
 
   // Interpolate coordinates along the polyline path
@@ -646,35 +679,22 @@ export default function SessionDetailScreen() {
       Alert.alert('Signature Required', 'Please input your digital signature to authorize report closure.');
       return;
     }
-    submitQuestionnaire(booking.id, {
-      mobilityScore,
-      workoutSummary,
-      coachNotes: coachNotes.trim() || 'Client executed exercises with excellent range of motion.',
-      coachSignature: coachSignature.trim(),
-    });
-    // Set to report submitted and advance to feedback pending
     try {
-      await updateTimelineStatus(booking.id, 'trainer_report_submitted');
+      await submitQuestionnaire(booking.id, {
+        mobilityScore,
+        workoutSummary,
+        coachNotes: coachNotes.trim() || 'Client executed exercises with excellent range of motion.',
+        coachSignature: coachSignature.trim(),
+      });
       addNotification({
         title: 'Workout Completed 🏆',
         body: `Coach ${booking.trainerName} submitted your post-workout mobility index report.`,
         icon: 'award'
       });
 
-      setTimeout(async () => {
-        try {
-          await updateTimelineStatus(booking.id, 'customer_review_pending');
-          addNotification({
-            title: 'Rate Session Experience 🌟',
-            body: 'Please leave a rating and share your post-workout feedback.',
-            icon: 'bell'
-          });
-        } catch (err: any) {
-          Alert.alert('Error', err.message || 'Could not advance session status.');
-        }
-      }, 600);
-
       setShowQuestionnaire(false);
+      syncFromDB();
+      Alert.alert('Report Submitted', 'Session report finalized. Customer can now review the session.');
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Could not submit report.');
     }
@@ -711,13 +731,19 @@ export default function SessionDetailScreen() {
   };
 
   const handleMessage = () => {
-    if (booking?.id) {
-      useChatStore.getState().markAsRead([booking.id]);
-    }
-    router.push({
-      pathname: '/communication' as any,
-      params: { id: booking.id }
-    });
+    if (!booking?.id) return;
+    // Asynchronous navigation to keep touch feedback smooth and non-blocking
+    setTimeout(() => {
+      try {
+        useChatStore.getState().markAsRead([booking.id]);
+        router.push({
+          pathname: '/communication' as any,
+          params: { id: booking.id }
+        });
+      } catch (err) {
+        console.error('[NAVIGATION] handleMessage async push failed:', err);
+      }
+    }, 0);
   };
 
   const handleShareLocation = () => {
@@ -910,7 +936,7 @@ export default function SessionDetailScreen() {
             >
               <View className="flex-row items-center gap-2.5 mb-3">
                 <View className="w-7 h-7 rounded-full bg-indigo-50 items-center justify-center">
-                  <Feather name="brain" size={13} color="#4F46E5" />
+                  <Feather name="cpu" size={13} color="#4F46E5" />
                 </View>
                 <Text className="text-zinc-955 text-xs font-black uppercase tracking-wider">Client Assessment</Text>
               </View>
@@ -1445,7 +1471,7 @@ export default function SessionDetailScreen() {
               >
                 <View className="flex-row items-center gap-2.5 mb-3">
                   <View className="w-7 h-7 rounded-full bg-indigo-50 items-center justify-center">
-                    <Feather name="brain" size={14} color="#4F46E5" />
+                    <Feather name="cpu" size={14} color="#4F46E5" />
                   </View>
                   <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">Client Assessment</Text>
                 </View>
@@ -1668,29 +1694,36 @@ export default function SessionDetailScreen() {
                   </TouchableOpacity>
 
                   {/* Secure Call */}
-                  <View className="flex-1">
-                    <TouchableOpacity 
-                      onPress={
-                        isMissed 
-                          ? () => Alert.alert('Session Missed', 'This session has been marked as missed and communications are closed.') 
-                          : isCancelled 
-                          ? () => Alert.alert('Session Cancelled', 'This session has been cancelled and communications are closed.') 
-                          : !isAccepted 
-                          ? () => Alert.alert('Security Lock', 'Waiting for Trainer Acceptance. Secure communications will unlock after a coach confirms.') 
-                          : (getMinutesToSession() <= 60 ? handleCall : undefined)
-                      } 
-                      activeOpacity={!isAccepted || isMissed || isCancelled ? 0.8 : (getMinutesToSession() <= 60 ? 0.8 : 1)}
-                      className={`py-4 rounded-2xl items-center justify-center flex-row gap-2.5 shadow-sm ${
-                        (!isMissed && !isCancelled && isAccepted && getMinutesToSession() <= 60) ? 'bg-zinc-950 border border-zinc-900' : 'bg-zinc-100 border border-zinc-200 opacity-60'
-                      }`}
-                    >
-                      <Feather name="phone" size={16} color={(!isMissed && !isCancelled && isAccepted && getMinutesToSession() <= 60) ? 'white' : '#6B7280'} />
-                      <Text className={`text-sm font-black tracking-wide ${(!isMissed && !isCancelled && isAccepted && getMinutesToSession() <= 60) ? 'text-white' : 'text-zinc-500'}`}>Direct Call</Text>
-                    </TouchableOpacity>
-                  </View>
+                  {currentStatus !== 'session_closed' && booking?.status !== 'completed' && (
+                    <View className="flex-1">
+                      <TouchableOpacity 
+                        onPress={
+                          isMissed 
+                            ? () => Alert.alert('Session Missed', 'This session has been marked as missed and communications are closed.') 
+                            : isCancelled 
+                            ? () => Alert.alert('Session Cancelled', 'This session has been cancelled and communications are closed.') 
+                            : !isAccepted 
+                            ? () => Alert.alert('Security Lock', 'Waiting for Trainer Acceptance. Secure communications will unlock after a coach confirms.') 
+                            : (getMinutesToSession() <= 60 ? handleCall : undefined)
+                        } 
+                        activeOpacity={!isAccepted || isMissed || isCancelled ? 0.8 : (getMinutesToSession() <= 60 ? 0.8 : 1)}
+                        className={`py-4 rounded-2xl items-center justify-center flex-row gap-2.5 shadow-sm ${
+                          (!isMissed && !isCancelled && isAccepted && getMinutesToSession() <= 60) ? 'bg-zinc-950 border border-zinc-900' : 'bg-zinc-100 border border-zinc-200 opacity-60'
+                        }`}
+                      >
+                        <Feather name="phone" size={16} color={(!isMissed && !isCancelled && isAccepted && getMinutesToSession() <= 60) ? 'white' : '#6B7280'} />
+                        <Text className={`text-sm font-black tracking-wide ${(!isMissed && !isCancelled && isAccepted && getMinutesToSession() <= 60) ? 'text-white' : 'text-zinc-500'}`}>Direct Call</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
 
                 {/* Helper text if Call is disabled */}
+                {(currentStatus === 'session_closed' || booking?.status === 'completed') && (
+                  <Text className="text-zinc-500 text-xs font-semibold text-center mt-1 leading-relaxed">
+                    Direct calling is closed because this session has completed.
+                  </Text>
+                )}
                 {isMissed && (
                   <Text className="text-zinc-500 text-xs font-semibold text-center mt-1 leading-relaxed">
                     Direct communications are closed because this session was missed.
@@ -1701,7 +1734,7 @@ export default function SessionDetailScreen() {
                     Direct communications are closed because this session was cancelled.
                   </Text>
                 )}
-                {!isMissed && !isCancelled && isAccepted && getMinutesToSession() > 60 && (
+                {!isMissed && !isCancelled && isAccepted && currentStatus !== 'session_closed' && booking?.status !== 'completed' && getMinutesToSession() > 60 && (
                   <Text className="text-zinc-600 text-xs font-semibold text-center mt-1 leading-relaxed">
                     Direct calling unlocks 60 minutes before your scheduled session.
                   </Text>
@@ -1722,29 +1755,33 @@ export default function SessionDetailScreen() {
                 </View>
                 
                 <View className="flex-row justify-between">
-                  <TouchableOpacity 
-                    onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Communication channel opens 5 hours prior to session.') : handleCall} 
-                    className="w-[30%] bg-zinc-950 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5 shadow-sm"
-                  >
-                    <Feather name="phone" size={14} color="white" />
-                    <Text className="text-white text-xs font-bold uppercase">Call Client</Text>
-                  </TouchableOpacity>
+                  {currentStatus !== 'session_closed' && booking?.status !== 'completed' && (
+                    <TouchableOpacity 
+                      onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Communication channel opens 5 hours prior to session.') : handleCall} 
+                      className="w-[30%] bg-zinc-950 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5 shadow-sm"
+                    >
+                      <Feather name="phone" size={14} color="white" />
+                      <Text className="text-white text-xs font-bold uppercase">Call Client</Text>
+                    </TouchableOpacity>
+                  )}
                   
                   <TouchableOpacity 
                     onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Communication channel opens 5 hours prior to session.') : handleMessage} 
-                    className="w-[30%] bg-zinc-950 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5 shadow-sm"
+                    className={`${(currentStatus === 'session_closed' || booking?.status === 'completed') ? 'w-full' : 'w-[30%]'} bg-zinc-950 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5 shadow-sm`}
                   >
                     <Feather name="message-square" size={14} color="white" />
                     <Text className="text-white text-xs font-bold uppercase">Chat Board</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity 
-                    onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Live tracking GPS details lock opens 5 hours prior.') : handleShareLocation} 
-                    className="w-[30%] bg-zinc-950 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5 shadow-sm"
-                  >
-                    <Feather name="map-pin" size={14} color="white" />
-                    <Text className="text-white text-xs font-bold uppercase">Share GPS</Text>
-                  </TouchableOpacity>
+                  {currentStatus !== 'session_closed' && booking?.status !== 'completed' && (
+                    <TouchableOpacity 
+                      onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Live tracking GPS details lock opens 5 hours prior.') : handleShareLocation} 
+                      className="w-[30%] bg-zinc-950 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5 shadow-sm"
+                    >
+                      <Feather name="map-pin" size={14} color="white" />
+                      <Text className="text-white text-xs font-bold uppercase">Share GPS</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 {/* Dynamic Concierge Action Buttons */}
@@ -1989,7 +2026,7 @@ export default function SessionDetailScreen() {
                       try {
                         await SessionEngine.completeSession(booking.id);
                         syncFromDB();
-                        Alert.alert('Workout Completed', 'Workout session has been completed.');
+                        setShowQuestionnaire(true);
                       } catch (err: any) {
                         Alert.alert('Completion Error', err.message || 'Could not complete workout.');
                       }
@@ -2006,8 +2043,8 @@ export default function SessionDetailScreen() {
               </View>
             )}
 
-            {/* Questionnaire Report Panel */}
-            {showQuestionnaire && (
+            {/* Questionnaire Report Panel (For Trainer right after completing workout) */}
+            {(showQuestionnaire || (currentStatus === 'workout_completed' && role === 'trainer')) && !isMissed && !isCancelled && (
               <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-lg gap-4">
                 <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider border-b border-zinc-50 pb-3">Finalize workout report</Text>
                 
@@ -2044,6 +2081,34 @@ export default function SessionDetailScreen() {
                 <TouchableOpacity onPress={handleQuestionnaireSubmit} className="w-full bg-[#4F46E5] py-3.5 rounded-xl items-center justify-center mt-2">
                   <Text className="text-white text-xs font-black uppercase">Authorize & Close Workout</Text>
                 </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Trainer status banner after filing report */}
+            {(currentStatus === 'trainer_report_submitted' || currentStatus === 'customer_review_pending') && !showQuestionnaire && !isMissed && !isCancelled && role === 'trainer' && (
+              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-3">
+                <View className="flex-row items-center gap-2">
+                  <View className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                  <Text className="text-indigo-600 text-[10px] font-black uppercase tracking-wider">Report Submitted</Text>
+                </View>
+                <Text className="text-zinc-950 text-base font-bold">Post-Workout Summary Filed 📋</Text>
+                <Text className="text-zinc-500 text-xs leading-relaxed">
+                  Your mobility score and notes have been filed. Waiting for client to submit review and close the session.
+                </Text>
+              </View>
+            )}
+
+            {/* Trainer status banner when session closed */}
+            {currentStatus === 'session_closed' && !isMissed && !isCancelled && role === 'trainer' && (
+              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-3">
+                <View className="flex-row items-center gap-2">
+                  <View className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  <Text className="text-emerald-600 text-[10px] font-black uppercase tracking-wider">Session Closed</Text>
+                </View>
+                <Text className="text-zinc-950 text-base font-bold">Session Successfully Completed ✅</Text>
+                <Text className="text-zinc-500 text-xs leading-relaxed">
+                  All milestones and client feedback have been recorded. Payout credits have been processed.
+                </Text>
               </View>
             )}
 
@@ -2115,10 +2180,25 @@ export default function SessionDetailScreen() {
                   </View>
                 </View>
 
-                {/* Star-ratings form if review pending */}
-                {currentStatus === 'customer_review_pending' && (
+                {/* If Trainer hasn't filed summary yet, show waiting notice */}
+                {currentStatus === 'workout_completed' && (
+                  <View className="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200/70 flex-row items-center gap-3">
+                    <Feather name="clock" size={16} color="#D97706" />
+                    <View className="flex-1">
+                      <Text className="text-amber-900 text-xs font-bold">Coach Summary Pending</Text>
+                      <Text className="text-amber-700 text-[11px] mt-0.5">
+                        Your coach is submitting your post-workout mobility report. Client rating will unlock shortly.
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Star-ratings form unlocks only after Trainer has submitted summary report */}
+                {(currentStatus === 'customer_review_pending' || currentStatus === 'trainer_report_submitted') && (
                   <View className="gap-4 border-t border-zinc-100 pt-4 mt-1">
-                    <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1 border-b border-zinc-50 pb-2">Rate coach Karan</Text>
+                    <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1 border-b border-zinc-50 pb-2">
+                      Rate Coach {booking?.trainerName ? booking.trainerName.replace(/^Coach\s+/i, '') : 'Trainer'}
+                    </Text>
                     
                     <View className="flex-row justify-around py-1">
                       {[1,2,3,4,5].map(s => (
