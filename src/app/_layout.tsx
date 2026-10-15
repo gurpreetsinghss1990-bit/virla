@@ -12,6 +12,16 @@ import { useUserStore } from '../store/userStore';
 import { TopToastNotification } from '../components/TopToastNotification';
 import { useEngagementNudges } from '../hooks/useEngagementNudges';
 import { useToastStore } from '../store/toastStore';
+import {
+  Inter_300Light,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+  Inter_900Black,
+} from '@expo-google-fonts/inter';
+import { configureGlobalInterFont } from '../utils/configureFonts';
 import '../global.css';
 
 // Suppress known upstream React Native Fabric / Expo Router useLinking race condition warning
@@ -29,10 +39,21 @@ export default function RootLayout() {
     // Hide splash screen immediately since we handle the premium splash layout in index.tsx
     SplashScreen.hideAsync();
 
-    // Brand display font for AI Wellness Coach headers (bundled, no network at runtime)
+    // Load fonts and configure crisp typography across the app
     Font.loadAsync({
       PlaywriteCAGuides: require('../../assets/fonts/PlaywriteCAGuides-Regular.ttf'),
-    }).catch((e) => console.warn('[Fonts] Playwrite CA Guides failed to load:', e));
+      Inter_300Light,
+      Inter_400Regular,
+      Inter_500Medium,
+      Inter_600SemiBold,
+      Inter_700Bold,
+      Inter_800ExtraBold,
+      Inter_900Black,
+    })
+      .then(() => {
+        configureGlobalInterFont();
+      })
+      .catch((e) => console.warn('[Fonts] Font loading failed:', e));
 
     let isMounted = true;
     let responseSubscription: any = null;

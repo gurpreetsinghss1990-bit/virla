@@ -123,7 +123,7 @@ export default function SplashScreen() {
         className="items-center justify-center"
       >
         <View className="flex-row items-center justify-center">
-          <Text className="font-bold text-[#101828] text-5xl tracking-[0.3em]">
+          <Text style={{ fontFamily: 'System' }} className="font-bold text-[#101828] text-5xl tracking-[0.3em]">
             VIRLA
           </Text>
           {/* Small animated blue/purple dot next to the logo text */}

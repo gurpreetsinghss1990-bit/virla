@@ -1092,7 +1092,7 @@ export default function HomeScreen() {
                   resizeMode: 'contain',
                 }}
               />
-              <Text className="text-2xl font-black tracking-[0.2em] text-[#101828] ml-1">
+              <Text style={{ fontFamily: 'System' }} className="text-2xl font-black tracking-[0.2em] text-[#101828] ml-1">
                 {role === 'trainer' ? 'IRLA PRO' : 'IRLA'}
               </Text>
             </View>
