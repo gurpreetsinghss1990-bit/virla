@@ -159,8 +159,11 @@ export default function MessagesScreen() {
       const targetBookingId = primaryBooking.id;
 
       // Query all messages across all sessions and unified thread with this person
+      const cId = (primaryBooking.clientId || 'client').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+      const tId = (primaryBooking.trainerId || primaryBooking.trainerName || 'coach').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+      const symmetricChatId = `chat_${cId}_${tId}`;
       const unifiedChatId = isTrainer ? `chat-client-${personKey}` : `chat-coach-${personKey}`;
-      const relatedIds = [unifiedChatId, ...sortedBookings.map((b) => b.id)];
+      const relatedIds = Array.from(new Set([symmetricChatId, unifiedChatId, `chat-client-${personKey}`, `chat-coach-${personKey}`, ...sortedBookings.map((b) => b.id)]));
       const allMsgs = Database.getUnifiedChatMessages(relatedIds);
 
       if (allMsgs.length > 0) {

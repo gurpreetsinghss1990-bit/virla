@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Animated, Platform, BackHandler, LayoutAnimation, UIManager } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Animated, Platform, BackHandler, LayoutAnimation, UIManager, InteractionManager } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -252,7 +252,21 @@ export default function MembershipScreen() {
 
   const userEmail = useUserStore((state) => state.user?.email);
 
+  // Asynchronous background hydration & non-blocking DB sync
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(async () => {
+      try {
+        // Sync wallet & user state in background asynchronously without stalling transition
+        await useWalletStore.getState().syncFromDB();
+      } catch (err) {
+        console.warn('[Membership] Non-blocking background sync warning:', err);
+      }
+    });
 
+    return () => {
+      task.cancel();
+    };
+  }, []);
 
   // PayPhi Gateway Integration
   useEffect(() => {
@@ -655,14 +669,21 @@ export default function MembershipScreen() {
       {isModalOpen && selectedPlan && (
         <Animated.View 
           style={{ opacity: overlayOpacity }}
-          className="absolute top-0 left-0 right-0 bottom-0 bg-black/60 z-50 justify-end"
+          className="absolute top-0 left-0 right-0 bottom-0 bg-black/60 z-50 justify-end pb-6 px-4"
         >
           {/* Transparent dismiss header */}
           <TouchableOpacity onPress={closeDetails} className="flex-1" />
 
           <Animated.View 
-            style={{ transform: [{ translateY: slideUpAnim }] }}
-            className="bg-white rounded-t-[36px] p-6 pb-12 gap-6 min-h-[500px]"
+            style={{ 
+              transform: [{ translateY: slideUpAnim }],
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.18,
+              shadowRadius: 20,
+              elevation: 16,
+            }}
+            className="bg-white rounded-[32px] p-6 pb-8 gap-5 min-h-[480px] border border-zinc-100/80"
           >
             {/* Modal Drag handle indicator */}
             <View className="w-10 h-1 bg-zinc-200 rounded-full align-self-center mx-auto" />

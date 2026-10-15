@@ -113,44 +113,40 @@ export default function CommunicationScreen() {
       .replace(/[^a-z0-9]/g, '_');
   }, [booking, isTrainer]);
 
-  const unifiedChatId = useMemo(() => {
-    if (!personKey) return booking?.id || 'general';
-    return isTrainer ? `chat-client-${personKey}` : `chat-coach-${personKey}`;
-  }, [personKey, isTrainer, booking?.id]);
+  // Symmetrical shared thread key between the client and coach so BOTH see the exact same conversation
+  const symmetricChatId = useMemo(() => {
+    if (!booking) return 'general';
+    const cId = (booking.clientId || 'client').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+    const tId = (booking.trainerId || booking.trainerName || 'coach').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+    // Symmetrical pair: chat_session_client_trainer (order independent)
+    return `chat_${cId}_${tId}`;
+  }, [booking]);
 
-  // All session IDs associated with this same coach/person
+  const unifiedChatId = symmetricChatId;
+
+  // All session IDs and legacy alias IDs associated with this conversation
   const relatedChatIds = useMemo(() => {
-    const ids: string[] = [unifiedChatId];
+    const ids: string[] = [symmetricChatId];
     if (booking?.id) ids.push(booking.id);
+    if (personKey) {
+      ids.push(`chat-client-${personKey}`);
+      ids.push(`chat-coach-${personKey}`);
+    }
 
     bookings.forEach((b) => {
-      let bKey = '';
-      if (isTrainer) {
-        bKey = (b.clientId || b.clientName || 'client')
-          .toLowerCase()
-          .replace(/^client\s+/i, '')
-          .trim()
-          .replace(/[^a-z0-9]/g, '_');
-      } else {
-        let raw = b.trainerName;
-        if (!raw && b.trainerId) {
-          const coach = Database.getCoaches().find((c) => c.id === b.trainerId);
-          if (coach?.name) raw = coach.name;
-        }
-        bKey = (raw || b.trainerId || 'coach')
-          .toLowerCase()
-          .replace(/^coach\s+/i, '')
-          .trim()
-          .replace(/[^a-z0-9]/g, '_');
-      }
+      const bClient = (b.clientId || b.clientName || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+      const bTrainer = (b.trainerId || b.trainerName || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+      const currentClient = (booking.clientId || booking.clientName || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+      const currentTrainer = (booking.trainerId || booking.trainerName || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
 
-      if (bKey === personKey) {
+      if ((bClient === currentClient && bTrainer === currentTrainer) || b.id === booking.id) {
         ids.push(b.id);
+        ids.push(`chat_${bClient}_${bTrainer}`);
       }
     });
 
-    return Array.from(new Set(ids));
-  }, [bookings, booking, personKey, unifiedChatId, isTrainer]);
+    return Array.from(new Set(ids.filter(Boolean)));
+  }, [bookings, booking, personKey, symmetricChatId]);
 
   const mapDbMessage = (msg: any): ChatMessage => {
     let localSender: 'customer' | 'trainer' = 'customer';

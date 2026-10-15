@@ -753,10 +753,19 @@ export function mapChatMessage(row: any): ChatMessage {
 }
 
 export function mapChatMessageToPostgres(msg: ChatMessage): any {
+  let pgSender = 'user';
+  if (msg.sender === 'trainer' || msg.sender === 'coach') {
+    pgSender = 'coach';
+  } else if (msg.sender === 'virla') {
+    pgSender = 'virla';
+  } else {
+    pgSender = 'user';
+  }
+
   return {
     id: msg.id,
     chat_id: msg.chatId,
-    sender: msg.sender,
+    sender: pgSender,
     text: msg.text,
     timestamp: msg.timestamp,
     is_pinned: msg.isPinned,
@@ -3489,7 +3498,19 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     };
     this.schema.messages.push(msg);
 
-    supabase.from('chat_messages').insert(mapChatMessageToPostgres(msg)).then();
+    supabase
+      .from('chat_messages')
+      .insert(mapChatMessageToPostgres(msg))
+      .then(({ error }) => {
+        if (error) {
+          console.warn('[Database] chat_messages Supabase insert error:', error.message);
+        } else {
+          console.log('[Database] chat_message successfully synced to Supabase:', msg.id);
+        }
+      })
+      .catch((err) => {
+        console.warn('[Database] chat_messages network exception:', err);
+      });
 
     this.save();
     this.log('SendMessage', `Sent message: "${text}" in chat ${chatId}`);

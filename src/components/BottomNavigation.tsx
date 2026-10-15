@@ -91,7 +91,6 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
 
   // Visible routes indices
   const currentRouteName = state.routes[state.index]?.name;
-  const activeRouteIndex = visibleRoutes.findIndex((r: any) => r.name === currentRouteName);
 
   return (
     <View
@@ -102,6 +101,10 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
         }
       ]}
     >
+      {/* Soft Ambient White Rays / Halo Glow */}
+      <View style={styles.outerRaysGlow} />
+      <View style={styles.innerRaysGlow} />
+
       <View style={styles.navContainer}>
         {visibleRoutes.map((route: any, index: number) => {
           const isFocused = currentRouteName === route.name;
@@ -201,11 +204,40 @@ const styles = StyleSheet.create({
     elevation: 10,
     zIndex: 50,
   },
+  outerRaysGlow: {
+    position: 'absolute',
+    top: -6,
+    bottom: -6,
+    left: -6,
+    right: -6,
+    borderRadius: 36,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.85,
+    shadowRadius: 18,
+    elevation: 6,
+  },
+  innerRaysGlow: {
+    position: 'absolute',
+    top: -2.5,
+    bottom: -2.5,
+    left: -2.5,
+    right: -2.5,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.75)',
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.95,
+    shadowRadius: 10,
+    elevation: 4,
+  },
   navContainer: {
     borderRadius: 30,
     borderWidth: 1.2,
     borderColor: 'rgba(255, 255, 255, 0.9)',
-    // Glossy frosted solid base: solid high-opacity surface with subtle light reflectance
     backgroundColor: 'rgba(253, 253, 254, 0.96)',
     flexDirection: 'row',
     alignItems: 'center',
