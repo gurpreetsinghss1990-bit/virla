@@ -10,6 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PushNotificationService } from '../services/PushNotificationService';
 import { useUserStore } from '../store/userStore';
 import { TopToastNotification } from '../components/TopToastNotification';
+import { useEngagementNudges } from '../hooks/useEngagementNudges';
 import { useToastStore } from '../store/toastStore';
 import '../global.css';
 
@@ -22,6 +23,8 @@ LogBox.ignoreLogs([
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  useEngagementNudges();
+
   useEffect(() => {
     // Hide splash screen immediately since we handle the premium splash layout in index.tsx
     SplashScreen.hideAsync();

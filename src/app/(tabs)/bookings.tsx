@@ -467,8 +467,20 @@ export default function BookingsScreen() {
     }
   }, [bookings, activeFilter, clientDateFilter]);
 
-  const getFilterLabel = (type: FilterType) => {
-    switch (type) {
+  // Count bookings in the active tab ignoring the date filter — hides date pills when the tab is empty
+  const activeTabCount = useMemo(() => {
+    const serverNow = getCurrentServerTime();
+    return bookings.filter((b) => {
+      if (activeFilter === 'upcoming') {
+        return b.status === 'upcoming' && getBookingISTDateRange(b).start.getTime() > serverNow.getTime();
+      } else if (activeFilter === 'cancelled') {
+        return b.status === 'cancelled' || b.status === 'client_no_show' || b.status === 'trainer_no_show' || b.status === 'missed_session_not_started';
+      }
+      return b.status === activeFilter;
+    }).length;
+  }, [bookings, activeFilter]);
+
+  const getFilterLabel = (type: FilterType) => {    switch (type) {
       case 'upcoming': return 'Upcoming';
       case 'completed': return 'Completed';
       case 'cancelled': return 'Cancelled';
@@ -1156,11 +1168,13 @@ export default function BookingsScreen() {
 
             {/* Support Tickets Notepad / History Button */}
             <TouchableOpacity
-              activeOpacity={0.7}
+              activeOpacity={0.6}
               onPress={() => setShowUserTicketsModal(true)}
-              className="bg-white border border-[#E5E7EB] p-2.5 rounded-2xl items-center justify-center shadow-xs mt-1 flex-row gap-1"
+              className="p-2 items-center justify-center mt-0.5"
+              accessibilityRole="button"
+              accessibilityLabel="My Support Tickets"
             >
-              <Feather name="file-text" size={18} color="#101828" />
+              <Feather name="file-text" size={20} color="#101828" />
             </TouchableOpacity>
           </View>
         </View>
@@ -1206,7 +1220,8 @@ export default function BookingsScreen() {
           })}
         </View>
 
-        {/* Date Filter Pills (All / Today / This Week / This Month) */}
+        {/* Date Filter Pills (All / Today / This Week / This Month) — hidden when the tab is empty */}
+        {activeTabCount > 0 && (
         <View className="mb-5 -mx-6">
           <ScrollView
             horizontal
@@ -1244,10 +1259,11 @@ export default function BookingsScreen() {
                 </TouchableOpacity>
               );
             })}
-          </ScrollView>
-        </View>
+            </ScrollView>
+          </View>
+          )}
 
-        {/* Bookings Render List */}
+          {/* Bookings Render List */}
         <View className="min-h-[220px]">
           {isSwitchingTab ? (
             <View className="py-16 items-center justify-center">

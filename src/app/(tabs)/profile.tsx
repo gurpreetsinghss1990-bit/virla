@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, InteractionManager, BackHandler, Modal, LayoutAnimation, UIManager } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, InteractionManager, BackHandler, Modal, LayoutAnimation, UIManager, ActivityIndicator, Pressable, TouchableWithoutFeedback, StyleSheet, Easing, Dimensions } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
@@ -16,7 +16,21 @@ import { AutocompleteSuggestion, fetchGooglePlacesAutocomplete, reverseGeocodeCo
 import { LuxuryCard } from '../../components/LuxuryCard';
 import { SignOutConfirmationModal } from '../../components/SignOutConfirmationModal';
 import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
 import { formatToDDMMYYYY } from '../../utils/date';
+
+const DEFAULT_AVATARS = [
+  { id: 'avatar_male', label: 'Men (Athlete)', gender: 'male', uri: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=350&q=80' },
+  { id: 'avatar_female', label: 'Women (Yoga)', gender: 'female', uri: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=350&q=80' },
+];
+
+export const getDefaultAvatarForGender = (gender?: string) => {
+  const g = (gender || '').toLowerCase();
+  if (g === 'female' || g === 'women') {
+    return DEFAULT_AVATARS[1].uri;
+  }
+  return DEFAULT_AVATARS[0].uri;
+};
 
 type TrainerSectionType = 'profile' | 'workout' | 'operating' | 'availability' | 'banking' | 'support' | 'safety' | 'kit' | 'wallet';
 
@@ -29,6 +43,8 @@ const CATEGORY_DISPLAY_MAP: Record<string, string> = {
   'Aerial Yoga': 'Aerial Yoga',
   'All Workouts': 'All Workouts'
 };
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const DB_CATEGORIES = [
   { key: 'Strength', display: 'Strength Training' },
@@ -216,6 +232,48 @@ export default function ProfileScreen() {
 
   // Client Profile Edit local states
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const profileModalBackdropAnim = useMemo(() => new Animated.Value(0), []);
+  const profileModalSheetAnim = useMemo(() => new Animated.Value(1), []);
+
+  const openEditProfileModal = useCallback(() => {
+    setIsEditingProfile(true);
+    profileModalBackdropAnim.setValue(0);
+    profileModalSheetAnim.setValue(1);
+    Animated.parallel([
+      Animated.timing(profileModalBackdropAnim, {
+        toValue: 1,
+        duration: 320,
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+        useNativeDriver: true,
+      }),
+      Animated.timing(profileModalSheetAnim, {
+        toValue: 0,
+        duration: 360,
+        easing: Easing.bezier(0.16, 1, 0.3, 1),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [profileModalBackdropAnim, profileModalSheetAnim]);
+
+  const closeEditProfileModal = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(profileModalBackdropAnim, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+        useNativeDriver: true,
+      }),
+      Animated.timing(profileModalSheetAnim, {
+        toValue: 1,
+        duration: 240,
+        easing: Easing.bezier(0.4, 0, 1, 1),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setIsEditingProfile(false);
+    });
+  }, [profileModalBackdropAnim, profileModalSheetAnim]);
+
   const [isPersonalInfoExpanded, setIsPersonalInfoExpanded] = useState(false);
 
   const togglePersonalInfoExpansion = useCallback((targetState?: boolean) => {
@@ -249,6 +307,8 @@ export default function ProfileScreen() {
   const [editTargetGoal, setEditTargetGoal] = useState(profile.targetGoal || '');
   const [editLanguage, setEditLanguage] = useState(profile.preferredLanguage || '');
   const [editCity, setEditCity] = useState(profile.city || '');
+  const [editAvatar, setEditAvatar] = useState(profile.avatar || user?.avatar || DEFAULT_AVATARS[0].uri);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -263,6 +323,7 @@ export default function ProfileScreen() {
       setEditTargetGoal(profile.targetGoal || '');
       setEditLanguage(profile.preferredLanguage || '');
       setEditCity(profile.city || '');
+      setEditAvatar(profile.avatar || user?.avatar || DEFAULT_AVATARS[0].uri);
     }, 0);
     return () => clearTimeout(timer);
   }, [
@@ -276,11 +337,54 @@ export default function ProfileScreen() {
     profile.fitnessLevel,
     profile.targetGoal,
     profile.preferredLanguage,
-    profile.city
+    profile.city,
+    profile.avatar,
+    user?.avatar
   ]);
 
-  const handleSaveProfile = async () => {
+  const pickAvatarImage = async (source: 'camera' | 'library') => {
     try {
+      if (source === 'camera') {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Required', 'Camera permission is needed to take a profile picture.');
+          return;
+        }
+        const result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+        if (!result.canceled && result.assets?.[0]?.uri) {
+          setEditAvatar(result.assets[0].uri);
+        }
+      } else {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Required', 'Gallery access is needed to select a profile picture.');
+          return;
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+        if (!result.canceled && result.assets?.[0]?.uri) {
+          setEditAvatar(result.assets[0].uri);
+        }
+      }
+    } catch (e: any) {
+      console.warn('[AvatarPicker] Error picking image:', e);
+      Alert.alert('Picker Error', 'Unable to pick image. Please try again.');
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (isSavingProfile) return;
+    try {
+      setIsSavingProfile(true);
       await profile.updateCoreProfile({
         name: editName,
         mobile: editMobile,
@@ -292,13 +396,16 @@ export default function ProfileScreen() {
         fitnessLevel: editFitnessLevel,
         targetGoal: editTargetGoal,
         preferredLanguage: editLanguage,
-        city: editCity
+        city: editCity,
+        avatar: editAvatar
       });
-      setIsEditingProfile(false);
+      closeEditProfileModal();
       Alert.alert('Profile Saved', 'Your personal details have been updated.');
     } catch (err: any) {
       console.error('[Profile Update Error]', err);
       Alert.alert('Save Error', err.message || 'Failed to save profile changes. Please try again.');
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -325,7 +432,7 @@ export default function ProfileScreen() {
           return true;
         }
         if (isEditingProfile) {
-          setIsEditingProfile(false);
+          closeEditProfileModal();
           return true;
         }
         if (isEditingTrainer) {
@@ -337,7 +444,7 @@ export default function ProfileScreen() {
       };
       const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
       return () => sub.remove();
-    }, [isSignOutModalVisible, isEditingProfile, isEditingTrainer])
+    }, [isSignOutModalVisible, isEditingProfile, isEditingTrainer, closeEditProfileModal])
   );
   const [trainerBio, setTrainerBio] = useState(coach?.shortBio || '');
   const [trainerName, setTrainerName] = useState(coach?.name || user?.name || '');
@@ -413,23 +520,23 @@ export default function ProfileScreen() {
         Database.setCurrentUserId(storedUser.id);
       }
 
-      // 1. Instant sync from local cache so profile tab renders immediately with zero lag
-      syncAllDomainStores();
+      // 1. Instant lightweight sync from local cache so profile tab renders immediately with zero lag
       useUserStore.getState().syncFromDB();
-      const cachedCoach = Database.schema.coaches.find((c: any) => c.name === user.name || c.id === user.id);
+      const cachedCoach = Database.schema?.coaches?.find((c: any) => c.name === user.name || c.id === user.id);
       if (cachedCoach) {
         setTrainerName(cachedCoach.name || '');
         setTrainerGender(cachedCoach.gender || '');
         setTrainerBio(cachedCoach.shortBio || '');
       }
 
-      // 2. Perform background async sync after screen transition finishes
+      // 2. Perform background async sync after screen transition finishes completely
       const task = InteractionManager.runAfterInteractions(() => {
+        syncAllDomainStores();
         Database.load().then(() => {
           syncAllDomainStores();
           useUserStore.getState().syncFromDB();
           reloadDynamicLists();
-          const latestCoach = Database.schema.coaches.find((c: any) => c.name === user.name || c.id === user.id);
+          const latestCoach = Database.schema?.coaches?.find((c: any) => c.name === user.name || c.id === user.id);
           if (latestCoach) {
             setTrainerName(latestCoach.name || '');
             setTrainerGender(latestCoach.gender || '');
@@ -738,16 +845,25 @@ export default function ProfileScreen() {
 
               {/* User Hero Section */}
               <View className="flex-row items-center gap-4 mb-6 z-10">
-                <View className="w-[78px] h-[78px] rounded-full p-[2.5px] border-2 border-[#F59E0B] bg-white shadow-sm">
-                  <Image
-                    source={{ uri: profile.avatar || user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80' }}
-                    className="w-full h-full rounded-full"
-                  />
-                </View>
+                <TouchableOpacity 
+                  activeOpacity={0.85}
+                  onPress={openEditProfileModal}
+                  className="relative"
+                >
+                  <View className="w-[78px] h-[78px] rounded-full p-[2.5px] border-2 border-[#F59E0B] bg-white shadow-sm">
+                    <Image
+                      source={{ uri: profile.avatar || user?.avatar || getDefaultAvatarForGender(profile.gender) }}
+                      className="w-full h-full rounded-full"
+                    />
+                  </View>
+                  <View className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-rose-500 border-2 border-white items-center justify-center shadow-xs">
+                    <Feather name="camera" size={11} color="#FFFFFF" />
+                  </View>
+                </TouchableOpacity>
                 <View className="flex-1">
                   <View className="flex-row items-center gap-2 flex-wrap">
                     <Text className="text-[#101828] text-2xl font-black tracking-tight">
-                      {profile.name || user?.name || 'Virral'}
+                      {profile.name || user?.name || 'User'}
                     </Text>
                     <View className="bg-[#FFFBEB] border border-[#FDE68A] px-2.5 py-0.5 rounded-full flex-row items-center gap-1">
                       <MaterialCommunityIcons name="crown" size={11} color="#D97706" />
@@ -941,7 +1057,7 @@ export default function ProfileScreen() {
                     <View className="flex-1">
                       <Text className="text-[#101828] text-sm font-black tracking-tight">Personal Information</Text>
                       <Text className="text-[#94A3B8] text-[11px] font-semibold mt-0.5">
-                        {isPersonalInfoExpanded ? 'Tap to wrap / collapse' : `${profile.name || 'Virral'} • Tap to view all details`}
+                        {isPersonalInfoExpanded ? 'Tap to wrap / collapse' : `${profile.name || user?.name || 'User'} • Tap to view all details`}
                       </Text>
                     </View>
                   </View>
@@ -958,7 +1074,7 @@ export default function ProfileScreen() {
                       <Text className="text-[#64748B] text-xs font-bold uppercase tracking-wider">Profile Details</Text>
                       <TouchableOpacity
                         activeOpacity={0.7}
-                        onPress={() => setIsEditingProfile(true)}
+                        onPress={openEditProfileModal}
                         className="flex-row items-center gap-1.5 bg-slate-100 border border-slate-200/80 px-3 py-1 rounded-full"
                       >
                         <Feather name="edit-2" size={11} color="#0F172A" />
@@ -966,113 +1082,115 @@ export default function ProfileScreen() {
                       </TouchableOpacity>
                     </View>
                     {/* Full Name */}
-                    <TouchableOpacity activeOpacity={0.6} onPress={() => setIsEditingProfile(true)} className="flex-row items-center justify-between py-1.5">
+                    <TouchableOpacity activeOpacity={0.6} onPress={openEditProfileModal} className="flex-row items-center justify-between py-1.5">
                       <View className="flex-row items-center gap-3">
                         <Feather name="user" size={16} color="#64748B" />
                         <Text className="text-[#64748B] text-xs font-semibold">Full Name</Text>
                       </View>
                       <View className="flex-row items-center gap-1.5">
-                        <Text className="text-[#101828] text-xs font-black">{profile.name || 'Virral'}</Text>
+                        <Text className="text-[#101828] text-xs font-black">{profile.name || user?.name || 'Not set'}</Text>
                         <Feather name="chevron-right" size={14} color="#94A3B8" />
                       </View>
                     </TouchableOpacity>
 
                     {/* Mobile Number */}
-                    <TouchableOpacity activeOpacity={0.6} onPress={() => setIsEditingProfile(true)} className="flex-row items-center justify-between py-1.5">
+                    <TouchableOpacity activeOpacity={0.6} onPress={openEditProfileModal} className="flex-row items-center justify-between py-1.5">
                       <View className="flex-row items-center gap-3">
                         <Feather name="phone" size={16} color="#64748B" />
                         <Text className="text-[#64748B] text-xs font-semibold">Mobile Number</Text>
                       </View>
                       <View className="flex-row items-center gap-1.5">
-                        <Text className="text-[#101828] text-xs font-black">{profile.mobile || '919967720006'}</Text>
+                        <Text className="text-[#101828] text-xs font-black">
+                          {profile.mobile ? profile.mobile.replace(/^\+?91\s*/, '') : (user?.phone ? user.phone.replace(/^\+?91\s*/, '') : 'Not set')}
+                        </Text>
                         <Feather name="chevron-right" size={14} color="#94A3B8" />
                       </View>
                     </TouchableOpacity>
 
                     {/* Email address */}
-                    <TouchableOpacity activeOpacity={0.6} onPress={() => setIsEditingProfile(true)} className="flex-row items-center justify-between py-1.5">
+                    <TouchableOpacity activeOpacity={0.6} onPress={openEditProfileModal} className="flex-row items-center justify-between py-1.5">
                       <View className="flex-row items-center gap-3">
                         <Feather name="mail" size={16} color="#64748B" />
                         <Text className="text-[#64748B] text-xs font-semibold">Email address</Text>
                       </View>
                       <View className="flex-row items-center gap-1.5">
-                        <Text className="text-[#101828] text-xs font-black">{profile.email || 'Not provided'}</Text>
+                        <Text className="text-[#101828] text-xs font-black">{profile.email || user?.email || 'Not set'}</Text>
                         <Feather name="chevron-right" size={14} color="#94A3B8" />
                       </View>
                     </TouchableOpacity>
 
                     {/* Gender */}
-                    <TouchableOpacity activeOpacity={0.6} onPress={() => setIsEditingProfile(true)} className="flex-row items-center justify-between py-1.5">
+                    <TouchableOpacity activeOpacity={0.6} onPress={openEditProfileModal} className="flex-row items-center justify-between py-1.5">
                       <View className="flex-row items-center gap-3">
                         <Ionicons name="male-female-outline" size={16} color="#64748B" />
                         <Text className="text-[#64748B] text-xs font-semibold">Gender</Text>
                       </View>
                       <View className="flex-row items-center gap-1.5">
-                        <Text className="text-[#101828] text-xs font-black">{profile.gender || 'Male'}</Text>
+                        <Text className="text-[#101828] text-xs font-black">{profile.gender || 'Not set'}</Text>
                         <Feather name="chevron-right" size={14} color="#94A3B8" />
                       </View>
                     </TouchableOpacity>
 
                     {/* Date of Birth */}
-                    <TouchableOpacity activeOpacity={0.6} onPress={() => setIsEditingProfile(true)} className="flex-row items-center justify-between py-1.5">
+                    <TouchableOpacity activeOpacity={0.6} onPress={openEditProfileModal} className="flex-row items-center justify-between py-1.5">
                       <View className="flex-row items-center gap-3">
                         <Feather name="calendar" size={16} color="#64748B" />
                         <Text className="text-[#64748B] text-xs font-semibold">Date of Birth</Text>
                       </View>
                       <View className="flex-row items-center gap-1.5">
-                        <Text className="text-[#101828] text-xs font-black">{profile.dob || 'Not provided'}</Text>
+                        <Text className="text-[#101828] text-xs font-black">{profile.dob || 'Not set'}</Text>
                         <Feather name="chevron-right" size={14} color="#94A3B8" />
                       </View>
                     </TouchableOpacity>
 
                     {/* Height */}
-                    <TouchableOpacity activeOpacity={0.6} onPress={() => setIsEditingProfile(true)} className="flex-row items-center justify-between py-1.5">
+                    <TouchableOpacity activeOpacity={0.6} onPress={openEditProfileModal} className="flex-row items-center justify-between py-1.5">
                       <View className="flex-row items-center gap-3">
                         <Ionicons name="resize-outline" size={16} color="#64748B" />
                         <Text className="text-[#64748B] text-xs font-semibold">Height</Text>
                       </View>
                       <View className="flex-row items-center gap-1.5">
                         <Text className="text-[#101828] text-xs font-black">
-                          {profile.height ? (profile.height.includes('cm') ? profile.height : `${profile.height} cm`) : '189 cm'}
+                          {profile.height ? (profile.height.includes('cm') ? profile.height : `${profile.height} cm`) : 'Not set'}
                         </Text>
                         <Feather name="chevron-right" size={14} color="#94A3B8" />
                       </View>
                     </TouchableOpacity>
 
                     {/* Weight */}
-                    <TouchableOpacity activeOpacity={0.6} onPress={() => setIsEditingProfile(true)} className="flex-row items-center justify-between py-1.5">
+                    <TouchableOpacity activeOpacity={0.6} onPress={openEditProfileModal} className="flex-row items-center justify-between py-1.5">
                       <View className="flex-row items-center gap-3">
                         <Ionicons name="barbell-outline" size={16} color="#64748B" />
                         <Text className="text-[#64748B] text-xs font-semibold">Weight</Text>
                       </View>
                       <View className="flex-row items-center gap-1.5">
                         <Text className="text-[#101828] text-xs font-black">
-                          {profile.weight ? (profile.weight.includes('kg') ? profile.weight : `${profile.weight} kg`) : '74 kg'}
+                          {profile.weight ? (profile.weight.includes('kg') ? profile.weight : `${profile.weight} kg`) : 'Not set'}
                         </Text>
                         <Feather name="chevron-right" size={14} color="#94A3B8" />
                       </View>
                     </TouchableOpacity>
 
                     {/* Fitness Level */}
-                    <TouchableOpacity activeOpacity={0.6} onPress={() => setIsEditingProfile(true)} className="flex-row items-center justify-between py-1.5">
+                    <TouchableOpacity activeOpacity={0.6} onPress={openEditProfileModal} className="flex-row items-center justify-between py-1.5">
                       <View className="flex-row items-center gap-3">
                         <Feather name="trending-up" size={16} color="#64748B" />
                         <Text className="text-[#64748B] text-xs font-semibold">Fitness Level</Text>
                       </View>
                       <View className="flex-row items-center gap-1.5">
-                        <Text className="text-[#101828] text-xs font-black">{profile.fitnessLevel || 'Intermediate'}</Text>
+                        <Text className="text-[#101828] text-xs font-black">{profile.fitnessLevel || 'Not set'}</Text>
                         <Feather name="chevron-right" size={14} color="#94A3B8" />
                       </View>
                     </TouchableOpacity>
 
-                    {/* City */}
-                    <TouchableOpacity activeOpacity={0.6} onPress={() => setIsEditingProfile(true)} className="flex-row items-center justify-between py-1.5">
+                    {/* Area */}
+                    <TouchableOpacity activeOpacity={0.6} onPress={openEditProfileModal} className="flex-row items-center justify-between py-1.5">
                       <View className="flex-row items-center gap-3">
                         <Feather name="map-pin" size={16} color="#64748B" />
-                        <Text className="text-[#64748B] text-xs font-semibold">City</Text>
+                        <Text className="text-[#64748B] text-xs font-semibold">Area</Text>
                       </View>
                       <View className="flex-row items-center gap-1.5">
-                        <Text className="text-[#101828] text-xs font-black">{profile.city || 'Bengaluru'}</Text>
+                        <Text className="text-[#101828] text-xs font-black">{profile.city || 'Not set'}</Text>
                         <Feather name="chevron-right" size={14} color="#94A3B8" />
                       </View>
                     </TouchableOpacity>
@@ -1141,48 +1259,82 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Goal Chips */}
-                <View className="flex-row flex-wrap gap-2 mb-3.5">
-                  {(Array.isArray(profile.selectedGoals) && profile.selectedGoals.length > 0
-                    ? profile.selectedGoals
-                    : ['Strength', 'Endurance', 'Weight Loss', 'Flexibility']
-                  ).map((goal, idx) => (
-                    <TouchableOpacity
-                      key={`${goal}-${idx}`}
-                      activeOpacity={0.8}
+                {Array.isArray(profile.selectedGoals) && profile.selectedGoals.length > 0 ? (
+                  <View className="flex-row flex-wrap gap-2 mb-3.5">
+                    {profile.selectedGoals.map((goal, idx) => (
+                      <View key={`${goal}-${idx}`} className="rounded-full overflow-hidden">
+                        <Pressable
+                          android_ripple={{
+                            color: idx < 2 ? 'rgba(4, 120, 87, 0.25)' : 'rgba(71, 85, 105, 0.2)',
+                            borderless: false,
+                          }}
+                          onPress={() => router.push('/fitness-goals' as any)}
+                          style={({ pressed }) => [
+                            pressed && { transform: [{ scale: 0.96 }] },
+                            Platform.OS === 'ios' && pressed && { opacity: 0.75 },
+                          ]}
+                          className={
+                            idx < 2
+                              ? "bg-[#E6F4F1] border border-[#A7F3D0] px-3.5 py-2 rounded-full flex-row items-center gap-1.5"
+                              : "bg-[#F1F5F9] border border-[#E2E8F0] px-3.5 py-2 rounded-full"
+                          }
+                        >
+                          <Text className={idx < 2 ? "text-[#065F46] text-xs font-bold" : "text-[#475569] text-xs font-semibold"}>
+                            {goal}
+                          </Text>
+                          {idx < 2 && <Feather name="arrow-up-right" size={12} color="#065F46" />}
+                        </Pressable>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <View className="rounded-2xl overflow-hidden mb-3.5 border border-dashed border-zinc-250 bg-zinc-50/80">
+                    <Pressable
+                      android_ripple={{
+                        color: 'rgba(79, 70, 229, 0.15)',
+                        borderless: false,
+                      }}
                       onPress={() => router.push('/fitness-goals' as any)}
-                      className={
-                        idx < 2
-                          ? "bg-[#E6F4F1] border border-[#A7F3D0] px-3 py-1.5 rounded-full flex-row items-center gap-1"
-                          : "bg-[#F1F5F9] border border-[#E2E8F0] px-3 py-1.5 rounded-full"
-                      }
+                      style={({ pressed }) => [
+                        pressed && { transform: [{ scale: 0.98 }] },
+                        Platform.OS === 'ios' && pressed && { opacity: 0.75 },
+                      ]}
+                      className="p-4 items-center justify-center flex-row gap-2"
                     >
-                      <Text className={idx < 2 ? "text-[#065F46] text-xs font-bold" : "text-[#475569] text-xs font-semibold"}>
-                        {goal}
-                      </Text>
-                      {idx < 2 && <Feather name="arrow-up-right" size={12} color="#065F46" />}
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                      <Feather name="plus-circle" size={15} color="#64748B" />
+                      <Text className="text-zinc-600 text-xs font-bold">No fitness goals set yet. Tap to add</Text>
+                    </Pressable>
+                  </View>
+                )}
 
                 {/* Motivational Banner */}
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={() => router.push('/fitness-goals' as any)}
-                  className="bg-[#EDF7F2] border border-[#D1FAE5] rounded-2xl p-3.5 flex-row items-center justify-between"
-                >
-                  <View className="flex-row items-center gap-3 flex-1 pr-2">
-                    <View className="w-8 h-8 rounded-full bg-[#D1FAE5] items-center justify-center">
-                      <Feather name="target" size={16} color="#047857" />
+                <View className="rounded-2xl overflow-hidden border border-[#D1FAE5] bg-[#EDF7F2]">
+                  <Pressable
+                    android_ripple={{
+                      color: 'rgba(4, 120, 87, 0.2)',
+                      borderless: false,
+                    }}
+                    onPress={() => router.push('/fitness-goals' as any)}
+                    style={({ pressed }) => [
+                      pressed && { transform: [{ scale: 0.98 }] },
+                      Platform.OS === 'ios' && pressed && { opacity: 0.8 },
+                    ]}
+                    className="p-3.5 flex-row items-center justify-between"
+                  >
+                    <View className="flex-row items-center gap-3 flex-1 pr-2">
+                      <View className="w-8 h-8 rounded-full bg-[#D1FAE5] items-center justify-center">
+                        <Feather name="target" size={16} color="#047857" />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-[#064E3B] text-xs font-black">Your fitness journey matters.</Text>
+                        <Text className="text-[#047857] text-[11px] font-medium mt-0.5">
+                          Let's set your goals for better results.
+                        </Text>
+                      </View>
                     </View>
-                    <View className="flex-1">
-                      <Text className="text-[#064E3B] text-xs font-black">Your fitness journey matters.</Text>
-                      <Text className="text-[#047857] text-[11px] font-medium mt-0.5">
-                        Let's set your goals for better results.
-                      </Text>
-                    </View>
-                  </View>
-                  <Feather name="chevron-right" size={16} color="#047857" />
-                </TouchableOpacity>
+                    <Feather name="chevron-right" size={16} color="#047857" />
+                  </Pressable>
+                </View>
               </View>
 
 
@@ -2213,19 +2365,57 @@ export default function ProfileScreen() {
       {/* Edit Personal Information Modal */}
       <Modal
         visible={isEditingProfile}
-        animationType="slide"
+        animationType="none"
         transparent={true}
-        onRequestClose={() => setIsEditingProfile(false)}
+        statusBarTranslucent={true}
+        onRequestClose={closeEditProfileModal}
       >
         <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          className="flex-1 justify-end bg-black/60"
+          style={{ flex: 1, justifyContent: 'flex-end' }}
         >
-          <View className="bg-white rounded-t-[32px] p-6 max-h-[88%] shadow-2xl">
+          {/* Smooth animated backdrop */}
+          <Animated.View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                backgroundColor: '#000000',
+                opacity: profileModalBackdropAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 0.65],
+                }),
+              },
+            ]}
+          >
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={closeEditProfileModal}
+              accessibilityLabel="Dismiss modal backdrop"
+              accessibilityRole="button"
+            />
+          </Animated.View>
+
+          {/* Smooth animated bottom sheet */}
+          <Animated.View 
+            style={[
+              {
+                paddingBottom: Math.max(insets.bottom, 24),
+                transform: [
+                  {
+                    translateY: profileModalSheetAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, SCREEN_HEIGHT * 0.9],
+                    }),
+                  },
+                ],
+              },
+            ]}
+            className="bg-white rounded-t-[32px] px-6 pt-6 max-h-[88%] shadow-2xl"
+          >
             <View className="flex-row justify-between items-center pb-3.5 border-b border-zinc-100">
               <Text className="text-[#101828] text-base font-black">Edit Personal Information</Text>
               <TouchableOpacity 
-                onPress={() => setIsEditingProfile(false)}
+                onPress={closeEditProfileModal}
                 className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center"
               >
                 <Feather name="x" size={16} color="#64748B" />
@@ -2233,46 +2423,220 @@ export default function ProfileScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} className="mt-4">
-              <View className="gap-3.5 pb-4">
-                {[
-                  { l: 'Full Name', val: editName, set: setEditName },
-                  { l: 'Mobile Number', val: editMobile, set: setEditMobile, kt: 'phone-pad' as const },
-                  { l: 'Email address', val: editEmail, set: setEditEmail, kt: 'email-address' as const },
-                  { l: 'Gender', val: editGender, set: setEditGender },
-                  { l: 'Date of Birth', val: editDob, set: setEditDob },
-                  { l: 'Height (e.g. 189 cm)', val: editHeight, set: setEditHeight },
-                  { l: 'Weight (e.g. 74 kg)', val: editWeight, set: setEditWeight },
-                  { l: 'Fitness Level', val: editFitnessLevel, set: setEditFitnessLevel },
-                  { l: 'City', val: editCity, set: setEditCity },
-                ].map((f, idx) => (
-                  <View key={idx} className="gap-1">
-                    <Text className="text-zinc-500 text-[9px] font-black uppercase tracking-wider">{f.l}</Text>
+              <View className="gap-4 pb-4">
+                {/* Profile Picture Selection */}
+                <View className="bg-zinc-50 border border-zinc-200/80 rounded-2xl p-4 gap-3">
+                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Profile Picture</Text>
+                  
+                  <View className="flex-row items-center gap-4">
+                    {/* Current Selected Avatar */}
+                    <View className="w-16 h-16 rounded-full border-2 border-rose-500 p-0.5 bg-white shadow-sm">
+                      <Image
+                        source={{ uri: editAvatar || DEFAULT_AVATARS[0].uri }}
+                        className="w-full h-full rounded-full"
+                      />
+                    </View>
+
+                    {/* Camera / Gallery Upload Options */}
+                    <View className="flex-1 flex-row gap-2">
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => pickAvatarImage('camera')}
+                        className="flex-1 py-2 px-2.5 rounded-xl bg-white border border-zinc-200 items-center justify-center flex-row gap-1.5 shadow-2xs"
+                      >
+                        <Feather name="camera" size={13} color="#101828" />
+                        <Text className="text-[11px] font-bold text-zinc-800">Camera</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => pickAvatarImage('library')}
+                        className="flex-1 py-2 px-2.5 rounded-xl bg-white border border-zinc-200 items-center justify-center flex-row gap-1.5 shadow-2xs"
+                      >
+                        <Feather name="image" size={13} color="#101828" />
+                        <Text className="text-[11px] font-bold text-zinc-800">Gallery</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Full Name */}
+                <View className="gap-1">
+                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Full Name</Text>
+                  <TextInput
+                    value={editName}
+                    onChangeText={setEditName}
+                    placeholder="Your Full Name"
+                    placeholderTextColor="#9CA3AF"
+                    className="border border-[#E5E7EB] bg-[#F8F9FA] px-3.5 py-3 rounded-xl text-sm text-zinc-900 font-medium"
+                  />
+                </View>
+
+                {/* Mobile Number with separate +91 badge */}
+                <View className="gap-1">
+                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Mobile Number</Text>
+                  <View className="flex-row items-center border border-[#E5E7EB] bg-[#F8F9FA] rounded-xl overflow-hidden">
+                    <View className="bg-zinc-200/70 px-3.5 py-3 border-r border-[#E5E7EB] items-center justify-center">
+                      <Text className="text-sm font-bold text-zinc-800 tracking-wider">+91</Text>
+                    </View>
                     <TextInput
-                      value={f.val}
-                      onChangeText={f.set}
-                      keyboardType={f.kt}
-                      className="border border-[#E5E7EB] bg-[#F8F9FA] p-3 rounded-xl text-xs text-zinc-900 font-semibold"
+                      value={editMobile.replace(/^\+?91\s*/, '')}
+                      onChangeText={(val) => {
+                        const cleaned = val.replace(/^\+?91\s*/, '').replace(/[^0-9]/g, '');
+                        setEditMobile(cleaned);
+                      }}
+                      keyboardType="phone-pad"
+                      maxLength={10}
+                      placeholder="9876543210"
+                      placeholderTextColor="#9CA3AF"
+                      className="flex-1 px-3.5 py-3 text-sm text-zinc-900 font-medium"
                     />
                   </View>
-                ))}
+                </View>
+
+                {/* Email Address */}
+                <View className="gap-1">
+                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Email address</Text>
+                  <TextInput
+                    value={editEmail}
+                    onChangeText={setEditEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    placeholder="name@example.com"
+                    placeholderTextColor="#9CA3AF"
+                    className="border border-[#E5E7EB] bg-[#F8F9FA] px-3.5 py-3 rounded-xl text-sm text-zinc-900 font-medium"
+                  />
+                </View>
+
+                {/* Gender Dropdown Selection */}
+                <View className="gap-1">
+                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Gender</Text>
+                  <View className="flex-row gap-2">
+                    {['Male', 'Female', 'Other'].map((g) => {
+                      const isSelected = editGender.toLowerCase() === g.toLowerCase();
+                      return (
+                        <TouchableOpacity
+                          key={g}
+                          onPress={() => {
+                            setEditGender(g);
+                            // Auto-align avatar if user is using default avatars or not customized
+                            const isDefault = !editAvatar || DEFAULT_AVATARS.some(av => av.uri === editAvatar);
+                            if (isDefault) {
+                              setEditAvatar(getDefaultAvatarForGender(g));
+                            }
+                          }}
+                          activeOpacity={0.7}
+                          className={`flex-1 py-2.5 rounded-xl border items-center justify-center flex-row gap-1.5 ${
+                            isSelected 
+                              ? 'bg-rose-50 border-rose-500' 
+                              : 'bg-[#F8F9FA] border-[#E5E7EB]'
+                          }`}
+                        >
+                          <View className={`w-3.5 h-3.5 rounded-full border items-center justify-center ${
+                            isSelected ? 'border-rose-500 bg-rose-500' : 'border-zinc-300 bg-white'
+                          }`}>
+                            {isSelected && <View className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          </View>
+                          <Text className={`text-xs font-bold ${
+                            isSelected ? 'text-rose-600 font-black' : 'text-zinc-700'
+                          }`}>
+                            {g}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* Date of Birth */}
+                <View className="gap-1">
+                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Date of Birth</Text>
+                  <TextInput
+                    value={editDob}
+                    onChangeText={setEditDob}
+                    placeholder="DD/MM/YYYY"
+                    placeholderTextColor="#9CA3AF"
+                    className="border border-[#E5E7EB] bg-[#F8F9FA] px-3.5 py-3 rounded-xl text-sm text-zinc-900 font-medium"
+                  />
+                </View>
+
+                {/* Height & Weight Side by Side */}
+                <View className="flex-row gap-3">
+                  <View className="flex-1 gap-1">
+                    <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Height (cm)</Text>
+                    <TextInput
+                      value={editHeight}
+                      onChangeText={setEditHeight}
+                      placeholder="175 cm"
+                      placeholderTextColor="#9CA3AF"
+                      className="border border-[#E5E7EB] bg-[#F8F9FA] px-3.5 py-3 rounded-xl text-sm text-zinc-900 font-medium"
+                    />
+                  </View>
+                  <View className="flex-1 gap-1">
+                    <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Weight (kg)</Text>
+                    <TextInput
+                      value={editWeight}
+                      onChangeText={setEditWeight}
+                      placeholder="70 kg"
+                      placeholderTextColor="#9CA3AF"
+                      className="border border-[#E5E7EB] bg-[#F8F9FA] px-3.5 py-3 rounded-xl text-sm text-zinc-900 font-medium"
+                    />
+                  </View>
+                </View>
+
+                {/* Fitness Level */}
+                <View className="gap-1">
+                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Fitness Level</Text>
+                  <TextInput
+                    value={editFitnessLevel}
+                    onChangeText={setEditFitnessLevel}
+                    placeholder="Beginner / Intermediate / Advanced"
+                    placeholderTextColor="#9CA3AF"
+                    className="border border-[#E5E7EB] bg-[#F8F9FA] px-3.5 py-3 rounded-xl text-sm text-zinc-900 font-medium"
+                  />
+                </View>
+
+                {/* Area */}
+                <View className="gap-1">
+                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Area</Text>
+                  <TextInput
+                    value={editCity}
+                    onChangeText={setEditCity}
+                    placeholder="e.g. Koramangala, Indiranagar"
+                    placeholderTextColor="#9CA3AF"
+                    className="border border-[#E5E7EB] bg-[#F8F9FA] px-3.5 py-3 rounded-xl text-sm text-zinc-900 font-medium"
+                  />
+                </View>
               </View>
             </ScrollView>
 
             <View className="flex-row gap-3 pt-3 border-t border-zinc-100">
               <TouchableOpacity
-                onPress={() => setIsEditingProfile(false)}
-                className="flex-1 py-3.5 rounded-xl border border-zinc-200 items-center justify-center"
+                onPress={closeEditProfileModal}
+                disabled={isSavingProfile}
+                activeOpacity={0.7}
+                className="flex-1 py-3.5 rounded-xl border border-zinc-200 items-center justify-center bg-white"
               >
                 <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleSaveProfile}
-                className="flex-1 py-3.5 rounded-xl bg-[#101828] items-center justify-center shadow-sm"
+                disabled={isSavingProfile}
+                activeOpacity={0.8}
+                className={`flex-1 py-3.5 rounded-xl items-center justify-center shadow-sm flex-row gap-2 ${
+                  isSavingProfile ? 'bg-zinc-700 opacity-90' : 'bg-[#101828]'
+                }`}
               >
-                <Text className="text-white text-xs font-black uppercase tracking-wider">Save Changes</Text>
+                {isSavingProfile ? (
+                  <>
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <Text className="text-white text-xs font-black uppercase tracking-wider">Saving...</Text>
+                  </>
+                ) : (
+                  <Text className="text-white text-xs font-black uppercase tracking-wider">Save Changes</Text>
+                )}
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         </KeyboardAvoidingView>
       </Modal>
 

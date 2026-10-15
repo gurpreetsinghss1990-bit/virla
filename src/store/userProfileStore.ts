@@ -237,6 +237,10 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
         userFields.phone = fields.mobile;
         delete profileFields.mobile;
       }
+      if ('avatar' in fields) {
+        userFields.avatar = fields.avatar;
+        delete profileFields.avatar;
+      }
 
       if (Object.keys(userFields).length > 0) {
         await Database.updateUser(userId, userFields);
@@ -263,15 +267,11 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
   },
   
   toggleGoal: (goal) => {
-    console.log('[DEBUG-GOALS] 1. toggleGoal called with goal:', goal);
     const currentGoals = Array.isArray(get().selectedGoals) ? get().selectedGoals : [];
-    console.log('[DEBUG-GOALS] 2. currentGoals before:', currentGoals);
     const updated = currentGoals.includes(goal)
       ? currentGoals.filter(g => g !== goal)
       : [...currentGoals, goal];
-    console.log('[DEBUG-GOALS] 3. updating store selectedGoals to:', updated);
     set({ selectedGoals: updated });
-    console.log('[DEBUG-GOALS] 4. store updated successfully!');
   },
 
   setGoals: async (goals: string[]) => {
@@ -279,6 +279,11 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
     set({ selectedGoals: goals, targetGoal: primaryGoal });
     const userId = Database.getCurrentUserId();
     if (userId) {
+      const dbProfile = Database.getProfile(userId);
+      if (dbProfile) {
+        dbProfile.selectedGoals = goals;
+        if (primaryGoal) dbProfile.fitnessGoal = primaryGoal;
+      }
       try {
         await Database.updateProfile(userId, { selectedGoals: goals, fitnessGoal: primaryGoal } as any);
       } catch (e) {

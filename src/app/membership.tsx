@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, Animated, Platform, BackHandler, LayoutAnimation, UIManager } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useWalletStore } from '../store/walletStore';
 import { useUserStore } from '../store/userStore';
@@ -290,6 +291,7 @@ export default function MembershipScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <StatusBar style="dark" />
       {/* Top Header — matching screenshot exactly */}
       <View 
         style={{ paddingTop: insets.top, backgroundColor: '#FFFFFF' }}

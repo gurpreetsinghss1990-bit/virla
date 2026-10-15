@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, Animated } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useUserStore } from '../store/userStore';
@@ -112,7 +113,8 @@ export default function SplashScreen() {
   }, [router]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 24), paddingBottom: Math.max(insets.bottom, 24) }} className="items-center justify-center">
+    <View style={{ flex: 1, backgroundColor: '#ffffff' }} className="items-center justify-center">
+      <StatusBar style="dark" />
       <Animated.View 
         style={{ 
           opacity: fadeAnim,
