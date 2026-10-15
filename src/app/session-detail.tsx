@@ -1142,8 +1142,8 @@ export default function SessionDetailScreen() {
       {/* Developer Push Simulator (Only for trainer during development) */}
       {__DEV__ && role === 'trainer' && !isMissed && !isCancelled && (
         <View className="bg-zinc-950 p-3.5 border-b border-zinc-800 gap-2">
-          <Text className="text-amber-500 text-xs font-bold uppercase tracking-wider pl-2.5">Developer Push Simulator</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-2 pl-2">
+          <Text className="text-amber-400 text-xs font-bold uppercase tracking-wider pl-2">Developer Push Simulator</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 8, gap: 8 }}>
             {currentStatus === 'trainer_assigned' && role === 'trainer' && (
               <TouchableOpacity
                 activeOpacity={0.8}
@@ -1154,9 +1154,9 @@ export default function SessionDetailScreen() {
                     Alert.alert('Simulation Error', e.message);
                   }
                 }}
-                className="px-3.5 py-1.5 bg-indigo-600 rounded-xl"
+                className="px-3.5 py-2 bg-indigo-600 rounded-xl items-center justify-center"
               >
-                <Text className="text-white text-xs font-bold uppercase">Simulate Accept</Text>
+                <Text className="text-white text-xs font-semibold">Simulate Accept</Text>
               </TouchableOpacity>
             )}
 
@@ -1170,9 +1170,9 @@ export default function SessionDetailScreen() {
                     Alert.alert('Simulation Error', e.message);
                   }
                 }}
-                className="px-3.5 py-1.5 bg-indigo-600 rounded-xl"
+                className="px-3.5 py-2 bg-indigo-600 rounded-xl items-center justify-center"
               >
-                <Text className="text-white text-xs font-bold uppercase">Simulate Prep Gear</Text>
+                <Text className="text-white text-xs font-semibold">Simulate Prep Gear</Text>
               </TouchableOpacity>
             )}
 
@@ -1180,9 +1180,9 @@ export default function SessionDetailScreen() {
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={startTravelSimulation}
-                className="px-3.5 py-1.5 bg-green-600 rounded-xl"
+                className="px-3.5 py-2 bg-emerald-600 rounded-xl items-center justify-center"
               >
-                <Text className="text-white text-xs font-bold uppercase">Simulate Start Journey</Text>
+                <Text className="text-white text-xs font-semibold">Simulate Start Journey</Text>
               </TouchableOpacity>
             )}
 
@@ -1198,26 +1198,26 @@ export default function SessionDetailScreen() {
                     Alert.alert('Simulation Error', e.message);
                   }
                 }}
-                className="px-3.5 py-1.5 bg-green-600 rounded-xl"
+                className="px-3.5 py-2 bg-emerald-600 rounded-xl items-center justify-center"
               >
-                <Text className="text-white text-xs font-bold uppercase">Skip to Arrived</Text>
+                <Text className="text-white text-xs font-semibold">Skip to Arrived</Text>
               </TouchableOpacity>
             )}
 
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => triggerClientNoShow(booking.id)}
-              className="px-3.5 py-1.5 bg-rose-600 rounded-xl"
+              className="px-3.5 py-2 bg-rose-600 rounded-xl items-center justify-center"
             >
-              <Text className="text-white text-xs font-bold uppercase">Client No-Show</Text>
+              <Text className="text-white text-xs font-semibold">Client No-Show</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => triggerTrainerNoShow(booking.id)}
-              className="px-3.5 py-1.5 bg-rose-600 rounded-xl"
+              className="px-3.5 py-2 bg-rose-600 rounded-xl items-center justify-center"
             >
-              <Text className="text-white text-xs font-bold uppercase">Trainer No-Show</Text>
+              <Text className="text-white text-xs font-semibold">Trainer No-Show</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -1974,9 +1974,14 @@ export default function SessionDetailScreen() {
             {/* Active Workout timer dashboard console */}
             {currentStatus === 'workout_started' && !isMissed && !isCancelled && (
               <View className="bg-zinc-950 p-6 rounded-[28px] border border-zinc-800 items-center justify-center gap-3 shadow-xl">
-                <Text className="text-emerald-400 text-[8px] font-black uppercase tracking-wider">WORKOUT IN PROGRESS</Text>
-                <Text className="text-white text-4xl font-black tracking-tight">{formatTime(workoutTimeLeft)}</Text>
-                <Text className="text-zinc-500 text-[9px] font-bold text-center leading-none">Activity tracker is active. Warm-up Drills logs are online.</Text>
+                <View className="bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-full flex-row items-center gap-1.5">
+                  <View className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <Text className="text-emerald-400 text-[11px] font-semibold uppercase tracking-wider">Workout In Progress</Text>
+                </View>
+                <Text className="text-white text-5xl font-bold tracking-tight my-1">{formatTime(workoutTimeLeft)}</Text>
+                <Text className="text-zinc-400 text-xs font-normal text-center leading-relaxed max-w-[280px]">
+                  Activity tracker is active. Warm-up drills & conditioning underway.
+                </Text>
                 {role === 'trainer' && (
                   <TouchableOpacity
                     disabled={workoutTimeLeft > 0}
@@ -1989,11 +1994,11 @@ export default function SessionDetailScreen() {
                         Alert.alert('Completion Error', err.message || 'Could not complete workout.');
                       }
                     }}
-                    className={`mt-3 px-6 py-2.5 rounded-full ${
-                      workoutTimeLeft > 0 ? 'bg-zinc-850 opacity-40' : 'bg-emerald-500'
+                    className={`mt-2 px-8 py-3.5 rounded-2xl items-center justify-center ${
+                      workoutTimeLeft > 0 ? 'bg-zinc-800 opacity-50' : 'bg-emerald-600'
                     }`}
                   >
-                    <Text className="text-white text-[8px] font-black uppercase tracking-wider">
+                    <Text className="text-white text-xs font-bold uppercase tracking-wider">
                       {workoutTimeLeft > 0 ? 'Workout in Progress' : 'Complete Session'}
                     </Text>
                   </TouchableOpacity>
@@ -2160,10 +2165,10 @@ export default function SessionDetailScreen() {
             <View className="gap-4">
               <View className="flex-row items-center justify-between pb-3 border-b border-zinc-100">
                 <View>
-                  <Text className="text-zinc-950 text-sm font-black uppercase tracking-wider">
+                  <Text className="text-zinc-950 text-sm font-bold uppercase tracking-wider">
                     Session Timeline
                   </Text>
-                  <Text className="text-zinc-500 text-[11px] font-semibold mt-0.5">
+                  <Text className="text-zinc-500 text-xs font-normal mt-0.5">
                     {isMissed || isCancelled ? 'Status history of your session' : 'Live progress of your session'}
                   </Text>
                 </View>
@@ -2177,7 +2182,7 @@ export default function SessionDetailScreen() {
                   <View className={`w-2 h-2 rounded-full ${
                     isMissed ? 'bg-amber-500' : isCancelled ? 'bg-rose-500' : 'bg-emerald-500'
                   }`} />
-                  <Text className={`text-[10px] font-black uppercase tracking-wider ${
+                  <Text className={`text-[11px] font-semibold tracking-wide uppercase ${
                     isMissed ? 'text-amber-700' : isCancelled ? 'text-rose-700' : 'text-emerald-700'
                   }`}>
                     {isMissed ? 'Missed' : isCancelled ? 'Cancelled' : 'Live Sync'}
@@ -2224,7 +2229,7 @@ export default function SessionDetailScreen() {
                           ) : isCurrent ? (
                             <Feather name={meta.icon as any} size={13} color="white" />
                           ) : (
-                            <Text className="text-zinc-500 text-[10px] font-black">{idx + 1}</Text>
+                            <Text className="text-zinc-500 text-xs font-semibold">{idx + 1}</Text>
                           )}
                         </Animated.View>
 
@@ -2244,47 +2249,47 @@ export default function SessionDetailScreen() {
                         <View className="flex-row items-center justify-between pr-1">
                           <Text className={`text-sm tracking-tight ${
                             isTerminalMissed
-                              ? 'font-black text-amber-700'
+                              ? 'font-bold text-amber-700'
                               : isTerminalCancelled
-                              ? 'font-black text-rose-700'
+                              ? 'font-bold text-rose-700'
                               : isCurrent 
-                              ? 'font-black text-[#E11D48]' 
+                              ? 'font-bold text-[#E11D48]' 
                               : isCompleted 
-                              ? 'font-bold text-zinc-900' 
-                              : 'font-semibold text-zinc-600'
+                              ? 'font-semibold text-zinc-900' 
+                              : 'font-medium text-zinc-600'
                           }`}>
                             {meta.title}
                           </Text>
 
                           {isTerminalMissed && (
                             <View className="bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                              <Text className="text-amber-700 text-[10px] font-black uppercase tracking-wider">Missed</Text>
+                              <Text className="text-amber-700 text-[10px] font-semibold uppercase tracking-wider">Missed</Text>
                             </View>
                           )}
                           {isTerminalCancelled && (
                             <View className="bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
-                              <Text className="text-rose-600 text-[10px] font-black uppercase tracking-wider">Cancelled</Text>
+                              <Text className="text-rose-600 text-[10px] font-semibold uppercase tracking-wider">Cancelled</Text>
                             </View>
                           )}
                           {isCurrent && (
                             <View className="bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
-                              <Text className="text-rose-600 text-[10px] font-black uppercase tracking-wider">Active</Text>
+                              <Text className="text-rose-600 text-[10px] font-semibold uppercase tracking-wider">Active</Text>
                             </View>
                           )}
                           {isCompleted && (
-                            <Text className="text-emerald-700 text-xs font-bold">Done</Text>
+                            <Text className="text-emerald-700 text-xs font-semibold">Done</Text>
                           )}
                         </View>
 
                         <Text className={`text-xs mt-0.5 leading-normal ${
                           isTerminalMissed
-                            ? 'text-amber-700/90 font-medium'
+                            ? 'text-amber-700/90 font-normal'
                             : isTerminalCancelled
-                            ? 'text-rose-700/90 font-medium'
+                            ? 'text-rose-700/90 font-normal'
                             : isCurrent 
-                            ? 'text-rose-700/90 font-medium' 
+                            ? 'text-rose-700/90 font-normal' 
                             : isCompleted 
-                            ? 'text-zinc-600 font-medium' 
+                            ? 'text-zinc-600 font-normal' 
                             : 'text-zinc-500 font-normal'
                         }`}>
                           {meta.desc}
