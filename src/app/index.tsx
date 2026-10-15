@@ -82,8 +82,8 @@ export default function SplashScreen() {
         try {
           if (isLoggedIn) {
             if (user && user.registrationStatus !== 'complete') {
-              console.log('[Splash] Incomplete registration detected on startup. Redirecting to setup wizard.');
-              router.replace('/get-started');
+              console.log('[Splash] Incomplete registration detected on startup. Redirecting to user-metrics.');
+              router.replace('/user-metrics' as any);
             } else {
               router.replace('/(tabs)');
             }

@@ -142,25 +142,8 @@ export default function GetStartedScreen() {
       await new Promise(resolve => setTimeout(resolve, 0));
       const { isLoggedIn, user } = useUserStore.getState();
       if (isLoggedIn && user && user.registrationStatus !== 'complete') {
-        console.log(`[get-started] Resuming incomplete user: ${user.name} (status: ${user.registrationStatus})`);
-        setTempUserObj(user);
-        setNewUserIdToRegister(user.id);
-
-        // Sync profile
-        Database.setCurrentUserId(user.id);
-        await Database.load();
-        await useUserProfileStore.getState().syncFromDB();
-        const profile = Database.getProfile(user.id);
-
-        if (user.registrationStatus === 'name_pending' || !user.name || user.name === 'Complete your profile') {
-          setSetupStep(0);
-        } else if (!profile?.gender) {
-          setSetupStep(1);
-        } else if (!profile?.selectedGoals || profile.selectedGoals.length === 0) {
-          setSetupStep(2);
-        } else {
-          setSetupStep(3);
-        }
+        console.log(`[get-started] Resuming incomplete user: ${user.name} (status: ${user.registrationStatus}). Redirecting to /user-metrics.`);
+        router.replace('/user-metrics' as any);
       }
     };
     checkResumeState();
@@ -291,21 +274,13 @@ export default function GetStartedScreen() {
             router.replace('/(tabs)');
           });
         } else {
-          console.log(`[DEBUG] Incomplete registration detected (status: ${regStatus}). Set up resume...`);
+          console.log(`[DEBUG] Incomplete registration detected (status: ${regStatus}). Redirecting new user to user-metrics landing page...`);
           setTempUserObj(userObj);
           setNewUserIdToRegister(userObj.id || "");
           await finalizeUserSession(userObj);
 
-          const profile = Database.getProfile(userObj.id);
-          if (regStatus === 'name_pending' || !userObj.name || userObj.name === 'Complete your profile') {
-            setSetupStep(0);
-          } else if (!profile?.gender) {
-            setSetupStep(1);
-          } else if (!profile?.selectedGoals || profile.selectedGoals.length === 0) {
-            setSetupStep(2);
-          } else {
-            setSetupStep(3);
-          }
+          // For brand new / incomplete users, route directly to the user-metrics onboarding page
+          router.replace('/user-metrics' as any);
         }
       } else {
         const failMsg = result?.message || 'Something went wrong while signing you in. Please try again.';
