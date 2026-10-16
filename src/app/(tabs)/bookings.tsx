@@ -123,7 +123,11 @@ export default function BookingsScreen() {
   const [activeFilter, setActiveFilter] = useState<FilterType>(role === 'trainer' ? 'today' : 'upcoming');
   const [renderedFilter, setRenderedFilter] = useState<FilterType>(role === 'trainer' ? 'today' : 'upcoming');
   const [clientDateFilter, setClientDateFilter] = useState<'all' | 'today' | 'this_week' | 'this_month'>('all');
-  const [visibleLimit, setVisibleLimit] = useState<number>(10);
+  // Cursor-based pagination state for Completed & Cancelled sections
+  // Cursor format: "<startMs>|<bookingId>" (null = first page)
+  const CURSOR_PAGE_SIZE = 5;
+  const [currentCursor, setCurrentCursor] = useState<string | null>(null);
+  const [cursorHistory, setCursorHistory] = useState<(string | null)[]>([]);
   const [loading, setLoading] = useState(() => !Database.getIsLoaded());
 
   const handleOpenSupport = React.useCallback((b: Booking) => {
@@ -224,6 +228,8 @@ export default function BookingsScreen() {
     const nextFilter = role === 'trainer' ? 'today' : 'upcoming';
     setActiveFilter(nextFilter);
     setRenderedFilter(nextFilter);
+    setCurrentCursor(null);
+    setCursorHistory([]);
   }
 
   // Date formatted strings
@@ -460,14 +466,20 @@ export default function BookingsScreen() {
       }
     }
 
-    upcoming.sort((a, b) => a.startMs - b.startMs);
-    completed.sort((a, b) => b.startMs - a.startMs);
-    cancelled.sort((a, b) => b.startMs - a.startMs);
+    upcoming.sort((a, b) => a.startMs - b.startMs || a.booking.id.localeCompare(b.booking.id));
+    completed.sort((a, b) => b.startMs - a.startMs || b.booking.id.localeCompare(a.booking.id));
+    cancelled.sort((a, b) => b.startMs - a.startMs || b.booking.id.localeCompare(a.booking.id));
+
+    const cursorMap = new Map<string, string>();
+    for (const item of withMeta) {
+      cursorMap.set(item.booking.id, `${item.startMs}|${item.booking.id}`);
+    }
 
     return {
       upcoming: upcoming.map((x) => x.booking),
       completed: completed.map((x) => x.booking),
       cancelled: cancelled.map((x) => x.booking),
+      cursorMap,
     };
   }, [bookings]);
 
@@ -510,6 +522,54 @@ export default function BookingsScreen() {
       return true;
     });
   }, [groupedCustomerBookings, renderedFilter, clientDateFilter]);
+
+  // Cursor-based pagination for Completed & Cancelled sections
+  const cursorPage = useMemo(() => {
+    const isCursorPaginated = renderedFilter === 'completed' || renderedFilter === 'cancelled';
+    if (!isCursorPaginated) {
+      return {
+        items: filteredBookings,
+        nextCursor: null as string | null,
+        hasNextPage: false,
+        hasPrevPage: false,
+        pageIndex: 1,
+        totalItems: filteredBookings.length,
+      };
+    }
+
+    let startIndex = 0;
+    if (currentCursor) {
+      const [cursorMsStr, cursorId] = currentCursor.split('|');
+      const cursorMs = Number(cursorMsStr);
+      // Seek first item strictly after the cursor in descending order (startMs < cursorMs, or equal & id < cursorId)
+      const foundIdx = filteredBookings.findIndex((b) => {
+        const itemCursor = groupedCustomerBookings.cursorMap.get(b.id) || '0|';
+        const [itemMsStr, itemId] = itemCursor.split('|');
+        const itemMs = Number(itemMsStr);
+        if (itemMs < cursorMs) return true;
+        if (itemMs === cursorMs && itemId.localeCompare(cursorId) < 0) return true;
+        return false;
+      });
+      startIndex = foundIdx === -1 ? filteredBookings.length : foundIdx;
+    }
+
+    const items = filteredBookings.slice(startIndex, startIndex + CURSOR_PAGE_SIZE);
+    const hasNextPage = startIndex + CURSOR_PAGE_SIZE < filteredBookings.length;
+    const lastItem = items[items.length - 1];
+    const nextCursor =
+      hasNextPage && lastItem
+        ? groupedCustomerBookings.cursorMap.get(lastItem.id) || null
+        : null;
+
+    return {
+      items,
+      nextCursor,
+      hasNextPage,
+      hasPrevPage: cursorHistory.length > 0,
+      pageIndex: cursorHistory.length + 1,
+      totalItems: filteredBookings.length,
+    };
+  }, [filteredBookings, renderedFilter, currentCursor, cursorHistory.length, groupedCustomerBookings.cursorMap]);
 
   // Count bookings in the active tab ignoring the date filter — hides date pills when the tab is empty
   const activeTabCount = useMemo(() => {
@@ -1229,7 +1289,8 @@ export default function BookingsScreen() {
                   if (activeFilter === opt) return;
                   setActiveFilter(opt);
                   setClientDateFilter('all');
-                  setVisibleLimit(8);
+                  setCurrentCursor(null);
+                  setCursorHistory([]);
                   setRenderedFilter(opt);
                 }}
                 className={`flex-1 py-2.5 rounded-full items-center justify-center ${
@@ -1277,7 +1338,8 @@ export default function BookingsScreen() {
                   activeOpacity={0.8}
                   onPress={() => {
                     setClientDateFilter(filterKey);
-                    setVisibleLimit(8);
+                    setCurrentCursor(null);
+                    setCursorHistory([]);
                   }}
                   className={`px-4 py-2 rounded-full border items-center justify-center flex-row ${
                     isActive
@@ -1303,26 +1365,70 @@ export default function BookingsScreen() {
 
           {/* Bookings Render List */}
         <View className="min-h-[220px]">
-          {filteredBookings.length > 0 ? (
+          {cursorPage.items.length > 0 ? (
             <>
-              {filteredBookings.slice(0, visibleLimit).map((booking) => (
+              {cursorPage.items.map((booking) => (
                 <BookingCard 
                   key={booking.id} 
                   booking={booking} 
                   onOpenSupport={handleOpenSupport}
                 />
               ))}
-              {filteredBookings.length > visibleLimit && (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => setVisibleLimit((prev) => prev + 12)}
-                  className="mt-2 mb-4 py-3.5 rounded-2xl bg-white border border-zinc-200 items-center justify-center"
-                >
-                  <Text className="text-[#101828] text-xs font-bold uppercase tracking-wider">
-                    Show More ({filteredBookings.length - visibleLimit} remaining)
-                  </Text>
-                </TouchableOpacity>
-              )}
+              {(renderedFilter === 'completed' || renderedFilter === 'cancelled') &&
+                (cursorPage.hasPrevPage || cursorPage.hasNextPage) && (
+                  <View className="flex-row items-center justify-between mt-4 mb-2 pt-3 border-t border-zinc-200/80">
+                    <TouchableOpacity
+                      activeOpacity={0.75}
+                      disabled={!cursorPage.hasPrevPage}
+                      onPress={() => {
+                        if (!cursorPage.hasPrevPage) return;
+                        const prevCursor = cursorHistory[cursorHistory.length - 1] ?? null;
+                        setCursorHistory((prev) => prev.slice(0, -1));
+                        setCurrentCursor(prevCursor);
+                      }}
+                      className={`px-4 py-2.5 rounded-full flex-row items-center gap-1.5 border ${
+                        cursorPage.hasPrevPage
+                          ? 'bg-white border-zinc-300'
+                          : 'bg-zinc-100 border-zinc-200 opacity-40'
+                      }`}
+                    >
+                      <Feather name="chevron-left" size={14} color="#101828" />
+                      <Text className="text-[#101828] text-xs font-bold">Prev</Text>
+                    </TouchableOpacity>
+
+                    <Text className="text-[#6B7280] text-xs font-bold">
+                      Page {cursorPage.pageIndex} • {cursorPage.totalItems} Sessions
+                    </Text>
+
+                    <TouchableOpacity
+                      activeOpacity={0.75}
+                      disabled={!cursorPage.hasNextPage || !cursorPage.nextCursor}
+                      onPress={() => {
+                        if (!cursorPage.hasNextPage || !cursorPage.nextCursor) return;
+                        setCursorHistory((prev) => [...prev, currentCursor]);
+                        setCurrentCursor(cursorPage.nextCursor);
+                      }}
+                      className={`px-4 py-2.5 rounded-full flex-row items-center gap-1.5 ${
+                        cursorPage.hasNextPage
+                          ? 'bg-[#101828]'
+                          : 'bg-zinc-200 opacity-40'
+                      }`}
+                    >
+                      <Text
+                        className={`text-xs font-bold ${
+                          cursorPage.hasNextPage ? 'text-white' : 'text-zinc-500'
+                        }`}
+                      >
+                        Next
+                      </Text>
+                      <Feather
+                        name="chevron-right"
+                        size={14}
+                        color={cursorPage.hasNextPage ? '#FFFFFF' : '#6B7280'}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                )}
             </>
           ) : (
             <EmptyState 
