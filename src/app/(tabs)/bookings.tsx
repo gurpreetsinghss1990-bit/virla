@@ -195,15 +195,15 @@ export default function BookingsScreen() {
       }
 
       const isAlreadyLoaded = Database.getIsLoaded();
-      if (!isAlreadyLoaded) {
-        setLoading(true);
+      if (isAlreadyLoaded) {
+        setLoading(false);
+        return;
       }
 
+      setLoading(true);
       try {
-        console.log('[BOOKINGS TAB] Syncing database from Supabase in background...');
-        await Database.reload();
+        await Database.load();
         syncAllDomainStores();
-        console.log('[BOOKINGS TAB] Database reloaded and synced.');
       } catch (err) {
         console.warn('Failed to load database in bookings tab:', err);
       } finally {

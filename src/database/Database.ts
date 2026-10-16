@@ -1354,15 +1354,22 @@ class DatabaseClient {
     });
   }
 
+  private saveDebounceTimer: any = null;
+
   private async save(): Promise<void> {
     if (Platform.OS === 'web' && typeof window === 'undefined') {
       return;
     }
-    try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(this.schema));
-    } catch (err) {
-      console.error('[DB ERROR] Failed to save database:', err);
+    if (this.saveDebounceTimer) {
+      clearTimeout(this.saveDebounceTimer);
     }
+    this.saveDebounceTimer = setTimeout(async () => {
+      try {
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(this.schema));
+      } catch (err) {
+        console.error('[DB ERROR] Failed to save database:', err);
+      }
+    }, 300);
   }
 
   private async seedData() {
@@ -2145,16 +2152,25 @@ class DatabaseClient {
     }
   }
 
+  private localReminderSentBookingIds = new Set<string>();
+
   checkAndSendLocalReminders(): void {
     const now = Date.now();
     let changed = false;
     this.schema.bookings.forEach(b => {
-      if (b.status === 'upcoming' && b.trainerId && b.trainerId !== 'searching' && !b.reminderSent) {
+      if (
+        b.status === 'upcoming' &&
+        b.trainerId &&
+        b.trainerId !== 'searching' &&
+        !b.reminderSent &&
+        !this.localReminderSentBookingIds.has(b.id)
+      ) {
         const bookedTime = this.parseBookingDateHelper(b);
         const diffMs = bookedTime.getTime() - now;
 
         if (diffMs > 0 && diffMs <= 60 * 60 * 1000) {
           b.reminderSent = true;
+          this.localReminderSentBookingIds.add(b.id);
           changed = true;
 
           const formattedTime = b.time.split('-')[0].trim();
@@ -2247,11 +2263,12 @@ class DatabaseClient {
     // Disabled client-side mutations that conflict with One Brain database authority
     // this.autoAcceptPendingBookingsLocal();
     // this.autoExpireStaleBookingsLocal();
-    this.checkAndSendLocalReminders();
+    setTimeout(() => {
+      this.checkAndSendLocalReminders();
+    }, 0);
   }
 
   getBookings(userId: string): Booking[] {
-    this.runBackgroundSyncChecks();
     const userObj = this.schema.users.find(u => u.id === userId);
     const isWildcard =
       userId === 'u-testadmin' ||

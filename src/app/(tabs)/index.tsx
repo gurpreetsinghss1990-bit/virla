@@ -802,9 +802,11 @@ export default function HomeScreen() {
       try {
         if (!Database.getIsLoaded()) {
           setLoading(true);
+          await Database.load();
+        } else {
+          // Run non-blocking background refresh without resetting isLoaded
+          Database.load().catch(() => {});
         }
-        // Force reload database with the authenticated user context
-        await Database.reload();
 
         useUserStore.getState().syncFromDB();
         useUserProfileStore.getState().syncFromDB();
@@ -826,7 +828,7 @@ export default function HomeScreen() {
     return () => {
       isMounted = false;
     };
-  }, [bookings.length]);
+  }, []);
 
   const upcomingBookings = bookings
     .filter((b) => b.status === 'upcoming' && (getBookingISTDateRange(b).start.getTime() > serverNow.getTime() || (b.timelineStatus && b.timelineStatus !== 'session_closed')))
