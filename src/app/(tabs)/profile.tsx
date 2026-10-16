@@ -524,6 +524,8 @@ export default function ProfileScreen() {
           }
 
           useUserStore.getState().syncFromDB();
+          useMembershipStore.getState().syncFromDB();
+          useWalletStore.getState().syncFromDB();
           const cachedCoach = Database.schema?.coaches?.find((c: any) => c.name === user.name || c.id === user.id);
           if (cachedCoach) {
             setTrainerName(cachedCoach.name || '');
@@ -531,9 +533,14 @@ export default function ProfileScreen() {
             setTrainerBio(cachedCoach.shortBio || '');
           }
 
-          Database.load().then(() => {
+          Database.load().then(async () => {
+            const currentUid = storedUser?.id || Database.getCurrentUserId();
+            if (currentUid) {
+              await Database.refreshUserData(currentUid);
+            }
             syncAllDomainStores();
             useUserStore.getState().syncFromDB();
+            useMembershipStore.getState().syncFromDB();
             reloadDynamicLists();
             const latestCoach = Database.schema?.coaches?.find((c: any) => c.name === user.name || c.id === user.id);
             if (latestCoach) {
@@ -945,7 +952,18 @@ export default function ProfileScreen() {
                       </Text>
                     </View>
                     <Text className="text-white text-2xl font-black mt-1 tracking-tight">
-                      {(membership.tier || 'PREMIUM').toUpperCase()}
+                      {(() => {
+                        const bal = creditBalance ?? profile.creditsBalance ?? membership.availableCredits ?? 0;
+                        if (bal <= 0) return 'STANDARD';
+                        const status = (profile.membershipStatus || membership.tier || '').trim().toUpperCase();
+                        if (status && status !== 'STANDARD' && status !== 'NONE') {
+                          return status;
+                        }
+                        if (bal >= 15) return 'ELITE PASS';
+                        if (bal >= 12) return 'ACTIVE PASS';
+                        if (bal >= 8) return 'STARTER PASS';
+                        return 'PREMIUM';
+                      })()}
                     </Text>
                   </TouchableOpacity>
                   <View className="bg-white p-1.5 rounded-xl shadow-xs">
@@ -1028,7 +1046,7 @@ export default function ProfileScreen() {
                     </View>
 
                     <Text className="text-white text-sm font-black ml-2">
-                      {membership.availableCredits ?? 20} Credits
+                      {creditBalance ?? profile.creditsBalance ?? membership.availableCredits ?? 0} Credits
                     </Text>
                   </TouchableOpacity>
 
@@ -1039,7 +1057,17 @@ export default function ProfileScreen() {
                       Valid till
                     </Text>
                     <Text className="text-white text-xs font-bold mt-0.5">
-                      {membership.renewalDate || 'Sep 19, 2027'}
+                      {(() => {
+                        const bal = creditBalance ?? profile.creditsBalance ?? membership.availableCredits ?? 0;
+                        if (bal <= 0) return 'Not Active';
+                        const activeLot = creditLots?.find((l: any) => l.remaining_credits > 0 && l.official_expiry_date);
+                        if (activeLot?.official_expiry_date) {
+                          return formatToDDMMYYYY(activeLot.official_expiry_date);
+                        }
+                        return membership.renewalDate && membership.renewalDate !== 'Not Active'
+                          ? membership.renewalDate
+                          : 'Active';
+                      })()}
                     </Text>
                     <TouchableOpacity
                       activeOpacity={0.7}

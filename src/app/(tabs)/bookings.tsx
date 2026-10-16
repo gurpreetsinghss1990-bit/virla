@@ -1396,10 +1396,6 @@ export default function BookingsScreen() {
                       <Text className="text-[#101828] text-xs font-bold">Prev</Text>
                     </TouchableOpacity>
 
-                    <Text className="text-[#6B7280] text-xs font-bold">
-                      Page {cursorPage.pageIndex} • {cursorPage.totalItems} Sessions
-                    </Text>
-
                     <TouchableOpacity
                       activeOpacity={0.75}
                       disabled={!cursorPage.hasNextPage || !cursorPage.nextCursor}
