@@ -82,7 +82,7 @@ export async function fetchGooglePlacesAutocomplete(
   sessionToken: string
 ): Promise<AutocompleteSuggestion[]> {
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
-  if (!apiKey || apiKey.startsWith('AIzaSyDdj1e8_89sOmKK1qQoX_sLblKFyqkBxEA') || apiKey.includes('YOUR_KEY')) {
+  if (!apiKey || apiKey.includes('YOUR_KEY')) {
     if (typeof __DEV__ !== 'undefined' && __DEV__) {
       return getMockSuggestions(input);
     }

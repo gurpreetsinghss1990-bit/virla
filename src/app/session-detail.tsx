@@ -20,7 +20,7 @@ import { getBookingISTDateRange, getDisplayWorkoutTitle, formatToDDMMYYYY } from
 import { locationTrackerService } from '../services/LocationTrackerService';
 import { supabase } from '../database/supabaseClient';
 import TrackingMap from '../components/TrackingMap';
-import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
 import { parseBookingAddress } from '../utils/LocationParser';
 
 function formatToIndianDate(dateStr: string): string {
@@ -2410,7 +2410,7 @@ export default function SessionDetailScreen() {
           <View style={{ flex: 1, position: 'relative' }}>
             {parsedAddress && parsedAddress.lat && parsedAddress.lng ? (
               <MapView
-                provider={PROVIDER_DEFAULT}
+                provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
                 style={{ flex: 1 }}
                 initialRegion={{
                   latitude: parsedAddress.lat,

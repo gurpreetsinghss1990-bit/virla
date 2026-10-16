@@ -52,9 +52,12 @@ module.exports = function withAndroidUpiAndMaps(config) {
         app['meta-data'].push({
           $: {
             'android:name': 'com.google.android.geo.API_KEY',
-            'android:value': 'AIzaSyDdj1e8_89sOmKK1qQoX_sLblKFyqkBxEA',
+            'android:value': 'AIzaSyD6t3ORCAH2PtATVajh8fRPL9qso9APVe8',
           },
         });
+      } else {
+        if (!mapsMeta.$) mapsMeta.$ = {};
+        mapsMeta.$['android:value'] = 'AIzaSyD6t3ORCAH2PtATVajh8fRPL9qso9APVe8';
       }
     }
 
