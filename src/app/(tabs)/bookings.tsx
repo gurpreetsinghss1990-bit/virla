@@ -168,7 +168,9 @@ export default function BookingsScreen() {
     enableAllSlotsForDay
   } = useCoachStore();
 
-  const coach = coaches.find(c => c.id === user.id || c.name === user.name);
+  const coach = coaches.find(
+    c => c.id === user.id || c.name === user.name || (user.name && c.name?.toLowerCase().startsWith(user.name.toLowerCase()))
+  );
 
   // Sync today timer
   useEffect(() => {
@@ -206,6 +208,8 @@ export default function BookingsScreen() {
 
       const isAlreadyLoaded = Database.getIsLoaded();
       if (isAlreadyLoaded) {
+        useBookingStore.getState().syncFromDB();
+        useCoachStore.getState().syncFromDB();
         setLoading(false);
         return;
       }
@@ -389,10 +393,27 @@ export default function BookingsScreen() {
   // Trainer list filters
   const trainerBookings = useMemo(() => {
     if (role !== 'trainer') return [];
-    return bookings.filter(b => 
-      b.trainerId === user.id || b.trainerName === user.name
+    const isWildcardTrainer =
+      user.isWildcardUser ||
+      user.id === 'u-testadmin' ||
+      user.id === 'u-testclient' ||
+      user.id?.startsWith('u-test') ||
+      user.phone?.includes('1234567891');
+
+    const matched = bookings.filter(b =>
+      b.trainerId === user.id ||
+      b.trainerName === user.name ||
+      (user.name && b.trainerName?.toLowerCase().startsWith(user.name.toLowerCase())) ||
+      (coach && (b.trainerId === coach.id || b.trainerName === coach.name))
     );
-  }, [role, bookings, user.id, user.name]);
+
+    // If a wildcard/admin account is viewing Trainer Mode and has no direct trainer bookings under their own ID,
+    // show all trainer-assigned sessions so they can inspect trainer schedule & history seamlessly.
+    if (matched.length === 0 && isWildcardTrainer) {
+      return bookings.filter(b => Boolean(b.trainerId && b.trainerId !== 'searching'));
+    }
+    return matched;
+  }, [role, bookings, user.id, user.name, user.isWildcardUser, user.phone, coach]);
 
   const getFilteredSessions = (tab: TrainerTabType) => {
     const todayStr = normalizeDate(today);
@@ -1129,7 +1150,7 @@ export default function BookingsScreen() {
                 }
 
                 if (trainerTab === 'history') {
-                  const historicalBookings = trainerBookings.filter(b => b.status === 'completed' || b.status === 'cancelled');
+                  const historicalBookings = getFilteredSessions('history');
                   const historyGroups: Record<string, typeof historicalBookings> = {};
                   historicalBookings.forEach(b => {
                     const bDate = normalizeDate(getBookingDateObj(b.date));

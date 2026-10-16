@@ -163,29 +163,75 @@ export const useAddressStore = create<AddressState>((set, get) => ({
         Database.setCurrentUserId(userId);
       }
     }
-    
+
+    const mapAddrToStore = (addr: any): Address => ({
+      id: addr.id,
+      label: addr.label || 'Custom',
+      addressLine: addr.building + (addr.street ? `, ${addr.street}` : '') + (addr.city ? `, ${addr.city}` : ''),
+      building: addr.building || '',
+      street: addr.street || '',
+      landmark: addr.landmark || '',
+      city: addr.city || 'Mumbai',
+      pinCode: addr.pinCode || '',
+      isDefault: addr.isDefault,
+      lat: addr.lat || 19.0176,
+      lng: addr.lng || 72.8164,
+      apartment: addr.apartment || '',
+      floor: addr.floor || '',
+      notes: addr.notes || '',
+      placeId: addr.placeId || ''
+    });
+
     if (userId) {
-      const list = Database.getAddresses(userId).map(addr => ({
-        id: addr.id,
-        label: addr.label || 'Custom',
-        addressLine: addr.building + (addr.street ? `, ${addr.street}` : '') + (addr.city ? `, ${addr.city}` : ''),
-        building: addr.building || '',
-        street: addr.street || '',
-        landmark: addr.landmark || '',
-        city: addr.city || 'Mumbai',
-        pinCode: addr.pinCode || '',
-        isDefault: addr.isDefault,
-        lat: addr.lat || 19.0176,
-        lng: addr.lng || 72.8164,
-        apartment: addr.apartment || '',
-        floor: addr.floor || '',
-        notes: addr.notes || '',
-        placeId: addr.placeId || ''
-      }));
+      const list = Database.getAddresses(userId).map(mapAddrToStore);
       set({
         addresses: list,
         selectedAddressId: get().selectedAddressId || list.find(a => a.isDefault)?.id || list[0]?.id || ''
       });
+
+      // Fallback: if local cache is empty (e.g. initial load happened before x-user-id header was set),
+      // fetch the user's saved addresses directly from Supabase and hydrate local cache + store.
+      if (list.length === 0) {
+        const targetUserId = userId;
+        supabase
+          .from('addresses')
+          .select('*')
+          .eq('user_id', targetUserId)
+          .then(({ data, error }) => {
+            if (!error && data && data.length > 0) {
+              const existingIds = new Set(Database.schema.addresses.map(a => a.id));
+              for (const row of data) {
+                if (!existingIds.has(row.id)) {
+                  Database.schema.addresses.push({
+                    id: row.id,
+                    userId: row.user_id,
+                    label: row.label,
+                    name: row.name,
+                    building: row.building,
+                    street: row.street,
+                    landmark: row.landmark || '',
+                    city: row.city,
+                    pinCode: row.pin_code,
+                    gpsPlaceholder: row.gps_placeholder || '',
+                    isDefault: row.is_default,
+                    lat: row.lat !== null && row.lat !== undefined ? Number(row.lat) : undefined,
+                    lng: row.lng !== null && row.lng !== undefined ? Number(row.lng) : undefined,
+                    apartment: row.apartment || '',
+                    floor: row.floor || '',
+                    notes: row.notes || '',
+                    placeId: row.place_id || ''
+                  });
+                }
+              }
+              const refreshed = Database.getAddresses(targetUserId).map(mapAddrToStore);
+              set({
+                addresses: refreshed,
+                selectedAddressId: get().selectedAddressId || refreshed.find(a => a.isDefault)?.id || refreshed[0]?.id || ''
+              });
+            }
+          })
+          .catch(() => {});
+      }
     } else {
       set({
         addresses: [],

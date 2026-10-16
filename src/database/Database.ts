@@ -1062,7 +1062,8 @@ class DatabaseClient {
   }
 
   constructor() {
-    this.load();
+    // Wait for bootstrap / screen init to set currentUserId before firing Supabase queries,
+    // because RLS requires the x-user-id header to return users, addresses, user_profiles, etc.
   }
 
   generateUUID(prefix = 'id'): string {
@@ -1901,6 +1902,7 @@ class DatabaseClient {
   setCurrentUserId(id: string | null) {
     if (this.currentUserId !== id) {
       this.isLoaded = false;
+      this.loadPromise = null;
     }
     this.currentUserId = id;
     setClientUserId(id);
@@ -2281,7 +2283,15 @@ class DatabaseClient {
       return this.schema.bookings;
     }
     if (userObj && userObj.role === 'trainer') {
-      return this.schema.bookings.filter(b => b.trainerId === userObj.id || b.trainerName === userObj.name);
+      const coachObj = this.schema.coaches.find(
+        c => c.id === userObj.id || (userObj.name && c.name?.toLowerCase().startsWith(userObj.name.toLowerCase()))
+      );
+      return this.schema.bookings.filter(b =>
+        b.trainerId === userObj.id ||
+        b.trainerName === userObj.name ||
+        (userObj.name && b.trainerName?.toLowerCase().startsWith(userObj.name.toLowerCase())) ||
+        (coachObj && (b.trainerId === coachObj.id || b.trainerName === coachObj.name))
+      );
     }
     return this.schema.bookings.filter(b => b.clientId === userId || b.id.includes(userId) || b.id.startsWith('b-'));
   }

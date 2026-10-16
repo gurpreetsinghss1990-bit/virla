@@ -683,6 +683,10 @@ export default function BookingScreen() {
           console.warn('[BOOKING] User is not logged in or userId is missing on mount');
         }
 
+        if (!Database.getIsLoaded()) {
+          await Database.load();
+        }
+
         if (isMountedRef.current) {
           useCoachStore.getState().syncFromDB();
           useAddressStore.getState().syncFromDB();

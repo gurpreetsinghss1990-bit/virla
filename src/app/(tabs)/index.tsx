@@ -17,6 +17,7 @@ import { useUserStore } from '../../store/userStore';
 import { useUserProfileStore } from '../../store/userProfileStore';
 import { useWorkoutStore } from '../../store/workoutStore';
 import { useWalletStore } from '../../store/walletStore';
+import { useAddressStore } from '../../store/addressStore';
 import { Database, getCurrentServerTime, getISTDateInfo, isSessionGenuinelyActive } from '../../database/Database';
 import { AddPartnerModal } from '../../components/AddPartnerModal';
 import { CommunicationCenterModal } from '../../components/CommunicationCenterModal';
@@ -816,6 +817,7 @@ export default function HomeScreen() {
         useWalletStore.getState().syncFromDB();
         useMembershipStore.getState().syncFromDB();
         useNotificationStore.getState().syncFromDB();
+        useAddressStore.getState().syncFromDB();
       } catch (e) {
         console.error('Home sync failed:', e);
       } finally {

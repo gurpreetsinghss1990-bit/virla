@@ -305,25 +305,47 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
         city: addr.city,
         pinCode: addr.pinCode,
         gpsPlaceholder: addr.gpsPlaceholder,
-        isDefault: addr.isDefault
+        isDefault: addr.isDefault,
+        lat: addr.lat,
+        lng: addr.lng,
+        placeId: addr.placeId,
+        apartment: addr.apartment,
+        floor: addr.floor,
+        notes: addr.notes
       });
       get().syncFromDB();
+      try {
+        const { useAddressStore } = require('./addressStore');
+        useAddressStore.getState().syncFromDB();
+      } catch {}
     }
   },
 
   updateAddress: (id, fields) => {
     Database.updateAddress(id, fields as any);
     get().syncFromDB();
+    try {
+      const { useAddressStore } = require('./addressStore');
+      useAddressStore.getState().syncFromDB();
+    } catch {}
   },
 
   deleteAddress: (id) => {
     Database.deleteAddress(id);
     get().syncFromDB();
+    try {
+      const { useAddressStore } = require('./addressStore');
+      useAddressStore.getState().syncFromDB();
+    } catch {}
   },
 
   setDefaultAddress: (id) => {
     Database.updateAddress(id, { isDefault: true } as any);
     get().syncFromDB();
+    try {
+      const { useAddressStore } = require('./addressStore');
+      useAddressStore.getState().syncFromDB();
+    } catch {}
   },
 
   // Emergency Contacts CRUD
