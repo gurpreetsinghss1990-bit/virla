@@ -12,16 +12,6 @@ import { useUserStore } from '../store/userStore';
 import { TopToastNotification } from '../components/TopToastNotification';
 import { useEngagementNudges } from '../hooks/useEngagementNudges';
 import { useToastStore } from '../store/toastStore';
-import {
-  Inter_300Light,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-  Inter_800ExtraBold,
-  Inter_900Black,
-} from '@expo-google-fonts/inter';
-import { configureGlobalInterFont } from '../utils/configureFonts';
 import '../global.css';
 
 // Suppress known upstream React Native Fabric / Expo Router useLinking race condition warning
@@ -39,21 +29,41 @@ export default function RootLayout() {
     // Hide splash screen immediately since we handle the premium splash layout in index.tsx
     SplashScreen.hideAsync();
 
-    // Load fonts and configure crisp typography across the app
-    Font.loadAsync({
-      PlaywriteCAGuides: require('../../assets/fonts/PlaywriteCAGuides-Regular.ttf'),
-      Inter_300Light,
-      Inter_400Regular,
-      Inter_500Medium,
-      Inter_600SemiBold,
-      Inter_700Bold,
-      Inter_800ExtraBold,
-      Inter_900Black,
-    })
-      .then(() => {
+    // Lazy load fonts asynchronously so startup/bundling is resilient and never blocks
+    (async () => {
+      try {
+        const [
+          {
+            Inter_300Light,
+            Inter_400Regular,
+            Inter_500Medium,
+            Inter_600SemiBold,
+            Inter_700Bold,
+            Inter_800ExtraBold,
+            Inter_900Black,
+          },
+          { configureGlobalInterFont },
+        ] = await Promise.all([
+          import('@expo-google-fonts/inter'),
+          import('../utils/configureFonts'),
+        ]);
+
+        await Font.loadAsync({
+          PlaywriteCAGuides: require('../../assets/fonts/PlaywriteCAGuides-Regular.ttf'),
+          Inter_300Light,
+          Inter_400Regular,
+          Inter_500Medium,
+          Inter_600SemiBold,
+          Inter_700Bold,
+          Inter_800ExtraBold,
+          Inter_900Black,
+        });
+
         configureGlobalInterFont();
-      })
-      .catch((e) => console.warn('[Fonts] Font loading failed:', e));
+      } catch (e) {
+        console.warn('[Fonts] Lazy font loading fallback:', e);
+      }
+    })();
 
     let isMounted = true;
     let responseSubscription: any = null;
