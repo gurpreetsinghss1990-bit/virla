@@ -248,13 +248,15 @@ export default function SessionDetailScreen() {
       )
       .subscribe();
 
-    // 2. Active safety poll (every 3s while session is active) for instant updates without back navigation
+    // 2. Smart lightweight safety poll (every 6s while session is active, only re-renders if data actually changed)
     let pollInterval: any = null;
     if (currentStatus !== 'session_closed' && !isMissed && !isCancelled) {
       pollInterval = setInterval(async () => {
-        await Database.refreshBookings();
-        syncFromDB();
-      }, 3000);
+        const changed = await Database.syncBookingsOnly();
+        if (changed) {
+          syncFromDB();
+        }
+      }, 6000);
     }
 
     return () => {

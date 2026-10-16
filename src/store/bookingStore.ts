@@ -6,6 +6,7 @@ import { useWalletStore } from './walletStore';
 import { useUserProfileStore } from './userProfileStore';
 import { Database } from '../database/Database';
 import { AssignmentEngine } from '../services/AssignmentEngine';
+import { broadcastBookingUpdate } from '../utils/realtime';
 
 interface BookingState {
   bookings: Booking[];
@@ -55,6 +56,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     }
     await Database.cancelBooking(userId, id);
     get().syncFromDB();
+    broadcastBookingUpdate(id, 'cancelled');
     useWalletStore.getState().syncFromDB();
     useMembershipStore.getState().syncFromDB();
     useUserProfileStore.getState().syncFromDB();
@@ -68,12 +70,14 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   rescheduleSession: async (id, date, time) => {
     await Database.rescheduleBooking(id, date, time);
     get().syncFromDB();
+    broadcastBookingUpdate(id, 'rescheduled');
   },
   addBooking: async (booking) => {
     const userId = Database.getCurrentUserId();
     if (userId) {
       await Database.addBookingWithValidation(userId, booking);
       get().syncFromDB();
+      broadcastBookingUpdate(undefined, 'booked');
       useWalletStore.getState().syncFromDB();
       useMembershipStore.getState().syncFromDB();
     }
@@ -81,6 +85,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   updateTimelineStatus: async (id, status) => {
     await Database.updateTimelineStatus(id, status);
     get().syncFromDB();
+    broadcastBookingUpdate(id, status);
   },
   updateBookingRating: async (id, ratingDetails) => {
     await Database.updateBookingRating(id, ratingDetails);
@@ -89,6 +94,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       useUserProfileStore.getState().syncFromDB();
     }
     get().syncFromDB();
+    broadcastBookingUpdate(id, 'session_closed');
   },
   updateBookingNote: (id, note) => {
     Database.updateBookingNote(id, note);
@@ -97,6 +103,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   updateBookingSessionDetails: async (id, details) => {
     await Database.updateBookingSessionDetails(id, details);
     get().syncFromDB();
+    broadcastBookingUpdate(id, details.timelineStatus);
   },
   acceptBooking: async (id) => {
     await get().updateTimelineStatus(id, 'trainer_accepted');
@@ -104,6 +111,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   reassignTrainer: async (bookingId, action) => {
     await Database.updateBookingTrainer(bookingId, { action });
     get().syncFromDB();
+    broadcastBookingUpdate(bookingId, 'reassigned');
   },
   triggerClientNoShow: async (id) => {
     console.log("[CLIENT-NOSHOW-TRACE] TRAINER ACTION triggered CLIENT NO-SHOW");
@@ -123,6 +131,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
         useUserProfileStore.getState().syncFromDB();
       }
       get().syncFromDB();
+      broadcastBookingUpdate(id, 'client_no_show');
       console.log("[CLIENT-NOSHOW-TRACE] CLIENT REFRESH / STORE REFRESH completed successfully.");
     } catch (err: any) {
       console.error("[CLIENT-NOSHOW-TRACE] handleNoShow failed", err);
@@ -138,6 +147,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       useUserProfileStore.getState().syncFromDB();
     }
     get().syncFromDB();
+    broadcastBookingUpdate(id, 'trainer_no_show');
   },
   submitQuestionnaire: async (id, questionnaire) => {
     await Database.submitTrainerReport(id, questionnaire);
@@ -146,10 +156,12 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       useUserProfileStore.getState().syncFromDB();
     }
     get().syncFromDB();
+    broadcastBookingUpdate(id, 'trainer_report_submitted');
   },
   acknowledgeSession: async (id) => {
     await Database.acknowledgeAutoAccept(id);
     get().syncFromDB();
+    broadcastBookingUpdate(id, 'acknowledged');
   },
   syncFromDB: () => {
     const userId = Database.getCurrentUserId();

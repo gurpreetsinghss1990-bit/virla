@@ -2301,6 +2301,37 @@ class DatabaseClient {
     }
   }
 
+  private isSyncingBookings = false;
+
+  async syncBookingsOnly(): Promise<boolean> {
+    if (this.isSyncingBookings) return false;
+    this.isSyncingBookings = true;
+    try {
+      const { data, error } = await supabase.from('bookings').select('*');
+      if (data && !error) {
+        const mapped = data.map(mapBooking).filter((b: Booking) => !b.isInvalidData);
+        // Only trigger store/save if something actually changed
+        const prevSig = this.schema.bookings
+          .map(b => `${b.id}:${b.status}:${b.timelineStatus}:${b.trainerId}:${b.otp || ''}`)
+          .join('|');
+        const nextSig = mapped
+          .map((b: Booking) => `${b.id}:${b.status}:${b.timelineStatus}:${b.trainerId}:${b.otp || ''}`)
+          .join('|');
+
+        if (prevSig !== nextSig) {
+          this.schema.bookings = mapped;
+          this.save();
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      return false;
+    } finally {
+      this.isSyncingBookings = false;
+    }
+  }
+
   cleanExpiredReservations(): void {
     const now = Date.now();
     this.schema.slot_reservations = this.schema.slot_reservations.filter(r => {

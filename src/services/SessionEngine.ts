@@ -2,6 +2,7 @@ import { Database, getCurrentServerTime } from '../database/Database';
 import { getBookingISTDateRange } from '../utils/date';
 import { Booking } from '../types';
 import { supabase } from '../database/supabaseClient';
+import { broadcastBookingUpdate } from '../utils/realtime';
 
 export class SessionEngine {
   static TRAVEL_WINDOW_MINUTES = 25;
@@ -98,6 +99,7 @@ export class SessionEngine {
     }
 
     await Database.refreshBookings();
+    broadcastBookingUpdate(bookingId, 'trainer_arrived');
   }
 
   /**
@@ -116,6 +118,7 @@ export class SessionEngine {
     }
 
     await Database.refreshBookings();
+    broadcastBookingUpdate(bookingId, 'otp_verified');
     return true;
   }
 
@@ -133,6 +136,7 @@ export class SessionEngine {
     }
 
     await Database.refreshBookings();
+    broadcastBookingUpdate(bookingId, 'workout_started');
   }
 
   /**
@@ -149,6 +153,7 @@ export class SessionEngine {
     }
 
     await Database.refreshBookings();
+    broadcastBookingUpdate(bookingId, 'workout_completed');
   }
 
   /**
