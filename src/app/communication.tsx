@@ -114,15 +114,16 @@ export default function CommunicationScreen() {
   }, [booking, isTrainer]);
 
   // Symmetrical shared thread key between the client and coach so BOTH see the exact same conversation
+  // IMPORTANT: Keep hyphens and dots so that x-user-id (e.g. 'u-lo7leg48d', 'u-ej8bes2xq') matches Supabase RLS (chat_id LIKE '%' || user_id || '%')
   const symmetricChatId = useMemo(() => {
     if (!booking) return 'general';
-    const cId = (booking.clientId || 'client').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
-    const tId = (booking.trainerId || booking.trainerName || 'coach').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
-    // Symmetrical pair: chat_session_client_trainer (order independent)
+    const cId = (booking.clientId || 'client').trim().replace(/[^a-zA-Z0-9_.-]/g, '_');
+    const tId = (booking.trainerId || booking.trainerName || 'coach').trim().replace(/[^a-zA-Z0-9_.-]/g, '_');
     return `chat_${cId}_${tId}`;
   }, [booking]);
 
   const unifiedChatId = symmetricChatId;
+  const isCompletedSession = booking?.status === 'completed' || booking?.timelineStatus === 'session_closed';
 
   // All session IDs and legacy alias IDs associated with this conversation
   const relatedChatIds = useMemo(() => {
@@ -133,13 +134,20 @@ export default function CommunicationScreen() {
       ids.push(`chat-coach-${personKey}`);
     }
 
-    bookings.forEach((b) => {
-      const bClient = (b.clientId || b.clientName || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
-      const bTrainer = (b.trainerId || b.trainerName || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
-      const currentClient = (booking.clientId || booking.clientName || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
-      const currentTrainer = (booking.trainerId || booking.trainerName || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+    // Also include normalized versions with underscores for backward compatibility
+    if (booking) {
+      const cUnderscore = (booking.clientId || 'client').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+      const tUnderscore = (booking.trainerId || booking.trainerName || 'coach').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+      ids.push(`chat_${cUnderscore}_${tUnderscore}`);
+    }
 
-      if ((bClient === currentClient && bTrainer === currentTrainer) || b.id === booking.id) {
+    bookings.forEach((b) => {
+      const bClient = (b.clientId || b.clientName || '').trim().replace(/[^a-zA-Z0-9_.-]/g, '_');
+      const bTrainer = (b.trainerId || b.trainerName || '').trim().replace(/[^a-zA-Z0-9_.-]/g, '_');
+      const currentClient = (booking?.clientId || booking?.clientName || '').trim().replace(/[^a-zA-Z0-9_.-]/g, '_');
+      const currentTrainer = (booking?.trainerId || booking?.trainerName || '').trim().replace(/[^a-zA-Z0-9_.-]/g, '_');
+
+      if ((bClient === currentClient && bTrainer === currentTrainer) || b.id === booking?.id) {
         ids.push(b.id);
         ids.push(`chat_${bClient}_${bTrainer}`);
       }
@@ -173,10 +181,21 @@ export default function CommunicationScreen() {
   useEffect(() => {
     if (!booking) return;
 
+    if (user?.id) {
+      Database.setCurrentUserId(user.id);
+    }
+
     // 1. Initial load from local DB cache
     refreshMessagesFromDb();
 
-    // 2. Fetch latest remote messages from Supabase for these related chat IDs
+    // 2. Listen to Database real-time messages directly
+    const unsubscribeDb = Database.onChatMessage((msg) => {
+      if (msg && relatedChatIds.includes(msg.chatId)) {
+        refreshMessagesFromDb();
+      }
+    });
+
+    // 3. Fetch latest remote messages from Supabase for these related chat IDs
     const fetchRemoteLatest = async () => {
       try {
         const { data, error } = await supabase
@@ -205,7 +224,7 @@ export default function CommunicationScreen() {
     };
     fetchRemoteLatest();
 
-    // 3. Ultra-lightweight Realtime WebSocket channel for instant sub-50ms sync (WhatsApp style)
+    // 4. Ultra-lightweight Realtime WebSocket channel for instant sub-50ms sync (WhatsApp style)
     const channelName = `realtime-chat-${unifiedChatId.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
     const channel = supabase
       .channel(channelName)
@@ -232,9 +251,18 @@ export default function CommunicationScreen() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`[Realtime Chat] Channel ${channelName} status:`, status);
+      });
+
+    // 5. Active in-screen background refresh (2.5s interval) ensuring 100% guarantee even if WebSocket reconnects
+    const pollTimer = setInterval(() => {
+      fetchRemoteLatest();
+    }, 2500);
 
     return () => {
+      unsubscribeDb();
+      clearInterval(pollTimer);
       supabase.removeChannel(channel);
     };
   }, [booking, relatedChatIds, bookingId, unifiedChatId, markAsRead]);
@@ -354,11 +382,27 @@ export default function CommunicationScreen() {
     }
   };
 
+  // Session active check: if workout has started or is completed/closed, cancel option is disabled and hidden
+  const isWorkoutActive = useMemo(() => {
+    if (!booking) return false;
+    const activeTimelineStatuses = ['otp_verified', 'workout_started', 'workout_completed', 'session_closed'];
+    return (
+      activeTimelineStatuses.includes(booking.timelineStatus || '') ||
+      Boolean(booking.workoutStartedAt)
+    );
+  }, [booking]);
+
+  const canCancelBooking = booking?.status === 'upcoming' && !isWorkoutActive;
+
   // Enforce late cancellation business rules
   const handleCancelBooking = () => {
     setIsMenuVisible(false);
     if (!booking || booking.status !== 'upcoming') {
       Alert.alert('Notice', 'This session is already cancelled or completed.');
+      return;
+    }
+    if (isWorkoutActive) {
+      Alert.alert('Notice', 'Session is already in progress and cannot be cancelled.');
       return;
     }
 
@@ -627,51 +671,69 @@ export default function CommunicationScreen() {
         </ScrollView>
       </View>
 
-      {/* Claude's Iconic Floating Prompt Input Box */}
+      {/* Claude's Iconic Floating Prompt Input Box or Session Completed Notice */}
       {/* ponytail: keyboard offset lives on outer KAV (whole screen lifts).
           Inner keeps only safe-area — padding inner alone just shrinks ScrollView
           and leaves bottom edge behind keyboard on edge-to-edge Android. */}
-      <View 
-        style={{ 
-          paddingBottom: Platform.OS === 'android'
-            ? Math.max(insets.bottom, 12)
-            : (isKeyboardVisible ? 8 : Math.max(insets.bottom, 12)),
-          paddingTop: 6,
-          backgroundColor: '#FAF9F5',
-        }}
-        className="px-4 border-t border-[#ECE7DE]/80"
-      >
-        <View className="bg-white border border-[#E2DDD5] rounded-[24px] pl-4 pr-1.5 py-1.5 flex-row items-end gap-2 shadow-xs">
-          {/* Text Input */}
-          <TextInput
-            value={messageText}
-            onChangeText={setMessageText}
-            placeholder={role === 'trainer' ? "Message client securely..." : `Message ${coachDisplayName}...`}
-            placeholderTextColor="#9E9B93"
-            multiline
-            className="flex-1 text-[#1F1E1D] text-[15px] leading-relaxed max-h-28 py-1.5"
-            style={{ minHeight: 36, textAlignVertical: 'center' }}
-          />
-
-          {/* Claude-style Terracotta Circular Send Button */}
-          <TouchableOpacity
-            onPress={handleSendMessage}
-            disabled={!messageText.trim()}
-            activeOpacity={0.8}
-            className={`w-9 h-9 rounded-full items-center justify-center mb-0.5 transition-all ${
-              messageText.trim() 
-                ? 'bg-[#CC785C] active:bg-[#B6664C] shadow-xs' 
-                : 'bg-[#EDE9E1]'
-            }`}
-          >
-            <Feather 
-              name="arrow-up" 
-              size={18} 
-              color={messageText.trim() ? '#FFFFFF' : '#9E9B93'} 
+      {isCompletedSession ? (
+        <View 
+          style={{ 
+            paddingBottom: Math.max(insets.bottom, 16),
+            paddingTop: 12,
+            backgroundColor: '#FAF9F5',
+          }}
+          className="px-4 border-t border-[#ECE7DE]/80 items-center justify-center"
+        >
+          <View className="w-full bg-[#F4EFEA] border border-[#E2DDD5] rounded-2xl py-3.5 px-4 flex-row items-center justify-center gap-2 shadow-xs">
+            <Feather name="check-circle" size={16} color="#78716C" />
+            <Text className="text-[#57534E] text-xs font-bold tracking-wide">
+              The session is already completed.
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <View 
+          style={{ 
+            paddingBottom: Platform.OS === 'android'
+              ? Math.max(insets.bottom, 12)
+              : (isKeyboardVisible ? 8 : Math.max(insets.bottom, 12)),
+            paddingTop: 6,
+            backgroundColor: '#FAF9F5',
+          }}
+          className="px-4 border-t border-[#ECE7DE]/80"
+        >
+          <View className="bg-white border border-[#E2DDD5] rounded-[24px] pl-4 pr-1.5 py-1.5 flex-row items-end gap-2 shadow-xs">
+            {/* Text Input */}
+            <TextInput
+              value={messageText}
+              onChangeText={setMessageText}
+              placeholder={role === 'trainer' ? "Message client securely..." : `Message ${coachDisplayName}...`}
+              placeholderTextColor="#9E9B93"
+              multiline
+              className="flex-1 text-[#1F1E1D] text-[15px] leading-relaxed max-h-28 py-1.5"
+              style={{ minHeight: 36, textAlignVertical: 'center' }}
             />
+
+            {/* Claude-style Terracotta Circular Send Button */}
+            <TouchableOpacity
+              onPress={handleSendMessage}
+              disabled={!messageText.trim()}
+              activeOpacity={0.8}
+              className={`w-9 h-9 rounded-full items-center justify-center mb-0.5 transition-all ${
+                messageText.trim() 
+                  ? 'bg-[#CC785C] active:bg-[#B6664C] shadow-xs' 
+                  : 'bg-[#EDE9E1]'
+              }`}
+            >
+              <Feather 
+                name="arrow-up" 
+                size={18} 
+                color={messageText.trim() ? '#FFFFFF' : '#9E9B93'} 
+              />
             </TouchableOpacity>
           </View>
         </View>
+      )}
 
       {/* Overflow menu — Centered on Screen */}
       <Modal visible={isMenuVisible} transparent animationType="fade" onRequestClose={() => setIsMenuVisible(false)}>
@@ -698,58 +760,73 @@ export default function CommunicationScreen() {
             </View>
 
             <View className="py-1">
-              <TouchableOpacity 
-                onPress={handleCall} 
-                activeOpacity={0.7} 
-                className="flex-row items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-[#F5F2EC]"
-              >
-                <View className="w-8 h-8 rounded-xl bg-[#FAF9F5] border border-[#E8E4DC] items-center justify-center">
-                  <Feather name="phone" size={15} color={isCallLocked ? '#9E9B93' : '#1F1E1D'} />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-[#1F1E1D] text-sm font-semibold">
-                    Voice Call{isCallLocked ? ' (locked)' : ''}
-                  </Text>
-                  <Text className="text-[#716F6A] text-[11px]">
-                    {isCallLocked ? 'Unlocks 60m before session' : 'Encrypted line with coach'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
+              {!isCompletedSession && (
+                <>
+                  <TouchableOpacity 
+                    onPress={handleCall} 
+                    activeOpacity={0.7} 
+                    className="flex-row items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-[#F5F2EC]"
+                  >
+                    <View className="w-8 h-8 rounded-xl bg-[#FAF9F5] border border-[#E8E4DC] items-center justify-center">
+                      <Feather name="phone" size={15} color={isCallLocked ? '#9E9B93' : '#1F1E1D'} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-[#1F1E1D] text-sm font-semibold">
+                        Voice Call{isCallLocked ? ' (locked)' : ''}
+                      </Text>
+                      <Text className="text-[#716F6A] text-[11px]">
+                        {isCallLocked ? 'Unlocks 60m before session' : 'Encrypted line with coach'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
 
-              <TouchableOpacity 
-                onPress={handleShareRoute} 
-                activeOpacity={0.7} 
-                className="flex-row items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-[#F5F2EC]"
-              >
-                <View className="w-8 h-8 rounded-xl bg-[#FAF9F5] border border-[#E8E4DC] items-center justify-center">
-                  <Feather name="navigation" size={15} color="#1F1E1D" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-[#1F1E1D] text-sm font-semibold">Share Live Location</Text>
-                  <Text className="text-[#716F6A] text-[11px]">Send real-time GPS location in this chat</Text>
-                </View>
-              </TouchableOpacity>
+                  <TouchableOpacity 
+                    onPress={handleShareRoute} 
+                    activeOpacity={0.7} 
+                    className="flex-row items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-[#F5F2EC]"
+                  >
+                    <View className="w-8 h-8 rounded-xl bg-[#FAF9F5] border border-[#E8E4DC] items-center justify-center">
+                      <Feather name="navigation" size={15} color="#1F1E1D" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-[#1F1E1D] text-sm font-semibold">Share Live Location</Text>
+                      <Text className="text-[#716F6A] text-[11px]">Send real-time GPS location in this chat</Text>
+                    </View>
+                  </TouchableOpacity>
+                </>
+              )}
 
-              <View className="h-px bg-[#F0ECE1] mx-2 my-1" />
-
-              <TouchableOpacity 
-                onPress={() => { setIsMenuVisible(false); handleCancelBooking(); }} 
-                disabled={booking.status !== 'upcoming'} 
-                activeOpacity={0.7} 
-                className="flex-row items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-rose-50"
-              >
-                <View className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-200/80 items-center justify-center">
-                  <Feather name="x-circle" size={15} color={booking.status === 'upcoming' ? '#E11D48' : '#9E9B93'} />
-                </View>
-                <View className="flex-1">
-                  <Text className={`text-sm font-semibold ${booking.status === 'upcoming' ? 'text-rose-700' : 'text-[#9E9B93]'}`}>
-                    Cancel Booking
-                  </Text>
-                  <Text className="text-[#716F6A] text-[11px]">
-                    {booking.status === 'upcoming' ? 'Refund or forfeit policy apply' : 'Session cannot be cancelled'}
+              {isCompletedSession && (
+                <View className="py-4 items-center justify-center px-3">
+                  <Text className="text-[#716F6A] text-xs font-semibold text-center leading-relaxed">
+                    This session is completed. Voice call and live tracking are archived.
                   </Text>
                 </View>
-              </TouchableOpacity>
+              )}
+
+              {canCancelBooking && (
+                <>
+                  <View className="h-px bg-[#F0ECE1] mx-2 my-1" />
+
+                  <TouchableOpacity 
+                    onPress={() => { setIsMenuVisible(false); handleCancelBooking(); }} 
+                    activeOpacity={0.7} 
+                    className="flex-row items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-rose-50"
+                  >
+                    <View className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-200/80 items-center justify-center">
+                      <Feather name="x-circle" size={15} color="#E11D48" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-sm font-semibold text-rose-700">
+                        Cancel Booking
+                      </Text>
+                      <Text className="text-[#716F6A] text-[11px]">
+                        Refund or forfeit policy apply
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </TouchableOpacity>
         </TouchableOpacity>

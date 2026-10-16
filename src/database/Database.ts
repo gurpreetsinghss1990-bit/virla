@@ -1052,6 +1052,14 @@ class DatabaseClient {
   private isLoaded = false;
   private loadPromise: Promise<void> | null = null;
   public loadSource: 'supabase' | 'cache' | 'none' = 'none';
+  private chatMessageListeners: Array<(msg: ChatMessage) => void> = [];
+
+  onChatMessage(listener: (msg: ChatMessage) => void): () => void {
+    this.chatMessageListeners.push(listener);
+    return () => {
+      this.chatMessageListeners = this.chatMessageListeners.filter(l => l !== listener);
+    };
+  }
 
   constructor() {
     this.load();
@@ -2901,21 +2909,37 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
   }
 
   async getClientAssessmentHistory(clientId: string): Promise<{ bookingId: string; date: string; time: string; coachName: string; assessment: string }[]> {
-    const { data, error } = await supabase.rpc('get_client_assessment_history', {
-      p_client_id: clientId
-    });
+    try {
+      const { data, error } = await supabase.rpc('get_client_assessment_history', {
+        p_client_id: clientId
+      });
 
-    if (error) {
-      console.error('[DB ERROR] get_client_assessment_history failed:', error);
-      return [];
+      if (!error && data) {
+        return data.map((row: any) => ({
+          bookingId: row.booking_id,
+          date: row.session_date,
+          time: row.session_time,
+          coachName: row.coach_name,
+          assessment: row.assessment
+        }));
+      }
+    } catch {
+      // Fall through to local fallback
     }
 
-    return (data || []).map((row: any) => ({
-      bookingId: row.booking_id,
-      date: row.session_date,
-      time: row.session_time,
-      coachName: row.coach_name,
-      assessment: row.assessment
+    // Graceful local cache fallback (allows coaches to view past assessments for completed sessions)
+    const localPastBookings = this.schema.bookings.filter(b => 
+      b.clientId === clientId && 
+      (b.status === 'completed' || b.timelineStatus === 'workout_completed' || b.timelineStatus === 'trainer_report_submitted' || b.timelineStatus === 'customer_review_pending' || b.timelineStatus === 'session_closed') &&
+      Boolean(b.questionnaire?.coachNotes)
+    );
+
+    return localPastBookings.map(b => ({
+      bookingId: b.id,
+      date: b.date,
+      time: b.time,
+      coachName: b.trainerName,
+      assessment: b.questionnaire?.coachNotes || ''
     }));
   }
 
@@ -3525,6 +3549,14 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       this.save();
       this.log('ReceiveMessage', `Realtime message received: "${msg.text}" in chat ${msg.chatId}`);
     }
+    // Notify active chat screen listeners
+    this.chatMessageListeners.forEach(listener => {
+      try {
+        listener(msg);
+      } catch (err) {
+        console.warn('[Database] chatMessageListener error:', err);
+      }
+    });
   }
 
   private getLastChatMessage(chatId: string): string | null {

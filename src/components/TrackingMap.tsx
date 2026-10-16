@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
-import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+import { StyleSheet, View, Text, ActivityIndicator, Platform } from 'react-native';
+import MapView, { Marker, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { parseBookingAddress } from '../utils/LocationParser';
 
@@ -78,7 +78,7 @@ export default function TrackingMap({ liveTrainerCoords, isStale, clientAddress 
       <MapView
         ref={mapRef}
         style={styles.map}
-        provider={PROVIDER_DEFAULT}
+        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
         initialRegion={initialRegion}
         showsUserLocation={false}
         showsMyLocationButton={false}

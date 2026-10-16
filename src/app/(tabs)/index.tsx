@@ -829,12 +829,17 @@ export default function HomeScreen() {
   }, [bookings.length]);
 
   const upcomingBookings = bookings
-    .filter((b) => b.status === 'upcoming' && getBookingISTDateRange(b).start.getTime() > serverNow.getTime())
+    .filter((b) => b.status === 'upcoming' && (getBookingISTDateRange(b).start.getTime() > serverNow.getTime() || (b.timelineStatus && b.timelineStatus !== 'session_closed')))
     .sort((a, b) => getBookingISTDateRange(a).start.getTime() - getBookingISTDateRange(b).start.getTime());
   const pastBookings = bookings.filter((b) => b.status === 'completed');
   const activeBooking = bookings.find(b => {
     if (b.status !== 'upcoming' || !b.timelineStatus || b.timelineStatus === 'session_closed') {
       return false;
+    }
+    // If session has started or is actively progressing, keep it active regardless of slot end time until trainer completes it
+    const activeTimelineStatuses = ['trainer_travelling', 'trainer_arrived', 'otp_verified', 'workout_started', 'workout_completed', 'trainer_report_submitted', 'customer_review_pending'];
+    if (activeTimelineStatuses.includes(b.timelineStatus)) {
+      return true;
     }
     const range = getBookingISTDateRange(b);
     return serverNow.getTime() <= range.end.getTime();
