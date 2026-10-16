@@ -121,9 +121,15 @@ export default function BookingsScreen() {
   const { role, user } = useUserStore();
   const [prevRole, setPrevRole] = useState(role);
   const [activeFilter, setActiveFilter] = useState<FilterType>(role === 'trainer' ? 'today' : 'upcoming');
+  const [renderedFilter, setRenderedFilter] = useState<FilterType>(role === 'trainer' ? 'today' : 'upcoming');
   const [clientDateFilter, setClientDateFilter] = useState<'all' | 'today' | 'this_week' | 'this_month'>('all');
+  const [visibleLimit, setVisibleLimit] = useState<number>(10);
   const [loading, setLoading] = useState(() => !Database.getIsLoaded());
-  const [isSwitchingTab, setIsSwitchingTab] = useState(false);
+
+  const handleOpenSupport = React.useCallback((b: Booking) => {
+    setSupportBooking(b);
+    setShowRaiseTicketModal(true);
+  }, []);
 
   // Client Support States
   const [supportBooking, setSupportBooking] = useState<Booking | null>(null);
@@ -215,7 +221,9 @@ export default function BookingsScreen() {
 
   if (role !== prevRole) {
     setPrevRole(role);
-    setActiveFilter(role === 'trainer' ? 'today' : 'upcoming');
+    const nextFilter = role === 'trainer' ? 'today' : 'upcoming';
+    setActiveFilter(nextFilter);
+    setRenderedFilter(nextFilter);
   }
 
   // Date formatted strings
@@ -409,89 +417,106 @@ export default function BookingsScreen() {
     return [];
   };
 
-  // Regular Customer Bookings list filter (Memoized for high performance)
+  // Pre-group and sort customer bookings once when `bookings` changes — makes tab switching O(1) instant!
+  const groupedCustomerBookings = useMemo(() => {
+    const serverNow = getCurrentServerTime().getTime();
+    const activeTimelineStatuses = new Set([
+      'trainer_travelling',
+      'trainer_arrived',
+      'otp_verified',
+      'workout_started',
+      'workout_completed',
+      'trainer_report_submitted',
+      'customer_review_pending',
+    ]);
+
+    const withMeta = bookings.map((b) => {
+      const startMs = b.scheduledStartAt
+        ? new Date(b.scheduledStartAt).getTime()
+        : getBookingISTDateRange(b).start.getTime();
+      return { booking: b, startMs };
+    });
+
+    const upcoming: typeof withMeta = [];
+    const completed: typeof withMeta = [];
+    const cancelled: typeof withMeta = [];
+
+    for (const item of withMeta) {
+      const b = item.booking;
+      if (b.status === 'upcoming') {
+        const isOngoing = activeTimelineStatuses.has(b.timelineStatus || '');
+        if (isOngoing || item.startMs > serverNow) {
+          upcoming.push(item);
+        }
+      } else if (
+        b.status === 'cancelled' ||
+        b.status === 'client_no_show' ||
+        b.status === 'trainer_no_show' ||
+        b.status === 'missed_session_not_started'
+      ) {
+        cancelled.push(item);
+      } else if (b.status === 'completed') {
+        completed.push(item);
+      }
+    }
+
+    upcoming.sort((a, b) => a.startMs - b.startMs);
+    completed.sort((a, b) => b.startMs - a.startMs);
+    cancelled.sort((a, b) => b.startMs - a.startMs);
+
+    return {
+      upcoming: upcoming.map((x) => x.booking),
+      completed: completed.map((x) => x.booking),
+      cancelled: cancelled.map((x) => x.booking),
+    };
+  }, [bookings]);
+
+  // Regular Customer Bookings list filter (O(1) lookup when clientDateFilter === 'all')
   const filteredBookings = useMemo(() => {
-    const list = bookings.filter((b) => {
-      // 1. Status Filter
-      if (activeFilter === 'upcoming') {
-        const serverNow = getCurrentServerTime();
-        const activeTimelineStatuses = ['trainer_travelling', 'trainer_arrived', 'otp_verified', 'workout_started', 'workout_completed', 'trainer_report_submitted', 'customer_review_pending'];
-        const isOngoing = b.status === 'upcoming' && activeTimelineStatuses.includes(b.timelineStatus || '');
-        if (b.status !== 'upcoming') {
-          return false;
-        }
-        // Keep in list if ongoing OR if scheduled start is in the future
-        if (!isOngoing && getBookingISTDateRange(b).start.getTime() <= serverNow.getTime()) {
-          return false;
-        }
-      } else if (activeFilter === 'cancelled') {
-        const isCancelledOrMissed = b.status === 'cancelled' || b.status === 'client_no_show' || b.status === 'trainer_no_show' || b.status === 'missed_session_not_started';
-        if (!isCancelledOrMissed) return false;
-      } else if (b.status !== activeFilter) {
-        return false;
-      }
+    const baseList =
+      renderedFilter === 'upcoming'
+        ? groupedCustomerBookings.upcoming
+        : renderedFilter === 'cancelled'
+          ? groupedCustomerBookings.cancelled
+          : groupedCustomerBookings.completed;
 
-      // 2. Date Range Filter (All, Today, This Week, This Month)
-      if (clientDateFilter === 'all') return true;
+    if (clientDateFilter === 'all') {
+      return baseList;
+    }
 
-      const bDateStr = normalizeDate(getBookingDateObj(b.date));
-      const now = getCurrentServerTime();
-      const todayStr = normalizeDate(now);
+    const now = getCurrentServerTime();
+    const todayStr = normalizeDate(now);
 
+    return baseList.filter((b) => {
+      const bookingDate = getBookingDateObj(b.date);
       if (clientDateFilter === 'today') {
-        return bDateStr === todayStr;
+        return normalizeDate(bookingDate) === todayStr;
       }
-
       if (clientDateFilter === 'this_week') {
-        const bookingDate = getBookingDateObj(b.date);
         const startOfWeek = new Date(now);
-        const dayOfWeek = startOfWeek.getDay(); // 0 is Sunday
-        startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
+        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
         startOfWeek.setHours(0, 0, 0, 0);
-
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         endOfWeek.setHours(23, 59, 59, 999);
-
         return bookingDate >= startOfWeek && bookingDate <= endOfWeek;
       }
-
       if (clientDateFilter === 'this_month') {
-        const bookingDate = getBookingDateObj(b.date);
         return (
           bookingDate.getMonth() === now.getMonth() &&
           bookingDate.getFullYear() === now.getFullYear()
         );
       }
-
       return true;
     });
-
-    if (activeFilter === 'upcoming') {
-      return list.sort((a, b) => {
-        return getBookingISTDateRange(a).start.getTime() - getBookingISTDateRange(b).start.getTime();
-      });
-    } else {
-      return list.sort((a, b) => {
-        return getBookingISTDateRange(b).start.getTime() - getBookingISTDateRange(a).start.getTime();
-      });
-    }
-  }, [bookings, activeFilter, clientDateFilter]);
+  }, [groupedCustomerBookings, renderedFilter, clientDateFilter]);
 
   // Count bookings in the active tab ignoring the date filter — hides date pills when the tab is empty
   const activeTabCount = useMemo(() => {
-    const serverNow = getCurrentServerTime();
-    const activeTimelineStatuses = ['trainer_travelling', 'trainer_arrived', 'otp_verified', 'workout_started', 'workout_completed', 'trainer_report_submitted', 'customer_review_pending'];
-    return bookings.filter((b) => {
-      if (activeFilter === 'upcoming') {
-        const isOngoing = b.status === 'upcoming' && activeTimelineStatuses.includes(b.timelineStatus || '');
-        return b.status === 'upcoming' && (isOngoing || getBookingISTDateRange(b).start.getTime() > serverNow.getTime());
-      } else if (activeFilter === 'cancelled') {
-        return b.status === 'cancelled' || b.status === 'client_no_show' || b.status === 'trainer_no_show' || b.status === 'missed_session_not_started';
-      }
-      return b.status === activeFilter;
-    }).length;
-  }, [bookings, activeFilter]);
+    if (renderedFilter === 'upcoming') return groupedCustomerBookings.upcoming.length;
+    if (renderedFilter === 'cancelled') return groupedCustomerBookings.cancelled.length;
+    return groupedCustomerBookings.completed.length;
+  }, [groupedCustomerBookings, renderedFilter]);
 
   const getFilterLabel = (type: FilterType) => {    switch (type) {
       case 'upcoming': return 'Upcoming';
@@ -1204,6 +1229,8 @@ export default function BookingsScreen() {
                   if (activeFilter === opt) return;
                   setActiveFilter(opt);
                   setClientDateFilter('all');
+                  setVisibleLimit(8);
+                  setRenderedFilter(opt);
                 }}
                 className={`flex-1 py-2.5 rounded-full items-center justify-center ${
                   isActive ? 'bg-[#101828]' : ''
@@ -1248,7 +1275,10 @@ export default function BookingsScreen() {
                 <TouchableOpacity
                   key={filterKey}
                   activeOpacity={0.8}
-                  onPress={() => setClientDateFilter(filterKey)}
+                  onPress={() => {
+                    setClientDateFilter(filterKey);
+                    setVisibleLimit(8);
+                  }}
                   className={`px-4 py-2 rounded-full border items-center justify-center flex-row ${
                     isActive
                       ? 'bg-[#101828] border-[#101828]'
@@ -1274,35 +1304,45 @@ export default function BookingsScreen() {
           {/* Bookings Render List */}
         <View className="min-h-[220px]">
           {filteredBookings.length > 0 ? (
-            filteredBookings.map((booking) => (
-              <BookingCard 
-                key={booking.id} 
-                booking={booking} 
-                onOpenSupport={(b) => {
-                  setSupportBooking(b);
-                  setShowRaiseTicketModal(true);
-                }}
-              />
-            ))
+            <>
+              {filteredBookings.slice(0, visibleLimit).map((booking) => (
+                <BookingCard 
+                  key={booking.id} 
+                  booking={booking} 
+                  onOpenSupport={handleOpenSupport}
+                />
+              ))}
+              {filteredBookings.length > visibleLimit && (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setVisibleLimit((prev) => prev + 12)}
+                  className="mt-2 mb-4 py-3.5 rounded-2xl bg-white border border-zinc-200 items-center justify-center"
+                >
+                  <Text className="text-[#101828] text-xs font-bold uppercase tracking-wider">
+                    Show More ({filteredBookings.length - visibleLimit} remaining)
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </>
           ) : (
             <EmptyState 
-              type={activeFilter === 'completed' || activeFilter === 'past' ? 'no-sessions' : 'no-bookings'} 
+              type={renderedFilter === 'completed' || renderedFilter === 'past' ? 'no-sessions' : 'no-bookings'} 
               title={
-                activeFilter === 'cancelled' 
+                renderedFilter === 'cancelled' 
                   ? 'No Cancelled Sessions' 
-                  : activeFilter === 'completed' 
+                  : renderedFilter === 'completed' 
                     ? 'No Completed Sessions' 
                     : 'No Upcoming Sessions'
               }
               showCard={false}
               message={
-                activeFilter === 'cancelled' && clientDateFilter !== 'all'
+                renderedFilter === 'cancelled' && clientDateFilter !== 'all'
                   ? `No cancelled or missed visits found for this period.`
-                  : activeFilter === 'upcoming' 
+                  : renderedFilter === 'upcoming' 
                     ? 'Schedule your next premium at-home training session from the home dashboard.'
-                    : activeFilter === 'cancelled'
+                    : renderedFilter === 'cancelled'
                       ? 'You do not have any cancelled sessions logged in your profile.'
-                      : `You do not have any ${activeFilter} visits logged in your profile.`
+                      : `You do not have any ${renderedFilter} visits logged in your profile.`
               }
               actionText={clientDateFilter !== 'all' ? 'Show All' : undefined}
               onAction={clientDateFilter !== 'all' ? () => setClientDateFilter('all') : undefined}

@@ -18,7 +18,7 @@ interface BookingCardProps {
   onOpenSupport?: (booking: Booking) => void;
 }
 
-export function BookingCard({ booking, onOpenSupport }: BookingCardProps) {
+export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupport }: BookingCardProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { cancelSession, rescheduleSession } = useBookingStore();
@@ -35,15 +35,32 @@ export function BookingCard({ booking, onOpenSupport }: BookingCardProps) {
   const [selectedRescheduleDate, setSelectedRescheduleDate] = useState('');
   const [selectedRescheduleTime, setSelectedRescheduleTime] = useState('');
 
-  // 2-hour cancellation/reschedule calculations
-  const range = getBookingISTDateRange(booking);
-  const now = getCurrentServerTime();
-  const timeUntilStartMs = range.start.getTime() - now.getTime();
-  const timeUntilStartHours = timeUntilStartMs / (1000 * 60 * 60);
-
-  const isPast = timeUntilStartHours <= 0;
-  const isWithinTwoHours = timeUntilStartHours > 0 && timeUntilStartHours <= 2;
-  const isMoreThanTwoHours = timeUntilStartHours > 2;
+  // 2-hour cancellation/reschedule calculations (only needed for upcoming sessions)
+  const { range, now, timeUntilStartHours, isPast, isWithinTwoHours, isMoreThanTwoHours } = React.useMemo(() => {
+    if (booking.status !== 'upcoming') {
+      const dummyNow = new Date(0);
+      return {
+        range: { start: dummyNow, end: dummyNow },
+        now: dummyNow,
+        timeUntilStartHours: -1,
+        isPast: true,
+        isWithinTwoHours: false,
+        isMoreThanTwoHours: false,
+      };
+    }
+    const r = getBookingISTDateRange(booking);
+    const n = getCurrentServerTime();
+    const ms = r.start.getTime() - n.getTime();
+    const hrs = ms / (1000 * 60 * 60);
+    return {
+      range: r,
+      now: n,
+      timeUntilStartHours: hrs,
+      isPast: hrs <= 0,
+      isWithinTwoHours: hrs > 0 && hrs <= 2,
+      isMoreThanTwoHours: hrs > 2,
+    };
+  }, [booking]);
 
   // Generate reschedule date capsules (only when reschedule modal is open)
   const rescheduleDates = React.useMemo(() => {
@@ -1098,4 +1115,4 @@ export function BookingCard({ booking, onOpenSupport }: BookingCardProps) {
       </Modal>
     </LuxuryCard>
   );
-}
+});
