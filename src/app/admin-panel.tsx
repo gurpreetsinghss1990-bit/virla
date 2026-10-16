@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, Image, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, Image, Modal, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -31,8 +31,15 @@ export default function AdminPanelScreen() {
 
   // Filters for trainer locations
   const [radiusFilter, setRadiusFilter] = useState<'all' | '10' | '15'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'verified' | 'pending'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'verified' | 'pending' | 'rejected'>('all');
   const [selectedAuditSession, setSelectedAuditSession] = useState<Booking | null>(null);
+
+  // Direct Admin Location & Radius Override Modal state
+  const [editingCoachLocation, setEditingCoachLocation] = useState<Coach | null>(null);
+  const [overrideRadius, setOverrideRadius] = useState<number>(15);
+  const [overrideAddress, setOverrideAddress] = useState<string>('');
+  const [overrideStatus, setOverrideStatus] = useState<'verified' | 'pending' | 'rejected'>('verified');
+  const [isSavingLocation, setIsSavingLocation] = useState<boolean>(false);
   
   // Connect shared bookingStore
   const { bookings, updateTimelineStatus } = useBookingStore();
@@ -139,6 +146,22 @@ export default function AdminPanelScreen() {
       }
     };
 
+    const refreshAllAdminData = async () => {
+      setIsLoading(true);
+      try {
+        await Database.reload();
+        await useBookingStore.getState().syncFromDB();
+        await useBookingStore.getState().refreshBookings();
+        await loadApplications();
+        await loadDisputesAndKits();
+        await loadSupportTickets();
+      } catch (err: any) {
+        console.error('[Admin] Refresh error:', err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     const handleApproveLocation = async (coachId: string) => {
       const coach = Database.schema.coaches.find(c => c.id === coachId);
       if (!coach || !coach.preferences?.addressChangeRequest) return;
@@ -177,6 +200,54 @@ export default function AdminPanelScreen() {
       try {
         await Database.updateTrainerPreferences(coachId, updatedPrefs);
         Alert.alert('Location Change Rejected', `Operating base change request for Coach ${coach.name} has been rejected.`);
+        setCoaches(Database.getCoaches());
+      } catch (err: any) {
+        Alert.alert('Error', err.message);
+      }
+    };
+
+    const handleOpenEditLocation = (coach: Coach) => {
+      setEditingCoachLocation(coach);
+      setOverrideRadius(coach.preferences?.radiusKm || 15);
+      setOverrideAddress(coach.preferences?.operatingAddress || '');
+      setOverrideStatus(coach.preferences?.operatingLocationStatus || 'pending');
+    };
+
+    const handleSaveLocationOverride = async () => {
+      if (!editingCoachLocation) return;
+      setIsSavingLocation(true);
+      try {
+        const coach = Database.schema.coaches.find(c => c.id === editingCoachLocation.id) || editingCoachLocation;
+        const currentPrefs = coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] };
+        
+        const updatedPrefs = {
+          ...currentPrefs,
+          operatingAddress: overrideAddress.trim() || currentPrefs.operatingAddress,
+          radiusKm: overrideRadius,
+          operatingLocationStatus: overrideStatus,
+        };
+
+        await Database.updateTrainerPreferences(editingCoachLocation.id, updatedPrefs);
+        Alert.alert('Success', `Operating area and service radius updated for Coach ${coach.name}.`);
+        setCoaches(Database.getCoaches());
+        setEditingCoachLocation(null);
+      } catch (err: any) {
+        Alert.alert('Error', err.message || 'Failed to update location.');
+      } finally {
+        setIsSavingLocation(false);
+      }
+    };
+
+    const handleQuickVerifyLocation = async (coachId: string) => {
+      const coach = Database.schema.coaches.find(c => c.id === coachId);
+      if (!coach) return;
+      try {
+        const currentPrefs = coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] };
+        await Database.updateTrainerPreferences(coachId, {
+          ...currentPrefs,
+          operatingLocationStatus: 'verified' as const
+        });
+        Alert.alert('Status Updated', `Coach ${coach.name}'s location has been marked as VERIFIED.`);
         setCoaches(Database.getCoaches());
       } catch (err: any) {
         Alert.alert('Error', err.message);
@@ -292,7 +363,7 @@ export default function AdminPanelScreen() {
           <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">
             Admin Control Panel
           </Text>
-          <TouchableOpacity onPress={loadApplications} className="w-8 h-8 items-center justify-center">
+          <TouchableOpacity onPress={refreshAllAdminData} className="w-8 h-8 items-center justify-center">
             <Feather name="refresh-cw" size={16} color="#101828" />
           </TouchableOpacity>
         </View>
@@ -543,45 +614,93 @@ export default function AdminPanelScreen() {
 
           {activeTab === 'locations' && (
             <View className="gap-6">
-              <View>
-                <Text className="text-zinc-900 text-xl font-black tracking-tight uppercase">Trainer Locations</Text>
-                <Text className="text-[#6B7280] text-xs font-semibold mt-1 leading-relaxed">
-                  Manage permanent trainer operating coordinates and service areas.
+              {/* Header Title & Explanatory Guide */}
+              <View className="gap-2">
+                <Text className="text-zinc-950 text-xl font-black tracking-tight uppercase">Trainer Locations & Service Radius</Text>
+                <Text className="text-zinc-500 text-xs font-semibold leading-relaxed">
+                  Controls trainer dispatch eligibility, travel distance calculations, and client booking visibility.
                 </Text>
               </View>
 
+              {/* Educational How-It-Works Panel */}
+              <View className="bg-indigo-50/60 border border-indigo-150 p-4.5 rounded-[24px] gap-2.5">
+                <View className="flex-row items-center gap-2">
+                  <View className="w-6 h-6 rounded-lg bg-indigo-600 items-center justify-center">
+                    <Feather name="navigation" size={13} color="#FFFFFF" />
+                  </View>
+                  <Text className="text-indigo-950 text-xs font-black uppercase tracking-wider">
+                    How Operating Area & Radius Function
+                  </Text>
+                </View>
+                <View className="gap-2 pt-1">
+                  <View className="flex-row items-start gap-2">
+                    <Feather name="map-pin" size={13} color="#4F46E5" style={{ marginTop: 2 }} />
+                    <Text className="text-zinc-700 text-xs font-medium leading-relaxed flex-1">
+                      <Text className="font-bold text-zinc-900">Operating Base Address:</Text> The anchor GPS coordinates where the trainer starts their commute or travels from.
+                    </Text>
+                  </View>
+                  <View className="flex-row items-start gap-2">
+                    <Feather name="target" size={13} color="#4F46E5" style={{ marginTop: 2 }} />
+                    <Text className="text-zinc-700 text-xs font-medium leading-relaxed flex-1">
+                      <Text className="font-bold text-zinc-900">Service Area Radius (10km / 15km):</Text> Maximum spherical/geofence distance from their base. Clients whose workout address is beyond this radius will not be matched with this trainer.
+                    </Text>
+                  </View>
+                  <View className="flex-row items-start gap-2">
+                    <Feather name="check-circle" size={13} color="#4F46E5" style={{ marginTop: 2 }} />
+                    <Text className="text-zinc-700 text-xs font-medium leading-relaxed flex-1">
+                      <Text className="font-bold text-zinc-900">Verification Status:</Text> Once marked <Text className="font-bold text-emerald-700">Verified</Text>, the trainer's enabled slots appear directly in the client booking calendar.
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
               {/* Filters */}
-              <View className="bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-xs gap-3">
-                <Text className="text-zinc-950 text-[9px] font-black uppercase tracking-wider">Filters</Text>
+              <View className="bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-xs gap-3.5">
+                <View className="flex-row justify-between items-center">
+                  <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Filter Trainers</Text>
+                  <Text className="text-zinc-400 text-[10px] font-bold">
+                    Showing {coaches.filter((c) => {
+                      const status = c.preferences?.operatingLocationStatus || 'pending';
+                      const radius = String(c.preferences?.radiusKm || 15);
+                      if (statusFilter !== 'all' && status !== statusFilter) return false;
+                      if (radiusFilter !== 'all' && radius !== radiusFilter) return false;
+                      return true;
+                    }).length} of {coaches.length} Trainers
+                  </Text>
+                </View>
                 
-                <View className="flex-row gap-2">
+                <View className="flex-row gap-3">
                   {/* Status Filter */}
-                  <View className="flex-1 gap-1">
-                    <Text className="text-zinc-400 text-[8px] font-black uppercase">Status</Text>
+                  <View className="flex-1 gap-1.5">
+                    <Text className="text-zinc-500 text-[9px] font-black uppercase tracking-wider">Status</Text>
                     <View className="flex-row bg-[#F1F3F5] p-1 rounded-xl">
-                      {['all', 'verified', 'pending'].map((st) => (
+                      {(['all', 'verified', 'pending', 'rejected'] as const).map((st) => (
                         <TouchableOpacity
                           key={st}
-                          onPress={() => setStatusFilter(st as any)}
-                          className={`flex-1 py-1 rounded-lg items-center ${statusFilter === st ? 'bg-white shadow-xs' : ''}`}
+                          onPress={() => setStatusFilter(st)}
+                          className={`flex-1 py-1.5 rounded-lg items-center ${statusFilter === st ? 'bg-white shadow-xs' : ''}`}
                         >
-                          <Text className="text-[8px] font-black uppercase text-zinc-950">{st}</Text>
+                          <Text className={`text-[8px] font-black uppercase ${statusFilter === st ? 'text-zinc-950' : 'text-zinc-500'}`}>
+                            {st}
+                          </Text>
                         </TouchableOpacity>
                       ))}
                     </View>
                   </View>
 
                   {/* Radius Filter */}
-                  <View className="flex-1 gap-1">
-                    <Text className="text-zinc-400 text-[8px] font-black uppercase">Radius</Text>
+                  <View className="w-36 gap-1.5">
+                    <Text className="text-zinc-500 text-[9px] font-black uppercase tracking-wider">Radius Limit</Text>
                     <View className="flex-row bg-[#F1F3F5] p-1 rounded-xl">
                       {['all', '10', '15'].map((rd) => (
                         <TouchableOpacity
                           key={rd}
                           onPress={() => setRadiusFilter(rd as any)}
-                          className={`flex-1 py-1 rounded-lg items-center ${radiusFilter === rd ? 'bg-white shadow-xs' : ''}`}
+                          className={`flex-1 py-1.5 rounded-lg items-center ${radiusFilter === rd ? 'bg-white shadow-xs' : ''}`}
                         >
-                          <Text className="text-[8px] font-black uppercase text-zinc-950">{rd === 'all' ? 'All' : `${rd}km`}</Text>
+                          <Text className={`text-[8px] font-black uppercase ${radiusFilter === rd ? 'text-zinc-950' : 'text-zinc-500'}`}>
+                            {rd === 'all' ? 'All' : `${rd}km`}
+                          </Text>
                         </TouchableOpacity>
                       ))}
                     </View>
@@ -589,7 +708,7 @@ export default function AdminPanelScreen() {
                 </View>
               </View>
 
-              {/* List */}
+              {/* List of Trainers */}
               <View className="gap-4">
                 {coaches
                   .filter((c) => {
@@ -601,90 +720,134 @@ export default function AdminPanelScreen() {
                   })
                   .map((coach) => {
                     const hasRequest = !!coach.preferences?.addressChangeRequest;
+                    const status = coach.preferences?.operatingLocationStatus || 'pending';
+                    const radius = coach.preferences?.radiusKm || 15;
+                    const address = coach.preferences?.operatingAddress;
+                    const hasCoords = coach.preferences?.operatingLatitude !== undefined && coach.preferences?.operatingLongitude !== undefined;
+
                     return (
                       <LuxuryCard key={coach.id} className="p-5 gap-4" interactive={false}>
+                        {/* Header Row: Trainer Info & Status Badge */}
                         <View className="flex-row justify-between items-start">
-                          <View className="flex-row items-center gap-3">
-                            <Image source={{ uri: coach.photo }} className="w-10 h-10 rounded-full border border-zinc-200" />
-                            <View>
-                              <Text className="text-zinc-950 text-xs font-black">{coach.name}</Text>
-                              <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Trainer ID: {coach.id}</Text>
+                          <View className="flex-row items-center gap-3 flex-1 pr-3">
+                            <Image 
+                              source={{ uri: coach.photo || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=300&q=80' }} 
+                              className="w-11 h-11 rounded-full border border-zinc-200" 
+                            />
+                            <View className="flex-1">
+                              <Text className="text-zinc-950 text-sm font-black tracking-tight leading-tight">{coach.name}</Text>
+                              <Text className="text-zinc-400 text-[9px] font-bold uppercase mt-0.5">Trainer ID: {coach.id}</Text>
                             </View>
                           </View>
 
-                          <View className={`px-2 py-0.5 rounded-full ${
-                            coach.preferences?.operatingLocationStatus === 'verified'
-                              ? 'bg-green-50 border border-green-150'
-                              : 'bg-amber-50 border border-amber-150'
+                          <View className={`px-2.5 py-1 rounded-full border ${
+                            status === 'verified'
+                              ? 'bg-emerald-50 border-emerald-200'
+                              : status === 'rejected'
+                              ? 'bg-rose-50 border-rose-200'
+                              : 'bg-amber-50 border-amber-200'
                           }`}>
-                            <Text className={`text-[7px] font-black uppercase ${
-                              coach.preferences?.operatingLocationStatus === 'verified' ? 'text-green-600' : 'text-amber-600'
+                            <Text className={`text-[8px] font-black uppercase tracking-wider ${
+                              status === 'verified' ? 'text-emerald-700' : status === 'rejected' ? 'text-rose-700' : 'text-amber-700'
                             }`}>
-                              {coach.preferences?.operatingLocationStatus || 'pending'}
+                              {status === 'verified' ? '✓ Verified Base' : status === 'rejected' ? '✕ Rejected' : '⏳ Pending Base'}
                             </Text>
                           </View>
                         </View>
 
-                        <View className="h-[1px] bg-zinc-50" />
+                        <View className="h-[1px] bg-zinc-100" />
 
-                        <View className="gap-2.5 pl-1">
-                          <View className="gap-0.5">
-                            <Text className="text-zinc-400 text-[8px] font-black uppercase">Operating Base Address</Text>
-                            <Text className="text-zinc-900 text-xs font-bold leading-normal">
-                              {coach.preferences?.operatingAddress || 'Not Set'}
+                        {/* Location & Radius Details Box */}
+                        <View className="bg-zinc-50 border border-zinc-150/80 p-3.5 rounded-2xl gap-3">
+                          {/* Address */}
+                          <View className="gap-1">
+                            <View className="flex-row items-center gap-1.5">
+                              <Feather name="map-pin" size={12} color="#6B7280" />
+                              <Text className="text-zinc-500 text-[9px] font-black uppercase tracking-wider">Operating Base Address</Text>
+                            </View>
+                            <Text className="text-zinc-900 text-xs font-bold leading-relaxed">
+                              {address || 'Not Set (Trainer must configure in profile)'}
                             </Text>
                           </View>
 
-                          <View className="flex-row justify-between">
+                          {/* Coordinates & Service Radius */}
+                          <View className="flex-row justify-between pt-2 border-t border-zinc-200/60">
                             <View className="gap-0.5">
-                              <Text className="text-zinc-400 text-[8px] font-black uppercase">Coordinates</Text>
-                              <Text className="text-zinc-700 text-[10px] font-semibold">
-                                {coach.preferences?.operatingLatitude !== undefined 
-                                  ? `${coach.preferences.operatingLatitude.toFixed(5)}, ${coach.preferences.operatingLongitude?.toFixed(5)}` 
+                              <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">GPS Coordinates</Text>
+                              <Text className="text-zinc-700 text-[10px] font-semibold font-mono">
+                                {hasCoords 
+                                  ? `${coach.preferences?.operatingLatitude?.toFixed(5)}, ${coach.preferences?.operatingLongitude?.toFixed(5)}` 
                                   : 'Not Configured'}
                               </Text>
                             </View>
 
                             <View className="gap-0.5 items-end">
-                              <Text className="text-zinc-400 text-[8px] font-black uppercase">Service Area Radius</Text>
-                              <Text className="text-zinc-700 text-[10px] font-semibold">
-                                {coach.preferences?.radiusKm ? `${coach.preferences.radiusKm} km` : '15 km (Default)'}
-                              </Text>
+                              <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Service Coverage Radius</Text>
+                              <View className="flex-row items-center gap-1">
+                                <Feather name="target" size={11} color="#4F46E5" />
+                                <Text className="text-[#4F46E5] text-xs font-black">
+                                  {radius} km
+                                </Text>
+                              </View>
                             </View>
                           </View>
                         </View>
 
+                        {/* Pending Change Request Alert */}
                         {hasRequest && (
-                          <View className="bg-amber-50 border border-amber-200/50 p-4 rounded-2xl gap-3">
-                            <View className="gap-1">
-                              <Text className="text-amber-800 text-[8px] font-black uppercase tracking-wider">Requested Location Update</Text>
-                              <Text className="text-zinc-900 text-xs font-black">
-                                {coach.preferences?.addressChangeRequest?.requestedAddress}
-                              </Text>
-                              <Text className="text-zinc-500 text-[8px] font-bold uppercase">
+                          <View className="bg-amber-50 border border-amber-200 p-4 rounded-2xl gap-2.5">
+                            <View className="flex-row items-center gap-1.5">
+                              <Feather name="alert-triangle" size={13} color="#D97706" />
+                              <Text className="text-amber-900 text-[10px] font-black uppercase tracking-wider">Requested Location Update</Text>
+                            </View>
+                            <Text className="text-zinc-900 text-xs font-bold leading-relaxed">
+                              {coach.preferences?.addressChangeRequest?.requestedAddress}
+                            </Text>
+                            <View className="flex-row justify-between pt-1 border-t border-amber-200/60">
+                              <Text className="text-amber-800 text-[9px] font-bold uppercase">
                                 Requested Radius: {coach.preferences?.addressChangeRequest?.requestedRadius} km
                               </Text>
-                              <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">
-                                Coordinates: {coach.preferences?.addressChangeRequest?.requestedLatitude?.toFixed(5)}, {coach.preferences?.addressChangeRequest?.requestedLongitude?.toFixed(5)}
+                              <Text className="text-zinc-500 text-[9px] font-semibold font-mono">
+                                {coach.preferences?.addressChangeRequest?.requestedLatitude?.toFixed(4)}, {coach.preferences?.addressChangeRequest?.requestedLongitude?.toFixed(4)}
                               </Text>
                             </View>
 
                             <View className="flex-row gap-2 mt-1">
                               <TouchableOpacity
                                 onPress={() => handleRejectLocation(coach.id)}
-                                className="flex-1 border border-rose-200 bg-white py-2 rounded-xl items-center"
+                                className="flex-1 border border-rose-200 bg-white py-2.5 rounded-xl items-center"
                               >
-                                <Text className="text-rose-600 text-[8px] font-black uppercase">Reject Request</Text>
+                                <Text className="text-rose-600 text-[9px] font-black uppercase tracking-wider">Reject Request</Text>
                               </TouchableOpacity>
                               <TouchableOpacity
                                 onPress={() => handleApproveLocation(coach.id)}
-                                className="flex-1 bg-green-600 py-2 rounded-xl items-center shadow-sm"
+                                className="flex-1 bg-emerald-600 py-2.5 rounded-xl items-center shadow-xs"
                               >
-                                <Text className="text-white text-[8px] font-black uppercase">Approve Request</Text>
+                                <Text className="text-white text-[9px] font-black uppercase tracking-wider">Approve Base</Text>
                               </TouchableOpacity>
                             </View>
                           </View>
                         )}
+
+                        {/* Admin Action Buttons */}
+                        <View className="flex-row gap-2 pt-1 border-t border-zinc-100">
+                          {status !== 'verified' && (
+                            <TouchableOpacity
+                              onPress={() => handleQuickVerifyLocation(coach.id)}
+                              className="flex-1 py-2.5 bg-emerald-600 rounded-xl items-center justify-center flex-row gap-1.5"
+                            >
+                              <Feather name="check" size={13} color="#FFFFFF" />
+                              <Text className="text-white text-[9px] font-black uppercase tracking-wider">Mark Verified</Text>
+                            </TouchableOpacity>
+                          )}
+                          <TouchableOpacity
+                            onPress={() => handleOpenEditLocation(coach)}
+                            className="flex-1 py-2.5 bg-zinc-900 rounded-xl items-center justify-center flex-row gap-1.5"
+                          >
+                            <Feather name="edit-2" size={13} color="#FFFFFF" />
+                            <Text className="text-white text-[9px] font-black uppercase tracking-wider">Edit Base & Radius</Text>
+                          </TouchableOpacity>
+                        </View>
                       </LuxuryCard>
                     );
                   })}
@@ -736,18 +899,29 @@ export default function AdminPanelScreen() {
               <View className="bg-red-50 border border-red-100 p-4.5 rounded-2xl gap-2">
                 <Text className="text-red-700 text-[9px] font-black uppercase tracking-wider">🚨 Safety SOS Alerts Console</Text>
                 <View className="h-[1px] bg-red-100/50 my-1" />
-                <View className="flex-row justify-between items-center bg-white p-2.5 rounded-xl border border-red-100">
-                  <View className="gap-0.5">
-                    <Text className="text-zinc-950 text-xs font-black">Coach Karan • Client Viral</Text>
-                    <Text className="text-zinc-400 text-[8px] font-bold uppercase">Status: Offline / Ready</Text>
+                {liveSessions.length === 0 ? (
+                  <View className="bg-white p-3 rounded-xl border border-red-100/60 items-center justify-center">
+                    <Text className="text-zinc-500 text-[10px] font-bold">All Emergency Alert Channels Active & Normal</Text>
+                    <Text className="text-zinc-400 text-[8px] font-medium mt-0.5">No emergency SOS triggers dispatched.</Text>
                   </View>
-                  <TouchableOpacity 
-                    onPress={() => Alert.alert('SOS Reset', 'Emergency alert channels cleared successfully.')} 
-                    className="bg-red-600 px-3 py-1.5 rounded-lg"
-                  >
-                    <Text className="text-white text-[7px] font-black uppercase">Reset SOS</Text>
-                  </TouchableOpacity>
-                </View>
+                ) : (
+                  <View className="gap-2">
+                    {liveSessions.map((ls) => (
+                      <View key={ls.id} className="flex-row justify-between items-center bg-white p-2.5 rounded-xl border border-red-100">
+                        <View className="gap-0.5 flex-1 pr-2">
+                          <Text className="text-zinc-950 text-xs font-black">Coach {ls.trainerName} ↔ {ls.clientName || 'Client'}</Text>
+                          <Text className="text-zinc-400 text-[8px] font-bold uppercase">Status: Live Monitoring ({ls.timelineStatus || 'In Progress'})</Text>
+                        </View>
+                        <TouchableOpacity 
+                          onPress={() => Alert.alert('Safety Check', `Emergency channels for booking ${ls.id} are operational.`)} 
+                          className="bg-zinc-800 px-3 py-1.5 rounded-lg"
+                        >
+                          <Text className="text-white text-[7px] font-black uppercase">Check SOS</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
 
               {/* TODAY'S BOOKED SESSIONS */}
@@ -798,7 +972,7 @@ export default function AdminPanelScreen() {
                             </View>
                             <View className="h-[1px] bg-zinc-100 my-2" />
                             <View className="gap-1.5 mb-3.5">
-                              <Text className="text-zinc-650 text-xs font-medium">Client Name: <Text className="font-bold text-zinc-900">{b.clientName || 'Viral'}</Text></Text>
+                              <Text className="text-zinc-650 text-xs font-medium">Client Name: <Text className="font-bold text-zinc-900">{b.clientName || 'Client'}</Text></Text>
                               <Text className="text-zinc-650 text-xs font-medium">Trainer Name: <Text className="font-bold text-zinc-900">{b.trainerName}</Text></Text>
                               <Text className="text-zinc-650 text-xs font-medium">Workout Type: <Text className="font-bold text-zinc-900">{b.workoutTitle}</Text></Text>
                               <Text className="text-zinc-650 text-xs font-medium">Booking Status: <Text className="font-bold text-zinc-900">Confirmed / Booked</Text></Text>
@@ -841,7 +1015,7 @@ export default function AdminPanelScreen() {
                             </View>
                             <View className="h-[1px] bg-zinc-100 my-2" />
                             <View className="gap-1.5 mb-3.5">
-                              <Text className="text-zinc-650 text-xs font-medium">Client Name: <Text className="font-bold text-zinc-900">{b.clientName || 'Viral'}</Text></Text>
+                              <Text className="text-zinc-650 text-xs font-medium">Client Name: <Text className="font-bold text-zinc-900">{b.clientName || 'Client'}</Text></Text>
                               <Text className="text-zinc-650 text-xs font-medium">Trainer Name: <Text className="font-bold text-zinc-900">{b.trainerName}</Text></Text>
                               <Text className="text-zinc-650 text-xs font-medium">Workout Type: <Text className="font-bold text-zinc-900">{b.workoutTitle}</Text></Text>
                               <Text className="text-zinc-650 text-xs font-medium">Booking Status: <Text className="font-bold text-zinc-900">Confirmed / Booked</Text></Text>
@@ -879,7 +1053,7 @@ export default function AdminPanelScreen() {
                       <View className="flex-row items-center gap-3">
                         <Image source={{ uri: b.trainerPhoto }} className="w-10 h-10 rounded-full" />
                         <View className="flex-1">
-                          <Text className="text-zinc-950 text-xs font-black">Coach {b.trainerName} ↔ {b.clientName || 'Viral'}</Text>
+                          <Text className="text-zinc-950 text-xs font-black">Coach {b.trainerName} ↔ {b.clientName || 'Client'}</Text>
                           <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{b.workoutTitle} • {formatToDDMMYYYY(b.date)} ({b.time})</Text>
                         </View>
                         <View className="bg-indigo-50 border border-indigo-150 px-2 py-0.5 rounded-full">
@@ -890,7 +1064,7 @@ export default function AdminPanelScreen() {
                       <View className="h-[1px] bg-zinc-50" />
                       <View className="gap-1 pl-1">
                         <Text className="text-zinc-450 text-[8px] font-black uppercase">Target Address</Text>
-                        <Text className="text-zinc-850 text-[10px] font-medium leading-relaxed" numberOfLines={1}>{b.address || 'Mumbai, MH'}</Text>
+                        <Text className="text-zinc-850 text-[10px] font-medium leading-relaxed" numberOfLines={1}>{b.address || 'Client Scheduled Address'}</Text>
                       </View>
 
                       <View className="flex-row gap-2 mt-1">
@@ -934,7 +1108,7 @@ export default function AdminPanelScreen() {
                       <View className="flex-row items-center gap-3">
                         <Image source={{ uri: b.trainerPhoto }} className="w-10 h-10 rounded-full" />
                         <View className="flex-1">
-                          <Text className="text-zinc-950 text-xs font-black">Coach {b.trainerName} ↔ {b.clientName || 'Viral'}</Text>
+                          <Text className="text-zinc-950 text-xs font-black">Coach {b.trainerName} ↔ {b.clientName || 'Client'}</Text>
                           <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{b.workoutTitle} • {formatToDDMMYYYY(b.date)} ({b.time})</Text>
                         </View>
                         <View className={`border px-2 py-0.5 rounded-full ${
@@ -1015,7 +1189,7 @@ export default function AdminPanelScreen() {
                         </View>
                         <View className="h-[1px] bg-zinc-100 my-2" />
                         <View className="gap-1.5 mb-3.5">
-                          <Text className="text-zinc-650 text-xs font-medium">Client: <Text className="font-bold text-zinc-900">{b.clientName || 'Viral'}</Text></Text>
+                          <Text className="text-zinc-650 text-xs font-medium">Client: <Text className="font-bold text-zinc-900">{b.clientName || 'Client'}</Text></Text>
                           <Text className="text-zinc-650 text-xs font-medium">Assigned Trainer: <Text className="font-bold text-zinc-900">{b.trainerId === 'searching' || !b.trainerId ? 'Searching for Trainer...' : b.trainerName}</Text></Text>
                           <Text className="text-zinc-650 text-xs font-medium">Booked Time: <Text className="font-bold text-zinc-900">{formatToDDMMYYYY(b.date)} @ {b.time}</Text></Text>
                         </View>
@@ -1056,7 +1230,7 @@ export default function AdminPanelScreen() {
                           </View>
                           <View className="h-[1px] bg-amber-100 my-2" />
                           <View className="gap-1.5 mb-3.5">
-                            <Text className="text-zinc-650 text-xs font-medium">Client: <Text className="font-bold text-zinc-900">{b.clientName || 'Viral'}</Text></Text>
+                            <Text className="text-zinc-650 text-xs font-medium">Client: <Text className="font-bold text-zinc-900">{b.clientName || 'Client'}</Text></Text>
                             <Text className="text-zinc-650 text-xs font-medium">Assigned Trainer: <Text className="font-bold text-zinc-900">{b.trainerName}</Text></Text>
                             <Text className="text-zinc-650 text-xs font-medium">Booked Time: <Text className="font-bold text-zinc-900">{formatToDDMMYYYY(b.date)} @ {b.time}</Text></Text>
                             <Text className="text-zinc-650 text-xs font-medium">Auto-Accepted At: <Text className="font-bold text-zinc-900">{b.autoAcceptedAt ? new Date(b.autoAcceptedAt).toLocaleString() : 'N/A'}</Text></Text>
@@ -1096,7 +1270,7 @@ export default function AdminPanelScreen() {
                         </View>
                         <View className="h-[1px] bg-rose-100 my-2" />
                         <View className="gap-1.5 mb-3.5">
-                          <Text className="text-rose-900/80 text-xs font-medium">Client: <Text className="font-bold text-rose-900">{b.clientName || 'Viral'}</Text></Text>
+                          <Text className="text-rose-900/80 text-xs font-medium">Client: <Text className="font-bold text-rose-900">{b.clientName || 'Client'}</Text></Text>
                           <Text className="text-rose-900/80 text-xs font-medium">Assigned Trainer: <Text className="font-bold text-rose-900">{b.trainerName}</Text> (No response)</Text>
                           <Text className="text-rose-900/80 text-xs font-medium">Booked Time: <Text className="font-bold text-rose-900">{formatToDDMMYYYY(b.date)} @ {b.time}</Text></Text>
                           <Text className="text-rose-900/80 text-xs font-medium">Trainer Acknowledgement: <Text className="font-bold text-rose-900">{b.trainerAcknowledgement === 'pending' ? 'PENDING' : 'COMPLETED'}</Text></Text>
@@ -1133,7 +1307,7 @@ export default function AdminPanelScreen() {
                         </View>
                         <View className="h-[1px] bg-zinc-100 my-2" />
                         <View className="gap-1.5 mb-3.5">
-                          <Text className="text-zinc-650 text-xs font-medium">Client: <Text className="font-bold text-zinc-900">{b.clientName || 'Viral'}</Text></Text>
+                          <Text className="text-zinc-650 text-xs font-medium">Client: <Text className="font-bold text-zinc-900">{b.clientName || 'Client'}</Text></Text>
                           <Text className="text-zinc-650 text-xs font-medium">Assigned Trainer: <Text className="font-bold text-zinc-900">{b.trainerName}</Text> (Accepted manually)</Text>
                           <Text className="text-zinc-650 text-xs font-medium">Booked Time: <Text className="font-bold text-zinc-900">{formatToDDMMYYYY(b.date)} @ {b.time}</Text></Text>
                         </View>
@@ -1649,7 +1823,7 @@ export default function AdminPanelScreen() {
                           <View className="flex-row items-center gap-2">
                             <View className="w-1.5 h-1.5 rounded-full bg-rose-500 -ml-[9.5px]" />
                             <Text className="text-zinc-500 text-[8px] font-bold">
-                              {new Date(b.autoAcceptedAt || b.acceptanceDeadline || (b.createdAt + 30 * 60 * 1000)).toLocaleTimeString()}
+                              {b.autoAcceptedAt ? new Date(b.autoAcceptedAt).toLocaleTimeString() : (b.acceptanceDeadline ? new Date(b.acceptanceDeadline).toLocaleTimeString() : 'Auto-Accepted')}
                             </Text>
                             <Text className="text-rose-600 text-[9px] font-black uppercase">SYSTEM AUTO-ACCEPTED (NO RESP)</Text>
                           </View>
@@ -1657,7 +1831,7 @@ export default function AdminPanelScreen() {
                           <View className="flex-row items-center gap-2">
                             <View className="w-1.5 h-1.5 rounded-full bg-emerald-500 -ml-[9.5px]" />
                             <Text className="text-zinc-500 text-[8px] font-bold">
-                              {new Date(b.trainerAcceptedAt || (b.createdAt + 7 * 60 * 1000)).toLocaleTimeString()}
+                              {b.trainerAcceptedAt ? new Date(b.trainerAcceptedAt).toLocaleTimeString() : 'Accepted'}
                             </Text>
                             <Text className="text-emerald-700 text-[9px] font-black uppercase">Trainer Manually Accepted</Text>
                           </View>
@@ -1682,7 +1856,7 @@ export default function AdminPanelScreen() {
                     <View className="flex-row justify-between">
                       <View className="w-[48%]">
                         <Text className="text-zinc-400 text-[8px] font-black uppercase">Client Name</Text>
-                        <Text className="text-[#101828] text-xs font-semibold mt-0.5">{b.clientName || 'Viral'}</Text>
+                        <Text className="text-[#101828] text-xs font-semibold mt-0.5">{b.clientName || 'Client'}</Text>
                       </View>
                       <View className="w-[48%]">
                         <Text className="text-zinc-400 text-[8px] font-black uppercase">Assigned Trainer</Text>
@@ -1759,6 +1933,149 @@ export default function AdminPanelScreen() {
                 </ScrollView>
               );
             })()}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Direct Admin Location & Radius Override Modal */}
+      <Modal
+        visible={editingCoachLocation !== null}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setEditingCoachLocation(null)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(9, 9, 11, 0.7)', justifyContent: 'center', padding: 20 }}>
+          <View className="bg-white rounded-[32px] border border-zinc-200 p-6 shadow-2xl max-h-[90%] gap-4">
+            {/* Modal Header */}
+            <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
+              <View>
+                <Text className="text-[#101828] text-base font-black uppercase tracking-wider">
+                  Edit Operating Base & Radius
+                </Text>
+                <Text className="text-zinc-400 text-[10px] font-bold mt-0.5">
+                  Coach {editingCoachLocation?.name} ({editingCoachLocation?.id})
+                </Text>
+              </View>
+              <TouchableOpacity 
+                onPress={() => setEditingCoachLocation(null)}
+                className="w-8 h-8 rounded-full bg-zinc-50 items-center justify-center"
+              >
+                <Feather name="x" size={16} color="#101828" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} className="gap-4">
+              {/* Functionality Brief */}
+              <View className="bg-indigo-50/50 border border-indigo-150 p-3 rounded-2xl gap-1">
+                <Text className="text-indigo-950 text-[10px] font-black uppercase tracking-wider">
+                  Admin Authority Override
+                </Text>
+                <Text className="text-zinc-650 text-xs font-medium leading-relaxed">
+                  Modifying this base address or radius directly alters this coach's dispatch coverage. Clients searching outside this radius will not be matched.
+                </Text>
+              </View>
+
+              {/* Operating Base Address Input */}
+              <View className="gap-1.5 mt-2">
+                <Text className="text-zinc-700 text-xs font-black uppercase tracking-wider">
+                  Operating Base Address
+                </Text>
+                <TextInput
+                  value={overrideAddress}
+                  onChangeText={setOverrideAddress}
+                  placeholder="e.g. Andheri West, Mumbai, MH"
+                  placeholderTextColor="#9CA3AF"
+                  multiline
+                  className="bg-zinc-50 border border-zinc-200 rounded-2xl p-3.5 text-zinc-900 text-xs font-semibold leading-relaxed min-h-[70px]"
+                />
+              </View>
+
+              {/* Service Radius Selector */}
+              <View className="gap-1.5 mt-2">
+                <View className="flex-row justify-between items-center">
+                  <Text className="text-zinc-700 text-xs font-black uppercase tracking-wider">
+                    Service Area Radius Limit
+                  </Text>
+                  <Text className="text-indigo-600 text-xs font-black">
+                    {overrideRadius} km Coverage
+                  </Text>
+                </View>
+                <View className="flex-row gap-2 mt-1">
+                  {[10, 15].map((r) => (
+                    <TouchableOpacity
+                      key={r}
+                      onPress={() => setOverrideRadius(r)}
+                      className={`flex-1 py-3 rounded-2xl border items-center justify-center flex-row gap-1.5 ${
+                        overrideRadius === r 
+                          ? 'bg-indigo-600 border-indigo-600 shadow-xs' 
+                          : 'bg-zinc-50 border-zinc-200'
+                      }`}
+                    >
+                      <Feather name="target" size={13} color={overrideRadius === r ? '#FFFFFF' : '#6B7280'} />
+                      <Text className={`text-xs font-black ${overrideRadius === r ? 'text-white' : 'text-zinc-700'}`}>
+                        {r} km {r === 15 ? '(Standard)' : '(Compact)'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Verification Status Selector */}
+              <View className="gap-1.5 mt-2">
+                <Text className="text-zinc-700 text-xs font-black uppercase tracking-wider">
+                  Verification Status
+                </Text>
+                <View className="flex-row gap-2 mt-1">
+                  {(['verified', 'pending', 'rejected'] as const).map((st) => (
+                    <TouchableOpacity
+                      key={st}
+                      onPress={() => setOverrideStatus(st)}
+                      className={`flex-1 py-2.5 rounded-xl border items-center justify-center ${
+                        overrideStatus === st 
+                          ? st === 'verified'
+                            ? 'bg-emerald-600 border-emerald-600'
+                            : st === 'rejected'
+                            ? 'bg-rose-600 border-rose-600'
+                            : 'bg-amber-600 border-amber-600'
+                          : 'bg-zinc-50 border-zinc-200'
+                      }`}
+                    >
+                      <Text className={`text-[9px] font-black uppercase ${
+                        overrideStatus === st ? 'text-white' : 'text-zinc-700'
+                      }`}>
+                        {st}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Action Buttons */}
+              <View className="flex-row gap-2.5 mt-4 pt-3 border-t border-zinc-100">
+                <TouchableOpacity
+                  onPress={() => setEditingCoachLocation(null)}
+                  disabled={isSavingLocation}
+                  className="flex-1 py-3.5 border border-zinc-200 rounded-2xl items-center justify-center bg-white"
+                >
+                  <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={handleSaveLocationOverride}
+                  disabled={isSavingLocation}
+                  className="flex-1 py-3.5 bg-zinc-950 rounded-2xl items-center justify-center flex-row gap-2 shadow-sm"
+                >
+                  {isSavingLocation ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Feather name="save" size={14} color="#FFFFFF" />
+                      <Text className="text-white text-xs font-black uppercase tracking-wider">Save Changes</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>

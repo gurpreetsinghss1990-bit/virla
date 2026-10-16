@@ -6,6 +6,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { NotificationBadge } from './NotificationBadge';
 import { Ionicons } from '@expo/vector-icons';
 import { CommunicationCenterModal } from './CommunicationCenterModal';
+import { MASTER_TRAINER_AVATAR_IMAGE } from '../constants/masterTrainerAvatar';
 
 interface AppHeaderProps {
   onNotificationPress?: () => void;
@@ -14,7 +15,7 @@ interface AppHeaderProps {
 
 export function AppHeader({ onNotificationPress, onAvatarPress }: AppHeaderProps) {
   const router = useRouter();
-  const { user } = useUserStore();
+  const { user, role } = useUserStore();
   const { unreadCount } = useNotificationStore();
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -32,7 +33,17 @@ export function AppHeader({ onNotificationPress, onAvatarPress }: AppHeaderProps
       <View className="flex-row items-center gap-3">
         <TouchableOpacity activeOpacity={0.8} onPress={onAvatarPress}>
           <Image
-            source={{ uri: user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80' }}
+            source={(() => {
+              const isMale = (user.gender || '').toLowerCase() === 'male' || role === 'trainer';
+              const rawAvatar = user.avatar;
+              if (isMale && (!rawAvatar || rawAvatar.includes('photo-1534528741775') || rawAvatar.includes('photo-1544005313') || rawAvatar.includes('selfie.jpg'))) {
+                return MASTER_TRAINER_AVATAR_IMAGE;
+              }
+              if (rawAvatar && typeof rawAvatar === 'string' && (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:')) && !rawAvatar.includes('selfie.jpg')) {
+                return { uri: rawAvatar };
+              }
+              return isMale ? MASTER_TRAINER_AVATAR_IMAGE : { uri: rawAvatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80' };
+            })()}
             className="w-12 h-12 rounded-full border-2 border-zinc-50"
           />
         </TouchableOpacity>
