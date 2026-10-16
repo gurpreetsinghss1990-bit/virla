@@ -88,13 +88,41 @@ export default function TrackingMap({ liveTrainerCoords, isStale, clientAddress 
         {clientCoords && (
           <Marker
             coordinate={clientCoords}
-            title="Destination"
-            description="Your workout location"
+            title="Workout Venue"
+            description="Client Location"
             tracksViewChanges={false}
           >
-            <View style={styles.clientMarkerContainer}>
-              <View style={styles.clientMarkerPin}>
-                <Ionicons name="location" size={24} color="#9f1239" />
+            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{
+                backgroundColor: '#E11D48',
+                paddingHorizontal: 7,
+                paddingVertical: 2,
+                borderRadius: 10,
+                marginBottom: 3,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 3,
+                elevation: 4,
+              }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>YOU</Text>
+              </View>
+              <View style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: '#E11D48',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 2.5,
+                borderColor: '#FFFFFF',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                elevation: 5,
+              }}>
+                <Ionicons name="location" size={20} color="#FFFFFF" />
               </View>
             </View>
           </Marker>
@@ -111,10 +139,47 @@ export default function TrackingMap({ liveTrainerCoords, isStale, clientAddress 
             description={isStale ? "Last known location (signal lost)" : "On the way"}
             tracksViewChanges={false}
           >
-            <View style={[styles.trainerMarkerContainer, isStale && styles.staleMarker]}>
-              <View style={styles.trainerMarkerOutline}>
-                <View style={[styles.trainerMarkerCore, isStale && styles.staleCore]}>
-                  <Ionicons name="barbell" size={14} color="#ffffff" />
+            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{
+                backgroundColor: isStale ? '#64748B' : '#0D9488',
+                paddingHorizontal: 7,
+                paddingVertical: 2,
+                borderRadius: 10,
+                marginBottom: 3,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 3,
+                elevation: 4,
+              }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>
+                  {isStale ? 'LAST SEEN' : 'TRAINER'}
+                </Text>
+              </View>
+              <View style={{
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: isStale ? 'rgba(100, 116, 139, 0.2)' : 'rgba(13, 148, 136, 0.25)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <View style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: isStale ? '#64748B' : '#0D9488',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 2.5,
+                  borderColor: '#FFFFFF',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 3,
+                  elevation: 5,
+                }}>
+                  <Ionicons name="navigate" size={16} color="#FFFFFF" />
                 </View>
               </View>
             </View>

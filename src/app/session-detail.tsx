@@ -2415,26 +2415,113 @@ export default function SessionDetailScreen() {
                 initialRegion={{
                   latitude: parsedAddress.lat,
                   longitude: parsedAddress.lng,
-                  latitudeDelta: 0.01,
-                  longitudeDelta: 0.01,
+                  latitudeDelta: 0.015,
+                  longitudeDelta: 0.015,
                 }}
                 showsUserLocation={true}
                 showsMyLocationButton={true}
                 showsCompass={true}
               >
+                {/* 1. Client Workout Venue Destination Pin */}
                 <Marker
                   coordinate={{
                     latitude: parsedAddress.lat,
                     longitude: parsedAddress.lng,
                   }}
-                  title="Workout Venue"
-                  description={parsedAddress.addressLine || "Destination"}
+                  title="Client Location"
+                  description={parsedAddress.addressLine || "Workout Venue"}
                   tracksViewChanges={false}
                 >
-                  <View className="w-10 h-10 items-center justify-center bg-rose-500 rounded-full border-2 border-white shadow-md">
-                    <Ionicons name="location" size={20} color="white" />
+                  <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                    <View style={{
+                      backgroundColor: '#E11D48',
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 12,
+                      marginBottom: 4,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.25,
+                      shadowRadius: 3,
+                      elevation: 4,
+                    }}>
+                      <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>CLIENT</Text>
+                    </View>
+                    <View style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 19,
+                      backgroundColor: '#E11D48',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 3,
+                      borderColor: '#FFFFFF',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 3 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 4,
+                      elevation: 5,
+                    }}>
+                      <Ionicons name="location" size={20} color="white" />
+                    </View>
                   </View>
                 </Marker>
+
+                {/* 2. Trainer Live Moving Position Pin */}
+                {deviceCoords && (
+                  <Marker
+                    coordinate={{
+                      latitude: deviceCoords.latitude,
+                      longitude: deviceCoords.longitude,
+                    }}
+                    title="You (Trainer)"
+                    description="Moving towards client"
+                    tracksViewChanges={false}
+                  >
+                    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                      <View style={{
+                        backgroundColor: '#0F766E',
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        borderRadius: 12,
+                        marginBottom: 4,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.25,
+                        shadowRadius: 3,
+                        elevation: 4,
+                      }}>
+                        <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>TRAINER</Text>
+                      </View>
+                      <View style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 21,
+                        backgroundColor: 'rgba(15, 118, 110, 0.25)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        <View style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 16,
+                          backgroundColor: '#0D9488',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderWidth: 2.5,
+                          borderColor: '#FFFFFF',
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.3,
+                          shadowRadius: 3,
+                          elevation: 4,
+                        }}>
+                          <Ionicons name="navigate" size={16} color="white" />
+                        </View>
+                      </View>
+                    </View>
+                  </Marker>
+                )}
               </MapView>
             ) : (
               <View className="flex-1 items-center justify-center bg-slate-950">
