@@ -546,8 +546,9 @@ export default function CommunicationScreen() {
         {/* Conversation Stream */}
         <View className="gap-3.5 mt-1">
           {messages.map((msg) => {
-            const isMe = (role === 'customer' && msg.sender === 'customer') ||
-                         (role === 'trainer' && msg.sender === 'trainer');
+            const isMe = isTrainer
+              ? msg.sender === 'trainer'
+              : msg.sender === 'customer';
             
             let timeDisplay = msg.timestamp || '';
             try {
@@ -560,6 +561,10 @@ export default function CommunicationScreen() {
             return (
               <View
                 key={msg.id}
+                style={{
+                  maxWidth: '82%',
+                  alignSelf: isMe ? 'flex-end' : 'flex-start',
+                }}
                 className={`max-w-[82%] ${isMe ? 'self-end' : 'self-start'}`}
               >
                 <View

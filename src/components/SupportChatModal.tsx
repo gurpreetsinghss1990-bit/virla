@@ -212,6 +212,10 @@ export function SupportChatModal({
                 return (
                   <View
                     key={m.id}
+                    style={{
+                      maxWidth: '82%',
+                      alignSelf: isMe ? 'flex-end' : 'flex-start',
+                    }}
                     className={`max-w-[82%] p-3.5 rounded-2xl ${
                       isMe
                         ? 'self-end bg-[#101828] rounded-br-xs'
