@@ -262,10 +262,10 @@ export default function BookingsScreen() {
     }
   };
 
-  // Day states for dots
-  const getDayStates = () => {
+  // Day states for dots (only computed in trainer mode)
+  const dayStates = useMemo(() => {
     const states: { [day: number]: { hasBookings: boolean; hasAvailability: boolean; isFullyBooked: boolean } } = {};
-    if (!coach) return states;
+    if (role !== 'trainer' || !coach) return states;
 
     const daysCount = new Date(selectedYear, selectedMonth + 1, 0).getDate();
     const bkList = bookings || [];
@@ -310,9 +310,8 @@ export default function BookingsScreen() {
       };
     }
     return states;
-  };
+  }, [role, coach, selectedYear, selectedMonth, bookings, availabilityOverrides]);
 
-  const dayStates = getDayStates();
   const prevMonthYearVal = getPrevMonthYear(selectedMonth, selectedYear);
   const prevMonthAvailable = isMonthInAllowedRange(prevMonthYearVal.year, prevMonthYearVal.month, today);
   const nextMonthYearVal = getNextMonthYear(selectedMonth, selectedYear);
@@ -337,43 +336,49 @@ export default function BookingsScreen() {
     );
   };
 
-  // Generate slots for selected day
-  const allMonthlyDays = generateMonthlySlots(selectedMonth, selectedYear);
-  const daySlotsData = allMonthlyDays.find(d => d.date === dateStr)?.slots || [];
-  
-  const dailySlots = daySlotsData.map(slot => {
-    const isBooked = bookings.some((b: any) => 
-      b.trainerId === coach?.id && 
-      normalizeDate(b.date) === normalizeDate(dateStr) && 
-      canonicalizeTimeRange(b.time) === canonicalizeTimeRange(slot.time) && 
-      b.status === 'upcoming'
-    );
-    const isReserved = (Database.schema.slot_reservations || []).some((r: any) =>
-      r.trainer_id === coach?.id &&
-      normalizeDate(r.slot_date) === normalizeDate(dateStr) &&
-      canonicalizeTimeRange(r.slot_time) === canonicalizeTimeRange(slot.time) &&
-      r.expires_at > getCurrentServerTime().getTime()
-    );
+  // Generate slots for selected day (only in trainer mode)
+  const dailySlots = useMemo(() => {
+    if (role !== 'trainer') return [];
+    const allMonthlyDays = generateMonthlySlots(selectedMonth, selectedYear);
+    const daySlotsData = allMonthlyDays.find(d => d.date === dateStr)?.slots || [];
+    
+    return daySlotsData.map(slot => {
+      const isBooked = bookings.some((b: any) => 
+        b.trainerId === coach?.id && 
+        normalizeDate(b.date) === normalizeDate(dateStr) && 
+        canonicalizeTimeRange(b.time) === canonicalizeTimeRange(slot.time) && 
+        b.status === 'upcoming'
+      );
+      const isReserved = (Database.schema.slot_reservations || []).some((r: any) =>
+        r.trainer_id === coach?.id &&
+        normalizeDate(r.slot_date) === normalizeDate(dateStr) &&
+        canonicalizeTimeRange(r.slot_time) === canonicalizeTimeRange(slot.time) &&
+        r.expires_at > getCurrentServerTime().getTime()
+      );
 
-    const override = availabilityOverrides.find(o => normalizeDate(o.date) === normalizeDate(dateStr) && canonicalizeTimeRange(o.time) === canonicalizeTimeRange(slot.time));
-    const isAvailable = override ? override.isAvailable : true;
-    const category = override?.category || '';
+      const override = availabilityOverrides.find(o => normalizeDate(o.date) === normalizeDate(dateStr) && canonicalizeTimeRange(o.time) === canonicalizeTimeRange(slot.time));
+      const isAvailable = override ? override.isAvailable : true;
+      const category = override?.category || '';
 
-    return {
-      id: slot.id,
-      time: slot.time,
-      isAvailable,
-      isBooked: isBooked || isReserved,
-      category
-    };
-  });
+      return {
+        id: slot.id,
+        time: slot.time,
+        isAvailable,
+        isBooked: isBooked || isReserved,
+        category
+      };
+    });
+  }, [role, selectedMonth, selectedYear, dateStr, bookings, coach?.id, availabilityOverrides]);
 
   const isSelectedDateOutOfRange = !isDateInAllowedRange(selectedYear, selectedMonth, selectedDay, today);
 
   // Trainer list filters
-  const trainerBookings = bookings.filter(b => 
-    b.trainerId === user.id || b.trainerName === user.name
-  );
+  const trainerBookings = useMemo(() => {
+    if (role !== 'trainer') return [];
+    return bookings.filter(b => 
+      b.trainerId === user.id || b.trainerName === user.name
+    );
+  }, [role, bookings, user.id, user.name]);
 
   const getFilteredSessions = (tab: TrainerTabType) => {
     const todayStr = normalizeDate(today);
@@ -1197,13 +1202,8 @@ export default function BookingsScreen() {
                 activeOpacity={0.8}
                 onPress={() => {
                   if (activeFilter === opt) return;
-                  setIsSwitchingTab(true);
                   setActiveFilter(opt);
                   setClientDateFilter('all');
-                  // Let the UI immediately switch the tab button and show spinner, then yield to render cards
-                  setTimeout(() => {
-                    setIsSwitchingTab(false);
-                  }, 60);
                 }}
                 className={`flex-1 py-2.5 rounded-full items-center justify-center ${
                   isActive ? 'bg-[#101828]' : ''
@@ -1273,14 +1273,7 @@ export default function BookingsScreen() {
 
           {/* Bookings Render List */}
         <View className="min-h-[220px]">
-          {isSwitchingTab ? (
-            <View className="py-16 items-center justify-center">
-              <ActivityIndicator size="small" color="#101828" />
-              <Text className="text-zinc-500 text-xs font-semibold mt-3 tracking-wide">
-                Loading sessions...
-              </Text>
-            </View>
-          ) : filteredBookings.length > 0 ? (
+          {filteredBookings.length > 0 ? (
             filteredBookings.map((booking) => (
               <BookingCard 
                 key={booking.id} 

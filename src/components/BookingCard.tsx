@@ -45,8 +45,9 @@ export function BookingCard({ booking, onOpenSupport }: BookingCardProps) {
   const isWithinTwoHours = timeUntilStartHours > 0 && timeUntilStartHours <= 2;
   const isMoreThanTwoHours = timeUntilStartHours > 2;
 
-  // Generate reschedule date capsules (next 7 days starting from today in IST)
-  const rescheduleDates = (() => {
+  // Generate reschedule date capsules (only when reschedule modal is open)
+  const rescheduleDates = React.useMemo(() => {
+    if (!showRescheduleModal) return [];
     const dates = [];
     const nowServer = getCurrentServerTime();
     const istOffset = 5.5 * 60 * 60 * 1000;
@@ -62,7 +63,7 @@ export function BookingCard({ booking, onOpenSupport }: BookingCardProps) {
       dates.push({ ymd, label, sub });
     }
     return dates;
-  })();
+  }, [showRescheduleModal]);
 
 
 
@@ -367,8 +368,8 @@ export function BookingCard({ booking, onOpenSupport }: BookingCardProps) {
           </View>
         </TouchableOpacity>
 
-        {/* Coach Row (for upcoming sessions) */}
-        {isUpcoming && (
+        {/* Coach Row (for upcoming and completed sessions) */}
+        {(isUpcoming || isCompletedStatus) && (
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={handleViewDetails}
@@ -386,7 +387,9 @@ export function BookingCard({ booking, onOpenSupport }: BookingCardProps) {
                   Coach: {booking.trainerName || 'Assigned Coach'}
                 </Text>
                 <Text className="text-[#6B7280] text-[11px] font-semibold mt-0.5">
-                  {isAccepted ? 'Your coach has been assigned.' : 'Matching in progress...'}
+                  {isCompletedStatus
+                    ? 'Session completed with your coach.'
+                    : (isAccepted ? 'Your coach has been assigned.' : 'Matching in progress...')}
                 </Text>
               </View>
             </View>
@@ -395,26 +398,29 @@ export function BookingCard({ booking, onOpenSupport }: BookingCardProps) {
         )}
 
         {/* Modal attachments for customer flow */}
-        {booking.sessionType === 'COUPLE' && !!booking.partnerName && (
+        {(booking.sessionType === 'COUPLE' || isCompletedStatus) && !!(booking.trainerName || booking.partnerName) && (
           <View className="bg-emerald-50 border border-emerald-100 px-4 py-2.5 rounded-xl mt-3 flex-row items-center gap-2">
             <Feather name="users" size={12} color="#10B981" />
             <Text className="text-zinc-500 text-[10px] font-semibold flex-1 leading-snug">
-              Training with: <Text className="font-extrabold text-zinc-800">{booking.partnerName}</Text> (+91 {booking.partnerPhone})
+              Training with: <Text className="font-extrabold text-zinc-800">{booking.trainerName ? `Coach ${booking.trainerName}` : booking.partnerName}</Text>
             </Text>
           </View>
         )}
 
-        <AddPartnerModal
-          visible={showPartnerModal}
-          bookingId={booking.id}
-          onClose={() => setShowPartnerModal(false)}
-          onSuccess={() => {
-            setShowPartnerModal(false);
-            useBookingStore.getState().syncFromDB();
-          }}
-        />
+        {showPartnerModal && (
+          <AddPartnerModal
+            visible={showPartnerModal}
+            bookingId={booking.id}
+            onClose={() => setShowPartnerModal(false)}
+            onSuccess={() => {
+              setShowPartnerModal(false);
+              useBookingStore.getState().syncFromDB();
+            }}
+          />
+        )}
 
         {/* Cancellation Warning Modal */}
+        {showCancelWarningModal && (
         <Modal
           visible={showCancelWarningModal}
           animationType="slide"
@@ -469,8 +475,10 @@ export function BookingCard({ booking, onOpenSupport }: BookingCardProps) {
             </View>
           </View>
         </Modal>
+        )}
 
         {/* Reschedule Modal */}
+        {showRescheduleModal && (
         <Modal
           visible={showRescheduleModal}
           animationType="slide"
@@ -590,6 +598,7 @@ export function BookingCard({ booking, onOpenSupport }: BookingCardProps) {
             </View>
           </View>
         </Modal>
+        )}
       </View>
     );
   }
@@ -765,20 +774,22 @@ export function BookingCard({ booking, onOpenSupport }: BookingCardProps) {
         <View className="bg-emerald-50 border border-emerald-100 px-4 py-2.5 rounded-xl mb-3 flex-row items-center gap-2">
           <Feather name="users" size={12} color="#10B981" />
           <Text className="text-zinc-500 text-[10px] font-semibold flex-1 leading-snug">
-            Training with: <Text className="font-extrabold text-zinc-800">{booking.partnerName}</Text> (+91 {booking.partnerPhone})
+            Training with: <Text className="font-extrabold text-zinc-800">{booking.partnerName}</Text>
           </Text>
         </View>
       )}
 
-      <AddPartnerModal
-        visible={showPartnerModal}
-        bookingId={booking.id}
-        onClose={() => setShowPartnerModal(false)}
-        onSuccess={() => {
-          setShowPartnerModal(false);
-          useBookingStore.getState().syncFromDB();
-        }}
-      />
+      {showPartnerModal && (
+        <AddPartnerModal
+          visible={showPartnerModal}
+          bookingId={booking.id}
+          onClose={() => setShowPartnerModal(false)}
+          onSuccess={() => {
+            setShowPartnerModal(false);
+            useBookingStore.getState().syncFromDB();
+          }}
+        />
+      )}
 
       {/* Action Buttons */}
       <View className="flex-row gap-3">

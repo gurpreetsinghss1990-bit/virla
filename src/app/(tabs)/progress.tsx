@@ -12,6 +12,7 @@ type RangeType = 'weekly' | 'monthly' | 'yearly';
 import { useUserProfileStore } from '../../store/userProfileStore';
 import { useUserStore } from '../../store/userStore';
 import { useAIWellnessStore } from '../../store/aiWellnessStore';
+import { useBookingStore } from '../../store/bookingStore';
 import { Database } from '../../database/Database';
 import { CalculatedTargetsCard } from '../../components/CalculatedTargetsCard';
 
@@ -36,34 +37,47 @@ export default function ProgressScreen() {
   const { totalSessions, totalCalories, currentStreak } = useUserProfileStore();
   const { user, role } = useUserStore();
   const { savedPlan } = useAIWellnessStore();
+  const { bookings: storeBookings } = useBookingStore();
 
-  const bookings = user.id 
-    ? (role === 'trainer'
-        ? (Database.schema.bookings || []).filter(b => b.trainerId === user.id || b.trainerName === user.name)
-        : Database.getBookings(user.id))
-    : [];
-  const completedJobs = bookings.filter(b => b.status === 'completed');
-  const upcomingJobs = bookings.filter(b => b.status === 'upcoming');
-  const cancelledJobs = bookings.filter(b => b.status === 'cancelled');
-  const totalCompleted = completedJobs.length;
-  const totalUpcoming = upcomingJobs.length;
-  const rawEffectiveSessions = Math.max(totalSessions || 0, totalCompleted || 0);
-  const effectiveSessions = forceShowDemo && rawEffectiveSessions === 0 ? 3 : rawEffectiveSessions;
-  const streak = currentStreak || (forceShowDemo ? 4 : 0);
+  const { bookings, completedJobs, upcomingJobs, cancelledJobs, totalCompleted, totalUpcoming, rawEffectiveSessions, effectiveSessions, streak, monthlyEarnings } = useMemo(() => {
+    const bk = user.id
+      ? (role === 'trainer'
+          ? (storeBookings || []).filter(b => b.trainerId === user.id || b.trainerName === user.name)
+          : storeBookings || [])
+      : [];
+    const comp = bk.filter(b => b.status === 'completed');
+    const upc = bk.filter(b => b.status === 'upcoming');
+    const canc = bk.filter(b => b.status === 'cancelled');
+    const totComp = comp.length;
+    const totUpc = upc.length;
+    const rawEff = Math.max(totalSessions || 0, totComp || 0);
+    const eff = forceShowDemo && rawEff === 0 ? 3 : rawEff;
+    const strk = currentStreak || (forceShowDemo ? 4 : 0);
+    const earnList = user.id && role === 'trainer' ? Database.getEarnings(user.id) : [];
+    const moEarn = earnList.reduce((acc, earn) => acc + (earn.amount > 0 ? earn.amount : 0), 0);
 
-  const trainerEarningsList = user.id ? Database.getEarnings(user.id) : [];
-  const monthlyEarnings = trainerEarningsList.reduce((acc, earn) => acc + (earn.amount > 0 ? earn.amount : 0), 0);
+    return {
+      bookings: bk,
+      completedJobs: comp,
+      upcomingJobs: upc,
+      cancelledJobs: canc,
+      totalCompleted: totComp,
+      totalUpcoming: totUpc,
+      rawEffectiveSessions: rawEff,
+      effectiveSessions: eff,
+      streak: strk,
+      monthlyEarnings: moEarn,
+    };
+  }, [user.id, user.name, role, storeBookings, totalSessions, forceShowDemo, currentStreak]);
 
   const isNaturallyEmpty = useMemo(() => {
-    const userId = Database.getCurrentUserId();
+    const userId = user.id || Database.getCurrentUserId();
     if (!userId) return true;
-    const bookingsCount = role === 'trainer'
-      ? (Database.schema.bookings || []).filter(b => (b.trainerId === userId || b.trainerName === user.name) && b.status === 'completed').length
-      : Database.getBookings(userId).filter(b => b.status === 'completed').length;
+    const bookingsCount = totalCompleted;
     const dateStr = new Date().toLocaleDateString('en-CA');
     const hydrationLogged = Database.getHydration(userId, dateStr);
     return role === 'trainer' ? bookingsCount === 0 : (bookingsCount === 0 && hydrationLogged === 0 && rawEffectiveSessions === 0);
-  }, [user.id, role, user.name, rawEffectiveSessions]);
+  }, [user.id, role, totalCompleted, rawEffectiveSessions]);
 
   const isEmpty = useMemo(() => {
     if (simulateEmpty) return true;
@@ -80,8 +94,8 @@ export default function ProgressScreen() {
     }).start();
   }, [activeRange, fadeAnim]);
 
-  const getStats = () => {
-    const userId = Database.getCurrentUserId();
+  const currentStats = useMemo(() => {
+    const userId = user.id || Database.getCurrentUserId();
     const dateStr = new Date().toLocaleDateString('en-CA');
     const dbRecovery = userId ? (Database.getRecoveryScore(userId, dateStr) ?? 85) : 85;
     const caloriesBurned = userId ? Database.getCalories(userId, dateStr) : 0;
@@ -242,9 +256,7 @@ export default function ProgressScreen() {
         };
       }
     }
-  };
-
-  const currentStats = getStats();
+  }, [activeRange, user.id, role, totalCompleted, cancelledJobs.length, effectiveSessions, savedPlan?.dailyCalories, streak, completedJobs.length, totalUpcoming, monthlyEarnings]);
 
   const achievements = useMemo(() => {
     return [

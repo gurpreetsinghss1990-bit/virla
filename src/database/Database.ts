@@ -553,7 +553,7 @@ export function mapBooking(row: any): Booking {
     sessionType: row.session_type || 'SINGLE',
     originalPackageType: row.original_package_type || 'SINGLE',
     partnerName: row.partner_name || undefined,
-    partnerPhone: row.partner_phone || undefined,
+    partnerPhone: undefined,
     travelStartedAt: row.travel_started_at ? new Date(row.travel_started_at).getTime() : undefined,
     workoutCompletedAt: row.session_completed_at ? new Date(row.session_completed_at).getTime() : undefined,
     workoutStartedAt: row.session_started_at ? new Date(row.session_started_at).getTime() : undefined,
@@ -3341,7 +3341,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     booking.participantCount = 2;
     booking.sessionType = 'COUPLE';
     booking.partnerName = partnerName;
-    booking.partnerPhone = partnerPhone;
+    booking.partnerPhone = undefined;
 
     this.schema.credit_transactions.unshift(tx);
     this.save();
@@ -3362,7 +3362,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     // Send partner invitation notification
     this.addNotification(userId, {
       title: 'Partner Added! 🤝',
-      body: `You've successfully added ${partnerName} (+91 ${partnerPhone}) to your session.`,
+      body: `You've successfully added ${partnerName} to your session.`,
       icon: 'user-plus',
       type: 'Bookings',
       priority: 'medium',

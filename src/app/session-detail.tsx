@@ -1540,7 +1540,7 @@ export default function SessionDetailScreen() {
                   <View className="flex-1">
                     <Text className="text-zinc-950 text-sm font-bold tracking-tight">2-Person Session</Text>
                     <Text className="text-zinc-600 text-xs font-medium mt-0.5 leading-relaxed">
-                      Partner: <Text className="font-bold text-zinc-900">{booking.partnerName}</Text> (+91 {booking.partnerPhone})
+                      Partner: <Text className="font-bold text-zinc-900">{booking.partnerName}</Text>
                     </Text>
                   </View>
                 </View>

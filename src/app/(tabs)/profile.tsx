@@ -514,38 +514,37 @@ export default function ProfileScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      // Ensure session is restored if store is hydrated
-      const storedUser = useUserStore.getState().user;
-      const isLoggedIn = useUserStore.getState().isLoggedIn;
-      if (isLoggedIn && storedUser && storedUser.id) {
-        Database.setCurrentUserId(storedUser.id);
-      }
-
-      // 1. Instant lightweight sync from local cache so profile tab renders immediately with zero lag
-      useUserStore.getState().syncFromDB();
-      const cachedCoach = Database.schema?.coaches?.find((c: any) => c.name === user.name || c.id === user.id);
-      if (cachedCoach) {
-        setTrainerName(cachedCoach.name || '');
-        setTrainerGender(cachedCoach.gender || '');
-        setTrainerBio(cachedCoach.shortBio || '');
-      }
-
-      // 2. Perform background async sync after screen transition finishes completely
+      // Run all sync operations asynchronously after tab transition so switching tabs is instant
       const task = InteractionManager.runAfterInteractions(() => {
-        syncAllDomainStores();
-        Database.load().then(() => {
-          syncAllDomainStores();
-          useUserStore.getState().syncFromDB();
-          reloadDynamicLists();
-          const latestCoach = Database.schema?.coaches?.find((c: any) => c.name === user.name || c.id === user.id);
-          if (latestCoach) {
-            setTrainerName(latestCoach.name || '');
-            setTrainerGender(latestCoach.gender || '');
-            setTrainerBio(latestCoach.shortBio || '');
+        setTimeout(() => {
+          const storedUser = useUserStore.getState().user;
+          const isLoggedIn = useUserStore.getState().isLoggedIn;
+          if (isLoggedIn && storedUser && storedUser.id) {
+            Database.setCurrentUserId(storedUser.id);
           }
-        }).catch((err) => {
-          console.warn('[Profile Tab] Background database sync warning:', err);
-        });
+
+          useUserStore.getState().syncFromDB();
+          const cachedCoach = Database.schema?.coaches?.find((c: any) => c.name === user.name || c.id === user.id);
+          if (cachedCoach) {
+            setTrainerName(cachedCoach.name || '');
+            setTrainerGender(cachedCoach.gender || '');
+            setTrainerBio(cachedCoach.shortBio || '');
+          }
+
+          Database.load().then(() => {
+            syncAllDomainStores();
+            useUserStore.getState().syncFromDB();
+            reloadDynamicLists();
+            const latestCoach = Database.schema?.coaches?.find((c: any) => c.name === user.name || c.id === user.id);
+            if (latestCoach) {
+              setTrainerName(latestCoach.name || '');
+              setTrainerGender(latestCoach.gender || '');
+              setTrainerBio(latestCoach.shortBio || '');
+            }
+          }).catch((err) => {
+            console.warn('[Profile Tab] Background database sync warning:', err);
+          });
+        }, 0);
       });
 
       return () => {
