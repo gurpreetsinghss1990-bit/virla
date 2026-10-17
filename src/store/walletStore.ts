@@ -119,10 +119,23 @@ export const useWalletStore = create<WalletState>((set, get) => ({
           .filter(t => t.type === 'spend' || t.type === 'transfer_sent' || t.type === 'penalty' || t.type === 'expired')
           .reduce((sum, curr) => sum + Math.abs(curr.credits || 1), 0);
 
+        const parseTxTimestamp = (tx: any): number => {
+          const idMatch = (tx.id || '').match(/(?:tx-|TXN_)(\d{10,13})/);
+          if (idMatch) {
+            let num = parseInt(idMatch[1], 10);
+            if (num < 10000000000) num *= 1000;
+            return num;
+          }
+          const d = new Date(tx.date).getTime();
+          return isNaN(d) ? 0 : d;
+        };
+
+        const sortedLedgerList = [...ledgerList].sort((a, b) => parseTxTimestamp(b) - parseTxTimestamp(a));
+
         set({
           creditBalance: profile.creditsBalance,
           creditLots: lots || [],
-          ledger: ledgerList.map(tx => {
+          ledger: sortedLedgerList.map(tx => {
             const isAddition = tx.type === 'paid' || tx.type === 'refund' || tx.type === 'purchase' || tx.type === 'transfer_received';
             const changeVal = isAddition ? tx.credits : -Math.abs(tx.credits);
             

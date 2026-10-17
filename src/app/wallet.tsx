@@ -81,6 +81,7 @@ export default function WalletScreen() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showAllLots, setShowAllLots] = useState(false);
   const [ledgerFilter, setLedgerFilter] = useState<'all' | 'booking' | 'purchase' | 'refund'>('all');
+  const [visibleLedgerCount, setVisibleLedgerCount] = useState(25);
 
   const handleVerifyRecipient = async () => {
     if (!transferPhone || transferPhone.length < 10) {
@@ -1012,7 +1013,10 @@ export default function WalletScreen() {
                   <TouchableOpacity
                     key={filter}
                     activeOpacity={0.7}
-                    onPress={() => setLedgerFilter(filter)}
+                    onPress={() => {
+                      setLedgerFilter(filter);
+                      setVisibleLedgerCount(25);
+                    }}
                     className={`px-4 py-2 rounded-full border ${
                       ledgerFilter === filter
                         ? 'bg-zinc-900 border-zinc-900'
@@ -1035,35 +1039,49 @@ export default function WalletScreen() {
                     <Text className="text-zinc-400 text-sm font-semibold">No transactions found</Text>
                   </View>
                 ) : (
-                  filteredLedger.map((tx) => {
-                    const isAdd = tx.change >= 0;
-                    const iconInfo = getLedgerIcon(tx.type);
-                    return (
-                      <View key={tx.id} className="flex-row justify-between items-center py-3.5 border-b border-zinc-100 last:border-0">
-                        <View className="flex-row items-center gap-3.5 flex-1 pr-3">
-                          <View className={`w-9 h-9 rounded-xl ${iconInfo.bg} items-center justify-center`}>
-                            <Feather name={iconInfo.icon as any} size={16} color={iconInfo.color} />
+                  <>
+                    {filteredLedger.slice(0, visibleLedgerCount).map((tx) => {
+                      const isAdd = tx.change >= 0;
+                      const iconInfo = getLedgerIcon(tx.type);
+                      return (
+                        <View key={tx.id} className="flex-row justify-between items-center py-3.5 border-b border-zinc-100 last:border-0">
+                          <View className="flex-row items-center gap-3.5 flex-1 pr-3">
+                            <View className={`w-9 h-9 rounded-xl ${iconInfo.bg} items-center justify-center`}>
+                              <Feather name={iconInfo.icon as any} size={16} color={iconInfo.color} />
+                            </View>
+                            <View className="flex-1 gap-0.5">
+                              <Text className="text-zinc-900 text-sm font-semibold leading-tight">{tx.title}</Text>
+                              <Text className="text-zinc-500 text-xs font-medium mt-0.5">{formatToDDMMYYYY(tx.date)}</Text>
+                            </View>
                           </View>
-                          <View className="flex-1 gap-0.5">
-                            <Text className="text-zinc-900 text-sm font-semibold leading-tight">{tx.title}</Text>
-                            <Text className="text-zinc-500 text-xs font-medium mt-0.5">{formatToDDMMYYYY(tx.date)}</Text>
-                          </View>
-                        </View>
-                        <View className="items-end gap-1.5">
-                          <Text className={`text-sm font-bold ${isAdd ? 'text-emerald-600' : 'text-zinc-900'}`}>
-                            {isAdd ? '+' : ''}{tx.change} {Math.abs(tx.change) === 1 ? 'Credit' : 'Credits'}
-                          </Text>
-                          
-                          {/* Type Badge */}
-                          <View className="px-2.5 py-0.5 rounded-md bg-zinc-100 border border-zinc-200">
-                            <Text className="text-[10px] font-semibold uppercase text-zinc-600">
-                              {tx.type}
+                          <View className="items-end gap-1.5">
+                            <Text className={`text-sm font-bold ${isAdd ? 'text-emerald-600' : 'text-zinc-900'}`}>
+                              {isAdd ? '+' : ''}{tx.change} {Math.abs(tx.change) === 1 ? 'Credit' : 'Credits'}
                             </Text>
+                            
+                            {/* Type Badge */}
+                            <View className="px-2.5 py-0.5 rounded-md bg-zinc-100 border border-zinc-200">
+                              <Text className="text-[10px] font-semibold uppercase text-zinc-600">
+                                {tx.type}
+                              </Text>
+                            </View>
                           </View>
                         </View>
-                      </View>
-                    );
-                  })
+                      );
+                    })}
+
+                    {filteredLedger.length > visibleLedgerCount && (
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => setVisibleLedgerCount(prev => prev + 25)}
+                        className="py-3 mt-2 rounded-2xl bg-zinc-50 border border-zinc-200 items-center justify-center"
+                      >
+                        <Text className="text-zinc-900 text-xs font-bold uppercase tracking-wider">
+                          Load More ({filteredLedger.length - visibleLedgerCount} remaining)
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
                 )}
               </View>
             </View>
