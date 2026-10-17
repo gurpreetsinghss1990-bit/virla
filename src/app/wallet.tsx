@@ -46,23 +46,25 @@ export default function WalletScreen() {
 
       // 2. Perform background async sync & self-healing reconciliation after screen transition
       const task = InteractionManager.runAfterInteractions(() => {
-        Database.load().then(async () => {
-          syncAllDomainStores();
+        if (!Database.getIsLoaded()) {
+          Database.load().then(() => {
+            syncAllDomainStores();
+          }).catch((err) => {
+            console.warn('[Wallet] Background database load notice:', err);
+          });
+        }
 
-          // Passive Self-Healing: Check if user has any orphan pending payments in background
-          const currentUid = Database.getCurrentUserId();
-          if (currentUid) {
-            PayPhiService.reconcileUserPendingOrders(currentUid).then((recovered) => {
-              if (recovered) {
-                Alert.alert('Payment Recovered 🎉', 'Your pending payment was confirmed by the payment gateway and credits have been credited to your wallet!');
-              }
-            }).catch((err) => {
-              console.warn('[Wallet] Background reconciliation notice:', err);
-            });
-          }
-        }).catch((err) => {
-          console.warn('[Wallet] Background database load notice:', err);
-        });
+        // Passive Self-Healing: Check if user has any orphan pending payments in background
+        const currentUid = Database.getCurrentUserId();
+        if (currentUid) {
+          PayPhiService.reconcileUserPendingOrders(currentUid).then((recovered) => {
+            if (recovered) {
+              Alert.alert('Payment Recovered 🎉', 'Your pending payment was confirmed by the payment gateway and credits have been credited to your wallet!');
+            }
+          }).catch((err) => {
+            console.warn('[Wallet] Background reconciliation notice:', err);
+          });
+        }
       });
 
       return () => {

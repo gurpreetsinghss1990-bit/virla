@@ -533,24 +533,26 @@ export default function ProfileScreen() {
             setTrainerBio(cachedCoach.shortBio || '');
           }
 
-          Database.load().then(async () => {
-            const currentUid = storedUser?.id || Database.getCurrentUserId();
-            if (currentUid) {
-              await Database.refreshUserData(currentUid);
-            }
-            syncAllDomainStores();
-            useUserStore.getState().syncFromDB();
-            useMembershipStore.getState().syncFromDB();
-            reloadDynamicLists();
-            const latestCoach = Database.schema?.coaches?.find((c: any) => c.name === user.name || c.id === user.id);
-            if (latestCoach) {
-              setTrainerName(latestCoach.name || '');
-              setTrainerGender(latestCoach.gender || '');
-              setTrainerBio(latestCoach.shortBio || '');
-            }
-          }).catch((err) => {
-            console.warn('[Profile Tab] Background database sync warning:', err);
-          });
+          if (!Database.getIsLoaded()) {
+            Database.load().then(async () => {
+              const currentUid = storedUser?.id || Database.getCurrentUserId();
+              if (currentUid) {
+                await Database.refreshUserData(currentUid);
+              }
+              syncAllDomainStores();
+              useUserStore.getState().syncFromDB();
+              useMembershipStore.getState().syncFromDB();
+              reloadDynamicLists();
+              const latestCoach = Database.schema?.coaches?.find((c: any) => c.name === user.name || c.id === user.id);
+              if (latestCoach) {
+                setTrainerName(latestCoach.name || '');
+                setTrainerGender(latestCoach.gender || '');
+                setTrainerBio(latestCoach.shortBio || '');
+              }
+            }).catch((err) => {
+              console.warn('[Profile Tab] Background database sync warning:', err);
+            });
+          }
         }, 0);
       });
 
