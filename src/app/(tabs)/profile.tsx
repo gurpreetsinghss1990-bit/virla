@@ -805,14 +805,8 @@ export default function ProfileScreen() {
   return (
     <SafeAreaViewWrapper>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
-        {/* Fixed Top Bar Header - Always stable like WhatsApp / Google */}
-        <View 
-          className="bg-[#F7F8FC] px-6 pt-3 pb-3 z-30"
-          style={{
-            borderBottomWidth: 1,
-            borderBottomColor: 'rgba(0,0,0,0.04)',
-          }}
-        >
+        {/* Fixed Top Bar Header - Always stable like WhatsApp / Google, seamless without artificial divider line */}
+        <View className="bg-[#F7F8FC] px-6 pt-3 pb-2 z-30">
           <View className="flex-row items-center justify-between">
             <Text className="text-[#101828] text-2xl font-black tracking-tight">
               {activeRole === 'trainer' ? 'Trainer Profile' : 'Profile'}
