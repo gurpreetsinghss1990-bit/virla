@@ -139,47 +139,92 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
         const sortedLedgerList = [...ledgerList].sort((a, b) => parseTxTimestamp(b) - parseTxTimestamp(a));
 
+        const coupleBookings = Database.schema.bookings
+          .filter(b => b.clientId === userId && b.sessionType === 'COUPLE')
+          .map(b => ({
+            bookingId: b.id,
+            partner: b.partnerName,
+            createdAtMs: b.createdAt || 0
+          }));
+
+        const consolidatedLedger: any[] = [];
+        const processedTxIds = new Set<string>();
+
+        for (let i = 0; i < sortedLedgerList.length; i++) {
+          const tx = sortedLedgerList[i];
+          if (processedTxIds.has(tx.id)) continue;
+
+          if (tx.type === 'spend') {
+            const txMs = parseTxTimestamp(tx);
+            const coupleBooking = coupleBookings.find(cb => Math.abs(cb.createdAtMs - txMs) < 180000);
+            
+            // Look for a paired partner spend transaction within 3 minutes
+            const pairedTxIndex = sortedLedgerList.findIndex((other, idx) =>
+              idx !== i &&
+              !processedTxIds.has(other.id) &&
+              other.type === 'spend' &&
+              Math.abs(parseTxTimestamp(other) - txMs) < 180000
+            );
+
+            if (coupleBooking && pairedTxIndex !== -1) {
+              const pairedTx = sortedLedgerList[pairedTxIndex];
+              processedTxIds.add(tx.id);
+              processedTxIds.add(pairedTx.id);
+
+              consolidatedLedger.push({
+                id: `${tx.id}-${pairedTx.id}`,
+                title: `Session Booking (Solo + Partner${coupleBooking.partner ? ` - ${coupleBooking.partner}` : ''})`,
+                change: -2,
+                date: tx.date,
+                type: 'booking'
+              });
+              continue;
+            }
+          }
+
+          processedTxIds.add(tx.id);
+          const isAddition = tx.type === 'paid' || tx.type === 'refund' || tx.type === 'purchase' || tx.type === 'transfer_received';
+          const changeVal = isAddition ? tx.credits : -Math.abs(tx.credits);
+          
+          let title = tx.type;
+          let ledgerType: any = 'booking';
+
+          if (tx.type === 'paid' || tx.type === 'purchase') {
+            title = `Purchased ${tx.credits} Credits`;
+            ledgerType = 'purchase';
+          } else if (tx.type === 'spend') {
+            title = 'Session Booking';
+            ledgerType = 'booking';
+          } else if (tx.type === 'transfer_sent') {
+            title = `Credits Transferred (${tx.amount})`;
+            ledgerType = 'penalty';
+          } else if (tx.type === 'transfer_received') {
+            title = `Credits Received (${tx.amount})`;
+            ledgerType = 'purchase';
+          } else if (tx.type === 'refund') {
+            title = 'Credit Refund';
+            ledgerType = 'refund';
+          } else if (tx.type === 'penalty') {
+            title = 'Cancellation Penalty';
+            ledgerType = 'penalty';
+          } else if (tx.type === 'expired') {
+            title = 'Expired Credits';
+            ledgerType = 'penalty';
+          }
+
+          consolidatedLedger.push({
+            id: tx.id,
+            title: title,
+            change: changeVal,
+            date: tx.date,
+            type: ledgerType
+          });
+        }
+
         set({
           creditBalance: profile.creditsBalance,
           creditLots: lots || [],
-          ledger: sortedLedgerList.map(tx => {
-            const isAddition = tx.type === 'paid' || tx.type === 'refund' || tx.type === 'purchase' || tx.type === 'transfer_received';
-            const changeVal = isAddition ? tx.credits : -Math.abs(tx.credits);
-            
-            let title = tx.type;
-            let ledgerType: any = 'booking';
-
-            if (tx.type === 'paid' || tx.type === 'purchase') {
-              title = `Purchased ${tx.credits} Credits`;
-              ledgerType = 'purchase';
-            } else if (tx.type === 'spend') {
-              title = 'Session Booking';
-              ledgerType = 'booking';
-            } else if (tx.type === 'transfer_sent') {
-              title = `Credits Transferred (${tx.amount})`;
-              ledgerType = 'penalty';
-            } else if (tx.type === 'transfer_received') {
-              title = `Credits Received (${tx.amount})`;
-              ledgerType = 'purchase';
-            } else if (tx.type === 'refund') {
-              title = 'Credit Refund';
-              ledgerType = 'refund';
-            } else if (tx.type === 'penalty') {
-              title = 'Cancellation Penalty';
-              ledgerType = 'penalty';
-            } else if (tx.type === 'expired') {
-              title = 'Expired Credits';
-              ledgerType = 'penalty';
-            }
-
-            return {
-              id: tx.id,
-              title: title,
-              change: changeVal,
-              date: tx.date,
-              type: ledgerType
-            };
-          }),
+          ledger: consolidatedLedger,
           payments: paymentList,
           lifetimePurchased: purchased,
           creditsUsed: used
