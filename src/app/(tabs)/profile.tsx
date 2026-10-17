@@ -805,10 +805,25 @@ export default function ProfileScreen() {
   return (
     <SafeAreaViewWrapper>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
+        {/* Fixed Top Bar Header - Always stable like WhatsApp / Google */}
+        <View 
+          className="bg-[#F7F8FC] px-6 pt-3 pb-3 z-30"
+          style={{
+            borderBottomWidth: 1,
+            borderBottomColor: 'rgba(0,0,0,0.04)',
+          }}
+        >
+          <View className="flex-row items-center justify-between">
+            <Text className="text-[#101828] text-2xl font-black tracking-tight">
+              {activeRole === 'trainer' ? 'Trainer Profile' : 'Profile'}
+            </Text>
+          </View>
+        </View>
+
         <ScrollView 
           showsVerticalScrollIndicator={false}
           className="flex-1 bg-[#F7F8FC]"
-          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 140 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 140 }}
         >
           {/* =============================================================== */}
           {/* ======================= CLIENT PROFILE ======================== */}
@@ -836,20 +851,6 @@ export default function ProfileScreen() {
                   <Path d="M 48 114 Q 20 128 14 154 Q 38 144 48 114 Z" fill="url(#leafGrad)" />
                   <Path d="M 135 18 Q 112 4 98 20 Q 122 28 135 18 Z" fill="url(#leafGrad)" />
                 </Svg>
-              </View>
-
-              {/* Top Bar Header */}
-              <View className="flex-row items-center justify-between mb-5 z-10">
-                <Text className="text-[#101828] text-3xl font-black tracking-tight">Profile</Text>
-                {/* Settings button commented out
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => router.push('/settings' as any)}
-                  className="w-10 h-10 rounded-full border border-zinc-200/90 bg-white/90 items-center justify-center shadow-xs"
-                >
-                  <Ionicons name="settings-outline" size={20} color="#101828" />
-                </TouchableOpacity>
-                */}
               </View>
 
               {/* User Hero Section */}
