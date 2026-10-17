@@ -85,7 +85,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     console.log('[useWalletStore] addBonusCredit call ignored. Credits are authoritatively added on Supabase.');
   },
 
-  syncFromDB: async () => {
+  syncFromDB: async (forceRefresh = false) => {
     const userId = Database.getCurrentUserId();
     if (userId) {
       if (!Database.getIsLoaded()) {
@@ -93,10 +93,17 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         return;
       }
 
-      // ponytail: expiry cron owns process_credit_expiries_and_reminders (midnight job) —
-      // never block wallet sync on a global all-users sweep; it froze this page.
+      // Check if we need network refresh: only if forceRefresh is true, or if we have no transactions cached yet,
+      // or if last network refresh was more than 60 seconds ago.
+      const now = Date.now();
+      const lastSync = (Database as any)._lastWalletSyncTime || 0;
+      const cachedTxs = Database.getLedgerTransactions(userId);
 
-      await Database.refreshUserData(userId);
+      if (forceRefresh || cachedTxs.length === 0 || now - lastSync > 60000) {
+        await Database.refreshUserData(userId);
+        (Database as any)._lastWalletSyncTime = now;
+      }
+
       const profile = Database.getProfile(userId);
       if (profile) {
         const ledgerList = Database.getLedgerTransactions(userId) as any[];

@@ -81,7 +81,7 @@ export default function WalletScreen() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showAllLots, setShowAllLots] = useState(false);
   const [ledgerFilter, setLedgerFilter] = useState<'all' | 'booking' | 'purchase' | 'refund'>('all');
-  const [visibleLedgerCount, setVisibleLedgerCount] = useState(25);
+  const [visibleLedgerCount, setVisibleLedgerCount] = useState(8);
 
   const handleVerifyRecipient = async () => {
     if (!transferPhone || transferPhone.length < 10) {
@@ -444,7 +444,20 @@ export default function WalletScreen() {
         }}
       />
 
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 px-4 pt-0" contentContainerStyle={{ paddingBottom: Math.max((insets.bottom || 0) + 40, 110) }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        className="flex-1 px-4 pt-0"
+        contentContainerStyle={{ paddingBottom: Math.max((insets.bottom || 0) + 40, 110) }}
+        scrollEventThrottle={200}
+        onScroll={({ nativeEvent }) => {
+          if (activeTab !== 'ledger') return;
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 120;
+          if (isCloseToBottom && visibleLedgerCount < filteredLedger.length) {
+            setVisibleLedgerCount(prev => Math.min(prev + 8, filteredLedger.length));
+          }
+        }}
+      >
         <View className="gap-4 pt-3">
 
           {/* Dynamic Notice Banner */}
@@ -1015,7 +1028,7 @@ export default function WalletScreen() {
                     activeOpacity={0.7}
                     onPress={() => {
                       setLedgerFilter(filter);
-                      setVisibleLedgerCount(25);
+                      setVisibleLedgerCount(8);
                     }}
                     className={`px-4 py-2 rounded-full border ${
                       ledgerFilter === filter
@@ -1055,7 +1068,7 @@ export default function WalletScreen() {
                             </View>
                           </View>
                           <View className="items-end gap-1.5">
-                            <Text className={`text-sm font-bold ${isAdd ? 'text-emerald-600' : 'text-zinc-900'}`}>
+                            <Text className={`text-sm font-bold ${isAdd ? 'text-emerald-600' : 'text-rose-600'}`}>
                               {isAdd ? '+' : ''}{tx.change} {Math.abs(tx.change) === 1 ? 'Credit' : 'Credits'}
                             </Text>
                             
@@ -1073,7 +1086,7 @@ export default function WalletScreen() {
                     {filteredLedger.length > visibleLedgerCount && (
                       <TouchableOpacity
                         activeOpacity={0.8}
-                        onPress={() => setVisibleLedgerCount(prev => prev + 25)}
+                        onPress={() => setVisibleLedgerCount(prev => Math.min(prev + 8, filteredLedger.length))}
                         className="py-3 mt-2 rounded-2xl bg-zinc-50 border border-zinc-200 items-center justify-center"
                       >
                         <Text className="text-zinc-900 text-xs font-bold uppercase tracking-wider">
