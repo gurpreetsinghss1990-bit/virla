@@ -139,9 +139,11 @@ export async function fetchRoadRouteDirections(
 
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-  // 1. Try Google Routes API (New) first, then Legacy Directions API
+  // 1. Try Google Routes API (New) first
   if (apiKey && !apiKey.includes('YOUR_KEY')) {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
       const routesV2Res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
         method: 'POST',
         headers: {
@@ -163,7 +165,9 @@ export async function fetchRoadRouteDirections(
           travelMode: 'DRIVE',
           routingPreference: 'TRAFFIC_AWARE',
         }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (routesV2Res.ok) {
         const v2Data = await routesV2Res.json();
@@ -183,48 +187,19 @@ export async function fetchRoadRouteDirections(
         }
       }
     } catch {}
-
-    try {
-      const googleUrl =
-        `https://maps.googleapis.com/maps/api/directions/json` +
-        `?origin=${origin.latitude},${origin.longitude}` +
-        `&destination=${destination.latitude},${destination.longitude}` +
-        `&mode=driving&key=${apiKey}`;
-
-      const res = await fetch(googleUrl);
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.status === 'OK' && data.routes?.length > 0) {
-          const route = data.routes[0];
-          const points = route.overview_polyline?.points;
-          const leg = route.legs?.[0];
-          const decoded = points ? decodePolyline(points) : [];
-
-          if (decoded.length >= 2) {
-            const distMeters = leg?.distance?.value ?? straightDistKm * 1300;
-            const durSeconds = leg?.duration_in_traffic?.value ?? leg?.duration?.value ?? (distMeters / 1000) * 210;
-            return {
-              coordinates: [origin, ...decoded, destination],
-              distanceKm: Math.max(0.1, Number((distMeters / 1000).toFixed(1))),
-              durationMins: Math.max(1, Math.ceil(durSeconds / 60)),
-              source: 'google',
-            };
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('[RouteDirections] Google Directions fetch error, trying OSRM fallback:', err);
-    }
   }
 
   // 2. Try OSRM Driving Route API for real road geometry
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
     const osrmUrl =
       `https://router.project-osrm.org/route/v1/driving/` +
       `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}` +
       `?overview=full&geometries=polyline`;
 
-    const res = await fetch(osrmUrl);
+    const res = await fetch(osrmUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (res.ok) {
       const data = await res.json();
       if (data?.code === 'Ok' && data.routes?.length > 0) {
@@ -232,7 +207,7 @@ export async function fetchRoadRouteDirections(
         const decoded = route.geometry ? decodePolyline(route.geometry) : [];
         if (decoded.length >= 2) {
           const distKm = route.distance ? route.distance / 1000 : straightDistKm * 1.25;
-          // City driving ETA (~4 mins per km in Indian city traffic)
+          // City driving ETA (~3.8 mins per km in Indian city traffic)
           const estMins = Math.max(1, Math.ceil(distKm * 3.8));
           return {
             coordinates: [origin, ...decoded, destination],
