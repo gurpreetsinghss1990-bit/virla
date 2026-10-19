@@ -1,8 +1,15 @@
-import React, { useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, ActivityIndicator, Platform } from 'react-native';
-import MapView, { Marker, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { StyleSheet, View, Text, ActivityIndicator, Platform, TouchableOpacity, Animated } from 'react-native';
+import MapView, { Marker, Polyline, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { parseBookingAddress } from '../utils/LocationParser';
+import { calculateDistanceKm } from '../utils/distance';
+import {
+  fetchRoadRouteDirections,
+  snapRouteToLiveOrigin,
+  buildInterpolatedRoute,
+  LatLng,
+} from '../utils/routeDirections';
 
 interface TrackingMapProps {
   liveTrainerCoords: {
@@ -15,63 +22,200 @@ interface TrackingMapProps {
   } | null;
   isStale: boolean;
   clientAddress?: string;
+  viewerRole?: 'customer' | 'trainer' | 'admin';
+  onRouteMetricsChange?: (metrics: { distanceKm: number; durationMins: number }) => void;
+  onExpandPress?: () => void;
+  isFullScreen?: boolean;
 }
 
-export default function TrackingMap({ liveTrainerCoords, isStale, clientAddress }: TrackingMapProps) {
+export default function TrackingMap({
+  liveTrainerCoords,
+  isStale,
+  clientAddress,
+  viewerRole = 'customer',
+  onRouteMetricsChange,
+  onExpandPress,
+  isFullScreen = false,
+}: TrackingMapProps) {
   const mapRef = useRef<MapView>(null);
+  const [pulseAnim] = useState(() => new Animated.Value(1));
+  const lastFetchedOriginRef = useRef<LatLng | null>(null);
+  const hasFittedInitiallyRef = useRef(false);
 
-  // Parse client coordinates from address string
-  const getClientCoords = (): { latitude: number; longitude: number } | null => {
+  const [rawRouteCoords, setRawRouteCoords] = useState<LatLng[]>([]);
+  const [tracksChanges, setTracksChanges] = useState(true);
+
+  // Parse client venue coordinates from the booking's selected address
+  const clientCoords = useMemo((): LatLng | null => {
     if (!clientAddress) return null;
     const loc = parseBookingAddress(clientAddress);
-    if (loc.lat && loc.lng && !isNaN(loc.lat) && !isNaN(loc.lng)) {
+    if (loc.lat && loc.lng && !isNaN(loc.lat) && !isNaN(loc.lng) && !(loc.lat === 0 && loc.lng === 0)) {
       return {
         latitude: loc.lat,
         longitude: loc.lng,
       };
     }
     return null;
-  };
+  }, [clientAddress]);
 
-  const clientCoords = getClientCoords();
-
-  // Auto-fit bounds to show both trainer and client markers
-  useEffect(() => {
-    if (mapRef.current && (liveTrainerCoords || clientCoords)) {
-      const markers = [];
-      if (liveTrainerCoords) markers.push({ latitude: liveTrainerCoords.latitude, longitude: liveTrainerCoords.longitude });
-      if (clientCoords) markers.push(clientCoords);
-
-      if (markers.length > 0) {
-        mapRef.current.fitToCoordinates(markers, {
-          edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-          animated: true,
-        });
-      }
+  const trainerLatLng = useMemo((): LatLng | null => {
+    if (
+      !liveTrainerCoords ||
+      typeof liveTrainerCoords.latitude !== 'number' ||
+      typeof liveTrainerCoords.longitude !== 'number' ||
+      isNaN(liveTrainerCoords.latitude) ||
+      isNaN(liveTrainerCoords.longitude)
+    ) {
+      return null;
     }
-  }, [liveTrainerCoords, clientCoords]);
+    return {
+      latitude: liveTrainerCoords.latitude,
+      longitude: liveTrainerCoords.longitude,
+    };
+  }, [liveTrainerCoords]);
 
-  // Initial region centered on whatever coordinate is available
-  const initialRegion = liveTrainerCoords
+  // Subtle radar pulse animation for the Mota Trainer Marker
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.22, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.0, duration: 900, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulseAnim]);
+
+  // Briefly enable tracksViewChanges when marker state updates so custom marker UI renders crisply on Android/iOS
+  useEffect(() => {
+    const startTimer = setTimeout(() => setTracksChanges(true), 0);
+    const endTimer = setTimeout(() => setTracksChanges(false), 700);
+    return () => {
+      clearTimeout(startTimer);
+      clearTimeout(endTimer);
+    };
+  }, [trainerLatLng?.latitude, trainerLatLng?.longitude, isStale, liveTrainerCoords?.heading]);
+
+  // Fetch real road route (Google Directions / OSRM / Interpolated fallback) when trainer moves > 60m
+  useEffect(() => {
+    if (!trainerLatLng || !clientCoords) return;
+
+    const prevOrigin = lastFetchedOriginRef.current;
+    const movedKm = prevOrigin
+      ? calculateDistanceKm(
+          prevOrigin.latitude,
+          prevOrigin.longitude,
+          trainerLatLng.latitude,
+          trainerLatLng.longitude
+        )
+      : Infinity;
+
+    if (movedKm < 0.06 && rawRouteCoords.length >= 2) {
+      return;
+    }
+
+    let cancelled = false;
+    lastFetchedOriginRef.current = trainerLatLng;
+
+    fetchRoadRouteDirections(trainerLatLng, clientCoords)
+      .then((res) => {
+        if (cancelled) return;
+        setRawRouteCoords(res.coordinates);
+        if (onRouteMetricsChange) {
+          onRouteMetricsChange({
+            distanceKm: res.distanceKm,
+            durationMins: res.durationMins,
+          });
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setRawRouteCoords(buildInterpolatedRoute(trainerLatLng, clientCoords));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [trainerLatLng, clientCoords]);
+
+  // Live snapped route line that starts directly from the trainer's current coordinate to the client's venue
+  const activeRoutePolyline = useMemo((): LatLng[] => {
+    if (!trainerLatLng || !clientCoords) return [];
+    if (rawRouteCoords.length >= 2) {
+      return snapRouteToLiveOrigin(rawRouteCoords, trainerLatLng, clientCoords);
+    }
+    return buildInterpolatedRoute(trainerLatLng, clientCoords);
+  }, [rawRouteCoords, trainerLatLng, clientCoords]);
+
+  const fitMapToRoute = useCallback(
+    (animated = true) => {
+      if (!mapRef.current) return;
+      const pointsToFit: LatLng[] = [];
+      if (activeRoutePolyline.length >= 2) {
+        pointsToFit.push(...activeRoutePolyline);
+      } else {
+        if (trainerLatLng) pointsToFit.push(trainerLatLng);
+        if (clientCoords) pointsToFit.push(clientCoords);
+      }
+
+      if (pointsToFit.length >= 2) {
+        mapRef.current.fitToCoordinates(pointsToFit, {
+          edgePadding: isFullScreen
+            ? { top: 110, right: 70, bottom: 220, left: 70 }
+            : { top: 58, right: 52, bottom: 48, left: 52 },
+          animated,
+        });
+      } else if (pointsToFit.length === 1) {
+        mapRef.current.animateToRegion(
+          {
+            latitude: pointsToFit[0].latitude,
+            longitude: pointsToFit[0].longitude,
+            latitudeDelta: 0.012,
+            longitudeDelta: 0.012,
+          },
+          animated ? 500 : 0
+        );
+      }
+    },
+    [activeRoutePolyline, trainerLatLng, clientCoords, isFullScreen]
+  );
+
+  // Auto-fit when coordinates or route become available
+  useEffect(() => {
+    if (!trainerLatLng && !clientCoords) return;
+    const delay = hasFittedInitiallyRef.current ? 150 : 350;
+    const timer = setTimeout(() => {
+      fitMapToRoute(hasFittedInitiallyRef.current);
+      hasFittedInitiallyRef.current = true;
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [trainerLatLng?.latitude, trainerLatLng?.longitude, clientCoords?.latitude, clientCoords?.longitude, rawRouteCoords.length]);
+
+  const initialRegion = trainerLatLng
     ? {
-        latitude: liveTrainerCoords.latitude,
-        longitude: liveTrainerCoords.longitude,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
+        latitude: trainerLatLng.latitude,
+        longitude: trainerLatLng.longitude,
+        latitudeDelta: 0.018,
+        longitudeDelta: 0.018,
       }
     : clientCoords
     ? {
         latitude: clientCoords.latitude,
         longitude: clientCoords.longitude,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
+        latitudeDelta: 0.018,
+        longitudeDelta: 0.018,
       }
     : {
-        latitude: 19.1358,
-        longitude: 72.8270,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
+        latitude: 19.1076,
+        longitude: 72.8264,
+        latitudeDelta: 0.025,
+        longitudeDelta: 0.025,
       };
+
+  const headingRotation =
+    typeof liveTrainerCoords?.heading === 'number' && !isNaN(liveTrainerCoords.heading) && liveTrainerCoords.heading >= 0
+      ? `${Math.round(liveTrainerCoords.heading)}deg`
+      : '0deg';
 
   return (
     <View style={styles.container}>
@@ -82,104 +226,97 @@ export default function TrackingMap({ liveTrainerCoords, isStale, clientAddress 
         initialRegion={initialRegion}
         showsUserLocation={false}
         showsMyLocationButton={false}
-        showsCompass={true}
+        showsCompass={false}
+        toolbarEnabled={false}
+        onMapReady={() => fitMapToRoute(false)}
       >
-        {/* Client destination marker */}
+        {/* 1. Zepto-Style Dual-Layer Road Route Polyline (Trainer <-> Client Venue) */}
+        {activeRoutePolyline.length >= 2 && (
+          <>
+            {/* Dark outer border casing for high contrast on any map tile */}
+            <Polyline
+              coordinates={activeRoutePolyline}
+              strokeColor="rgba(15, 23, 42, 0.85)"
+              strokeWidth={9}
+              lineCap="round"
+              lineJoin="round"
+              zIndex={1}
+            />
+            {/* Vibrant primary route path */}
+            <Polyline
+              coordinates={activeRoutePolyline}
+              strokeColor={isStale ? '#64748B' : '#10B981'}
+              strokeWidth={5}
+              lineCap="round"
+              lineJoin="round"
+              zIndex={2}
+            />
+          </>
+        )}
+
+        {/* 2. Client Selected Booking Venue Marker */}
         {clientCoords && (
           <Marker
             coordinate={clientCoords}
+            anchor={{ x: 0.5, y: 0.88 }}
             title="Workout Venue"
-            description="Client Location"
-            tracksViewChanges={false}
+            description="Selected Booking Location"
+            tracksViewChanges={tracksChanges}
+            zIndex={10}
           >
-            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{
-                backgroundColor: '#E11D48',
-                paddingHorizontal: 7,
-                paddingVertical: 2,
-                borderRadius: 10,
-                marginBottom: 3,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25,
-                shadowRadius: 3,
-                elevation: 4,
-              }}>
-                <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>YOU</Text>
+            <View style={styles.markerWrapper}>
+              <View style={styles.clientBadge}>
+                <View style={styles.clientBadgeDot} />
+                <Text style={styles.clientBadgeText}>
+                  {viewerRole === 'trainer' ? 'CLIENT VENUE' : 'YOUR VENUE'}
+                </Text>
               </View>
-              <View style={{
-                width: 38,
-                height: 38,
-                borderRadius: 19,
-                backgroundColor: '#E11D48',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 2.5,
-                borderColor: '#FFFFFF',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.3,
-                shadowRadius: 4,
-                elevation: 5,
-              }}>
-                <Ionicons name="location" size={20} color="#FFFFFF" />
+              <View style={styles.clientPinOuter}>
+                <View style={styles.clientPinInner}>
+                  <Ionicons name="home" size={18} color="#FFFFFF" />
+                </View>
               </View>
+              <View style={styles.pinStem} />
             </View>
           </Marker>
         )}
 
-        {/* Live trainer tracking marker */}
-        {liveTrainerCoords && (
+        {/* 3. Zepto-Style Mota (Bold & Prominent) Live Trainer Marker */}
+        {trainerLatLng && (
           <Marker
-            coordinate={{
-              latitude: liveTrainerCoords.latitude,
-              longitude: liveTrainerCoords.longitude,
-            }}
-            title="Trainer"
-            description={isStale ? "Last known location (signal lost)" : "On the way"}
-            tracksViewChanges={false}
+            coordinate={trainerLatLng}
+            anchor={{ x: 0.5, y: 0.58 }}
+            title={viewerRole === 'trainer' ? 'You (Trainer)' : 'Coach Live Location'}
+            description={isStale ? 'Last known GPS position' : 'Travelling to venue'}
+            tracksViewChanges={tracksChanges}
+            zIndex={25}
           >
-            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-              <View style={{
-                backgroundColor: isStale ? '#64748B' : '#0D9488',
-                paddingHorizontal: 7,
-                paddingVertical: 2,
-                borderRadius: 10,
-                marginBottom: 3,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25,
-                shadowRadius: 3,
-                elevation: 4,
-              }}>
-                <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>
-                  {isStale ? 'LAST SEEN' : 'TRAINER'}
+            <View style={styles.markerWrapper}>
+              {/* Top Floating Status Pill */}
+              <View style={[styles.trainerBadge, isStale && styles.trainerBadgeStale]}>
+                <View style={[styles.livePulseDot, isStale && { backgroundColor: '#CBD5E1' }]} />
+                <Text style={styles.trainerBadgeText}>
+                  {isStale
+                    ? 'LAST SEEN'
+                    : viewerRole === 'trainer'
+                    ? 'YOU • LIVE'
+                    : 'COACH LIVE'}
                 </Text>
               </View>
-              <View style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: isStale ? 'rgba(100, 116, 139, 0.2)' : 'rgba(13, 148, 136, 0.25)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <View style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: isStale ? '#64748B' : '#0D9488',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderWidth: 2.5,
-                  borderColor: '#FFFFFF',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 3,
-                  elevation: 5,
-                }}>
-                  <Ionicons name="navigate" size={16} color="#FFFFFF" />
+
+              {/* Mota Circular Rider/Coach Marker with Outer Halo */}
+              <View style={styles.trainerHaloContainer}>
+                <Animated.View
+                  style={[
+                    styles.trainerOuterHalo,
+                    isStale && styles.trainerOuterHaloStale,
+                    { transform: [{ scale: pulseAnim }] },
+                  ]}
+                />
+                <View style={[styles.trainerMotaCore, isStale && styles.trainerMotaCoreStale]}>
+                  <View style={{ transform: [{ rotate: headingRotation }] }}>
+                    <MaterialCommunityIcons name="navigation-variant" size={24} color="#FFFFFF" />
+                  </View>
                 </View>
               </View>
             </View>
@@ -187,19 +324,40 @@ export default function TrackingMap({ liveTrainerCoords, isStale, clientAddress 
         )}
       </MapView>
 
+      {/* Map Floating Action Buttons (Recenter Route & Fullscreen) */}
+      <View style={[styles.mapControls, isFullScreen && { top: 16 }]}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => fitMapToRoute(true)}
+          style={styles.mapControlBtn}
+        >
+          <Ionicons name="locate" size={18} color="#0F172A" />
+        </TouchableOpacity>
+
+        {onExpandPress && !isFullScreen && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={onExpandPress}
+            style={styles.mapControlBtn}
+          >
+            <Ionicons name="expand" size={17} color="#0F172A" />
+          </TouchableOpacity>
+        )}
+      </View>
+
       {/* Waiting for live GPS signal overlay badge */}
-      {!liveTrainerCoords && (
+      {!trainerLatLng && (
         <View style={styles.staleOverlay}>
-          <ActivityIndicator size="small" color="#9f1239" style={{ marginRight: 6 }} />
-          <Text style={styles.staleText}>Acquiring live trainer GPS signal...</Text>
+          <ActivityIndicator size="small" color="#E11D48" style={{ marginRight: 6 }} />
+          <Text style={styles.staleText}>Connecting to live trainer GPS...</Text>
         </View>
       )}
 
       {/* Stale/Signal lost overlay badge */}
-      {isStale && liveTrainerCoords && (
+      {isStale && trainerLatLng && (
         <View style={styles.staleOverlay}>
-          <Ionicons name="warning" size={14} color="#b45309" style={{ marginRight: 6 }} />
-          <Text style={styles.staleText}>Connection Offline. Showing last known location.</Text>
+          <Ionicons name="warning" size={14} color="#B45309" style={{ marginRight: 6 }} />
+          <Text style={styles.staleText}>GPS signal weak • Showing last known position</Text>
         </View>
       )}
     </View>
@@ -211,91 +369,188 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     overflow: 'hidden',
+    position: 'relative',
   },
   map: {
     width: '100%',
     height: '100%',
   },
-  loadingContainer: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#f8fafc',
-    justifyContent: 'center',
+  markerWrapper: {
     alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 8,
-    fontSize: 13,
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  clientMarkerContainer: {
     justifyContent: 'center',
-    alignItems: 'center',
   },
-  clientMarkerPin: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 6,
+  clientBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E11D48',
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    borderRadius: 12,
+    marginBottom: 4,
     borderWidth: 1.5,
-    borderColor: '#e2e8f0',
+    borderColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowOpacity: 0.28,
+    shadowRadius: 3.5,
+    elevation: 5,
   },
-  trainerMarkerContainer: {
-    justifyContent: 'center',
+  clientBadgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
+    marginRight: 5,
+  },
+  clientBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9.5,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+  },
+  clientPinOuter: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(225, 29, 72, 0.22)',
     alignItems: 'center',
-  },
-  trainerMarkerOutline: {
-    backgroundColor: 'rgba(15, 118, 110, 0.2)',
-    borderRadius: 24,
-    padding: 6,
-  },
-  trainerMarkerCore: {
-    backgroundColor: '#0f766e',
-    borderRadius: 16,
-    width: 28,
-    height: 28,
     justifyContent: 'center',
+  },
+  clientPinInner: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E11D48',
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 6,
+  },
+  pinStem: {
+    width: 4,
+    height: 7,
+    backgroundColor: '#E11D48',
+    borderBottomLeftRadius: 2,
+    borderBottomRightRadius: 2,
+    marginTop: -2,
+  },
+  trainerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
+    marginBottom: 4,
     borderWidth: 1.5,
-    borderColor: '#ffffff',
+    borderColor: '#10B981',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.32,
+    shadowRadius: 4,
+    elevation: 6,
+  },
+  trainerBadgeStale: {
+    backgroundColor: '#475569',
+    borderColor: '#94A3B8',
+  },
+  livePulseDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#10B981',
+    marginRight: 5,
+  },
+  trainerBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+  },
+  trainerHaloContainer: {
+    width: 64,
+    height: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trainerOuterHalo: {
+    position: 'absolute',
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: 'rgba(16, 185, 129, 0.28)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(16, 185, 129, 0.55)',
+  },
+  trainerOuterHaloStale: {
+    backgroundColor: 'rgba(100, 116, 139, 0.22)',
+    borderColor: 'rgba(100, 116, 139, 0.45)',
+  },
+  trainerMotaCore: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#059669',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3.5,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 5,
+    elevation: 8,
+  },
+  trainerMotaCoreStale: {
+    backgroundColor: '#64748B',
+  },
+  mapControls: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    gap: 8,
+  },
+  mapControlBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(15, 23, 42, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
     shadowRadius: 3,
-    elevation: 3,
-  },
-  staleMarker: {
-    opacity: 0.7,
-  },
-  staleCore: {
-    backgroundColor: '#64748b',
+    elevation: 4,
   },
   staleOverlay: {
     position: 'absolute',
     top: 12,
     alignSelf: 'center',
-    backgroundColor: 'rgba(254, 243, 199, 0.95)',
+    backgroundColor: 'rgba(255, 251, 235, 0.96)',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#fcd34d',
+    borderColor: '#FCD34D',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 3,
   },
   staleText: {
     fontSize: 11,
-    color: '#78350f',
-    fontWeight: '600',
+    color: '#78350F',
+    fontWeight: '700',
   },
 });

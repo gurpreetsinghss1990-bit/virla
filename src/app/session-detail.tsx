@@ -20,7 +20,6 @@ import { getBookingISTDateRange, getDisplayWorkoutTitle, formatToDDMMYYYY } from
 import { locationTrackerService } from '../services/LocationTrackerService';
 import { supabase } from '../database/supabaseClient';
 import TrackingMap from '../components/TrackingMap';
-import MapView, { Marker, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
 import { parseBookingAddress } from '../utils/LocationParser';
 
 function formatToIndianDate(dateStr: string): string {
@@ -133,9 +132,10 @@ export default function SessionDetailScreen() {
   const [simIntervalId, setSimIntervalId] = useState<any>(null);
   const [deviceCoords, setDeviceCoords] = useState<{ latitude: number, longitude: number } | null>(null);
 
-  // Live trainer coordinates on client side
+  // Live trainer coordinates on client & trainer side
   const [liveTrainerCoords, setLiveTrainerCoords] = useState<{ latitude: number; longitude: number; accuracy: number; heading: number | null; speed: number | null; updatedAt: string } | null>(null);
   const [isLiveConnectionStale, setIsLiveConnectionStale] = useState(false);
+  const [routeMetrics, setRouteMetrics] = useState<{ distanceKm: number; durationMins: number } | null>(null);
 
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
@@ -155,7 +155,7 @@ export default function SessionDetailScreen() {
         // Watch position updates
         subscription = await Location.watchPositionAsync(
           {
-            accuracy: Location.Accuracy.High,
+            accuracy: Location.Accuracy.BestForNavigation,
             timeInterval: 4000,
             distanceInterval: 5
           },
@@ -171,7 +171,7 @@ export default function SessionDetailScreen() {
       }
     };
 
-    if (currentStatus === 'trainer_travelling' || currentStatus === 'trainer_preparing' || currentStatus === 'trainer_arrived') {
+    if (role === 'trainer' && (currentStatus === 'trainer_travelling' || currentStatus === 'trainer_preparing' || currentStatus === 'trainer_arrived')) {
       trackLocation();
     }
 
@@ -180,9 +180,9 @@ export default function SessionDetailScreen() {
         subscription.remove();
       }
     };
-  }, [currentStatus]);
+  }, [currentStatus, role]);
 
-  // Publisher (Trainer side) and Subscriber (Client side) hooks for live GPS tracking
+  // Publisher (Trainer side) and Subscriber (Client & Trainer side) hooks for live GPS tracking
   useEffect(() => {
     if (!bookingId) return;
 
@@ -190,8 +190,9 @@ export default function SessionDetailScreen() {
 
     if (role === 'trainer') {
       if (currentStatus === 'trainer_travelling') {
-        locationTrackerService.startTracking(bookingId);
-      } else {
+        locationTrackerService.startTracking(bookingId, true);
+      } else if (locationTrackerService.getTrackedBookingId() === bookingId) {
+        // Stop background + foreground tracking as soon as trainer arrives at client venue
         locationTrackerService.stopTracking();
       }
     }
@@ -211,6 +212,7 @@ export default function SessionDetailScreen() {
       setTimeout(() => {
         setLiveTrainerCoords(null);
         setIsLiveConnectionStale(false);
+        setRouteMetrics(null);
       }, 0);
     }
 
@@ -218,9 +220,8 @@ export default function SessionDetailScreen() {
       if (unsubscribe) {
         unsubscribe();
       }
-      if (role === 'trainer') {
-        locationTrackerService.stopTracking();
-      }
+      // Note: Do NOT call stopTracking() on unmount if trainer is still travelling,
+      // so background tracking continues when trainer switches screens or locks phone!
     };
   }, [bookingId, currentStatus, role]);
 
@@ -774,26 +775,39 @@ export default function SessionDetailScreen() {
     setIsNavigationMapVisible(true);
   };
 
+  const activeTrainerCoords = liveTrainerCoords || (role === 'trainer' && deviceCoords
+    ? {
+        latitude: deviceCoords.latitude,
+        longitude: deviceCoords.longitude,
+        accuracy: 0,
+        heading: null,
+        speed: null,
+        updatedAt: new Date().toISOString(),
+      }
+    : null);
+
   const getCalculatedDistance = () => {
+    if (currentStatus === 'trainer_arrived' || journeyProgress >= 1.0) {
+      return 0;
+    }
+    if (routeMetrics && typeof routeMetrics.distanceKm === 'number') {
+      return routeMetrics.distanceKm;
+    }
     const baseDistance = 3.2 * (1 - journeyProgress);
-    if (!booking?.address || !deviceCoords) {
+    if (!booking?.address || !activeTrainerCoords) {
       return baseDistance;
     }
 
     if (parsedAddress && parsedAddress.lat && parsedAddress.lng && !isNaN(parsedAddress.lat) && !isNaN(parsedAddress.lng)) {
       const realDist = calculateHaversineDistance(
-        deviceCoords.latitude,
-        deviceCoords.longitude,
+        activeTrainerCoords.latitude,
+        activeTrainerCoords.longitude,
         parsedAddress.lat,
         parsedAddress.lng
       );
 
-      // Scale distance if simulator is active (moving state)
       if (journeyProgress > 0 && journeyProgress < 1.0) {
         return realDist * (1 - journeyProgress);
-      }
-      if (journeyProgress >= 1.0 || currentStatus === 'trainer_arrived') {
-        return 0;
       }
       return realDist;
     }
@@ -802,7 +816,10 @@ export default function SessionDetailScreen() {
 
   const distVal = getCalculatedDistance();
   const remainingDistance = distVal.toFixed(1);
-  const remainingEta = distVal < 0.1 ? 0 : Math.max(1, Math.ceil(distVal * 4));
+  const remainingEta =
+    currentStatus === 'trainer_arrived' || distVal < 0.05
+      ? 0
+      : routeMetrics?.durationMins ?? Math.max(1, Math.ceil(distVal * 4));
 
   if (role === 'trainer' && currentStatus === 'booked') {
     const customerId = `VIRLA-C${booking.id.slice(-6).toUpperCase()}`;
@@ -1557,27 +1574,39 @@ export default function SessionDetailScreen() {
               }}
             />
 
-            {/* Module 2: Premium Animated SVG Live Map */}
+            {/* Module 2: Zepto-Style Live Route & GPS Map */}
             {(currentStatus === 'trainer_travelling' || currentStatus === 'trainer_arrived') && !isMissed && !isCancelled && (
               <View className="bg-slate-950 border border-slate-900 rounded-[28px] overflow-hidden shadow-md">
                 <View className="p-4 border-b border-slate-900 flex-row justify-between items-center bg-slate-900/40">
                   <View>
                     <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider">Live Tracking Feed</Text>
                     <Text className="text-white text-sm font-bold mt-0.5">
-                      {currentStatus === 'trainer_travelling' ? 'Coach on the way' : 'Coach arrived at your gate'}
+                      {currentStatus === 'trainer_travelling'
+                        ? role === 'trainer'
+                          ? 'Navigating to client venue'
+                          : 'Coach on the way'
+                        : 'Coach arrived at your gate'}
                     </Text>
                   </View>
-                  <View className="bg-[#E11D48]/15 px-3 py-1 rounded-full border border-[#E11D48]/20">
-                    <Text className="text-[#E11D48] text-xs font-bold uppercase tracking-wider">LIVE GPS</Text>
-                  </View>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => setIsNavigationMapVisible(true)}
+                    className="bg-emerald-500/15 px-3 py-1.5 rounded-full border border-emerald-500/30 flex-row items-center gap-1.5"
+                  >
+                    <View className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <Text className="text-emerald-400 text-xs font-bold uppercase tracking-wider">LIVE ROUTE</Text>
+                  </TouchableOpacity>
                 </View>
 
-                {/* Real Live Map */}
-                <View className="h-44 overflow-hidden relative bg-slate-950">
+                {/* Real Live Map with Polyline & Mota Marker */}
+                <View className="h-60 overflow-hidden relative bg-slate-950">
                   <TrackingMap
-                    liveTrainerCoords={liveTrainerCoords || (role === 'trainer' && deviceCoords ? { latitude: deviceCoords.latitude, longitude: deviceCoords.longitude, accuracy: 0, heading: null, speed: null, updatedAt: new Date().toISOString() } : null)}
+                    liveTrainerCoords={activeTrainerCoords}
                     isStale={isLiveConnectionStale}
                     clientAddress={booking?.address}
+                    viewerRole={role as any}
+                    onRouteMetricsChange={setRouteMetrics}
+                    onExpandPress={() => setIsNavigationMapVisible(true)}
                   />
                 </View>
 
@@ -1794,6 +1823,7 @@ export default function SessionDetailScreen() {
                         <TouchableOpacity
                           onPress={async () => {
                             try {
+                              await locationTrackerService.startTracking(booking.id, true);
                               await updateTimelineStatus(booking.id, 'trainer_travelling');
                               handleNavigateAddress();
                             } catch (err: any) {
@@ -1816,25 +1846,36 @@ export default function SessionDetailScreen() {
                     )}
 
                     {currentStatus === 'trainer_travelling' && (
-                      <TouchableOpacity
-                        onPress={async () => {
-                          if (!SessionEngine.canCheckIn(booking)) {
-                            Alert.alert('Check-In Locked', 'You can check in 30 minutes before the scheduled session.');
-                          } else {
-                            try {
-                              await SessionEngine.checkIn(booking.id);
-                              syncFromDB();
-                              Alert.alert('Checked In', 'You have successfully checked in at the customer location.');
-                            } catch (err: any) {
-                              Alert.alert('Check-In Error', err.message || 'Could not check in.');
+                      <View className="gap-2.5">
+                        <TouchableOpacity
+                          onPress={handleNavigateAddress}
+                          className="w-full bg-slate-900 border border-slate-800 py-3.5 rounded-[18px] items-center justify-center flex-row gap-2 shadow-sm"
+                        >
+                          <Feather name="map" size={14} color="#10B981" />
+                          <Text className="text-white text-xs font-black uppercase">View Full Route Map</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={async () => {
+                            if (!SessionEngine.canCheckIn(booking)) {
+                              Alert.alert('Check-In Locked', 'You can check in 30 minutes before the scheduled session.');
+                            } else {
+                              try {
+                                await SessionEngine.checkIn(booking.id);
+                                await locationTrackerService.stopTracking();
+                                syncFromDB();
+                                Alert.alert('Checked In', 'You have successfully checked in at the customer location.');
+                              } catch (err: any) {
+                                Alert.alert('Check-In Error', err.message || 'Could not check in.');
+                              }
                             }
-                          }
-                        }}
-                        className="w-full bg-[#E11D48] py-3.5 rounded-[18px] items-center justify-center flex-row gap-2 shadow-sm"
-                      >
-                        <Feather name="check-circle" size={14} color="white" />
-                        <Text className="text-white text-xs font-black uppercase">Check In</Text>
-                      </TouchableOpacity>
+                          }}
+                          className="w-full bg-[#E11D48] py-3.5 rounded-[18px] items-center justify-center flex-row gap-2 shadow-sm"
+                        >
+                          <Feather name="check-circle" size={14} color="white" />
+                          <Text className="text-white text-xs font-black uppercase">Check In (Reached Venue)</Text>
+                        </TouchableOpacity>
+                      </View>
                     )}
 
                     {currentStatus === 'otp_verified' && (
@@ -2387,13 +2428,13 @@ export default function SessionDetailScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Full-Screen Navigate Map Modal */}
+      {/* Full-Screen Navigate Map Modal (Zepto-Style Live Route & Mota Marker) */}
       <Modal
         visible={isNavigationMapVisible}
         animationType="slide"
         onRequestClose={() => setIsNavigationMapVisible(false)}
       >
-        <View style={{ flex: 1, backgroundColor: '#0F172A' }}>
+        <View style={{ flex: 1, backgroundColor: '#0F172A', paddingTop: insets.top }}>
           {/* Header */}
           <View className="h-16 flex-row items-center px-6 border-b border-zinc-800 bg-slate-900 justify-between">
             <TouchableOpacity 
@@ -2402,129 +2443,28 @@ export default function SessionDetailScreen() {
             >
               <Ionicons name="arrow-back" size={20} color="white" />
             </TouchableOpacity>
-            <Text className="text-white text-sm font-black uppercase tracking-wider">
-              Navigation Map
-            </Text>
+            <View className="items-center">
+              <Text className="text-white text-sm font-black uppercase tracking-wider">
+                {role === 'trainer' ? 'Live Route Navigation' : 'Coach Live Tracking'}
+              </Text>
+              <Text className="text-emerald-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">
+                ● Real-Time GPS Active
+              </Text>
+            </View>
             <View style={{ width: 40 }} />
           </View>
 
-          {/* Map View */}
+          {/* Map View with Road Polyline & Mota Trainer Marker */}
           <View style={{ flex: 1, position: 'relative' }}>
             {parsedAddress && parsedAddress.lat && parsedAddress.lng ? (
-              <MapView
-                provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
-                style={{ flex: 1 }}
-                initialRegion={{
-                  latitude: parsedAddress.lat,
-                  longitude: parsedAddress.lng,
-                  latitudeDelta: 0.015,
-                  longitudeDelta: 0.015,
-                }}
-                showsUserLocation={true}
-                showsMyLocationButton={true}
-                showsCompass={true}
-              >
-                {/* 1. Client Workout Venue Destination Pin */}
-                <Marker
-                  coordinate={{
-                    latitude: parsedAddress.lat,
-                    longitude: parsedAddress.lng,
-                  }}
-                  title="Client Location"
-                  description={parsedAddress.addressLine || "Workout Venue"}
-                  tracksViewChanges={false}
-                >
-                  <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                    <View style={{
-                      backgroundColor: '#E11D48',
-                      paddingHorizontal: 8,
-                      paddingVertical: 3,
-                      borderRadius: 12,
-                      marginBottom: 4,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.25,
-                      shadowRadius: 3,
-                      elevation: 4,
-                    }}>
-                      <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>CLIENT</Text>
-                    </View>
-                    <View style={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: 19,
-                      backgroundColor: '#E11D48',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderWidth: 3,
-                      borderColor: '#FFFFFF',
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 3 },
-                      shadowOpacity: 0.3,
-                      shadowRadius: 4,
-                      elevation: 5,
-                    }}>
-                      <Ionicons name="location" size={20} color="white" />
-                    </View>
-                  </View>
-                </Marker>
-
-                {/* 2. Trainer Live Moving Position Pin */}
-                {deviceCoords && (
-                  <Marker
-                    coordinate={{
-                      latitude: deviceCoords.latitude,
-                      longitude: deviceCoords.longitude,
-                    }}
-                    title="You (Trainer)"
-                    description="Moving towards client"
-                    tracksViewChanges={false}
-                  >
-                    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                      <View style={{
-                        backgroundColor: '#0F766E',
-                        paddingHorizontal: 8,
-                        paddingVertical: 3,
-                        borderRadius: 12,
-                        marginBottom: 4,
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.25,
-                        shadowRadius: 3,
-                        elevation: 4,
-                      }}>
-                        <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>TRAINER</Text>
-                      </View>
-                      <View style={{
-                        width: 42,
-                        height: 42,
-                        borderRadius: 21,
-                        backgroundColor: 'rgba(15, 118, 110, 0.25)',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}>
-                        <View style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: 16,
-                          backgroundColor: '#0D9488',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderWidth: 2.5,
-                          borderColor: '#FFFFFF',
-                          shadowColor: '#000',
-                          shadowOffset: { width: 0, height: 2 },
-                          shadowOpacity: 0.3,
-                          shadowRadius: 3,
-                          elevation: 4,
-                        }}>
-                          <Ionicons name="navigate" size={16} color="white" />
-                        </View>
-                      </View>
-                    </View>
-                  </Marker>
-                )}
-              </MapView>
+              <TrackingMap
+                liveTrainerCoords={activeTrainerCoords}
+                isStale={isLiveConnectionStale}
+                clientAddress={booking?.address}
+                viewerRole={role as any}
+                onRouteMetricsChange={setRouteMetrics}
+                isFullScreen={true}
+              />
             ) : (
               <View className="flex-1 items-center justify-center bg-slate-950">
                 <ActivityIndicator size="large" color="#E11D48" />
@@ -2532,26 +2472,68 @@ export default function SessionDetailScreen() {
               </View>
             )}
 
-            {/* Bottom Floating Card */}
-            <View className="absolute bottom-6 left-6 right-6 bg-slate-900/95 border border-zinc-800 p-5 rounded-[24px] gap-4 shadow-2xl">
+            {/* Bottom Floating Zepto-Style Route Summary Card */}
+            <View className="absolute bottom-6 left-5 right-5 bg-slate-900/95 border border-zinc-800 p-5 rounded-[26px] gap-4 shadow-2xl">
+              {/* Live Distance & ETA Strip */}
+              <View className="flex-row items-center justify-between bg-slate-800/80 border border-slate-700/70 rounded-2xl px-4 py-3">
+                <View className="flex-row items-center gap-2.5">
+                  <View className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 items-center justify-center">
+                    <Ionicons name="navigate" size={18} color="#10B981" />
+                  </View>
+                  <View>
+                    <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Distance</Text>
+                    <Text className="text-white text-base font-black">{remainingDistance} km</Text>
+                  </View>
+                </View>
+
+                <View className="h-8 w-[1px] bg-slate-700" />
+
+                <View className="items-end">
+                  <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Est. Arrival</Text>
+                  <Text className="text-emerald-400 text-base font-black">~{remainingEta} mins</Text>
+                </View>
+              </View>
+
               <View className="gap-1">
-                <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-widest">Destination</Text>
-                <Text className="text-white text-sm font-black mt-1">
+                <Text className="text-zinc-500 text-[9px] font-black uppercase tracking-widest">
+                  {role === 'trainer' ? 'Client Venue Destination' : 'Your Selected Workout Venue'}
+                </Text>
+                <Text className="text-white text-sm font-black mt-0.5">
                   {parsedAddress.buildingName || 'Workout Venue'}
                 </Text>
-                <Text className="text-zinc-400 text-[10px] font-medium leading-relaxed">
-                  {parsedAddress.addressLine || 'Coordinates: ' + parsedAddress.lat + ', ' + parsedAddress.lng}
+                <Text numberOfLines={2} className="text-zinc-400 text-xs font-medium leading-relaxed">
+                  {parsedAddress.addressLine || `Coordinates: ${parsedAddress.lat}, ${parsedAddress.lng}`}
                 </Text>
               </View>
 
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => setIsNavigationMapVisible(false)}
-                className="w-full h-12 bg-slate-800 rounded-2xl items-center justify-center flex-row gap-2 border border-zinc-700 shadow-md"
-              >
-                <Ionicons name="close-circle" size={16} color="white" />
-                <Text className="text-white text-xs font-black uppercase tracking-wider">Close In-App Map</Text>
-              </TouchableOpacity>
+              <View className="flex-row gap-2.5">
+                {role === 'trainer' && parsedAddress?.lat && parsedAddress?.lng && (
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => {
+                      const dest = `${parsedAddress.lat},${parsedAddress.lng}`;
+                      const url = Platform.select({
+                        ios: `http://maps.apple.com/?daddr=${dest}&dirflg=d`,
+                        default: `https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`,
+                      });
+                      if (url) Linking.openURL(url).catch(() => {});
+                    }}
+                    className="flex-1 h-12 bg-emerald-600 rounded-2xl items-center justify-center flex-row gap-2 shadow-md"
+                  >
+                    <Ionicons name="navigate-circle-outline" size={18} color="white" />
+                    <Text className="text-white text-xs font-black uppercase tracking-wider">Turn-by-Turn</Text>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => setIsNavigationMapVisible(false)}
+                  className="flex-1 h-12 bg-slate-800 rounded-2xl items-center justify-center flex-row gap-2 border border-zinc-700 shadow-md"
+                >
+                  <Ionicons name="close-circle" size={16} color="white" />
+                  <Text className="text-white text-xs font-black uppercase tracking-wider">Close Map</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>

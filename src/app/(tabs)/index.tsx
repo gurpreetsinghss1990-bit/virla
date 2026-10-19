@@ -28,6 +28,7 @@ import { supabase } from '../../database/supabaseClient';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { useAIWellnessStore } from '../../store/aiWellnessStore';
 import { SessionEngine } from '../../services/SessionEngine';
+import { locationTrackerService } from '../../services/LocationTrackerService';
 import { Booking } from '../../types';
 import { normalizeDate, canonicalizeTimeRange, getBookingISTDateRange, getDisplayWorkoutTitle, formatToDDMMYYYY } from '../../utils/date';
 import { MASTER_TRAINER_AVATAR_IMAGE } from '../../constants/masterTrainerAvatar';
@@ -2251,13 +2252,14 @@ export default function HomeScreen() {
                         <TouchableOpacity
                           onPress={async () => {
                             try {
+                              await locationTrackerService.startTracking(nextSession.id, true);
                               await updateTimelineStatus(nextSession.id, 'trainer_travelling');
                               useNotificationStore.getState().addNotification({
                                 title: 'Coach On The Way 🚗',
                                 body: 'Coach has started travelling to your venue.',
                                 icon: 'user-check'
                               });
-                              router.push({ pathname: '/session-detail', params: { id: nextSession.id } });
+                              router.push({ pathname: '/session-detail', params: { id: nextSession.id, openMap: 'true' } });
                             } catch (err: any) {
                               Alert.alert('Error', err.message || 'Could not start travel.');
                             }
@@ -2271,6 +2273,7 @@ export default function HomeScreen() {
                           onPress={async () => {
                             try {
                               await updateTimelineStatus(nextSession.id, 'trainer_arrived');
+                              await locationTrackerService.stopTracking();
                               useNotificationStore.getState().addNotification({
                                 title: 'Coach Arrived 🔔',
                                 body: 'Coach has arrived at your location.',

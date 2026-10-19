@@ -74,7 +74,12 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow Virla to use your location to find nearby trainers and customize your experience."
+          "locationAlwaysAndWhenInUsePermission": "Allow Virla to use your location to track travel and display real-time positions during active workouts, even in the background.",
+          "locationAlwaysPermission": "Allow Virla to use your location to track travel and display real-time positions during active workouts, even in the background.",
+          "locationWhenInUsePermission": "Allow Virla to use your location to find nearby trainers and customize your experience.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       [
