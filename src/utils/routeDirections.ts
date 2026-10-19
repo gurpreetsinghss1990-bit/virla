@@ -139,8 +139,51 @@ export async function fetchRoadRouteDirections(
 
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-  // 1. Try Google Directions API first
+  // 1. Try Google Routes API (New) first, then Legacy Directions API
   if (apiKey && !apiKey.includes('YOUR_KEY')) {
+    try {
+      const routesV2Res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline',
+        },
+        body: JSON.stringify({
+          origin: {
+            location: {
+              latLng: { latitude: origin.latitude, longitude: origin.longitude },
+            },
+          },
+          destination: {
+            location: {
+              latLng: { latitude: destination.latitude, longitude: destination.longitude },
+            },
+          },
+          travelMode: 'DRIVE',
+          routingPreference: 'TRAFFIC_AWARE',
+        }),
+      });
+
+      if (routesV2Res.ok) {
+        const v2Data = await routesV2Res.json();
+        const route = v2Data?.routes?.[0];
+        const encodedPoints = route?.polyline?.encodedPolyline;
+        const decoded = encodedPoints ? decodePolyline(encodedPoints) : [];
+        if (decoded.length >= 2) {
+          const distMeters = route?.distanceMeters ?? straightDistKm * 1300;
+          const rawDurationStr = typeof route?.duration === 'string' ? route.duration.replace('s', '') : '';
+          const durSeconds = parseFloat(rawDurationStr) || (distMeters / 1000) * 210;
+          return {
+            coordinates: [origin, ...decoded, destination],
+            distanceKm: Math.max(0.1, Number((distMeters / 1000).toFixed(1))),
+            durationMins: Math.max(1, Math.ceil(durSeconds / 60)),
+            source: 'google',
+          };
+        }
+      }
+    } catch {}
+
     try {
       const googleUrl =
         `https://maps.googleapis.com/maps/api/directions/json` +
