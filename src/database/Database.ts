@@ -3534,11 +3534,11 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
 
   getUnifiedChatMessages(chatIds: string[]): ChatMessage[] {
     const idSet = new Set(chatIds.filter(Boolean));
-    // Support known seed chat mappings
-    if (chatIds.some(id => id.toLowerCase().includes('karan') || id === 'chat-c-1' || id === 'c-1')) {
+    // Support known seed chat mappings ONLY for explicit mock chat threads (never real session bookings)
+    if (chatIds.some(id => id === 'mock-1' || id === 'chat-c-1' || id === 'c-1')) {
       idSet.add('chat-c-1');
     }
-    if (chatIds.some(id => id.toLowerCase().includes('priya') || id === 'chat-c-2' || id === 'c-2')) {
+    if (chatIds.some(id => id === 'mock-2' || id === 'chat-c-2' || id === 'c-2')) {
       idSet.add('chat-c-2');
     }
 

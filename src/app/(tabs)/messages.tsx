@@ -158,15 +158,20 @@ export default function MessagesScreen() {
       let lastTime = '';
       const targetBookingId = primaryBooking.id;
 
-      // Query all messages across all sessions and unified thread with this person
+      // Query messages strictly for THIS specific session booking (never pulling old chats from previous sessions with the same trainer)
+      const sId = (primaryBooking.id || 'session').trim().replace(/[^a-zA-Z0-9_.-]/g, '_');
       const cId = (primaryBooking.clientId || 'client').trim().replace(/[^a-zA-Z0-9_.-]/g, '_');
       const tId = (primaryBooking.trainerId || primaryBooking.trainerName || 'coach').trim().replace(/[^a-zA-Z0-9_.-]/g, '_');
-      const symmetricChatId = `chat_${cId}_${tId}`;
+      const symmetricChatId = `chat_${sId}_${cId}_${tId}`;
+      const sUnderscore = (primaryBooking.id || 'session').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
       const cUnderscore = (primaryBooking.clientId || 'client').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
       const tUnderscore = (primaryBooking.trainerId || primaryBooking.trainerName || 'coach').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
-      const symmetricChatIdLegacy = `chat_${cUnderscore}_${tUnderscore}`;
-      const unifiedChatId = isTrainer ? `chat-client-${personKey}` : `chat-coach-${personKey}`;
-      const relatedIds = Array.from(new Set([symmetricChatId, symmetricChatIdLegacy, unifiedChatId, `chat-client-${personKey}`, `chat-coach-${personKey}`, ...sortedBookings.map((b) => b.id)]));
+      const relatedIds = Array.from(new Set([
+        symmetricChatId,
+        primaryBooking.id,
+        `chat_${sId}_${cUnderscore}_${tUnderscore}`,
+        `chat_${sUnderscore}_${cUnderscore}_${tUnderscore}`,
+      ].filter(Boolean)));
       const allMsgs = Database.getUnifiedChatMessages(relatedIds);
 
       if (allMsgs.length > 0) {

@@ -294,14 +294,14 @@ export default function SessionDetailScreen() {
   // Automatically mark session and its messages as read when user views this session
   useEffect(() => {
     if (booking?.id) {
-      const trainerKey = (booking.trainerName || booking.trainerId || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
-      const clientKey = (booking.clientName || booking.clientId || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const sId = (booking.id || 'session').trim().replace(/[^a-zA-Z0-9_.-]/g, '_');
+      const cId = (booking.clientId || 'client').trim().replace(/[^a-zA-Z0-9_.-]/g, '_');
+      const tId = (booking.trainerId || booking.trainerName || 'coach').trim().replace(/[^a-zA-Z0-9_.-]/g, '_');
       useChatStore.getState().markSessionAsRead(booking.id, [
-        `chat-coach-${trainerKey}`,
-        `chat-client-${clientKey}`,
+        `chat_${sId}_${cId}_${tId}`,
       ]);
     }
-  }, [booking?.id, booking?.trainerName, booking?.clientName]);
+  }, [booking?.id, booking?.trainerId, booking?.trainerName, booking?.clientId]);
 
   useEffect(() => {
     if (!booking) return;
