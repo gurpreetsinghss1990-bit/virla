@@ -208,11 +208,12 @@ export const PayPhiService = {
         plan: order.plan,
       };
 
-      // Ensure SDK is initialized with merchant credentials
+      // Ensure SDK is initialized with parent/aggregator MID (100000000527738) for /merapp/login,
+      // while makePayment receives child merchantId (100000000527739) and aggregatorId (100000000527738).
       if (!isInitialized) {
         const initRes = await PayPhiService.initSDK(
           order.envType || 'PROD',
-          order.merchantId,
+          order.aggregatorId || '100000000527738',
           order.appId,
           order.merchantName
         );
