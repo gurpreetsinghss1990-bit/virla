@@ -1613,10 +1613,12 @@ export default function SessionDetailScreen() {
                 {/* Tracking ETA Indicators */}
                 {currentStatus === 'trainer_travelling' && (
                   <View className="flex-row divide-x divide-slate-900 border-t border-slate-900 bg-slate-900/20">
-                    <View className="flex-1 p-4 items-center">
-                      <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider">Distance Remaining</Text>
-                      <Text className="text-white text-base font-black mt-0.5">{remainingDistance} km</Text>
-                    </View>
+                    {role === 'trainer' && (
+                      <View className="flex-1 p-4 items-center">
+                        <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider">Distance Remaining</Text>
+                        <Text className="text-white text-base font-black mt-0.5">{remainingDistance} km</Text>
+                      </View>
+                    )}
                     <View className="flex-1 p-4 items-center">
                       <Text className="text-slate-400 text-xs font-bold uppercase tracking-wider">Estimated Arrival</Text>
                       <Text className="text-white text-base font-black mt-0.5">~{remainingEta} mins</Text>
@@ -2476,22 +2478,42 @@ export default function SessionDetailScreen() {
             <View className="absolute bottom-6 left-5 right-5 bg-slate-900/95 border border-zinc-800 p-5 rounded-[26px] gap-4 shadow-2xl">
               {/* Live Distance & ETA Strip */}
               <View className="flex-row items-center justify-between bg-slate-800/80 border border-slate-700/70 rounded-2xl px-4 py-3">
-                <View className="flex-row items-center gap-2.5">
-                  <View className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 items-center justify-center">
-                    <Ionicons name="navigate" size={18} color="#10B981" />
-                  </View>
-                  <View>
-                    <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Distance</Text>
-                    <Text className="text-white text-base font-black">{remainingDistance} km</Text>
-                  </View>
-                </View>
+                {role === 'trainer' ? (
+                  <>
+                    <View className="flex-row items-center gap-2.5">
+                      <View className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 items-center justify-center">
+                        <Ionicons name="navigate" size={18} color="#10B981" />
+                      </View>
+                      <View>
+                        <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Distance</Text>
+                        <Text className="text-white text-base font-black">{remainingDistance} km</Text>
+                      </View>
+                    </View>
 
-                <View className="h-8 w-[1px] bg-slate-700" />
+                    <View className="h-8 w-[1px] bg-slate-700" />
 
-                <View className="items-end">
-                  <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Est. Arrival</Text>
-                  <Text className="text-emerald-400 text-base font-black">~{remainingEta} mins</Text>
-                </View>
+                    <View className="items-end">
+                      <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Est. Arrival</Text>
+                      <Text className="text-emerald-400 text-base font-black">~{remainingEta} mins</Text>
+                    </View>
+                  </>
+                ) : (
+                  <View className="flex-row items-center justify-between flex-1">
+                    <View className="flex-row items-center gap-2.5">
+                      <View className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 items-center justify-center">
+                        <Ionicons name="navigate" size={18} color="#10B981" />
+                      </View>
+                      <View>
+                        <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Live Coach Route</Text>
+                        <Text className="text-white text-xs font-bold">On the way to your venue</Text>
+                      </View>
+                    </View>
+                    <View className="items-end">
+                      <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Est. Arrival</Text>
+                      <Text className="text-emerald-400 text-base font-black">~{remainingEta} mins</Text>
+                    </View>
+                  </View>
+                )}
               </View>
 
               <View className="gap-1">

@@ -1568,12 +1568,6 @@ export default function HomeScreen() {
                               </Text>
                             </View>
                             <View className="flex-row items-center gap-1">
-                              <Feather name="map-pin" size={12} color="#3B82F6" />
-                              <Text className="text-zinc-500 text-[11px] font-medium uppercase">
-                                {activeBooking.trainerDistance || '2.3 km'}
-                              </Text>
-                            </View>
-                            <View className="flex-row items-center gap-1">
                               <Feather name="shield" size={12} color="#16C784" />
                               <Text className="text-zinc-500 text-[11px] font-medium uppercase">
                                 Elite Coach
