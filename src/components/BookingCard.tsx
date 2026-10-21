@@ -319,11 +319,23 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
     return (
       <View className="py-4 border-b border-zinc-200/80">
         {/* Status indicator row */}
-        <View className="flex-row items-center gap-1.5 mb-3">
-          <View className={`w-2 h-2 rounded-full ${statusDotColor}`} />
-          <Text className={`text-[10px] font-black uppercase tracking-wider ${statusTextColor}`}>
-            {statusLabel}
-          </Text>
+        <View className="flex-row items-center justify-between mb-3">
+          <View className="flex-row items-center gap-1.5">
+            <View className={`w-2 h-2 rounded-full ${statusDotColor}`} />
+            <Text className={`text-[10px] font-black uppercase tracking-wider ${statusTextColor}`}>
+              {statusLabel}
+            </Text>
+          </View>
+          {isCompletedStatus && onOpenSupport && (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => onOpenSupport(booking)}
+              className="flex-row items-center gap-1 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full"
+            >
+              <Feather name="headphones" size={10} color="#E11D48" />
+              <Text className="text-rose-600 text-[10px] font-black uppercase tracking-wider">Support</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Main Workout Block */}

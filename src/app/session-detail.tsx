@@ -21,6 +21,9 @@ import { locationTrackerService } from '../services/LocationTrackerService';
 import { supabase } from '../database/supabaseClient';
 import TrackingMap from '../components/TrackingMap';
 import { parseBookingAddress } from '../utils/LocationParser';
+import { SupportChatModal } from '../components/SupportChatModal';
+import { RaiseSupportTicketModal } from '../components/RaiseSupportTicketModal';
+import { SupportTicket } from '../database/Database';
 
 function formatToIndianDate(dateStr: string): string {
   return formatToDDMMYYYY(dateStr);
@@ -68,10 +71,16 @@ export default function SessionDetailScreen() {
   } = useBookingStore();
   
   const { addNotification } = useNotificationStore();
+  const { user } = useUserStore();
   const { role } = useUserStore();
   const { syncFromDB: syncProfile } = useUserProfileStore();
   const [showPartnerModal, setShowPartnerModal] = useState(false);
   const [isNavigationMapVisible, setIsNavigationMapVisible] = useState(false);
+
+  // Concierge Support State
+  const [showRaiseTicketModal, setShowRaiseTicketModal] = useState(false);
+  const [activeChatTicket, setActiveChatTicket] = useState<SupportTicket | null>(null);
+  const [showSupportChatModal, setShowSupportChatModal] = useState(false);
 
   const booking = bookings.find((b) => b.id === bookingId) || bookings[0];
   const parsedAddress = useMemo(() => parseBookingAddress(booking?.address), [booking?.address]);
@@ -1173,14 +1182,28 @@ export default function SessionDetailScreen() {
             </Text>
           </View>
 
-          <TouchableOpacity 
-            onPress={handleSOS} 
-            activeOpacity={0.8}
-            className="bg-rose-50 px-3 py-1.5 rounded-full border border-rose-200/90 flex-row items-center gap-1.5"
-          >
-            <View className="w-1.5 h-1.5 rounded-full bg-rose-600" />
-            <Text className="text-rose-700 text-xs font-black uppercase tracking-wider">SOS</Text>
-          </TouchableOpacity>
+          <View className="flex-row items-center gap-2">
+            {role === 'customer' && (
+              <TouchableOpacity
+                onPress={() => setShowRaiseTicketModal(true)}
+                activeOpacity={0.8}
+                className="bg-rose-50 px-3 py-1.5 rounded-full border border-rose-200/90 flex-row items-center gap-1.5"
+                accessibilityLabel="Customer Support"
+              >
+                <Feather name="headphones" size={13} color="#E11D48" />
+                <Text className="text-rose-700 text-xs font-black uppercase tracking-wider">Support</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity 
+              onPress={handleSOS} 
+              activeOpacity={0.8}
+              className="bg-rose-50 px-3 py-1.5 rounded-full border border-rose-200/90 flex-row items-center gap-1.5"
+            >
+              <View className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+              <Text className="text-rose-700 text-xs font-black uppercase tracking-wider">SOS</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -2560,6 +2583,28 @@ export default function SessionDetailScreen() {
           </View>
         </View>
       </Modal>
+      {/* Concierge Support Ticket Creation Modal */}
+      <RaiseSupportTicketModal
+        visible={showRaiseTicketModal}
+        booking={booking}
+        userId={user.id}
+        onClose={() => setShowRaiseTicketModal(false)}
+        onTicketCreated={(newTicket) => {
+          setActiveChatTicket(newTicket);
+          setShowSupportChatModal(true);
+        }}
+      />
+
+      {/* Realtime User ↔ Admin Support Chat Modal */}
+      <SupportChatModal
+        visible={showSupportChatModal}
+        ticket={activeChatTicket}
+        currentRole="customer"
+        onClose={() => {
+          setShowSupportChatModal(false);
+          setActiveChatTicket(null);
+        }}
+      />
     </View>
   );
 }
