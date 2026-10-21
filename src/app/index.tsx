@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, Text, Animated } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -30,17 +31,17 @@ export default function SplashScreen() {
       }),
     ]).start();
 
-    // 2. Pulse the blue/purple dot continuously
+    // 2. Pulse the spark icon continuously
     Animated.loop(
       Animated.sequence([
         Animated.timing(dotScale, {
-          toValue: 1.6,
-          duration: 700,
+          toValue: 1.22,
+          duration: 750,
           useNativeDriver: true,
         }),
         Animated.timing(dotScale, {
-          toValue: 1,
-          duration: 700,
+          toValue: 0.92,
+          duration: 750,
           useNativeDriver: true,
         }),
       ])
@@ -123,20 +124,33 @@ export default function SplashScreen() {
         className="items-center justify-center"
       >
         <View className="flex-row items-center justify-center">
-          <Text style={{ fontFamily: 'System' }} className="font-bold text-[#101828] text-5xl tracking-[0.3em]">
+          <Text
+            style={{ fontFamily: 'System', letterSpacing: 16 }}
+            className="font-extrabold text-[#8E959E] text-5xl"
+          >
             VIRLA
           </Text>
-          {/* Small animated blue/purple dot next to the logo text */}
-          <Animated.View 
-            style={{ 
-              transform: [{ scale: dotScale }] 
-            }} 
-            className="w-3.5 h-3.5 rounded-full bg-[#E11D48] ml-2" 
-          />
+          {/* 4-pointed pulsing spark icon next to the VIRLA logo text */}
+          <Animated.View
+            style={{
+              transform: [{ scale: dotScale }],
+              marginLeft: 6,
+            }}
+          >
+            <Svg width={44} height={44} viewBox="0 0 100 100">
+              <Path
+                d="M50 0 C53 34 66 47 100 50 C66 53 53 66 50 100 C47 66 34 53 0 50 C34 47 47 34 50 0 Z"
+                fill="#F07178"
+              />
+            </Svg>
+          </Animated.View>
         </View>
-        
-        <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-[0.25em] text-center mt-6">
-          Wellness At Your Doorstep
+
+        <Text
+          style={{ letterSpacing: 5.5 }}
+          className="text-[#8E959E] text-[12px] font-medium uppercase text-center mt-5"
+        >
+          WELLNESS AT YOUR DOORSTEP
         </Text>
       </Animated.View>
     </View>

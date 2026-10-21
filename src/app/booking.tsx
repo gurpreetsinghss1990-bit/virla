@@ -64,9 +64,18 @@ interface Experience {
 
 const EXPERIENCES: Experience[] = [
   {
+    id: 'exp-pilates',
+    title: 'Pilates',
+    description: 'Core strength, posture and sculpting',
+    icon: 'activity',
+    gradientColors: ['#F43F5E', '#E11D48'],
+    emoji: '🤸‍♀️',
+    duration: 60,
+  },
+  {
     id: 'exp-strength',
-    title: 'Forge Strength',
-    description: 'Resistance training structured to build lean muscle and agility',
+    title: 'Strength Training',
+    description: 'Build strength and muscle',
     icon: 'dumbbell',
     gradientColors: ['#FF5A5F', '#FF385C'],
     emoji: '🏋️‍♂️',
@@ -74,8 +83,8 @@ const EXPERIENCES: Experience[] = [
   },
   {
     id: 'exp-flow',
-    title: 'Flow Motion',
-    description: 'Yoga & mobility to restore balance and posture',
+    title: 'Yoga & Mobility',
+    description: 'Improve flexibility and balance',
     icon: 'compass',
     gradientColors: ['#10B981', '#047857'],
     emoji: '🧘‍♀️',
@@ -83,8 +92,8 @@ const EXPERIENCES: Experience[] = [
   },
   {
     id: 'exp-rhythm',
-    title: 'Rhythm Dance',
-    description: 'High-intensity dance cardio to burn maximum calories',
+    title: 'Dance Fitness',
+    description: 'Cardio through dance',
     icon: 'music',
     gradientColors: ['#EC4899', '#BE185D'],
     emoji: '💃',
@@ -92,8 +101,8 @@ const EXPERIENCES: Experience[] = [
   },
   {
     id: 'exp-reset',
-    title: 'Reset Studio',
-    description: 'Deep stretch, myofascial release, and guided breathwork recovery',
+    title: 'Stretch & Recovery',
+    description: 'Relax and restore your body',
     icon: 'coffee',
     gradientColors: ['#64748B', '#475569'],
     emoji: '🧘‍♂️',
@@ -101,8 +110,8 @@ const EXPERIENCES: Experience[] = [
   },
   {
     id: 'exp-combat',
-    title: 'Combat Core',
-    description: 'Shadow boxing, kick drills, and core conditioning',
+    title: 'Boxing Fitness',
+    description: 'Boxing drills and conditioning',
     icon: 'activity',
     gradientColors: ['#F59E0B', '#D97706'],
     emoji: '🥊',
@@ -111,7 +120,7 @@ const EXPERIENCES: Experience[] = [
   {
     id: 'exp-aerial',
     title: 'Aerial Yoga',
-    description: 'Decompress and stretch using specialized aerial hammocks',
+    description: 'Yoga using aerial hammocks',
     icon: 'wind',
     gradientColors: ['#8B5CF6', '#6D28D9'],
     emoji: '🧘‍♀️',
@@ -406,27 +415,39 @@ export default function BookingScreen() {
 
     if (searchString) {
       if (
+        searchString.includes('pilates') ||
+        searchString.includes('corealign') ||
+        searchString.includes('exp-pilates') ||
+        searchString.includes('w-3')
+      ) {
+        return EXPERIENCES.find((e) => e.id === 'exp-pilates') || EXPERIENCES[0];
+      } else if (
+        searchString.includes('strength') ||
+        searchString.includes('forge') ||
+        searchString.includes('exp-strength') ||
+        searchString.includes('w-1')
+      ) {
+        return EXPERIENCES.find((e) => e.id === 'exp-strength') || EXPERIENCES[1];
+      } else if (
         searchString.includes('aerial') ||
         searchString.includes('hammock') ||
         searchString.includes('exp-aerial')
       ) {
-        return EXPERIENCES[5];
+        return EXPERIENCES.find((e) => e.id === 'exp-aerial') || EXPERIENCES[6];
       } else if (
         searchString.includes('yoga') || 
         searchString.includes('flow') || 
-        searchString.includes('pilates') || 
         searchString.includes('mind & body') || 
-        searchString.includes('w-2') || 
-        searchString.includes('w-3')
+        searchString.includes('w-2')
       ) {
-        return EXPERIENCES[1];
+        return EXPERIENCES.find((e) => e.id === 'exp-flow') || EXPERIENCES[2];
       } else if (
         searchString.includes('dance') || 
         searchString.includes('rhythm') || 
         searchString.includes('cardio') || 
         searchString.includes('w-4')
       ) {
-        return EXPERIENCES[2];
+        return EXPERIENCES.find((e) => e.id === 'exp-rhythm') || EXPERIENCES[3];
       } else if (
         searchString.includes('stretch') || 
         searchString.includes('recovery') || 
@@ -434,14 +455,14 @@ export default function BookingScreen() {
         searchString.includes('mobility') || 
         searchString.includes('w-5')
       ) {
-        return EXPERIENCES[3];
+        return EXPERIENCES.find((e) => e.id === 'exp-reset') || EXPERIENCES[4];
       } else if (
         searchString.includes('boxing') || 
         searchString.includes('combat') || 
         searchString.includes('kickboxing') || 
         searchString.includes('w-8')
       ) {
-        return EXPERIENCES[4];
+        return EXPERIENCES.find((e) => e.id === 'exp-combat') || EXPERIENCES[5];
       }
     }
     return EXPERIENCES[0];
@@ -1312,13 +1333,14 @@ export default function BookingScreen() {
       id: 'temp-id',
       workoutTitle: (() => {
         switch (selectedExperience.id) {
-          case 'exp-strength': return 'PowerForge';
-          case 'exp-flow': return 'ZenFlow';
-          case 'exp-rhythm': return 'RhythmX';
-          case 'exp-reset': return 'KinetiX';
-          case 'exp-combat': return 'FightLab';
-          case 'exp-aerial': return 'ZenFlow Aerial';
-          default: return 'PowerForge';
+          case 'exp-pilates': return 'Pilates';
+          case 'exp-strength': return 'Strength Training';
+          case 'exp-flow': return 'Yoga & Mobility';
+          case 'exp-rhythm': return 'Dance Fitness';
+          case 'exp-reset': return 'Stretch & Recovery';
+          case 'exp-combat': return 'Boxing Fitness';
+          case 'exp-aerial': return 'Aerial Yoga';
+          default: return selectedExperience.title || 'Pilates';
         }
       })(),
       date: selectedDate,
@@ -1700,6 +1722,7 @@ export default function BookingScreen() {
 
     // Filter by specialty if applicable
     let specFilter = 'Strength';
+    if (selectedExperience.id === 'exp-pilates') specFilter = 'Yoga';
     if (selectedExperience.id === 'exp-flow') specFilter = 'Yoga';
     if (selectedExperience.id === 'exp-rhythm') specFilter = 'Dance';
     if (selectedExperience.id === 'exp-reset') specFilter = 'Mobility';
@@ -1771,13 +1794,14 @@ export default function BookingScreen() {
       trainerPhoto: activeCoach.photo,
       workoutTitle: (() => {
         switch (selectedExperience.id) {
-          case 'exp-strength': return 'PowerForge';
-          case 'exp-flow': return 'ZenFlow';
-          case 'exp-rhythm': return 'RhythmX';
-          case 'exp-reset': return 'KinetiX';
-          case 'exp-combat': return 'FightLab';
-          case 'exp-aerial': return 'ZenFlow Aerial';
-          default: return 'PowerForge';
+          case 'exp-pilates': return 'Pilates';
+          case 'exp-strength': return 'Strength Training';
+          case 'exp-flow': return 'Yoga & Mobility';
+          case 'exp-rhythm': return 'Dance Fitness';
+          case 'exp-reset': return 'Stretch & Recovery';
+          case 'exp-combat': return 'Boxing Fitness';
+          case 'exp-aerial': return 'Aerial Yoga';
+          default: return selectedExperience.title || 'Pilates';
         }
       })(),
       date: selectedDate,
@@ -1930,6 +1954,8 @@ export default function BookingScreen() {
 
   const getWorkoutImage = (id: string) => {
     switch (id) {
+      case 'exp-pilates':
+        return 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=800&q=80';
       case 'exp-strength':
         return 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80';
       case 'exp-flow':

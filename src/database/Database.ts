@@ -2648,10 +2648,11 @@ class DatabaseClient {
       const targetB = bookings.find(b => b.id === bookingIdToExclude);
       if (targetB) {
         const t = (targetB.workoutTitle || '').toLowerCase();
-        if (t.includes('forge') || t.includes('strength')) targetCategory = 'Strength';
-        else if (t.includes('flow') || t.includes('motion')) targetCategory = 'Mind & Body';
-        else if (t.includes('rhythm') || t.includes('burn')) targetCategory = 'Cardio';
-        else if (t.includes('reset') || t.includes('studio') || t.includes('stretch')) targetCategory = 'Conditioning';
+        if (t.includes('aerial') || t.includes('hammock')) targetCategory = 'Aerial Yoga';
+        else if (t.includes('forge') || t.includes('strength')) targetCategory = 'Strength';
+        else if (t.includes('pilates') || t.includes('corealign') || t.includes('flow') || t.includes('motion') || t.includes('yoga')) targetCategory = 'Mind & Body';
+        else if (t.includes('rhythm') || t.includes('burn') || t.includes('dance')) targetCategory = 'Cardio';
+        else if (t.includes('reset') || t.includes('studio') || t.includes('stretch') || t.includes('recovery')) targetCategory = 'Conditioning';
         else if (t.includes('combat') || t.includes('boxing')) targetCategory = 'Boxing';
       }
     }
