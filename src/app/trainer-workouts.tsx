@@ -14,6 +14,7 @@ const CATEGORIES = [
   { key: 'Conditioning', name: 'Stretching', icon: '🤸‍♂️' },
   { key: 'Boxing', name: 'Boxing', icon: '🥊' },
   { key: 'Aerial Yoga', name: 'Aerial Yoga', icon: '🧘‍♀️' },
+  { key: 'Pilates', name: 'Pilates', icon: '🤸‍♀️' },
   { key: 'All Workouts', name: 'All Workouts', icon: '⭐' }
 ];
 

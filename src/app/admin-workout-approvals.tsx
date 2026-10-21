@@ -14,6 +14,7 @@ const CATEGORY_DISPLAY_MAP: Record<string, string> = {
   'Conditioning': 'Stretching',
   'Boxing': 'Boxing',
   'Aerial Yoga': 'Aerial Yoga',
+  'Pilates': 'Pilates',
   'All Workouts': 'All Workouts'
 };
 

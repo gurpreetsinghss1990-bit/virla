@@ -42,6 +42,7 @@ const CATEGORY_DISPLAY_MAP: Record<string, string> = {
   'Conditioning': 'Stretching',
   'Boxing': 'Boxing',
   'Aerial Yoga': 'Aerial Yoga',
+  'Pilates': 'Pilates',
   'All Workouts': 'All Workouts'
 };
 
@@ -53,7 +54,8 @@ const DB_CATEGORIES = [
   { key: 'Cardio', display: 'Dance Fitness' },
   { key: 'Conditioning', display: 'Stretching' },
   { key: 'Boxing', display: 'Boxing' },
-  { key: 'Aerial Yoga', display: 'Aerial Yoga' }
+  { key: 'Aerial Yoga', display: 'Aerial Yoga' },
+  { key: 'Pilates', display: 'Pilates' }
 ];
 
 const isWildcardTestAccount = (u: any, profileMobile?: string) => {

@@ -1336,6 +1336,7 @@ class DatabaseClient {
       'Conditioning': 'Stretching',
       'Boxing': 'Boxing',
       'Aerial Yoga': 'Aerial Yoga',
+      'Pilates': 'Pilates',
       'All Workouts': 'All Workouts'
     };
 
@@ -2649,8 +2650,9 @@ class DatabaseClient {
       if (targetB) {
         const t = (targetB.workoutTitle || '').toLowerCase();
         if (t.includes('aerial') || t.includes('hammock')) targetCategory = 'Aerial Yoga';
+        else if (t.includes('pilates')) targetCategory = 'Pilates';
         else if (t.includes('forge') || t.includes('strength')) targetCategory = 'Strength';
-        else if (t.includes('pilates') || t.includes('corealign') || t.includes('flow') || t.includes('motion') || t.includes('yoga')) targetCategory = 'Mind & Body';
+        else if (t.includes('corealign') || t.includes('flow') || t.includes('motion') || t.includes('yoga')) targetCategory = 'Mind & Body';
         else if (t.includes('rhythm') || t.includes('burn') || t.includes('dance')) targetCategory = 'Cardio';
         else if (t.includes('reset') || t.includes('studio') || t.includes('stretch') || t.includes('recovery')) targetCategory = 'Conditioning';
         else if (t.includes('combat') || t.includes('boxing')) targetCategory = 'Boxing';

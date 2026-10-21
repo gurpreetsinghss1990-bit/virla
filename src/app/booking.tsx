@@ -1722,7 +1722,7 @@ export default function BookingScreen() {
 
     // Filter by specialty if applicable
     let specFilter = 'Strength';
-    if (selectedExperience.id === 'exp-pilates') specFilter = 'Yoga';
+    if (selectedExperience.id === 'exp-pilates') specFilter = 'Pilates';
     if (selectedExperience.id === 'exp-flow') specFilter = 'Yoga';
     if (selectedExperience.id === 'exp-rhythm') specFilter = 'Dance';
     if (selectedExperience.id === 'exp-reset') specFilter = 'Mobility';
