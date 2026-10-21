@@ -63,7 +63,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "eas": "node eas-wrapper.js"
+    "eas": "node eas-wrapper.js",
+    "postinstall": "find ./node_modules/expo-modules-jsi/apple/Products/ExpoModulesJSI.xcframework -name '*.swiftinterface' -exec sed -i '' '/^extension __ObjC::expo\\.__ObjC::CppError : Swift::Error {/,/^}/d' {} + 2>/dev/null || true"
   },
   "private": true
 }
