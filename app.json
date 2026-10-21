@@ -33,7 +33,14 @@
           "location"
         ],
         "LSApplicationQueriesSchemes": [
-          "whatsapp"
+          "whatsapp",
+          "tez",
+          "phonepe",
+          "paytmmp",
+          "bhim",
+          "gpay",
+          "upi",
+          "credpay"
         ]
       }
     },
