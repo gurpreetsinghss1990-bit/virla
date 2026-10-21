@@ -94,7 +94,7 @@ interface UserProfileState {
   preferredLanguage: string;
   city: string;
   memberSince: string;
-  
+
   // Analytics stats
   totalSessions: number;
   totalCalories: number;
@@ -113,13 +113,13 @@ interface UserProfileState {
   notifications: NotificationPrefs;
   privacy: PrivacySecuritySettings;
   settings: GeneralSettings;
-  
+
   // Actions
   updateCoreProfile: (fields: Partial<Omit<UserProfileState, 'addresses' | 'emergencyContacts' | 'healthProfile' | 'notifications' | 'privacy' | 'settings'>>) => Promise<void>;
   updateHealthProfile: (fields: Partial<HealthProfile>) => void;
   toggleGoal: (goal: string) => void;
   setGoals: (goals: string[]) => Promise<void>;
-  
+
   // Address CRUD
   addAddress: (address: Omit<SavedAddress, 'id'>) => void;
   updateAddress: (id: string, address: Partial<SavedAddress>) => void;
@@ -224,7 +224,7 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
     if (userId) {
       const userFields: any = {};
       const profileFields: any = { ...fields };
-      
+
       if ('name' in fields) {
         userFields.name = fields.name;
         delete profileFields.name;
@@ -248,7 +248,7 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
       if (Object.keys(profileFields).length > 0) {
         await Database.updateProfile(userId, profileFields);
       }
-      
+
       get().syncFromDB();
     }
   },
@@ -265,7 +265,7 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
       }
     }
   },
-  
+
   toggleGoal: (goal) => {
     const currentGoals = Array.isArray(get().selectedGoals) ? get().selectedGoals : [];
     const updated = currentGoals.includes(goal)
@@ -317,7 +317,7 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
       try {
         const { useAddressStore } = require('./addressStore');
         useAddressStore.getState().syncFromDB();
-      } catch {}
+      } catch { }
     }
   },
 
@@ -327,7 +327,7 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
     try {
       const { useAddressStore } = require('./addressStore');
       useAddressStore.getState().syncFromDB();
-    } catch {}
+    } catch { }
   },
 
   deleteAddress: (id) => {
@@ -336,7 +336,7 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
     try {
       const { useAddressStore } = require('./addressStore');
       useAddressStore.getState().syncFromDB();
-    } catch {}
+    } catch { }
   },
 
   setDefaultAddress: (id) => {
@@ -345,7 +345,7 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
     try {
       const { useAddressStore } = require('./addressStore');
       useAddressStore.getState().syncFromDB();
-    } catch {}
+    } catch { }
   },
 
   // Emergency Contacts CRUD
@@ -485,7 +485,7 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
         const cancelledCount = bookingsList.filter(b => b.status === 'cancelled').length;
         const totalCals = Database.getCalories(userId, new Date().toLocaleDateString('en-CA')); // YYYY-MM-DD
         const currentStreakVal = Database.getStreak(userId);
-        
+
         let favoriteTrainerName = 'None';
         if (completedSessions.length > 0) {
           const trainersMap: Record<string, number> = {};
