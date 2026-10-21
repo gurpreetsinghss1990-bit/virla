@@ -1286,31 +1286,15 @@ export default function BookingsScreen() {
             </View>
 
             {/* Support Tickets Notepad / History Button */}
-            <View className="flex-row items-center gap-1">
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => {
-                  setSupportBooking(null);
-                  setShowRaiseTicketModal(true);
-                }}
-                className="flex-row items-center gap-1 bg-rose-50 border border-rose-200/80 px-2.5 py-1.5 rounded-full"
-                accessibilityRole="button"
-                accessibilityLabel="Get Support"
-              >
-                <Feather name="headphones" size={13} color="#E11D48" />
-                <Text className="text-rose-600 text-[11px] font-black uppercase tracking-wider">Support</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                activeOpacity={0.6}
-                onPress={() => setShowUserTicketsModal(true)}
-                className="p-2 items-center justify-center"
-                accessibilityRole="button"
-                accessibilityLabel="My Support Tickets"
-              >
-                <Feather name="file-text" size={18} color="#101828" />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              activeOpacity={0.6}
+              onPress={() => setShowUserTicketsModal(true)}
+              className="p-2 items-center justify-center mt-0.5"
+              accessibilityRole="button"
+              accessibilityLabel="My Support Tickets"
+            >
+              <Feather name="file-text" size={20} color="#101828" />
+            </TouchableOpacity>
           </View>
         </View>
 
