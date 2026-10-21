@@ -2613,7 +2613,18 @@ export default function ProfileScreen() {
                     {/* Current Selected Avatar */}
                     <View className="w-16 h-16 rounded-full border-2 border-rose-500 p-0.5 bg-white shadow-sm">
                       <Image
-                        source={{ uri: editAvatar || DEFAULT_AVATARS[0].uri }}
+                        source={(() => {
+                          const activeGender = (editGender || profile.gender || '').toLowerCase();
+                          const isMale = activeGender === 'male';
+                          const rawAvatar = editAvatar || profile.avatar || user?.avatar;
+                          if (isMale && (!rawAvatar || rawAvatar.includes('photo-1534528741775') || rawAvatar.includes('photo-1544005313') || rawAvatar.includes('photo-1506794778') || rawAvatar.includes('selfie.jpg'))) {
+                            return MASTER_TRAINER_AVATAR_IMAGE;
+                          }
+                          if (rawAvatar && typeof rawAvatar === 'string' && (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:')) && !rawAvatar.includes('selfie.jpg')) {
+                            return { uri: rawAvatar };
+                          }
+                          return isMale ? MASTER_TRAINER_AVATAR_IMAGE : { uri: getDefaultAvatarForGender(activeGender) };
+                        })()}
                         className="w-full h-full rounded-full"
                       />
                     </View>
