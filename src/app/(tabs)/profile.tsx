@@ -1390,28 +1390,7 @@ export default function ProfileScreen() {
               </View>
 
 
-              {/* Admin Control Panel direct entry button (Only for authorized admin role) */}
-              {user?.role === 'admin' && (
-                <View className="mb-4">
-                  <LuxuryCard 
-                    className="p-4 bg-indigo-950 border border-indigo-800 shadow-md rounded-[24px]"
-                    onPress={() => router.push('/admin-panel' as any)}
-                  >
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-row items-center gap-3">
-                        <View className="w-9 h-9 rounded-xl bg-indigo-600 items-center justify-center">
-                          <Feather name="shield" size={16} color="white" />
-                        </View>
-                        <View className="gap-0.5">
-                          <Text className="text-indigo-300 text-[8px] font-black uppercase tracking-widest">Administrator Access</Text>
-                          <Text className="text-white text-sm font-black tracking-tight">Open Admin Control Panel</Text>
-                        </View>
-                      </View>
-                      <Feather name="chevron-right" size={16} color="#A5B4FC" />
-                    </View>
-                  </LuxuryCard>
-                </View>
-              )}
+
 
               {/* Become a Trainer Option */}
               {user?.role !== 'trainer' && !hasApplied && (
