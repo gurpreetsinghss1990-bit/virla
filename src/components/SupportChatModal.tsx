@@ -8,6 +8,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
   ActivityIndicator
 } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -35,6 +36,29 @@ export function SupportChatModal({
   const scrollViewRef = useRef<ScrollView>(null);
 
   const chatId = ticket ? `support_ticket_${ticket.ticket_id || ticket.id}` : '';
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      const h = e.endCoordinates ? e.endCoordinates.height : 0;
+      setKeyboardHeight(h);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Load and subscribe to real-time chat messages
   useEffect(() => {
@@ -186,7 +210,10 @@ export function SupportChatModal({
 
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ flex: 1 }}
+          style={{ 
+            flex: 1, 
+            paddingBottom: Platform.OS === 'android' ? keyboardHeight : 0 
+          }}
           keyboardVerticalOffset={Platform.OS === 'ios' ? insets.bottom + 8 : 0}
         >
           {/* Messages Stream */}
