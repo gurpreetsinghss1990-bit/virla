@@ -19,6 +19,7 @@ interface Plan {
   gstText: string;
   gstVal: string;
   amountVal: string;
+  finalPrice?: string;
   idealFor: string;
   popular?: boolean;
   badge?: string;
@@ -49,11 +50,12 @@ const PLANS: Plan[] = [
     id: 'plan-ind-1',
     name: 'Single Session',
     credits: 1,
-    price: '₹1,574',
+    price: '₹1,499',
     savings: 'Standard rate',
-    gstText: '₹1,499 + 5% GST (₹75)',
+    gstText: '₹1,499 + 5% GST',
     gstVal: '₹75',
     amountVal: '₹1,499',
+    finalPrice: '₹1,574',
     perSessionText: '₹1,499 per session',
     idealFor: 'Start your journey - Ideal for a single trial session.',
     bulletPoints: [
@@ -66,12 +68,13 @@ const PLANS: Plan[] = [
     id: 'plan-ind-2',
     name: '8-Session Package',
     credits: 8,
-    price: '₹10,290',
-    originalPrice: '₹12,592',
+    price: '₹9,800',
+    originalPrice: '₹11,992',
     savings: 'Save ₹2,192 · 18.27% off',
-    gstText: '₹9,800 + 5% GST (₹490)',
+    gstText: '₹9,800 + 5% GST',
     gstVal: '₹490',
     amountVal: '₹9,800',
+    finalPrice: '₹10,290',
     perSessionText: '₹1,225 per session',
     idealFor: 'Build consistency - Best entry package for regular workouts.',
     bulletPoints: [
@@ -88,12 +91,13 @@ const PLANS: Plan[] = [
     id: 'plan-ind-3',
     name: '16-Session Package',
     credits: 16,
-    price: '₹18,900',
-    originalPrice: '₹25,184',
+    price: '₹18,000',
+    originalPrice: '₹23,984',
     savings: 'Save ₹5,984 · 24.95% off',
-    gstText: '₹18,000 + 5% GST (₹900)',
+    gstText: '₹18,000 + 5% GST',
     gstVal: '₹900',
     amountVal: '₹18,000',
+    finalPrice: '₹18,900',
     perSessionText: '₹1,125 per session',
     idealFor: 'Better results - Ideal for committed individuals targeting measurable goals.',
     bulletPoints: [
@@ -110,12 +114,13 @@ const PLANS: Plan[] = [
     id: 'plan-ind-4',
     name: '32-Session Package',
     credits: 32,
-    price: '₹36,120',
-    originalPrice: '₹50,368',
+    price: '₹34,400',
+    originalPrice: '₹47,968',
     savings: 'Save ₹13,568 · 28.29% off',
-    gstText: '₹34,400 + 5% GST (₹1,720)',
+    gstText: '₹34,400 + 5% GST',
     gstVal: '₹1,720',
     amountVal: '₹34,400',
+    finalPrice: '₹36,120',
     perSessionText: '₹1,075 per session',
     idealFor: 'Maximum transformation - Long-term wellness routine at the lowest per-session cost.',
     bulletPoints: [
@@ -130,11 +135,12 @@ const PLANS: Plan[] = [
     id: 'plan-ind-addon-buddy',
     name: 'Workout Buddy Add-On',
     credits: 1,
-    price: '₹524',
+    price: '₹499',
     savings: 'Bring a friend',
-    gstText: '₹499 + 5% GST (₹25)',
+    gstText: '₹499 + 5% GST',
     gstVal: '₹25',
     amountVal: '₹499',
+    finalPrice: '₹524',
     perSessionText: '₹499 per session add-on',
     idealFor: 'Bring a friend, partner, or family member to your existing solo session.',
     bulletPoints: [
@@ -150,11 +156,12 @@ const PLANS: Plan[] = [
     id: 'plan-cpl-1',
     name: 'Single Couple Session',
     credits: 1,
-    price: '₹1,994',
+    price: '₹1,899',
     savings: 'Train together',
-    gstText: '₹1,899 + 5% GST (₹95)',
+    gstText: '₹1,899 + 5% GST',
     gstVal: '₹95',
     amountVal: '₹1,899',
+    finalPrice: '₹1,994',
     perSessionText: '₹1,899 per 60-min session for both',
     idealFor: 'Train together - One trainer for two people.',
     bulletPoints: [
@@ -167,12 +174,13 @@ const PLANS: Plan[] = [
     id: 'plan-cpl-2',
     name: '8-Session Couple Package',
     credits: 8,
-    price: '₹13,650',
-    originalPrice: '₹15,952',
+    price: '₹13,000',
+    originalPrice: '₹15,192',
     savings: 'Save ₹2,192 · 14.43% off',
-    gstText: '₹13,000 + 5% GST (₹650)',
+    gstText: '₹13,000 + 5% GST',
     gstVal: '₹650',
     amountVal: '₹13,000',
+    finalPrice: '₹13,650',
     perSessionText: '₹1,625 per session for both',
     idealFor: 'Couple entry package - Train together consistently.',
     bulletPoints: [
@@ -190,12 +198,13 @@ const PLANS: Plan[] = [
     id: 'plan-cpl-3',
     name: '16-Session Couple Package',
     credits: 16,
-    price: '₹25,620',
-    originalPrice: '₹31,904',
+    price: '₹24,400',
+    originalPrice: '₹30,384',
     savings: 'Save ₹5,984 · 19.69% off',
-    gstText: '₹24,400 + 5% GST (₹1,220)',
+    gstText: '₹24,400 + 5% GST',
     gstVal: '₹1,220',
     amountVal: '₹24,400',
+    finalPrice: '₹25,620',
     perSessionText: '₹1,525 per session for both',
     idealFor: 'More consistency - Better shared value for partner training.',
     bulletPoints: [
@@ -212,12 +221,13 @@ const PLANS: Plan[] = [
     id: 'plan-cpl-4',
     name: '32-Session Couple Package',
     credits: 32,
-    price: '₹49,560',
-    originalPrice: '₹63,808',
+    price: '₹47,200',
+    originalPrice: '₹60,768',
     savings: 'Save ₹13,568 · 22.32% off',
-    gstText: '₹47,200 + 5% GST (₹2,360)',
+    gstText: '₹47,200 + 5% GST',
     gstVal: '₹2,360',
     amountVal: '₹47,200',
+    finalPrice: '₹49,560',
     perSessionText: '₹1,475 per session for both',
     idealFor: 'Best shared value - Long-term commitment and lifestyle change.',
     bulletPoints: [
@@ -908,17 +918,17 @@ export default function MembershipScreen() {
 
                     <View className="bg-zinc-50 border border-zinc-100 p-[18px] rounded-2xl gap-3">
                       <View className="flex-row justify-between items-center">
-                        <Text className="text-zinc-500 text-xs font-semibold">Subtotal (Base Price)</Text>
+                        <Text className="text-zinc-500 text-xs font-semibold">{selectedPlan.name}</Text>
                         <Text className="text-zinc-900 text-xs font-extrabold">{selectedPlan.amountVal}</Text>
                       </View>
                       <View className="flex-row justify-between items-center">
                         <Text className="text-zinc-500 text-xs font-semibold">GST (5%)</Text>
                         <Text className="text-zinc-900 text-xs font-extrabold">{selectedPlan.gstVal}</Text>
                       </View>
-                      <View className="h-[1px] bg-zinc-100 my-1" />
+                      <View className="h-[1px] bg-zinc-200 my-1" />
                       <View className="flex-row justify-between items-center">
                         <Text className="text-zinc-950 text-sm font-extrabold">Total Amount</Text>
-                        <Text className="text-[#4F46E5] text-sm font-extrabold">{selectedPlan.price}</Text>
+                        <Text className="text-[#4F46E5] text-base font-extrabold">{selectedPlan.finalPrice || selectedPlan.price}</Text>
                       </View>
                     </View>
 
@@ -932,7 +942,7 @@ export default function MembershipScreen() {
                         style={{ height: 54 }}
                       >
                         <Text className="text-white text-xs font-extrabold uppercase tracking-wide">
-                          Pay {selectedPlan.price} with Payment Gateway
+                          Pay {selectedPlan.finalPrice || selectedPlan.price} with Payment Gateway
                         </Text>
                       </TouchableOpacity>
 
