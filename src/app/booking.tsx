@@ -465,10 +465,10 @@ export default function BookingScreen() {
         return EXPERIENCES.find((e) => e.id === 'exp-combat') || EXPERIENCES[5];
       }
     }
-    return EXPERIENCES[0];
+    return null;
   };
 
-  const [selectedExperience, setSelectedExperience] = useState<Experience>(() => getInitialExperience());
+  const [selectedExperience, setSelectedExperience] = useState<Experience | null>(() => getInitialExperience());
   const [trainerPref, setTrainerPref] = useState<'any' | 'female' | 'male' | 'favourite'>(() => {
     const profile = Database.getProfile(useUserStore.getState().user?.id || '');
     const pref = (profile?.trainerPreference || 'no_preference').toLowerCase();
@@ -742,7 +742,7 @@ export default function BookingScreen() {
   };
 
   const getDevelopmentDiagnostics = () => {
-    const targetCategory = WORKOUT_CATEGORY_MAPPING[selectedExperience.id] || '';
+    const targetCategory = selectedExperience ? (WORKOUT_CATEGORY_MAPPING[selectedExperience.id] || '') : '';
     const customerAddress = addresses.find(a => a.id === selectedAddressId);
     
     const candidates = coaches.length;
@@ -826,6 +826,7 @@ export default function BookingScreen() {
   };
 
   const getDynamicAvailableSlots = (): any[] => {
+    if (!selectedExperience) return [];
     const targetCategory = WORKOUT_CATEGORY_MAPPING[selectedExperience.id] || '';
     if (!targetCategory) return [];
 
@@ -1129,7 +1130,7 @@ export default function BookingScreen() {
           `  Trainer active: ${isOnline ? 'PASS' : 'FAIL'}\n` +
           `  Trainer verified: ${isPartnerApproved ? 'PASS' : 'FAIL'}\n\n` +
           `Workout:\n` +
-          `  Requested workout: ${selectedExperience.title} (Category: ${targetCategory})\n` +
+          `  Requested workout: ${selectedExperience?.title || 'None'} (Category: ${targetCategory})\n` +
           `  Trainer workout approved: ${workoutApproved ? 'PASS' : 'FAIL'}\n\n` +
           `Date:\n` +
           `  Requested date: ${selectedDate} (${normalizedDateStr})\n` +
@@ -1332,7 +1333,7 @@ export default function BookingScreen() {
     const tempBooking = {
       id: 'temp-id',
       workoutTitle: (() => {
-        switch (selectedExperience.id) {
+        switch (selectedExperience?.id) {
           case 'exp-pilates': return 'Pilates';
           case 'exp-strength': return 'Strength Training';
           case 'exp-flow': return 'Yoga & Mobility';
@@ -1340,7 +1341,7 @@ export default function BookingScreen() {
           case 'exp-reset': return 'Stretch & Recovery';
           case 'exp-combat': return 'Boxing Fitness';
           case 'exp-aerial': return 'Aerial Yoga';
-          default: return selectedExperience.title || 'Pilates';
+          default: return selectedExperience?.title || 'Pilates';
         }
       })(),
       date: selectedDate,
@@ -1722,16 +1723,16 @@ export default function BookingScreen() {
 
     // Filter by specialty if applicable
     let specFilter = 'Strength';
-    if (selectedExperience.id === 'exp-pilates') specFilter = 'Pilates';
-    if (selectedExperience.id === 'exp-flow') specFilter = 'Yoga';
-    if (selectedExperience.id === 'exp-rhythm') specFilter = 'Dance';
-    if (selectedExperience.id === 'exp-reset') specFilter = 'Mobility';
-    if (selectedExperience.id === 'exp-combat') specFilter = 'Boxing';
-    if (selectedExperience.id === 'exp-aerial') specFilter = 'Aerial Yoga';
+    if (selectedExperience?.id === 'exp-pilates') specFilter = 'Pilates';
+    if (selectedExperience?.id === 'exp-flow') specFilter = 'Yoga';
+    if (selectedExperience?.id === 'exp-rhythm') specFilter = 'Dance';
+    if (selectedExperience?.id === 'exp-reset') specFilter = 'Mobility';
+    if (selectedExperience?.id === 'exp-combat') specFilter = 'Boxing';
+    if (selectedExperience?.id === 'exp-aerial') specFilter = 'Aerial Yoga';
 
     let specialtyPool = pool.filter(c => c.specialty.includes(specFilter) || c.workoutSpecialties?.some(s => s.includes(specFilter)));
     if (specialtyPool.length === 0) {
-      if (selectedExperience.id === 'exp-aerial') {
+      if (selectedExperience?.id === 'exp-aerial') {
         Alert.alert('No Trainers Available ⚠️', 'No certified Aerial Yoga trainers are currently available in your area.');
         setStep(2);
         setMatchedCoach(undefined as any);
@@ -1793,7 +1794,7 @@ export default function BookingScreen() {
       trainerName: activeCoach.name,
       trainerPhoto: activeCoach.photo,
       workoutTitle: (() => {
-        switch (selectedExperience.id) {
+        switch (selectedExperience?.id) {
           case 'exp-pilates': return 'Pilates';
           case 'exp-strength': return 'Strength Training';
           case 'exp-flow': return 'Yoga & Mobility';
@@ -1801,14 +1802,14 @@ export default function BookingScreen() {
           case 'exp-reset': return 'Stretch & Recovery';
           case 'exp-combat': return 'Boxing Fitness';
           case 'exp-aerial': return 'Aerial Yoga';
-          default: return selectedExperience.title || 'Pilates';
+          default: return selectedExperience?.title || 'Pilates';
         }
       })(),
       date: selectedDate,
       time: selectedTime,
       price: activeCoach.price || 1200,
       address: targetAddress,
-      goal: selectedExperience.title,
+      goal: selectedExperience?.title || 'Workout',
       trainerLevel: activeCoach.level || 'Certified',
       trainerRating: activeCoach.rating,
       trainerCompletedSessions: activeCoach.completedSessions || 150,
@@ -1819,7 +1820,7 @@ export default function BookingScreen() {
       assignedTrainersPool: [activeCoach.id],
       currentTrainerIndex: 0,
       trainerNote: trainerNote.trim() || undefined,
-      durationMinutes: selectedExperience.duration || 60,
+      durationMinutes: selectedExperience?.duration || 60,
       createdAt: Date.now(),
       participantCount: isCouple ? 2 : 1,
       sessionType: (isCouple ? 'COUPLE' : 'SINGLE') as 'SINGLE' | 'COUPLE',
@@ -1863,7 +1864,7 @@ export default function BookingScreen() {
         // Trigger notifications
         addNotification({
           title: 'Booking Confirmed 📅',
-          body: `Your VIRLA ${selectedExperience.title} session is confirmed for ${selectedDate} @ ${selectedTime}. Waiting for Trainer Confirmation.`,
+          body: `Your VIRLA ${selectedExperience?.title || 'Workout'} session is confirmed for ${selectedDate} @ ${selectedTime}. Waiting for Trainer Confirmation.`,
         });
 
         setSuccessBookingId(finalBooking.id);
@@ -2120,11 +2121,11 @@ export default function BookingScreen() {
 
                   <View className="gap-3.5">
                     {EXPERIENCES.map((exp) => {
-                      const isSelected = selectedExperience.id === exp.id;
+                      const isSelected = selectedExperience?.id === exp.id;
                       return (
                         <TouchableOpacity
                           key={exp.id}
-                          activeOpacity={0.9}
+                          activeOpacity={0.75}
                           onPress={() => {
                             setSelectedExperience(exp);
                           }}
@@ -3452,7 +3453,7 @@ export default function BookingScreen() {
                     }
 
                     const availableSlots = getDynamicAvailableSlots();
-                    const targetCategory = WORKOUT_CATEGORY_MAPPING[selectedExperience.id] || '';
+                    const targetCategory = selectedExperience ? (WORKOUT_CATEGORY_MAPPING[selectedExperience.id] || '') : '';
                     const customerLat = customerAddress?.lat || 0;
                     const customerLng = customerAddress?.lng || 0;
                     const finalEligibleTrainers = coaches.filter(coach => {
@@ -3579,7 +3580,7 @@ export default function BookingScreen() {
                             <TouchableOpacity
                               activeOpacity={0.8}
                               onPress={() => {
-                                Alert.alert('Notification Set 🔔', `We will alert you as soon as a coach for ${selectedExperience.title} becomes available on this date.`);
+                                Alert.alert('Notification Set 🔔', `We will alert you as soon as a coach for ${selectedExperience?.title || 'this workout'} becomes available on this date.`);
                               }}
                               className="bg-[#101828] py-4 rounded-xl items-center justify-center"
                             >
@@ -3757,11 +3758,11 @@ export default function BookingScreen() {
                     {/* Workout Info: Thumbnail, Title, Solo Badge */}
                     <View className="flex-row gap-4 items-center mt-1">
                       <Image 
-                        source={{ uri: getWorkoutImage(selectedExperience.id) }} 
+                        source={{ uri: getWorkoutImage(selectedExperience?.id || 'exp-strength') }} 
                         className="w-20 h-20 rounded-[20px] bg-zinc-50 border border-zinc-100" 
                       />
                       <View className="flex-1 gap-1.5">
-                        <Text className="text-[#101828] text-base font-bold tracking-tight">{selectedExperience.title}</Text>
+                        <Text className="text-[#101828] text-base font-bold tracking-tight">{selectedExperience?.title || 'Workout Session'}</Text>
                         <View className="flex-row">
                           <View className="bg-rose-50 border border-rose-100 px-2.5 py-1 rounded-full flex-row items-center gap-1.5">
                             <Feather name="user" size={10} color="#E11D48" />
@@ -3789,7 +3790,7 @@ export default function BookingScreen() {
                           <Text className="text-[#6B7280] text-[13px] font-medium">Time</Text>
                         </View>
                         <Text className="text-[#101828] text-[13px] font-bold">
-                          {getCustomerDisplayTime(selectedTime)} <Text className="text-[#6B7280] font-normal">({selectedExperience.duration} min)</Text>
+                          {getCustomerDisplayTime(selectedTime)} <Text className="text-[#6B7280] font-normal">({selectedExperience?.duration || 60} min)</Text>
                         </Text>
                       </View>
 
@@ -4011,8 +4012,8 @@ export default function BookingScreen() {
               {/* STEP 7: SUCCESS EXPERIENCE */}
               {step === 7 && (
                 <BookingSuccessAnimation
-                  workoutTitle={selectedExperience.title}
-                  workoutDuration={selectedExperience.duration}
+                  workoutTitle={selectedExperience?.title || 'Workout Session'}
+                  workoutDuration={selectedExperience?.duration || 60}
                   selectedDate={selectedDate}
                   selectedTime={selectedTime}
                   locationAddress={addresses.find(a => a.id === selectedAddressId)?.addressLine || 'Selected Location'}
