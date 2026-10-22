@@ -950,20 +950,35 @@ export default function ProfileScreen() {
                         VIRLA PASS
                       </Text>
                     </View>
-                    <Text className="text-white text-2xl font-black mt-1 tracking-tight">
-                      {(() => {
-                        const bal = creditBalance ?? profile.creditsBalance ?? membership.availableCredits ?? 0;
-                        if (bal <= 0) return 'STANDARD';
+                    {(() => {
+                      const bal = creditBalance ?? profile.creditsBalance ?? membership.availableCredits ?? 0;
+                      let passTier = 'STANDARD';
+                      let passColor = '#FFFFFF';
+
+                      if (bal <= 0) {
+                        passTier = 'STANDARD';
+                        passColor = '#94A3B8';
+                      } else if (bal >= 15) {
+                        passTier = 'ELITE PASS';
+                        passColor = '#F59E0B'; // Gold Amber matching Crown
+                      } else if (bal >= 12) {
+                        passTier = 'ACTIVE PASS';
+                        passColor = '#38BDF8'; // Sky Blue
+                      } else if (bal >= 8) {
+                        passTier = 'STARTER PASS';
+                        passColor = '#A78BFA'; // Purple
+                      } else {
                         const status = (profile.membershipStatus || membership.tier || '').trim().toUpperCase();
-                        if (status && status !== 'STANDARD' && status !== 'NONE') {
-                          return status;
-                        }
-                        if (bal >= 15) return 'ELITE PASS';
-                        if (bal >= 12) return 'ACTIVE PASS';
-                        if (bal >= 8) return 'STARTER PASS';
-                        return 'PREMIUM';
-                      })()}
-                    </Text>
+                        passTier = (status && status !== 'STANDARD' && status !== 'NONE') ? status : 'PREMIUM';
+                        passColor = '#34D399'; // Emerald
+                      }
+
+                      return (
+                        <Text style={{ color: passColor }} className="text-2xl font-black mt-1 tracking-tight">
+                          {passTier}
+                        </Text>
+                      );
+                    })()}
                   </TouchableOpacity>
                   <View className="bg-white p-1.5 rounded-xl shadow-xs">
                     <Ionicons name="qr-code" size={32} color="#0B1528" />
