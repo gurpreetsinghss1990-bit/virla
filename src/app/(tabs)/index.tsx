@@ -891,8 +891,8 @@ export default function HomeScreen() {
   }, [savedPlan?.workoutFrequency]);
 
   // Animations
-  const [fadeAnim] = useState(() => new Animated.Value(0));
-  const [slideAnim] = useState(() => new Animated.Value(20));
+  const [fadeAnim] = useState(() => new Animated.Value(1));
+  const [slideAnim] = useState(() => new Animated.Value(0));
   const [pulseAnim] = useState(() => new Animated.Value(1));
 
   // AI recommendations array
@@ -921,20 +921,12 @@ export default function HomeScreen() {
   }, [recs]);
 
   useEffect(() => {
-    fadeAnim.setValue(0);
-    slideAnim.setValue(20);
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      })
-    ]).start();
+    slideAnim.setValue(10);
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 350,
+      useNativeDriver: true,
+    }).start();
 
     Animated.loop(
       Animated.sequence([
@@ -942,7 +934,7 @@ export default function HomeScreen() {
         Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: true })
       ])
     ).start();
-  }, [role, fadeAnim, slideAnim, pulseAnim]);
+  }, [role, slideAnim, pulseAnim]);
 
   useEffect(() => {
     if (user.id) {
@@ -1262,7 +1254,7 @@ export default function HomeScreen() {
             className="bg-[#FCF5F5] flex-1"
           >
             <Animated.View
-          style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
+          style={{ opacity: 1, transform: [{ translateY: slideAnim }] }}
           className="px-6 pt-6 gap-8"
         >
           {/* ==================== CLIENT MODE DASHBOARD ==================== */}
