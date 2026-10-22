@@ -11,6 +11,7 @@ import {
   Keyboard,
   ActivityIndicator
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../database/supabaseClient';
@@ -29,14 +30,42 @@ export function SupportChatModal({
   currentRole,
   onClose,
 }: SupportChatModalProps) {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState<string>('');
   const [isSending, setIsSending] = useState<boolean>(false);
+  const [userCredits, setUserCredits] = useState<number | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const chatId = ticket ? `support_ticket_${ticket.ticket_id || ticket.id}` : '';
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Fetch client user credits if admin
+  useEffect(() => {
+    if (!visible || !ticket?.user_id) return;
+    
+    // 1. Try local cache
+    const profile = Database.getProfile(ticket.user_id);
+    if (profile && typeof profile.creditsBalance === 'number') {
+      setUserCredits(profile.creditsBalance);
+    }
+
+    // 2. Fetch fresh credits balance from Supabase
+    supabase
+      .from('user_profiles')
+      .select('credits_balance')
+      .eq('user_id', ticket.user_id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data && typeof data.credits_balance === 'number') {
+          setUserCredits(data.credits_balance);
+        }
+      })
+      .catch((err) => {
+        console.warn('[SupportChatModal] Fetch user credits error:', err);
+      });
+  }, [visible, ticket?.user_id]);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -186,6 +215,16 @@ export function SupportChatModal({
               </Text>
             </View>
           </View>
+
+          {/* User Credits Balance Tag (Visible to Admin in Support Chat) */}
+          {currentRole === 'admin' && (
+            <View className="flex-row items-center gap-1.5 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl">
+              <Feather name="credit-card" size={11} color="#D97706" />
+              <Text className="text-amber-800 text-[10px] font-black uppercase">
+                {userCredits !== null ? `${userCredits} Credits` : 'Credits: ...'}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Ticket Diagnostic Overview Header */}
@@ -282,6 +321,29 @@ export function SupportChatModal({
                     >
                       {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </Text>
+
+                    {/* Admin option to view session details attached below the issue report card */}
+                    {isTicketSummary && currentRole === 'admin' && ticket.booking_id && (
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          onClose();
+                          router.push({
+                            pathname: '/session-detail',
+                            params: { id: ticket.booking_id },
+                          });
+                        }}
+                        className="mt-2.5 pt-2 border-t border-rose-200/80 flex-row items-center justify-between"
+                      >
+                        <View className="flex-row items-center gap-1.5">
+                          <Feather name="external-link" size={12} color="#E11D48" />
+                          <Text className="text-[#E11D48] text-[10px] font-black uppercase tracking-wider">
+                            User & Trainer Session Details
+                          </Text>
+                        </View>
+                        <Feather name="chevron-right" size={12} color="#E11D48" />
+                      </TouchableOpacity>
+                    )}
                   </View>
                 );
               })
