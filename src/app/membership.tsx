@@ -24,6 +24,8 @@ interface Plan {
   badge?: string;
   ribbon?: string;
   category: 'individual' | 'couple';
+  perSessionText?: string;
+  bulletPoints?: string[];
 }
 
 const PLANS: Plan[] = [
@@ -41,110 +43,187 @@ const PLANS: Plan[] = [
     category: 'individual',
     badge: 'DEV TEST (₹1)',
   },
-  // Individual Plans (1 Person)
+  // Individual Plans (1 Person) - Image 1000080404.jpg
   {
     id: 'plan-ind-1',
     name: 'Single Session',
     credits: 1,
-    price: '₹1,499',
-    savings: '0% Save',
-    gstText: '₹1,270 + 18% GST',
-    gstVal: '₹229',
-    amountVal: '₹1,270',
-    idealFor: 'Casual visits or trying out a new program workout.',
+    price: '₹1,574',
+    savings: 'Standard rate',
+    gstText: '₹1,499 + 5% GST (₹75)',
+    gstVal: '₹75',
+    amountVal: '₹1,499',
+    perSessionText: '₹1,499 per session',
+    idealFor: 'Start your journey - Ideal for a single trial session.',
+    bulletPoints: [
+      'One trainer, one participant, personalized 60-minute session.',
+      'Designed to test the experience or for occasional workout needs.',
+    ],
     category: 'individual'
   },
   {
     id: 'plan-ind-2',
-    name: 'Starter Pack',
+    name: '8-Session Package',
     credits: 8,
-    price: '₹10,999',
-    savings: '8% Savings',
-    gstText: '₹9,321 + 18% GST',
-    gstVal: '₹1,678',
-    amountVal: '₹9,321',
-    idealFor: 'Weekly wellness routines at home.',
+    price: '₹10,290',
+    originalPrice: '₹12,592',
+    savings: 'Save ₹2,192 · 18.27% off',
+    gstText: '₹9,800 + 5% GST (₹490)',
+    gstVal: '₹490',
+    amountVal: '₹9,800',
+    perSessionText: '₹1,225 per session',
+    idealFor: 'Build consistency - Best entry package for regular workouts.',
+    bulletPoints: [
+      'FOUNDING 100 - EXCLUSIVE LAUNCH OFFER for first 100 members at ₹9,800.',
+      'Save ₹2,192 compared with booking 8 single sessions at ₹1,499 each.',
+      'Designed to establish a consistent, progressive training routine.',
+    ],
+    badge: 'LAUNCH OFFER',
+    ribbon: 'FOUNDING 100 · SAVE ₹2,192',
     category: 'individual'
   },
   {
     id: 'plan-ind-3',
-    name: 'Active Pack',
-    credits: 12,
-    price: '₹11,999',
-    originalPrice: '₹14,999',
-    savings: '20% Savings',
-    gstText: '₹10,169 + 18% GST',
-    gstVal: '₹1,830',
-    amountVal: '₹10,169',
+    name: '16-Session Package',
+    credits: 16,
+    price: '₹18,900',
+    originalPrice: '₹25,184',
+    savings: 'Save ₹5,984 · 24.95% off',
+    gstText: '₹18,000 + 5% GST (₹900)',
+    gstVal: '₹900',
+    amountVal: '₹18,000',
+    perSessionText: '₹1,125 per session',
+    idealFor: 'Better results - Ideal for committed individuals targeting measurable goals.',
+    bulletPoints: [
+      'Save ₹5,984 compared with booking 16 single sessions at ₹1,499 each.',
+      'Structured progression across multiple weeks for sustained fitness.',
+      'A lower per-session rate for members committed to regular workouts.',
+    ],
     popular: true,
-    idealFor: 'Our most popular pack for serious fitness goals.',
     badge: 'MOST POPULAR',
-    ribbon: 'FIRST TIME OFFER – SAVE 20%',
+    ribbon: 'BEST RESULTS · SAVE ₹5,984',
     category: 'individual'
   },
   {
     id: 'plan-ind-4',
-    name: 'Elite Pack',
-    credits: 15,
-    price: '₹17,999',
-    savings: '20% Savings',
-    gstText: '₹15,253 + 18% GST',
-    gstVal: '₹2,746',
-    amountVal: '₹15,253',
-    idealFor: 'Complete consistency with private home training.',
+    name: '32-Session Package',
+    credits: 32,
+    price: '₹36,120',
+    originalPrice: '₹50,368',
+    savings: 'Save ₹13,568 · 28.29% off',
+    gstText: '₹34,400 + 5% GST (₹1,720)',
+    gstVal: '₹1,720',
+    amountVal: '₹34,400',
+    perSessionText: '₹1,075 per session',
+    idealFor: 'Maximum transformation - Long-term wellness routine at the lowest per-session cost.',
+    bulletPoints: [
+      'Save ₹13,568 compared with booking 32 single sessions at ₹1,499 each.',
+      'Lowest per-session rate in our individual package range.',
+      'Full lifestyle transformation program with steady trainer tracking.',
+    ],
+    badge: 'BEST VALUE',
     category: 'individual'
   },
-  // Couple Plans (Train Together)
+  {
+    id: 'plan-ind-addon-buddy',
+    name: 'Workout Buddy Add-On',
+    credits: 1,
+    price: '₹524',
+    savings: 'Bring a friend',
+    gstText: '₹499 + 5% GST (₹25)',
+    gstVal: '₹25',
+    amountVal: '₹499',
+    perSessionText: '₹499 per session add-on',
+    idealFor: 'Bring a friend, partner, or family member to your existing solo session.',
+    bulletPoints: [
+      'Add a partner to an individual personal training session.',
+      'Both participants train together in the same 60-minute slot.',
+      'Valid as an add-on per session.',
+    ],
+    badge: 'OPTIONAL ADD-ON',
+    category: 'individual'
+  },
+  // Couple Plans (Train Together) - Image 1000080407.jpg
   {
     id: 'plan-cpl-1',
-    name: 'Couple Single Session',
+    name: 'Single Couple Session',
     credits: 1,
-    price: '₹2,499',
-    savings: '0% Save',
-    gstText: '₹2,118 + 18% GST',
-    gstVal: '₹381',
-    amountVal: '₹2,118',
-    idealFor: 'Single training session with your partner or friend.',
+    price: '₹1,994',
+    savings: 'Train together',
+    gstText: '₹1,899 + 5% GST (₹95)',
+    gstVal: '₹95',
+    amountVal: '₹1,899',
+    perSessionText: '₹1,899 per 60-min session for both',
+    idealFor: 'Train together - One trainer for two people.',
+    bulletPoints: [
+      'One trainer leads both participants in the same session.',
+      'Both participants must attend together at the same location.',
+    ],
     category: 'couple'
   },
   {
     id: 'plan-cpl-2',
-    name: 'Couple Starter Pack',
+    name: '8-Session Couple Package',
     credits: 8,
-    price: '₹17,999',
-    savings: '10% Savings',
-    gstText: '₹15,253 + 18% GST',
-    gstVal: '₹2,746',
-    amountVal: '₹15,253',
-    idealFor: 'Weekly routine for couples or training partners.',
+    price: '₹13,650',
+    originalPrice: '₹15,952',
+    savings: 'Save ₹2,192 · 14.43% off',
+    gstText: '₹13,000 + 5% GST (₹650)',
+    gstVal: '₹650',
+    amountVal: '₹13,000',
+    perSessionText: '₹1,625 per session for both',
+    idealFor: 'Couple entry package - Train together consistently.',
+    bulletPoints: [
+      'FOUNDING 100 - EXCLUSIVE COUPLE LAUNCH OFFER at ₹13,000 (First 100 couples).',
+      '8 shared personal training sessions for two people.',
+      'Save ₹2,192 compared with booking 8 single couple sessions at ₹1,899 each.',
+      'A convenient way to train together while sharing one trainer and session.',
+    ],
+    badge: 'COUPLE LAUNCH',
+    ribbon: 'FOUNDING 100 · SAVE ₹2,192',
     category: 'couple'
   },
   {
     id: 'plan-cpl-3',
-    name: 'Couple Active Pack',
-    credits: 12,
-    price: '₹19,199',
-    originalPrice: '₹23,988',
-    savings: '20% Savings',
-    gstText: '₹16,270 + 18% GST',
-    gstVal: '₹2,929',
-    amountVal: '₹16,270',
+    name: '16-Session Couple Package',
+    credits: 16,
+    price: '₹25,620',
+    originalPrice: '₹31,904',
+    savings: 'Save ₹5,984 · 19.69% off',
+    gstText: '₹24,400 + 5% GST (₹1,220)',
+    gstVal: '₹1,220',
+    amountVal: '₹24,400',
+    perSessionText: '₹1,525 per session for both',
+    idealFor: 'More consistency - Better shared value for partner training.',
+    bulletPoints: [
+      '16 shared personal training sessions for two people.',
+      'Save ₹5,984 compared with booking 16 single couple sessions at ₹1,899 each.',
+      'A lower per-session rate for couples who want to train together regularly.',
+    ],
     popular: true,
-    idealFor: 'Our hero couples package for regular training.',
     badge: 'MOST POPULAR',
-    ribbon: 'FIRST TIME OFFER – SAVE 20%',
+    ribbon: 'BEST VALUE COUPLE · SAVE ₹5,984',
     category: 'couple'
   },
   {
     id: 'plan-cpl-4',
-    name: 'Couple Elite Pack',
-    credits: 15,
-    price: '₹29,999',
-    savings: '20% Savings',
-    gstText: '₹25,423 + 18% GST',
-    gstVal: '₹4,576',
-    amountVal: '₹25,423',
-    idealFor: 'Elite wellness consistency for partners.',
+    name: '32-Session Couple Package',
+    credits: 32,
+    price: '₹49,560',
+    originalPrice: '₹63,808',
+    savings: 'Save ₹13,568 · 22.32% off',
+    gstText: '₹47,200 + 5% GST (₹2,360)',
+    gstVal: '₹2,360',
+    amountVal: '₹47,200',
+    perSessionText: '₹1,475 per session for both',
+    idealFor: 'Best shared value - Long-term commitment and lifestyle change.',
+    bulletPoints: [
+      '32 shared personal training sessions for two people.',
+      'Save ₹13,568 compared with booking 32 single couple sessions at ₹1,899 each.',
+      'Lowest per-session rate in the couple package range.',
+      'Designed for partners who want a consistent shared training routine.',
+    ],
+    badge: 'BEST VALUE',
     category: 'couple'
   }
 ];
@@ -460,9 +539,14 @@ export default function MembershipScreen() {
                         <View className="flex-row items-center gap-1.5 mt-1">
                           <Feather name="zap" size={11} color="#FB7185" />
                           <Text className="text-[#FB7185] text-[12px] font-semibold">
-                            {plan.credits} {plan.credits === 1 ? 'Credit' : 'Credits'} Included
+                            {plan.credits} {plan.credits === 1 ? 'Session / Credit' : 'Sessions / Credits'}
                           </Text>
                         </View>
+                        {plan.perSessionText && (
+                          <Text className="text-zinc-300 text-[11px] font-semibold mt-0.5">
+                            {plan.perSessionText}
+                          </Text>
+                        )}
                         <Text className="text-zinc-400 text-[12px] font-normal leading-[17px] mt-1">
                           {plan.idealFor}
                         </Text>
@@ -502,9 +586,14 @@ export default function MembershipScreen() {
                       <View className="flex-row items-center gap-1.5 mt-1">
                         <Feather name="zap" size={11} color="#E11D48" />
                         <Text className="text-[#E11D48] text-[12px] font-semibold">
-                          {plan.credits} {plan.credits === 1 ? 'Credit' : 'Credits'} Included
+                          {plan.credits} {plan.credits === 1 ? 'Session / Credit' : 'Sessions / Credits'}
                         </Text>
                       </View>
+                      {plan.perSessionText && (
+                        <Text className="text-zinc-600 text-[11px] font-semibold mt-0.5">
+                          {plan.perSessionText}
+                        </Text>
+                      )}
                       <Text className="text-zinc-400 text-[12px] font-normal leading-[17px] mt-1">
                         {plan.idealFor}
                       </Text>
@@ -522,21 +611,41 @@ export default function MembershipScreen() {
           })}
         </View>
 
-        {/* GOOD TO KNOW — Clean Seamless Section */}
-        <View className="mt-5 mb-4 px-0.5">
-          <View className="flex-row items-center gap-2 mb-3">
+        {/* HOW WORKOUTS WORK — Informative Section from Posters */}
+        <View className="mt-5 mb-4 p-4 rounded-2xl bg-zinc-50 border border-zinc-200/80">
+          <View className="flex-row items-center gap-2 mb-2">
             <Feather name="info" size={14} color="#18181B" />
+            <Text className="text-zinc-950 text-xs font-bold uppercase tracking-wider">
+              {activeCategory === 'individual' ? 'HOW INDIVIDUAL WORKOUTS WORK' : 'HOW COUPLE WORKOUTS WORK'}
+            </Text>
+          </View>
+          <Text className="text-zinc-600 text-[12.5px] font-normal leading-[19px]">
+            {activeCategory === 'individual'
+              ? 'Individual packages cover one participant training 1-on-1 with a certified trainer for a personalized 60-minute session at your home or doorstep. The optional ₹499 Workout Buddy add-on allows you to bring a friend or partner to your solo session.'
+              : 'Couple packages cover two people training together with one trainer, at the same location, for the same 60-minute session. They cannot be used to book separate solo sessions. The ₹499 individual workout-buddy add-on is a separate option for occasional shared sessions and is not a standalone service.'}
+          </Text>
+          <Text className="text-zinc-400 text-[10.5px] font-medium leading-[15px] mt-2.5">
+            {activeCategory === 'individual'
+              ? 'Individual package savings are calculated against the single session price of ₹1,499, before 5% GST. Founding 100 offer applies to the 8-session package.'
+              : 'Couple package savings are calculated against the single couple session price of ₹1,899, before 5% GST. Founding 100 offer applies to the 8-session couple package.'}
+          </Text>
+        </View>
+
+        {/* GOOD TO KNOW — Clean Seamless Section */}
+        <View className="mt-2 mb-4 px-0.5">
+          <View className="flex-row items-center gap-2 mb-3">
+            <Feather name="check-circle" size={14} color="#18181B" />
             <Text className="text-zinc-950 text-xs font-bold uppercase tracking-wider">GOOD TO KNOW</Text>
           </View>
 
           <View className="gap-2.5">
             {[
-              'Each credit equals one 60-minute training session.',
-              'Credits can be used for any available workout category.',
-              'Credits can be shared with your friends and family.',
-              'Individual packages are valid for one participant per session.',
-              'Couple packages are valid for two participants training together in the same session.',
-              'Unused credits follow the VIRLA renewal policy.'
+              'Each session equals one 60-minute training session at your doorstep.',
+              'All package prices are exclusive of 5% GST (GST charged at 5% checkout).',
+              'Sessions can be used for any available workout style (Strength, Flow, Cardio, Reset, Combat).',
+              'Credits/Sessions can be scheduled flexibly with top verified VIRLA coaches.',
+              'Individual packages: 1 participant. Couple packages: 2 participants together.',
+              'Unused sessions follow the VIRLA renewal & validity policy.'
             ].map((text, idx) => (
               <View key={idx} className="flex-row items-start gap-2.5">
                 <View className="w-1.5 h-1.5 rounded-full bg-zinc-400 mt-2" />
@@ -597,11 +706,11 @@ export default function MembershipScreen() {
 
         {/* Pricing Disclaimers */}
         <View className="mt-6 mb-8 gap-1">
-          <Text className="text-zinc-400 text-[10px] font-normal leading-[15px]">
-            * Prices shown include all applicable taxes.
+          <Text className="text-zinc-400 text-[10.5px] font-normal leading-[15px]">
+            * All prices are subject to 5% GST as displayed at checkout.
           </Text>
-          <Text className="text-zinc-400 text-[10px] font-normal leading-[15px]">
-            * First-time discount is applicable only on the first purchase of the 12 Credit Active Pack.
+          <Text className="text-zinc-400 text-[10.5px] font-normal leading-[15px]">
+            * Founding 100 promotional pricing applies exclusively to the 8-session packages.
           </Text>
         </View>
       </ScrollView>
@@ -724,14 +833,16 @@ export default function MembershipScreen() {
                     </View>
 
                     <View className="gap-2.5">
-                      <Text className="text-zinc-950 text-[10px] font-bold uppercase">What&apos;s included</Text>
-                      {[
-                        'Book any workout category (Strength, Flow, Cardio, Reset, Combat)',
-                        'Pause anytime options (up to validity limits)',
-                        'Premium verified VIRLA trainers automatically assigned',
-                        'Priority matching support algorithms',
-                        'Dedicated VIP Concierge customer support'
-                      ].map((item, idx) => (
+                      <Text className="text-zinc-950 text-[10px] font-bold uppercase">Package Highlights</Text>
+                      {(selectedPlan.bulletPoints && selectedPlan.bulletPoints.length > 0
+                        ? selectedPlan.bulletPoints
+                        : [
+                            'One trainer, private personalized 60-minute session.',
+                            'Book any workout category (Strength, Flow, Cardio, Reset, Combat)',
+                            'Premium verified VIRLA trainers automatically assigned',
+                            'Unused credits follow the VIRLA renewal policy.'
+                          ]
+                      ).map((item, idx) => (
                         <View key={idx} className="flex-row gap-2.5 items-start pl-1">
                           <View className="mt-0.5">
                             <Feather name="check" size={12} color="#10B981" />
@@ -762,16 +873,16 @@ export default function MembershipScreen() {
 
                     <View className="bg-zinc-50 border border-zinc-100 p-[18px] rounded-2xl gap-3">
                       <View className="flex-row justify-between items-center">
-                        <Text className="text-zinc-500 text-xs font-semibold">Subtotal Price</Text>
+                        <Text className="text-zinc-500 text-xs font-semibold">Subtotal (Base Price)</Text>
                         <Text className="text-zinc-900 text-xs font-extrabold">{selectedPlan.amountVal}</Text>
                       </View>
                       <View className="flex-row justify-between items-center">
-                        <Text className="text-zinc-500 text-xs font-semibold">GST charge (18%)</Text>
+                        <Text className="text-zinc-500 text-xs font-semibold">GST (5%)</Text>
                         <Text className="text-zinc-900 text-xs font-extrabold">{selectedPlan.gstVal}</Text>
                       </View>
                       <View className="h-[1px] bg-zinc-100 my-1" />
                       <View className="flex-row justify-between items-center">
-                        <Text className="text-zinc-950 text-sm font-extrabold">Total Paid amount</Text>
+                        <Text className="text-zinc-950 text-sm font-extrabold">Total Amount</Text>
                         <Text className="text-[#4F46E5] text-sm font-extrabold">{selectedPlan.price}</Text>
                       </View>
                     </View>
