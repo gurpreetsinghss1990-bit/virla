@@ -228,25 +228,64 @@ export async function reverseGeocodeCoords(
   // Native Expo Location fallback
   try {
     const Location = require('expo-location');
-    const addressList = await Location.reverseGeocodeAsync({ latitude, longitude });
-    if (addressList && addressList.length > 0) {
-      const addr = addressList[0];
-      const parts = [
-        addr.name,
-        addr.street,
-        addr.district,
-        addr.subregion,
-        addr.city,
-        addr.region,
-        addr.postalCode,
-        addr.country
-      ].filter(p => !!p);
-      return {
-        address: parts.join(', ') || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
-      };
+    const { status } = await Location.getForegroundPermissionsAsync();
+    if (status === 'granted') {
+      const addressList = await Location.reverseGeocodeAsync({ latitude, longitude });
+      if (addressList && addressList.length > 0) {
+        const addr = addressList[0];
+        const parts = [
+          addr.name,
+          addr.street,
+          addr.district,
+          addr.subregion,
+          addr.city,
+          addr.region,
+          addr.postalCode,
+          addr.country
+        ].filter(p => !!p);
+        const resolved = parts.join(', ');
+        if (resolved) {
+          return { address: resolved };
+        }
+      }
     }
   } catch (error: any) {
-    console.error('Native reverse geocode failed:', error);
+    console.warn('Native reverse geocode unavailable:', error.message || error);
+  }
+
+  // Resilient Web/HTTP reverse geocode fallback (OSM Nominatim)
+  try {
+    const osmUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`;
+    const osmRes = await fetch(osmUrl, {
+      headers: {
+        'User-Agent': 'VirlaFitnessApp/1.0',
+        'Accept-Language': 'en',
+      },
+    });
+    if (osmRes.ok) {
+      const osmData = await osmRes.json();
+      if (osmData && osmData.display_name) {
+        const addrObj = osmData.address || {};
+        const shortParts = [
+          addrObj.building || addrObj.amenity || addrObj.neighbourhood || addrObj.suburb || osmData.name,
+          addrObj.road,
+          addrObj.suburb || addrObj.neighbourhood,
+          addrObj.city || addrObj.town || addrObj.city_district || 'Mumbai',
+          addrObj.postcode,
+        ].filter(Boolean);
+
+        const shortAddress = shortParts.length > 0 
+          ? Array.from(new Set(shortParts)).join(', ')
+          : osmData.display_name;
+
+        return {
+          address: shortAddress,
+          placeId: osmData.place_id ? String(osmData.place_id) : undefined,
+        };
+      }
+    }
+  } catch (osmErr) {
+    console.warn('OSM reverse geocode fallback error:', osmErr);
   }
 
   return {
