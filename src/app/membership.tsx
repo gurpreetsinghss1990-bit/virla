@@ -26,6 +26,7 @@ interface Plan {
   category: 'individual' | 'couple';
   perSessionText?: string;
   bulletPoints?: string[];
+  isHighlighted?: boolean;
 }
 
 const PLANS: Plan[] = [
@@ -80,7 +81,8 @@ const PLANS: Plan[] = [
     ],
     badge: 'LAUNCH OFFER',
     ribbon: 'FOUNDING 100 · SAVE ₹2,192',
-    category: 'individual'
+    category: 'individual',
+    isHighlighted: true,
   },
   {
     id: 'plan-ind-3',
@@ -181,7 +183,8 @@ const PLANS: Plan[] = [
     ],
     badge: 'COUPLE LAUNCH',
     ribbon: 'FOUNDING 100 · SAVE ₹2,192',
-    category: 'couple'
+    category: 'couple',
+    isHighlighted: true,
   },
   {
     id: 'plan-cpl-3',
@@ -507,30 +510,30 @@ export default function MembershipScreen() {
                   activeOpacity={0.92}
                   onPress={() => openPlanDetails(plan)}
                   style={{
-                    backgroundColor: '#0B0C15',
+                    backgroundColor: plan.isHighlighted ? '#1A0710' : '#0B0C15',
                     borderRadius: 20,
                     padding: 18,
                     marginBottom: 12,
-                    borderWidth: 1,
-                    borderColor: 'rgba(49, 46, 129, 0.6)',
-                    shadowColor: '#4F46E5',
+                    borderWidth: 1.5,
+                    borderColor: plan.isHighlighted ? '#E11D48' : 'rgba(49, 46, 129, 0.6)',
+                    shadowColor: plan.isHighlighted ? '#E11D48' : '#4F46E5',
                     shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.16,
+                    shadowOpacity: 0.22,
                     shadowRadius: 12,
-                    elevation: 3,
+                    elevation: 4,
                   }}
                 >
                   {/* Badges */}
                   {(plan.badge || plan.ribbon) && (
                     <View className="flex-row items-center gap-2 mb-3">
                       {plan.badge && (
-                        <View className="bg-[#1E1F38] border border-indigo-500/30 px-2.5 py-1 rounded-[6px]">
-                          <Text className="text-[#818CF8] text-[10px] font-extrabold uppercase">{plan.badge}</Text>
+                        <View className={plan.isHighlighted ? "bg-[#3D0A1C] border border-[#E11D48]/50 px-2.5 py-1 rounded-[6px]" : "bg-[#1E1F38] border border-indigo-500/30 px-2.5 py-1 rounded-[6px]"}>
+                          <Text className={plan.isHighlighted ? "text-[#FB7185] text-[10px] font-extrabold uppercase" : "text-[#818CF8] text-[10px] font-extrabold uppercase"}>{plan.badge}</Text>
                         </View>
                       )}
                       {plan.ribbon && (
-                        <View className="bg-white px-2.5 py-1 rounded-[6px]">
-                          <Text className="text-zinc-950 text-[10px] font-extrabold uppercase">{plan.ribbon}</Text>
+                        <View className={plan.isHighlighted ? "bg-[#E11D48] px-2.5 py-1 rounded-[6px]" : "bg-white px-2.5 py-1 rounded-[6px]"}>
+                          <Text className="text-white text-[10px] font-extrabold uppercase">{plan.ribbon}</Text>
                         </View>
                       )}
                     </View>
@@ -538,7 +541,10 @@ export default function MembershipScreen() {
 
                   <View className="flex-row items-start justify-between">
                     <View className="flex-row items-start gap-3.5 flex-1 pr-3">
-                      <View className="w-[22px] h-[22px] rounded-full bg-[#4F46E5] items-center justify-center mt-0.5">
+                      <View 
+                        style={{ backgroundColor: plan.isHighlighted ? '#E11D48' : '#4F46E5' }}
+                        className="w-[22px] h-[22px] rounded-full items-center justify-center mt-0.5"
+                      >
                         <Feather name="check" size={13} color="white" />
                       </View>
                       <View className="flex-1">
@@ -550,7 +556,7 @@ export default function MembershipScreen() {
                           </Text>
                         </View>
                         {plan.perSessionText && (
-                          <Text className="text-zinc-300 text-[11px] font-semibold mt-0.5">
+                          <Text className={plan.isHighlighted ? "text-rose-200 text-[11px] font-bold mt-0.5" : "text-zinc-300 text-[11px] font-semibold mt-0.5"}>
                             {plan.perSessionText}
                           </Text>
                         )}
@@ -564,7 +570,7 @@ export default function MembershipScreen() {
                       {plan.originalPrice && (
                         <Text className="text-zinc-400 text-[11.5px] line-through font-medium mb-0.5">{plan.originalPrice}</Text>
                       )}
-                      <Text className="text-white text-[22px] font-extrabold tracking-tight">{plan.price}</Text>
+                      <Text className={plan.isHighlighted ? "text-[#FDA4AF] text-[22px] font-extrabold tracking-tight" : "text-white text-[22px] font-extrabold tracking-tight"}>{plan.price}</Text>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -577,17 +583,36 @@ export default function MembershipScreen() {
                 activeOpacity={0.85}
                 onPress={() => setSelectedPlan(plan)}
                 style={{
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: plan.isHighlighted ? '#FFF1F2' : '#FFFFFF',
                   borderRadius: 20,
                   padding: 18,
                   marginBottom: 12,
-                  borderWidth: 1,
-                  borderColor: '#E4E4E7',
+                  borderWidth: plan.isHighlighted ? 1.5 : 1,
+                  borderColor: plan.isHighlighted ? '#E11D48' : '#E4E4E7',
                 }}
               >
+                {/* Badges for unselected highlighted cards */}
+                {(plan.badge || plan.ribbon) && (
+                  <View className="flex-row items-center gap-2 mb-3">
+                    {plan.badge && (
+                      <View className={plan.isHighlighted ? "bg-rose-100 border border-rose-300 px-2.5 py-1 rounded-[6px]" : "bg-zinc-100 px-2.5 py-1 rounded-[6px]"}>
+                        <Text className={plan.isHighlighted ? "text-[#E11D48] text-[10px] font-extrabold uppercase" : "text-zinc-600 text-[10px] font-extrabold uppercase"}>{plan.badge}</Text>
+                      </View>
+                    )}
+                    {plan.ribbon && (
+                      <View className={plan.isHighlighted ? "bg-[#E11D48] px-2.5 py-1 rounded-[6px]" : "bg-zinc-800 px-2.5 py-1 rounded-[6px]"}>
+                        <Text className="text-white text-[10px] font-extrabold uppercase">{plan.ribbon}</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
                 <View className="flex-row items-start justify-between">
                   <View className="flex-row items-start gap-3.5 flex-1 pr-3">
-                    <View className="w-[22px] h-[22px] rounded-full border-[1.5px] border-zinc-300 bg-white items-center justify-center mt-0.5" />
+                    <View 
+                      style={{ borderColor: plan.isHighlighted ? '#E11D48' : '#D4D4D8' }}
+                      className="w-[22px] h-[22px] rounded-full border-[1.5px] bg-white items-center justify-center mt-0.5" 
+                    />
                     <View className="flex-1">
                       <Text className="text-zinc-950 text-[16px] font-bold tracking-tight">{displayName}</Text>
                       <View className="flex-row items-center gap-1.5 mt-1">
@@ -597,18 +622,21 @@ export default function MembershipScreen() {
                         </Text>
                       </View>
                       {plan.perSessionText && (
-                        <Text className="text-zinc-600 text-[11px] font-semibold mt-0.5">
+                        <Text className={plan.isHighlighted ? "text-[#BE123C] text-[11px] font-bold mt-0.5" : "text-zinc-600 text-[11px] font-semibold mt-0.5"}>
                           {plan.perSessionText}
                         </Text>
                       )}
-                      <Text className="text-zinc-400 text-[12px] font-normal leading-[17px] mt-1">
+                      <Text className="text-zinc-500 text-[12px] font-normal leading-[17px] mt-1">
                         {plan.idealFor}
                       </Text>
                     </View>
                   </View>
 
                   <View className="items-end justify-start">
-                    <Text className="text-zinc-950 text-[17px] font-bold tracking-tight mt-0.5">
+                    {plan.originalPrice && (
+                      <Text className="text-zinc-400 text-[11.5px] line-through font-medium mb-0.5">{plan.originalPrice}</Text>
+                    )}
+                    <Text className={plan.isHighlighted ? "text-[#E11D48] text-[19px] font-extrabold tracking-tight mt-0.5" : "text-zinc-950 text-[17px] font-bold tracking-tight mt-0.5"}>
                       {plan.price}
                     </Text>
                   </View>
