@@ -259,10 +259,8 @@ export default function MembershipScreen() {
     });
   }, [activeCategory]);
 
-  // Selection states - default to the popular Active Pack (plan-ind-3) matching design
-  const [selectedPlan, setSelectedPlan] = useState<Plan>(() => {
-    return PLANS.find((p) => p.id === 'plan-ind-3') || PLANS[0];
-  });
+  // Selection states - null initially, user selects manually
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [checkoutActive, setCheckoutActive] = useState(false);
   const [isBenefitsExpanded, setIsBenefitsExpanded] = useState(false);
@@ -271,13 +269,9 @@ export default function MembershipScreen() {
     setIsBenefitsExpanded((prev) => !prev);
   };
 
-
   const handleSelectCategory = (cat: 'individual' | 'couple') => {
     setActiveCategory(cat);
-    const defaultForCat = PLANS.find((p) => p.category === cat && p.popular) || PLANS.find((p) => p.category === cat);
-    if (defaultForCat) {
-      setSelectedPlan(defaultForCat);
-    }
+    setSelectedPlan(null); // Keep unselected on tab change
   };
 
   // Animations using useMemo to avoid render-phase ref reads
@@ -537,13 +531,13 @@ export default function MembershipScreen() {
                   {(plan.badge || plan.ribbon) && (
                     <View className="flex-row items-center gap-2 mb-3">
                       {plan.badge && (
-                        <View className={plan.isHighlighted ? "bg-[#3D0A1C] border border-[#E11D48]/50 px-2.5 py-1 rounded-[6px]" : "bg-[#1E1F38] border border-indigo-500/30 px-2.5 py-1 rounded-[6px]"}>
-                          <Text className={plan.isHighlighted ? "text-[#FB7185] text-[10px] font-extrabold uppercase" : "text-[#818CF8] text-[10px] font-extrabold uppercase"}>{plan.badge}</Text>
+                        <View className={plan.isHighlighted ? "bg-white border border-rose-200 px-2.5 py-1 rounded-[6px]" : "bg-white border border-indigo-200 px-2.5 py-1 rounded-[6px]"}>
+                          <Text className="text-zinc-950 text-[10px] font-black uppercase tracking-wider">{plan.badge}</Text>
                         </View>
                       )}
                       {plan.ribbon && (
-                        <View className={plan.isHighlighted ? "bg-[#E11D48] px-2.5 py-1 rounded-[6px]" : "bg-white px-2.5 py-1 rounded-[6px]"}>
-                          <Text className="text-white text-[10px] font-extrabold uppercase">{plan.ribbon}</Text>
+                        <View className="bg-white px-2.5 py-1 rounded-[6px]">
+                          <Text className="text-zinc-950 text-[10px] font-black uppercase tracking-wider">{plan.ribbon}</Text>
                         </View>
                       )}
                     </View>
