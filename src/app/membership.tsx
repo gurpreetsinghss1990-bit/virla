@@ -789,6 +789,14 @@ export default function MembershipScreen() {
                           Pay {selectedPlan.price} with Payment Gateway
                         </Text>
                       </TouchableOpacity>
+
+                      {/* Safety Guidance Warning */}
+                      <View className="bg-amber-50/80 border border-amber-200/90 rounded-xl p-3 flex-row items-center gap-2.5">
+                        <Feather name="alert-circle" size={14} color="#D97706" />
+                        <Text className="text-amber-900 text-[11px] font-bold flex-1 leading-tight">
+                          Please don't close the App or press back during payment operations.
+                        </Text>
+                      </View>
                     </View>
                   </View>
                 )}
@@ -821,9 +829,17 @@ export default function MembershipScreen() {
                   </Animated.View>
                   <Feather name="lock" size={20} color="#4F46E5" />
                 </View>
-                <View className="items-center gap-1">
+                <View className="items-center gap-1.5 px-6">
                   <Text className="text-zinc-900 text-sm font-extrabold uppercase">Securing Checkout Payout</Text>
-                  <Text className="text-zinc-500 text-[10px] font-bold uppercase">Connecting to payment hub</Text>
+                  <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-2">Connecting to payment hub</Text>
+                  
+                  {/* Highlighted Warning on Loader */}
+                  <View className="bg-amber-50 border border-amber-200 px-3.5 py-2 rounded-xl flex-row items-center gap-2">
+                    <Feather name="alert-triangle" size={13} color="#D97706" />
+                    <Text className="text-amber-900 text-[11px] font-black text-center">
+                      Please don't close the App or press back in payment operations
+                    </Text>
+                  </View>
                 </View>
               </View>
             )}
