@@ -758,6 +758,35 @@ export default function SessionDetailScreen() {
     }, 0);
   };
 
+  const handleOpenSupport = async () => {
+    if (!booking?.id || !user?.id) {
+      setShowRaiseTicketModal(true);
+      return;
+    }
+
+    try {
+      // 1. Check if an active/open ticket already exists for this booking
+      const { data, error } = await supabase
+        .from('support_tickets')
+        .select('*')
+        .eq('booking_id', booking.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        // Direct open existing support chatbox!
+        setActiveChatTicket(data[0] as SupportTicket);
+        setShowSupportChatModal(true);
+        return;
+      }
+    } catch (e) {
+      console.warn('[SessionDetail] Check existing ticket warning:', e);
+    }
+
+    // 2. If no ticket created yet, open raise modal so user can create first
+    setShowRaiseTicketModal(true);
+  };
+
   const handleShareLocation = () => {
     Alert.alert(
       'Live Location Shared',
@@ -1185,7 +1214,7 @@ export default function SessionDetailScreen() {
           <View className="flex-row items-center gap-2">
             {role === 'customer' && (
               <TouchableOpacity
-                onPress={() => setShowRaiseTicketModal(true)}
+                onPress={handleOpenSupport}
                 activeOpacity={0.8}
                 className="bg-rose-50 px-3 py-1.5 rounded-full border border-rose-200/90 flex-row items-center gap-1.5"
                 accessibilityLabel="Customer Support"
