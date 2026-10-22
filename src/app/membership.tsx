@@ -236,7 +236,14 @@ export default function MembershipScreen() {
   const [activeCategory, setActiveCategory] = useState<'individual' | 'couple'>('individual');
 
   const activePlans = useMemo(() => {
-    return PLANS.filter((p) => p.category === activeCategory);
+    return PLANS.filter((p) => {
+      if (p.category !== activeCategory) return false;
+      // Show ₹1 Developer Test plan ONLY on iOS for Apple review/sandbox testing; hide completely on Android.
+      if (p.id === 'plan-dev-test' && Platform.OS !== 'ios') {
+        return false;
+      }
+      return true;
+    });
   }, [activeCategory]);
 
   // Selection states - default to the popular Active Pack (plan-ind-3) matching design
