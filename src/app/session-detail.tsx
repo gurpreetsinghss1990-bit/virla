@@ -759,23 +759,18 @@ export default function SessionDetailScreen() {
   };
 
   const handleOpenSupport = async () => {
-    if (!booking?.id || !user?.id) {
+    const currentBookingId = booking?.id || bookingId;
+    if (!currentBookingId) {
       setShowRaiseTicketModal(true);
       return;
     }
 
     try {
-      // 1. Check if an active/open ticket already exists for this booking
-      const { data, error } = await supabase
-        .from('support_tickets')
-        .select('*')
-        .eq('booking_id', booking.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (!error && data && data.length > 0) {
+      // 1. Check if a support ticket already exists for this booking ID
+      const existingTicket = await Database.getRecentTicketForBooking(currentBookingId);
+      if (existingTicket) {
         // Direct open existing support chatbox!
-        setActiveChatTicket(data[0] as SupportTicket);
+        setActiveChatTicket(existingTicket);
         setShowSupportChatModal(true);
         return;
       }
