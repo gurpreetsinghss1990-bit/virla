@@ -959,8 +959,8 @@ export default function ProfileScreen() {
                         passTier = 'STANDARD';
                         passColor = '#94A3B8';
                       } else if (bal >= 15) {
-                        passTier = 'ELITE PASS';
-                        passColor = '#F59E0B'; // Gold Amber matching Crown
+                        passTier = 'ELITE';
+                        passColor = '#FACC15'; // Vibrant Bright Yellow
                       } else if (bal >= 12) {
                         passTier = 'ACTIVE PASS';
                         passColor = '#38BDF8'; // Sky Blue
@@ -1390,8 +1390,8 @@ export default function ProfileScreen() {
               </View>
 
 
-              {/* Admin Control Panel direct entry button */}
-              {(user?.role === 'admin' || isWildcardTestAccount(user, profile.mobile)) && (
+              {/* Admin Control Panel direct entry button (Only for authorized admin role) */}
+              {user?.role === 'admin' && (
                 <View className="mb-4">
                   <LuxuryCard 
                     className="p-4 bg-indigo-950 border border-indigo-800 shadow-md rounded-[24px]"
