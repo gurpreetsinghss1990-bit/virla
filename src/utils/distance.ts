@@ -107,14 +107,12 @@ export async function fetchGooglePlacesAutocomplete(
     if (!res.ok) {
       const errText = await res.text();
       console.warn(`Autocomplete HTTP ${res.status}: ${errText}`);
-      if (typeof __DEV__ !== 'undefined' && __DEV__) {
-        return getMockSuggestions(input);
-      }
-      return [];
+      // Fallback to OSM Nominatim Search for places suggestions
+      return fetchOsmPlacesAutocomplete(input);
     }
 
     const data = await res.json();
-    if (data && data.suggestions) {
+    if (data && data.suggestions && data.suggestions.length > 0) {
       return data.suggestions.map((s: any) => {
         const pred = s.placePrediction;
         return {
@@ -125,17 +123,64 @@ export async function fetchGooglePlacesAutocomplete(
         };
       });
     }
-    if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      return getMockSuggestions(input);
-    }
-    return [];
+    
+    // If Google returned no suggestions, try OSM
+    return fetchOsmPlacesAutocomplete(input);
   } catch (error) {
-    console.error('Autocomplete error:', error);
-    if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      return getMockSuggestions(input);
-    }
-    return [];
+    console.error('Autocomplete error, falling back to OSM:', error);
+    return fetchOsmPlacesAutocomplete(input);
   }
+}
+
+/**
+ * Free OSM (OpenStreetMap / Nominatim) Autocomplete Search Fallback
+ */
+async function fetchOsmPlacesAutocomplete(input: string): Promise<AutocompleteSuggestion[]> {
+  try {
+    const trimmed = input.trim();
+    if (trimmed.length < 2) return [];
+
+    // Query Nominatim restricted to India (with Mumbai prioritization)
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(trimmed)}&countrycodes=in&limit=6&addressdetails=1`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'VirlaFitnessApp/1.0',
+        'Accept-Language': 'en',
+      },
+    });
+
+    if (res.ok) {
+      const items = await res.json();
+      if (Array.isArray(items) && items.length > 0) {
+        return items.map((item: any) => {
+          const addr = item.address || {};
+          const mainTitle = addr.building || addr.amenity || addr.road || addr.suburb || addr.neighbourhood || item.name || trimmed;
+          const secondary = [
+            addr.suburb || addr.neighbourhood,
+            addr.city || addr.town || addr.city_district || 'Mumbai',
+            addr.state || 'Maharashtra',
+          ].filter(Boolean).join(', ');
+
+          // Encode coordinates directly into placeId for 0-latency resolution: "osm_<lat>_<lng>_<name>"
+          const encodedPlaceId = `osm_${item.lat}_${item.lon}_${encodeURIComponent(item.display_name || mainTitle)}`;
+
+          return {
+            placeId: encodedPlaceId,
+            description: item.display_name || `${mainTitle}, ${secondary}`,
+            mainText: mainTitle,
+            secondaryText: secondary || 'Mumbai, India',
+          };
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('[OSM Autocomplete] search failed:', e);
+  }
+
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    return getMockSuggestions(input);
+  }
+  return [];
 }
 
 export async function fetchGooglePlaceDetails(placeId: string): Promise<{
@@ -146,6 +191,22 @@ export async function fetchGooglePlaceDetails(placeId: string): Promise<{
   types?: string[];
   addressComponents?: any[];
 }> {
+  // 1. Check if place was generated via OSM Nominatim fallback: "osm_<lat>_<lng>_<name>"
+  if (placeId.startsWith('osm_')) {
+    const parts = placeId.split('_');
+    const lat = parseFloat(parts[1]);
+    const lng = parseFloat(parts[2]);
+    const decodedName = parts[3] ? decodeURIComponent(parts[3]) : 'Selected Location';
+    return {
+      address: decodedName,
+      latitude: !isNaN(lat) ? lat : 19.0176,
+      longitude: !isNaN(lng) ? lng : 72.8164,
+      placeName: decodedName.split(',')[0],
+      types: ['sublocality', 'point_of_interest'],
+      addressComponents: []
+    };
+  }
+
   if (placeId.startsWith('mock-')) {
     const mock = getMockPlaceDetails(placeId);
     let placeName = 'Selected Location';
