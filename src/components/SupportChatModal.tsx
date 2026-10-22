@@ -232,9 +232,14 @@ export function SupportChatModal({
               </View>
             ) : (
               messages.map((m) => {
-                const isMe = currentRole === 'admin' 
-                  ? (m.sender === 'virla' || m.sender === 'coach') 
-                  : (m.sender === 'customer' || m.sender === 'user');
+                const isTicketSummary = m.text?.startsWith('[Concierge Ticket #') || m.text?.includes('Issue regarding');
+                
+                // If it is the issue create message, show on left side for admin (as it comes from the user ticket)
+                const isMe = isTicketSummary 
+                  ? false 
+                  : (currentRole === 'admin' 
+                      ? (m.sender === 'virla' || m.sender === 'coach') 
+                      : (m.sender === 'customer' || m.sender === 'user'));
 
                 return (
                   <View
@@ -246,12 +251,26 @@ export function SupportChatModal({
                     className={`max-w-[82%] p-3.5 rounded-2xl ${
                       isMe
                         ? 'self-end bg-[#101828] rounded-br-xs'
-                        : 'self-start bg-zinc-100 border border-zinc-200/60 rounded-bl-xs'
+                        : isTicketSummary
+                          ? 'self-start bg-rose-50/70 border border-rose-200/80 rounded-bl-xs'
+                          : 'self-start bg-zinc-100 border border-zinc-200/60 rounded-bl-xs'
                     }`}
                   >
+                    {isTicketSummary && (
+                      <View className="flex-row items-center gap-1.5 mb-1 pb-1 border-b border-rose-200/60">
+                        <Feather name="alert-circle" size={11} color="#E11D48" />
+                        <Text className="text-[#E11D48] text-[9px] font-black uppercase tracking-wider">
+                          Reported Issue
+                        </Text>
+                      </View>
+                    )}
                     <Text
                       className={`text-xs font-medium leading-relaxed ${
-                        isMe ? 'text-white' : 'text-zinc-900'
+                        isMe 
+                          ? 'text-white' 
+                          : isTicketSummary 
+                            ? 'text-rose-950 font-semibold' 
+                            : 'text-zinc-900'
                       }`}
                     >
                       {m.text}
@@ -269,33 +288,53 @@ export function SupportChatModal({
             )}
           </ScrollView>
 
-          {/* Chat Input Bar */}
-          <View
-            className="px-4 py-3 bg-white border-t border-zinc-150 flex-row items-center gap-2"
-            style={{ paddingBottom: Math.max(insets.bottom, 12) }}
-          >
-            <TextInput
-              value={inputText}
-              onChangeText={setInputText}
-              placeholder={currentRole === 'admin' ? "Reply to client as Support Admin..." : "Type your message to Virla Support..."}
-              placeholderTextColor="#9CA3AF"
-              className="flex-1 bg-zinc-100 border border-zinc-200/80 rounded-2xl px-4 py-3 text-xs font-semibold text-zinc-900 max-h-24"
-              multiline
-            />
-            <TouchableOpacity
-              onPress={handleSend}
-              disabled={!inputText.trim() || isSending}
-              className={`w-11 h-11 rounded-2xl items-center justify-center ${
-                inputText.trim() ? 'bg-[#101828]' : 'bg-zinc-200'
-              }`}
+          {/* Chat Input Bar or Resolved/Closed Notice */}
+          {ticket?.status === 'RESOLVED' || ticket?.status === 'CLOSED' ? (
+            <View
+              className="px-5 py-4 bg-zinc-50 border-t border-zinc-200 items-center justify-center gap-1.5"
+              style={{ paddingBottom: Math.max(insets.bottom, 16) }}
             >
-              {isSending ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Feather name="arrow-up" size={18} color={inputText.trim() ? '#FFFFFF' : '#9CA3AF'} />
-              )}
-            </TouchableOpacity>
-          </View>
+              <View className="flex-row items-center gap-1.5 bg-emerald-100/70 border border-emerald-200 px-3 py-1 rounded-full">
+                <Feather name="check-circle" size={13} color="#059669" />
+                <Text className="text-emerald-800 text-[11px] font-black uppercase tracking-wider">
+                  Ticket {ticket.status}
+                </Text>
+              </View>
+              <Text className="text-zinc-600 text-xs font-bold text-center mt-0.5">
+                This Support was Resolved and Closed
+              </Text>
+              <Text className="text-zinc-400 text-[10px] font-medium text-center">
+                New replies are disabled for this ticket.
+              </Text>
+            </View>
+          ) : (
+            <View
+              className="px-4 py-3 bg-white border-t border-zinc-150 flex-row items-center gap-2"
+              style={{ paddingBottom: Math.max(insets.bottom, 12) }}
+            >
+              <TextInput
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder={currentRole === 'admin' ? "Reply to client as Support Admin..." : "Type your message to Virla Support..."}
+                placeholderTextColor="#9CA3AF"
+                className="flex-1 bg-zinc-100 border border-zinc-200/80 rounded-2xl px-4 py-3 text-xs font-semibold text-zinc-900 max-h-24"
+                multiline
+              />
+              <TouchableOpacity
+                onPress={handleSend}
+                disabled={!inputText.trim() || isSending}
+                className={`w-11 h-11 rounded-2xl items-center justify-center ${
+                  inputText.trim() ? 'bg-[#101828]' : 'bg-zinc-200'
+                }`}
+              >
+                {isSending ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Feather name="arrow-up" size={18} color={inputText.trim() ? '#FFFFFF' : '#9CA3AF'} />
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
         </KeyboardAvoidingView>
       </View>
     </Modal>
