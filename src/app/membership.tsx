@@ -301,6 +301,16 @@ export default function MembershipScreen() {
   const overlayOpacity = useMemo(() => new Animated.Value(0), []);
   const progressAnim = useMemo(() => new Animated.Value(0), []);
   const spinAnim = useMemo(() => new Animated.Value(0), []);
+  const footerBarAnim = useMemo(() => new Animated.Value(0), []);
+
+  useEffect(() => {
+    Animated.spring(footerBarAnim, {
+      toValue: selectedPlan ? 1 : 0,
+      friction: 8,
+      tension: 50,
+      useNativeDriver: true,
+    }).start();
+  }, [selectedPlan]);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -516,7 +526,7 @@ export default function MembershipScreen() {
         </View>
 
         {/* Plan Cards - Accordion replicating exact screenshot feel */}
-        <View className="gap-3.5 mb-6">
+        <View className="gap-4 mb-6">
           {activePlans.map((plan, idx) => {
             const isExpanded = selectedPlan?.id === plan.id;
             const displayName = plan.name;
@@ -526,32 +536,39 @@ export default function MembershipScreen() {
                 key={`plan-card-${idx}`}
                 style={{
                   backgroundColor: '#FFFFFF',
-                  borderRadius: 24,
-                  borderWidth: 1,
-                  borderColor: isExpanded ? '#E11D48' : '#EBEBEF',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: isExpanded ? 6 : 2 },
-                  shadowOpacity: isExpanded ? 0.08 : 0.03,
-                  shadowRadius: isExpanded ? 14 : 8,
+                  borderRadius: 22,
+                  borderWidth: 1.5,
+                  borderColor: isExpanded ? '#E11D48' : '#ECECF0',
+                  shadowColor: isExpanded ? '#E11D48' : '#000',
+                  shadowOffset: { width: 0, height: isExpanded ? 5 : 2 },
+                  shadowOpacity: isExpanded ? 0.12 : 0.03,
+                  shadowRadius: isExpanded ? 12 : 6,
                   elevation: isExpanded ? 4 : 1,
-                  overflow: 'hidden',
+                  position: 'relative',
                 }}
               >
-                {/* Popular / Highlighted Mini Header Tab */}
+                {/* Floating Flag/Ribbon Badge at top-left outside */}
                 {(plan.badge || plan.ribbon) && (
-                  <View className="flex-row">
-                    <View 
-                      style={{
-                        backgroundColor: plan.popular ? '#6366F1' : '#18181B',
-                        paddingHorizontal: 12,
-                        paddingVertical: 3.5,
-                        borderBottomRightRadius: 10,
-                      }}
-                    >
-                      <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                        {plan.ribbon || plan.badge}
-                      </Text>
-                    </View>
+                  <View 
+                    style={{
+                      position: 'absolute',
+                      top: -10,
+                      left: 18,
+                      zIndex: 10,
+                      backgroundColor: plan.popular ? '#6366F1' : (plan.isHighlighted ? '#E11D48' : '#18181B'),
+                      paddingHorizontal: 10,
+                      paddingVertical: 3,
+                      borderRadius: 6,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.15,
+                      shadowRadius: 4,
+                      elevation: 3,
+                    }}
+                  >
+                    <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.6, textTransform: 'uppercase' }}>
+                      {plan.ribbon || plan.badge}
+                    </Text>
                   </View>
                 )}
 
@@ -560,18 +577,18 @@ export default function MembershipScreen() {
                   activeOpacity={0.85}
                   onPress={() => handlePlanCardPress(plan)}
                   style={{
-                    padding: 20,
-                    paddingTop: (plan.badge || plan.ribbon) ? 14 : 20,
+                    padding: 18,
+                    paddingTop: (plan.badge || plan.ribbon) ? 16 : 18,
                     flexDirection: 'row',
                     alignItems: 'center',
-                    justifyContent: 'between',
+                    justifyContent: 'space-between',
                   }}
                 >
-                  <View style={{ flex: 1, paddingRight: 12 }}>
+                  <View style={{ flex: 1, paddingRight: 10 }}>
                     <Text style={{ fontSize: 16, fontWeight: '900', color: '#18181B', letterSpacing: -0.2 }}>
                       {displayName}
                     </Text>
-                    <Text style={{ fontSize: 12.5, color: '#71717A', marginTop: 2, fontWeight: '500' }}>
+                    <Text style={{ fontSize: 12, color: '#71717A', marginTop: 2, fontWeight: '500' }}>
                       {plan.idealFor}
                     </Text>
                   </View>
@@ -583,18 +600,20 @@ export default function MembershipScreen() {
                           {plan.originalPrice}
                         </Text>
                       )}
-                      <Text style={{ fontSize: 22, fontWeight: '900', color: '#18181B', letterSpacing: -0.5 }}>
+                      <Text style={{ fontSize: 21, fontWeight: '900', color: isExpanded ? '#E11D48' : '#18181B', letterSpacing: -0.5 }}>
                         {plan.price}
                       </Text>
-                      <Text style={{ fontSize: 10, color: '#A1A1AA', fontWeight: '500' }}>
+                      <Text style={{ fontSize: 10, color: '#A1A1AA', fontWeight: '600' }}>
                         {plan.perSessionText || '+5% GST'}
                       </Text>
                     </View>
 
                     <View 
                       style={{ 
-                        width: 24, 
-                        height: 24, 
+                        width: 26, 
+                        height: 26, 
+                        borderRadius: 13,
+                        backgroundColor: isExpanded ? '#FFF1F2' : '#F4F4F6',
                         alignItems: 'center', 
                         justifyContent: 'center',
                         marginLeft: 4,
@@ -602,7 +621,7 @@ export default function MembershipScreen() {
                     >
                       <Feather 
                         name={isExpanded ? 'chevron-up' : 'chevron-down'} 
-                        size={18} 
+                        size={16} 
                         color={isExpanded ? '#E11D48' : '#71717A'} 
                       />
                     </View>
@@ -611,23 +630,23 @@ export default function MembershipScreen() {
 
                 {/* Expanded Details Section */}
                 {isExpanded && (
-                  <View style={{ paddingHorizontal: 20, paddingBottom: 20, borderTopWidth: 1, borderTopColor: '#F4F4F6', paddingTop: 16 }}>
+                  <View style={{ paddingHorizontal: 18, paddingBottom: 18, borderTopWidth: 1, borderTopColor: '#F4F4F6', paddingTop: 14 }}>
                     {/* Bullet Points with clean round circles like screenshot */}
-                    <View style={{ gap: 10, marginBottom: 18 }}>
+                    <View style={{ gap: 8, marginBottom: 14 }}>
                       {plan.bulletPoints?.map((bullet, bIdx) => (
-                        <View key={bIdx} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <View key={bIdx} style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
                           <View 
                             style={{ 
-                              width: 14, 
-                              height: 14, 
-                              borderRadius: 7, 
+                              width: 13, 
+                              height: 13, 
+                              borderRadius: 6.5, 
                               borderWidth: 1.5, 
-                              borderColor: '#A1A1AA',
+                              borderColor: '#E11D48',
                               alignItems: 'center',
                               justifyContent: 'center'
                             }} 
                           />
-                          <Text style={{ fontSize: 13, color: '#3F3F46', fontWeight: '500', flex: 1, lineHeight: 18 }}>
+                          <Text style={{ fontSize: 12.5, color: '#3F3F46', fontWeight: '500', flex: 1, lineHeight: 17 }}>
                             {bullet}
                           </Text>
                         </View>
@@ -635,40 +654,40 @@ export default function MembershipScreen() {
                     </View>
 
                     {/* Breakdown & Calculation Note */}
-                    <View style={{ backgroundColor: '#FAFAFA', borderRadius: 14, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: '#F4F4F5' }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <Text style={{ fontSize: 12, color: '#71717A', fontWeight: '500' }}>Base Price</Text>
-                        <Text style={{ fontSize: 12, color: '#18181B', fontWeight: '700' }}>{plan.amountVal}</Text>
+                    <View style={{ backgroundColor: '#F8FAFC', borderRadius: 12, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
+                        <Text style={{ fontSize: 11.5, color: '#64748B', fontWeight: '500' }}>Base Price</Text>
+                        <Text style={{ fontSize: 11.5, color: '#1E293B', fontWeight: '700' }}>{plan.amountVal}</Text>
                       </View>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <Text style={{ fontSize: 12, color: '#71717A', fontWeight: '500' }}>GST (5%)</Text>
-                        <Text style={{ fontSize: 12, color: '#18181B', fontWeight: '700' }}>{plan.gstVal}</Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
+                        <Text style={{ fontSize: 11.5, color: '#64748B', fontWeight: '500' }}>GST (5%)</Text>
+                        <Text style={{ fontSize: 11.5, color: '#1E293B', fontWeight: '700' }}>{plan.gstVal}</Text>
                       </View>
-                      <View style={{ height: 1, backgroundColor: '#E4E4E7', marginVertical: 4 }} />
+                      <View style={{ height: 1, backgroundColor: '#E2E8F0', marginVertical: 3 }} />
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text style={{ fontSize: 13, color: '#18181B', fontWeight: '800' }}>Total Amount</Text>
-                        <Text style={{ fontSize: 14, color: '#E11D48', fontWeight: '900' }}>{plan.finalPrice || plan.price}</Text>
+                        <Text style={{ fontSize: 12, color: '#0F172A', fontWeight: '800' }}>Total Amount</Text>
+                        <Text style={{ fontSize: 13.5, color: '#E11D48', fontWeight: '900' }}>{plan.finalPrice || plan.price}</Text>
                       </View>
                     </View>
 
-                    {/* Prominent Red Button (replaces green in screenshot) */}
+                    {/* Sleek, Balanced Red Button (Not bulky/motaa) */}
                     <TouchableOpacity
-                      activeOpacity={0.88}
+                      activeOpacity={0.85}
                       onPress={() => openPlanDetails(plan)}
                       style={{
                         backgroundColor: '#E11D48',
-                        borderRadius: 18,
-                        paddingVertical: 14,
+                        borderRadius: 14,
+                        paddingVertical: 11,
                         alignItems: 'center',
                         justifyContent: 'center',
                         shadowColor: '#E11D48',
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.28,
-                        shadowRadius: 8,
-                        elevation: 3,
+                        shadowOffset: { width: 0, height: 3 },
+                        shadowOpacity: 0.25,
+                        shadowRadius: 6,
+                        elevation: 2,
                       }}
                     >
-                      <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '900', letterSpacing: 0.8, textTransform: 'uppercase' }}>
+                      <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase' }}>
                         GET STARTED • {plan.finalPrice || plan.price}
                       </Text>
                     </TouchableOpacity>
@@ -776,63 +795,75 @@ export default function MembershipScreen() {
         </View>
       </ScrollView>
 
-      {/* Sticky Bottom Bar */}
+      {/* Sticky Bottom Bar with smooth slide-up animation and glassmorphic shadow */}
       {selectedPlan && (
-        <View 
+        <Animated.View 
           style={{ 
-            paddingBottom: Math.max((insets.bottom || 0), 14),
+            paddingBottom: Math.max((insets.bottom || 0), 12),
+            opacity: footerBarAnim,
+            transform: [
+              {
+                translateY: footerBarAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [60, 0],
+                }),
+              },
+            ],
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: -3 },
-            shadowOpacity: 0.04,
-            shadowRadius: 8,
-            elevation: 6,
+            shadowOffset: { width: 0, height: -6 },
+            shadowOpacity: 0.08,
+            shadowRadius: 12,
+            elevation: 10,
           }}
-          className="border-t border-zinc-200 bg-white px-4 pt-3 flex-row items-center justify-between"
+          className="border-t border-zinc-100 bg-white/95 px-5 pt-3.5 flex-row items-center justify-between"
         >
           <View className="gap-0.5">
-            <Text className="text-zinc-400 text-[9.5px] font-bold uppercase tracking-[0.8px] mb-0.5">
-              SELECTED PLAN
+            <View className="flex-row items-center gap-1.5">
+              <View className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
+              <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.8px]">
+                SELECTED
+              </Text>
+            </View>
+            <Text className="text-zinc-950 text-[15px] font-black leading-tight mt-0.5">
+              {selectedPlan.name}
             </Text>
-            {(() => {
-              const rawName = selectedPlan.name === 'Active Pack' ? 'Active Pack' : selectedPlan.name;
-              const [firstWord, ...restWords] = rawName.split(' ');
-              const secondWord = restWords.join(' ');
-              return (
-                <View>
-                  <Text className="text-zinc-950 text-[16px] font-extrabold leading-tight">
-                    {firstWord}
-                  </Text>
-                  <View className="flex-row items-center gap-1.5">
-                    {Boolean(secondWord) && (
-                      <Text className="text-zinc-950 text-[16px] font-extrabold leading-tight">
-                        {secondWord}
-                      </Text>
-                    )}
-                    <Text className="text-zinc-400 text-[12px] font-medium">
-                      • {selectedPlan.credits} Credits
-                    </Text>
-                  </View>
-                </View>
-              );
-            })()}
+            <Text className="text-zinc-500 text-[11px] font-semibold">
+              {selectedPlan.credits} {selectedPlan.credits === 1 ? 'Session' : 'Sessions'} • Incl. 5% GST
+            </Text>
           </View>
 
           <TouchableOpacity
-            activeOpacity={0.85}
+            activeOpacity={0.88}
             onPress={() => openPlanDetails(selectedPlan)}
-            className="bg-[#121214] rounded-2xl px-5 py-3 flex-row items-center gap-3.5 shadow-sm"
+            style={{
+              backgroundColor: '#18181B',
+              borderRadius: 16,
+              paddingHorizontal: 18,
+              paddingVertical: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.18,
+              shadowRadius: 6,
+              elevation: 3,
+            }}
           >
-            <Text className="text-white text-[11.5px] font-bold leading-[14px]">
-              Continue to{'\n'}Checkout
-            </Text>
-            <View className="flex-row items-center gap-1 pl-1">
-              <Text className="text-white text-[15px] font-extrabold">
-                {selectedPlan.price}
+            <View className="items-end">
+              <Text className="text-zinc-400 text-[9.5px] font-bold uppercase tracking-wider">
+                Total Pay
               </Text>
-              <Feather name="arrow-right" size={14} color="white" />
+              <Text className="text-white text-[15px] font-black tracking-tight">
+                {selectedPlan.finalPrice || selectedPlan.price}
+              </Text>
+            </View>
+
+            <View className="w-7 h-7 rounded-full bg-white/10 items-center justify-center">
+              <Feather name="arrow-right" size={14} color="#FFFFFF" />
             </View>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       )}
 
       {/* Details & Checkout Overlay Modal (Feature 2) */}
