@@ -126,7 +126,7 @@ export default function SplashScreen() {
         <View className="flex-row items-center justify-center">
           <Text
             style={{ fontFamily: 'System', letterSpacing: 16 }}
-            className="font-extrabold text-[#8E959E] text-5xl"
+            className="font-extrabold text-black text-5xl"
           >
             VIRLA
           </Text>
@@ -148,7 +148,7 @@ export default function SplashScreen() {
 
         <Text
           style={{ letterSpacing: 5.5 }}
-          className="text-[#8E959E] text-[12px] font-medium uppercase text-center mt-5"
+          className="text-black text-[12px] font-semibold uppercase text-center mt-5"
         >
           WELLNESS AT YOUR DOORSTEP
         </Text>

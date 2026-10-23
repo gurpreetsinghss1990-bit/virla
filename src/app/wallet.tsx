@@ -73,7 +73,7 @@ export default function WalletScreen() {
     }, [])
   );
 
-  const [activeTab, setActiveTab] = useState<'lots' | 'transfer' | 'ledger'>('lots');
+  const [activeTab, setActiveTab] = useState<'lots' | 'transfer' | 'ledger'>('ledger');
   const [isReady, setIsReady] = useState(false);
   const [dismissPriorityNotice, setDismissPriorityNotice] = useState(false);
 
@@ -678,18 +678,18 @@ export default function WalletScreen() {
           <View className="flex-row border-b border-zinc-200 mt-2">
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => setActiveTab('lots')}
+              onPress={() => setActiveTab('ledger')}
               className={`flex-1 py-3 items-center justify-center border-b-2 ${
-                activeTab === 'lots' ? 'border-zinc-950 -mb-[1px]' : 'border-transparent'
+                activeTab === 'ledger' ? 'border-zinc-950 -mb-[1px]' : 'border-transparent'
               }`}
             >
               <Text 
                 numberOfLines={1}
                 className={`text-[11px] font-bold uppercase ${
-                  activeTab === 'lots' ? 'text-zinc-950' : 'text-zinc-400'
+                  activeTab === 'ledger' ? 'text-zinc-950' : 'text-zinc-400'
                 }`}
               >
-                LOTS
+                LEDGER
               </Text>
             </TouchableOpacity>
 
@@ -712,18 +712,18 @@ export default function WalletScreen() {
 
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => setActiveTab('ledger')}
+              onPress={() => setActiveTab('lots')}
               className={`flex-1 py-3 items-center justify-center border-b-2 ${
-                activeTab === 'ledger' ? 'border-zinc-950 -mb-[1px]' : 'border-transparent'
+                activeTab === 'lots' ? 'border-zinc-950 -mb-[1px]' : 'border-transparent'
               }`}
             >
               <Text 
                 numberOfLines={1}
                 className={`text-[11px] font-bold uppercase ${
-                  activeTab === 'ledger' ? 'text-zinc-950' : 'text-zinc-400'
+                  activeTab === 'lots' ? 'text-zinc-950' : 'text-zinc-400'
                 }`}
               >
-                LEDGER
+                LOTS
               </Text>
             </TouchableOpacity>
           </View>
@@ -1034,7 +1034,7 @@ export default function WalletScreen() {
 
               {/* Filter Chips */}
               <View className="flex-row gap-2 my-1">
-                {(['all', 'booking', 'purchase', 'refund'] as const).map((filter) => (
+                {(['booking', 'purchase', 'refund', 'all'] as const).map((filter) => (
                   <TouchableOpacity
                     key={filter}
                     activeOpacity={0.7}

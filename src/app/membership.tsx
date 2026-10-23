@@ -31,46 +31,8 @@ interface Plan {
 }
 
 const PLANS: Plan[] = [
-  // Developer Test Plan (₹1 Verification)
-  {
-    id: 'plan-dev-test',
-    name: 'DEV TEST',
-    credits: 1,
-    price: '₹1',
-    savings: 'Gateway verification',
-    gstText: '₹1.00 Incl. Taxes',
-    gstVal: '₹0',
-    amountVal: '₹1',
-    idealFor: 'Safe real bank & gateway verification without charges.',
-    category: 'individual',
-    badge: 'DEV TEST (₹1)',
-    bulletPoints: [
-      '₹1 live gateway test',
-      'Instant test transaction',
-      'Safe verification'
-    ]
-  },
   // Individual Plans (1 Person) - Image 1000080404.jpg
-  {
-    id: 'plan-ind-1',
-    name: 'SINGLE SESSION',
-    credits: 1,
-    price: '₹1,499',
-    savings: 'Standard rate',
-    gstText: '₹1,499 + 5% GST',
-    gstVal: '₹75',
-    amountVal: '₹1,499',
-    finalPrice: '₹1,574',
-    perSessionText: '1 session / 60 min',
-    idealFor: 'For exploring private fitness at your doorstep',
-    bulletPoints: [
-      '1-on-1 private training (60 min)',
-      'Certified doorstep trainer',
-      'Full equipment included',
-      'Flexible time slots'
-    ],
-    category: 'individual'
-  },
+  // 8-Session Pack placed at the TOP as requested
   {
     id: 'plan-ind-2',
     name: '8-SESSION PACK',
@@ -94,6 +56,26 @@ const PLANS: Plan[] = [
     ribbon: 'FOUNDING 100',
     category: 'individual',
     isHighlighted: true,
+  },
+  {
+    id: 'plan-ind-1',
+    name: 'SINGLE SESSION',
+    credits: 1,
+    price: '₹1,499',
+    savings: 'Standard rate',
+    gstText: '₹1,499 + 5% GST',
+    gstVal: '₹75',
+    amountVal: '₹1,499',
+    finalPrice: '₹1,574',
+    perSessionText: '1 session / 60 min',
+    idealFor: 'For exploring private fitness at your doorstep',
+    bulletPoints: [
+      '1-on-1 private training (60 min)',
+      'Certified doorstep trainer',
+      'Full equipment included',
+      'Flexible time slots'
+    ],
+    category: 'individual'
   },
   {
     id: 'plan-ind-3',
@@ -195,15 +177,11 @@ const PLANS: Plan[] = [
     perSessionText: '₹1,625 / session for two',
     idealFor: 'Couple entry package for regular joint workouts',
     bulletPoints: [
-      'Founding 100 launch offer (₹13,000)',
       '8 shared workouts for 2 people',
       'Save ₹2,192 vs single couple sessions',
       'Punctual doorstep trainer delivery'
     ],
-    badge: 'COUPLE LAUNCH',
-    ribbon: 'FOUNDING 100',
-    category: 'couple',
-    isHighlighted: true,
+    category: 'couple'
   },
   {
     id: 'plan-cpl-3',
@@ -261,14 +239,7 @@ export default function MembershipScreen() {
   const [activeCategory, setActiveCategory] = useState<'individual' | 'couple'>('individual');
 
   const activePlans = useMemo(() => {
-    return PLANS.filter((p) => {
-      if (p.category !== activeCategory) return false;
-      // Show ₹1 Developer Test plan ONLY on iOS for Apple review/sandbox testing; hide completely on Android.
-      if (p.id === 'plan-dev-test' && Platform.OS !== 'ios') {
-        return false;
-      }
-      return true;
-    });
+    return PLANS.filter((p) => p.category === activeCategory);
   }, [activeCategory]);
 
   // Selection states - null initially, user selects manually
@@ -532,13 +503,14 @@ export default function MembershipScreen() {
           {activePlans.map((plan, idx) => {
             const isExpanded = selectedPlan?.id === plan.id;
             const displayName = plan.name;
+            const is8SessionPack = plan.id === 'plan-ind-2'; // Exclusively for Solo 8-Session Pack
             const isBuddyAddon = plan.id === 'plan-ind-addon-buddy';
             const isBuddyDisabled = isBuddyAddon && (creditBalance || 0) <= 0;
 
             // Extra callout text between key packages
             let sectionCallout: { text: string; icon: any; color: string } | null = null;
-            if (plan.id === 'plan-ind-2' || plan.id === 'plan-cpl-2') {
-              sectionCallout = { text: 'POPULAR CHOICE • SAVE 18%', icon: 'award', color: '#E11D48' };
+            if (is8SessionPack) {
+              sectionCallout = { text: 'LIMITED OFFER • FIRST 100 USERS', icon: 'zap', color: '#D97706' };
             } else if (plan.id === 'plan-ind-addon-buddy') {
               sectionCallout = { text: 'FLEXIBILITY PASS • BRING A FRIEND', icon: 'users', color: '#059669' };
             }
@@ -557,15 +529,19 @@ export default function MembershipScreen() {
 
                 <View
                   style={{
-                    backgroundColor: isBuddyDisabled ? '#FAFAFA' : '#FFFFFF',
+                    backgroundColor: isBuddyDisabled 
+                      ? '#FAFAFA' 
+                      : (is8SessionPack 
+                          ? '#FEFDF8' 
+                          : '#FFFFFF'),
                     borderRadius: 22,
-                    borderWidth: isExpanded ? 1.5 : (isBuddyDisabled ? 1 : 0),
-                    borderColor: isExpanded ? '#E11D48' : (isBuddyDisabled ? '#E4E4E7' : 'transparent'),
-                    shadowColor: '#000000',
+                    borderWidth: is8SessionPack ? 1.2 : (isBuddyDisabled ? 1 : 0),
+                    borderColor: is8SessionPack ? '#FDE68A' : (isBuddyDisabled ? '#E4E4E7' : 'transparent'),
+                    shadowColor: is8SessionPack ? '#D97706' : '#000000',
                     shadowOffset: { width: 0, height: 7 },
-                    shadowOpacity: isExpanded ? 0.16 : (isBuddyDisabled ? 0.02 : 0.08),
-                    shadowRadius: isExpanded ? 14 : (isBuddyDisabled ? 4 : 9),
-                    elevation: isExpanded ? 6 : (isBuddyDisabled ? 1 : 3),
+                    shadowOpacity: isExpanded ? 0.12 : (isBuddyDisabled ? 0.02 : (is8SessionPack ? 0.10 : 0.08)),
+                    shadowRadius: isExpanded ? 12 : (isBuddyDisabled ? 4 : (is8SessionPack ? 10 : 9)),
+                    elevation: isExpanded ? 5 : (isBuddyDisabled ? 1 : (is8SessionPack ? 4 : 3)),
                     position: 'relative',
                     opacity: isBuddyDisabled ? 0.72 : 1,
                     marginBottom: 16, // Clean increased spacing between cards
@@ -579,7 +555,11 @@ export default function MembershipScreen() {
                       top: -10,
                       left: 18,
                       zIndex: 10,
-                      backgroundColor: isBuddyDisabled ? '#71717A' : (plan.popular ? '#6366F1' : (plan.isHighlighted ? '#E11D48' : '#18181B')),
+                      backgroundColor: isBuddyDisabled 
+                        ? '#71717A' 
+                        : (is8SessionPack 
+                            ? '#D97706' 
+                            : (plan.popular ? '#6366F1' : (plan.isHighlighted ? '#E11D48' : '#18181B'))),
                       paddingHorizontal: 10,
                       paddingVertical: 3,
                       borderRadius: 6,
@@ -591,7 +571,7 @@ export default function MembershipScreen() {
                     }}
                   >
                     <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.6, textTransform: 'uppercase' }}>
-                      {isBuddyDisabled ? 'ADD-ON LOCKED' : (plan.ribbon || plan.badge)}
+                      {isBuddyDisabled ? 'ADD-ON LOCKED' : (is8SessionPack ? 'FIRST 100 EXCLUSIVE' : (plan.ribbon || plan.badge))}
                     </Text>
                   </View>
                 )}
@@ -616,6 +596,16 @@ export default function MembershipScreen() {
                       {plan.idealFor}
                     </Text>
 
+                    {/* Always visible promo point without enlarging / opening the card */}
+                    {is8SessionPack && (
+                      <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                        <Feather name="gift" size={12} color="#D97706" />
+                        <Text style={{ fontSize: 11, color: '#B45309', fontWeight: '800' }}>
+                          Limited time offer for first 100 users
+                        </Text>
+                      </View>
+                    )}
+
                     {/* Inline helper message when user with 0 credits clicks Workout Buddy */}
                     {isBuddyAddon && isBuddyDisabled && buddyNotice && (
                       <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
@@ -634,7 +624,14 @@ export default function MembershipScreen() {
                           {plan.originalPrice}
                         </Text>
                       )}
-                      <Text style={{ fontSize: 21, fontWeight: '900', color: isExpanded ? '#E11D48' : (isBuddyDisabled ? '#71717A' : '#18181B'), letterSpacing: -0.5 }}>
+                      <Text style={{ 
+                        fontSize: 21, 
+                        fontWeight: '900', 
+                        color: is8SessionPack 
+                          ? '#D97706' 
+                          : (isBuddyDisabled ? '#71717A' : '#18181B'), 
+                        letterSpacing: -0.5 
+                      }}>
                         {plan.price}
                       </Text>
                       <Text style={{ fontSize: 10, color: '#A1A1AA', fontWeight: '600' }}>
@@ -647,7 +644,7 @@ export default function MembershipScreen() {
                         width: 26, 
                         height: 26, 
                         borderRadius: 13,
-                        backgroundColor: isExpanded ? '#FFF1F2' : '#F4F4F6',
+                        backgroundColor: isExpanded ? (is8SessionPack ? '#FEF3C7' : '#FFF1F2') : (is8SessionPack ? '#FEF3C7' : '#F4F4F6'),
                         alignItems: 'center', 
                         justifyContent: 'center',
                         marginLeft: 4,
@@ -656,7 +653,7 @@ export default function MembershipScreen() {
                       <Feather 
                         name={isBuddyDisabled ? 'lock' : (isExpanded ? 'chevron-up' : 'chevron-down')} 
                         size={15} 
-                        color={isExpanded ? '#E11D48' : '#71717A'} 
+                        color={is8SessionPack ? '#D97706' : (isExpanded ? '#E11D48' : '#71717A')} 
                       />
                     </View>
                   </View>
@@ -664,12 +661,12 @@ export default function MembershipScreen() {
 
                 {/* Expanded Details Section */}
                 {isExpanded && (
-                  <View style={{ paddingHorizontal: 18, paddingBottom: 16, borderTopWidth: 1, borderTopColor: '#F4F4F6', paddingTop: 14 }}>
+                  <View style={{ paddingHorizontal: 18, paddingBottom: 16, borderTopWidth: 1, borderTopColor: is8SessionPack ? '#FEF3C7' : '#F4F4F6', paddingTop: 14 }}>
                     {/* Bullet Points with Clean Check / Tick mark */}
                     <View style={{ gap: 8 }}>
                       {plan.bulletPoints?.map((bullet, bIdx) => (
                         <View key={bIdx} style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
-                          <Feather name="check" size={14} color="#E11D48" />
+                          <Feather name="check" size={14} color={is8SessionPack ? '#D97706' : '#E11D48'} />
                           <Text style={{ fontSize: 12.5, color: '#3F3F46', fontWeight: '500', flex: 1, lineHeight: 17 }}>
                             {bullet}
                           </Text>
@@ -687,8 +684,8 @@ export default function MembershipScreen() {
         {/* HOW WORKOUTS WORK — Lightweight Clean Editorial Section */}
         <View className="mt-6 mb-4 px-1 py-1">
           <View className="flex-row items-center gap-2 mb-2">
-            <Feather name="info" size={13} color="#71717A" />
-            <Text className="text-zinc-500 text-[11px] font-bold uppercase tracking-wider">
+            <Feather name="info" size={13} color="#18181B" />
+            <Text className="text-zinc-950 text-[12px] font-black uppercase tracking-wider">
               {activeCategory === 'individual' ? 'How 1-on-1 Workouts Work' : 'How Couple Workouts Work'}
             </Text>
           </View>
@@ -702,14 +699,14 @@ export default function MembershipScreen() {
         {/* GOOD TO KNOW — Clean Minimal List */}
         <View className="mt-3 mb-4 px-1 py-1">
           <View className="flex-row items-center gap-2 mb-3">
-            <Feather name="shield" size={13} color="#71717A" />
-            <Text className="text-zinc-500 text-[11px] font-bold uppercase tracking-wider">Membership Perks & Terms</Text>
+            <Feather name="shield" size={13} color="#18181B" />
+            <Text className="text-zinc-950 text-[12px] font-black uppercase tracking-wider">Membership Perks & Terms</Text>
           </View>
 
           <View className="gap-2.5">
             {[
               'Each session equals one full 60-minute private workout at your doorstep.',
-              'All workouts are flexible across Strength, Flow, Cardio, Reset, or Combat.',
+              'All workouts are flexible across the workouts shown in the app.',
               'Prices shown are base rates · 5% GST added cleanly at checkout.',
               'Unused credits carry over smoothly under the standard VIRLA policy.'
             ].map((text, idx) => (
@@ -732,7 +729,7 @@ export default function MembershipScreen() {
           >
             <View>
               <View className="flex-row items-center gap-2">
-                <Text className="text-zinc-950 text-xs font-bold uppercase tracking-wider">PREMIUM BENEFITS</Text>
+                <Text className="text-zinc-950 text-[12px] font-black uppercase tracking-wider">PREMIUM BENEFITS</Text>
                 <View className="bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
                   <Text className="text-[#4F46E5] text-[10px] font-bold">7 Perks</Text>
                 </View>
