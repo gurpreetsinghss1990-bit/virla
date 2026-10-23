@@ -624,9 +624,9 @@ export default function MembershipScreen() {
 
                 {/* Expanded Details Section */}
                 {isExpanded && (
-                  <View style={{ paddingHorizontal: 18, paddingBottom: 18, borderTopWidth: 1, borderTopColor: '#F4F4F6', paddingTop: 14 }}>
+                  <View style={{ paddingHorizontal: 18, paddingBottom: 16, borderTopWidth: 1, borderTopColor: '#F4F4F6', paddingTop: 14 }}>
                     {/* Bullet Points with Check / Tick mark */}
-                    <View style={{ gap: 8, marginBottom: 16 }}>
+                    <View style={{ gap: 8 }}>
                       {plan.bulletPoints?.map((bullet, bIdx) => (
                         <View key={bIdx} style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
                           <View 
@@ -647,28 +647,6 @@ export default function MembershipScreen() {
                         </View>
                       ))}
                     </View>
-
-                    {/* Sleek, Balanced Red Button (No GST box in accordion) */}
-                    <TouchableOpacity
-                      activeOpacity={0.85}
-                      onPress={() => openPlanDetails(plan)}
-                      style={{
-                        backgroundColor: '#E11D48',
-                        borderRadius: 14,
-                        paddingVertical: 12,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        shadowColor: '#E11D48',
-                        shadowOffset: { width: 0, height: 3 },
-                        shadowOpacity: 0.25,
-                        shadowRadius: 6,
-                        elevation: 2,
-                      }}
-                    >
-                      <Text style={{ color: '#FFFFFF', fontSize: 12.5, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase' }}>
-                        GET STARTED • {plan.price}
-                      </Text>
-                    </TouchableOpacity>
                   </View>
                 )}
               </View>
@@ -773,43 +751,37 @@ export default function MembershipScreen() {
         </View>
       </ScrollView>
 
-      {/* Sticky Bottom Bar with smooth slide-up animation and curved top corners with ambient dark shadow */}
+      {/* Sticky Bottom Bar with compact height and curved top corners */}
       {selectedPlan && (
         <Animated.View 
           style={{ 
-            paddingBottom: Math.max((insets.bottom || 0), 14),
+            paddingBottom: Math.max((insets.bottom || 0), 10),
             opacity: footerBarAnim,
             transform: [
               {
                 translateY: footerBarAnim.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [60, 0],
+                  outputRange: [50, 0],
                 }),
               },
             ],
-            borderTopLeftRadius: 28,
-            borderTopRightRadius: 28,
+            borderTopLeftRadius: 22,
+            borderTopRightRadius: 22,
             backgroundColor: '#FFFFFF',
             shadowColor: '#000000',
-            shadowOffset: { width: 0, height: -8 },
-            shadowOpacity: 0.12,
-            shadowRadius: 16,
-            elevation: 16,
+            shadowOffset: { width: 0, height: -6 },
+            shadowOpacity: 0.1,
+            shadowRadius: 12,
+            elevation: 12,
           }}
-          className="border-t border-zinc-100 px-6 pt-4 flex-row items-center justify-between"
+          className="border-t border-zinc-100 px-5 pt-2.5 pb-2.5 flex-row items-center justify-between"
         >
-          <View className="gap-0.5">
-            <View className="flex-row items-center gap-1.5">
-              <View className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
-              <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-[0.8px]">
-                SELECTED
-              </Text>
-            </View>
-            <Text className="text-zinc-950 text-[15px] font-black leading-tight mt-0.5">
+          <View>
+            <Text className="text-zinc-950 text-[14px] font-black leading-tight">
               {selectedPlan.name}
             </Text>
-            <Text className="text-zinc-500 text-[11px] font-semibold">
-              {selectedPlan.credits} {selectedPlan.credits === 1 ? 'Session' : 'Sessions'} • Incl. 5% GST
+            <Text className="text-zinc-500 text-[11px] font-semibold mt-0.5">
+              {selectedPlan.credits} {selectedPlan.credits === 1 ? 'Session' : 'Sessions'} • Total: {selectedPlan.finalPrice || selectedPlan.price}
             </Text>
           </View>
 
@@ -817,32 +789,24 @@ export default function MembershipScreen() {
             activeOpacity={0.88}
             onPress={() => openPlanDetails(selectedPlan)}
             style={{
-              backgroundColor: '#18181B',
-              borderRadius: 16,
-              paddingHorizontal: 18,
-              paddingVertical: 12,
+              backgroundColor: '#E11D48',
+              borderRadius: 13,
+              paddingHorizontal: 15,
+              paddingVertical: 9,
               flexDirection: 'row',
               alignItems: 'center',
-              gap: 10,
-              shadowColor: '#000',
+              gap: 6,
+              shadowColor: '#E11D48',
               shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.18,
-              shadowRadius: 6,
-              elevation: 3,
+              shadowOpacity: 0.25,
+              shadowRadius: 5,
+              elevation: 2,
             }}
           >
-            <View className="items-end">
-              <Text className="text-zinc-400 text-[9.5px] font-bold uppercase tracking-wider">
-                Total Pay
-              </Text>
-              <Text className="text-white text-[15px] font-black tracking-tight">
-                {selectedPlan.finalPrice || selectedPlan.price}
-              </Text>
-            </View>
-
-            <View className="w-7 h-7 rounded-full bg-white/10 items-center justify-center">
-              <Feather name="arrow-right" size={14} color="#FFFFFF" />
-            </View>
+            <Text className="text-white text-[12px] font-extrabold tracking-wide uppercase">
+              Checkout
+            </Text>
+            <Feather name="arrow-right" size={13} color="#FFFFFF" />
           </TouchableOpacity>
         </Animated.View>
       )}
