@@ -214,13 +214,9 @@ export const PayPhiService = {
         plan: order.plan,
       };
 
-      // For Android: setAppInfo takes aggregator MID (38) and makePayment takes merchantId (39) & aggregatorID (38).
-      // For iOS: Bank meeting test - setAppInfo takes MID ending in 39, and makePayment takes MID ending in 38.
+      // For both Android & iOS: setAppInfo takes aggregator MID (38) and makePayment takes merchantId (39) & aggregatorID (38).
       if (!isInitialized) {
-        const loginMid =
-          Platform.OS === 'ios'
-            ? '100000000527739'
-            : order.aggregatorId || '100000000527738';
+        const loginMid = order.aggregatorId || '100000000527738';
 
         const initRes = await PayPhiService.initSDK(
           order.envType || 'PROD',
@@ -239,15 +235,8 @@ export const PayPhiService = {
 
       console.log(`[PayPhiService] Launching PayphiSdk.makePayment for order: ${order.merchantTxnNo}, Amount: ${order.amount}`);
 
-      const makePaymentMerchantId =
-        Platform.OS === 'ios'
-          ? '100000000527738'
-          : order.merchantId || '100000000527739';
-
-      const makePaymentAggregatorId =
-        Platform.OS === 'ios'
-          ? '100000000527739'
-          : order.aggregatorId || '100000000527738';
+      const makePaymentMerchantId = order.merchantId || '100000000527739';
+      const makePaymentAggregatorId = order.aggregatorId || '100000000527738';
 
       PayphiSdk.makePayment({
         amount: order.amount,
