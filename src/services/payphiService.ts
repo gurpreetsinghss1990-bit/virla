@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 import PayphiSdk from 'react-native-payphi-sdk';
 import { supabase } from '../database/supabaseClient';
 import { useWalletStore } from '../store/walletStore';
@@ -27,12 +26,7 @@ export const PayPhiService = {
   /**
    * Initializes the native PayPhi SDK with merchant & app credentials
    */
-  initSDK: async (
-    env = 'PROD',
-    merchantId = Platform.OS === 'ios' ? '100000000527739' : '100000000527738',
-    appId = '80bc18249511f868',
-    merchantName = 'NAMRATHA JAUNI'
-  ): Promise<{ success: boolean; code?: string; message?: string }> => {
+  initSDK: async (env = 'PROD', merchantId = '100000000527738', appId = '80bc18249511f868', merchantName = 'NAMRATHA JAUNI'): Promise<{ success: boolean; code?: string; message?: string }> => {
     try {
       console.log(`[PayPhiService] Initializing SDK: env=${env}, mId=${merchantId}, appId=${appId}, merchantName=${merchantName}`);
       
@@ -214,13 +208,12 @@ export const PayPhiService = {
         plan: order.plan,
       };
 
-      // For both Android & iOS: setAppInfo takes aggregator MID (38) and makePayment takes merchantId (39) & aggregatorID (38).
+      // Ensure SDK is initialized with parent/aggregator MID (100000000527738) for /merapp/login,
+      // while makePayment receives child merchantId (100000000527739) and aggregatorId (100000000527738).
       if (!isInitialized) {
-        const loginMid = order.aggregatorId || '100000000527738';
-
         const initRes = await PayPhiService.initSDK(
           order.envType || 'PROD',
-          loginMid,
+          order.aggregatorId || '100000000527738',
           order.appId,
           order.merchantName
         );
@@ -235,17 +228,14 @@ export const PayPhiService = {
 
       console.log(`[PayPhiService] Launching PayphiSdk.makePayment for order: ${order.merchantTxnNo}, Amount: ${order.amount}`);
 
-      const makePaymentMerchantId = order.merchantId || '100000000527739';
-      const makePaymentAggregatorId = order.aggregatorId || '100000000527738';
-
       PayphiSdk.makePayment({
         amount: order.amount,
-        merchantId: makePaymentMerchantId,
+        merchantId: order.merchantId || '100000000527739',
         merchantTxnNo: order.merchantTxnNo,
         currencyCode: order.currencyCode,
         customerEmailID: order.customerEmail,
-        secretKey: order.secretKey || 'db06cca0-838b-4e01-8b20-6ac446ffb6bd',
-        aggregatorID: makePaymentAggregatorId,
+        secretKey: order.secretKey || '29037ef8-b1b3-4bc7-a887-02c8ad12c46c',
+        aggregatorID: order.aggregatorId || '100000000527738',
         apiVersion: '4',
       });
 

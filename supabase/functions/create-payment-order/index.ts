@@ -23,62 +23,70 @@ const AUTHORIZED_PLANS: Record<string, PlanDef> = {
     gstVal: '0.00',
     totalPrice: '1.00',
   },
+  // Individual Plans (1 Person) - 5% GST
   'plan-ind-1': {
     name: 'Single Session',
     credits: 1,
-    amountVal: '1270.00',
-    gstVal: '229.00',
-    totalPrice: '1499.00',
+    amountVal: '1499.00',
+    gstVal: '75.00',
+    totalPrice: '1574.00',
   },
   'plan-ind-2': {
-    name: 'Starter Pack',
+    name: '8-Session Package',
     credits: 8,
-    amountVal: '9321.00',
-    gstVal: '1678.00',
-    totalPrice: '10999.00',
+    amountVal: '9800.00',
+    gstVal: '490.00',
+    totalPrice: '10290.00',
   },
   'plan-ind-3': {
-    name: 'Active Pack',
-    credits: 12,
-    amountVal: '10169.00',
-    gstVal: '1830.00',
-    totalPrice: '11999.00',
+    name: '16-Session Package',
+    credits: 16,
+    amountVal: '18000.00',
+    gstVal: '900.00',
+    totalPrice: '18900.00',
   },
   'plan-ind-4': {
-    name: 'Elite Pack',
-    credits: 15,
-    amountVal: '15253.00',
-    gstVal: '2746.00',
-    totalPrice: '17999.00',
+    name: '32-Session Package',
+    credits: 32,
+    amountVal: '34400.00',
+    gstVal: '1720.00',
+    totalPrice: '36120.00',
   },
-  // Couple Plans
-  'plan-cpl-1': {
-    name: 'Couple Single Session',
+  'plan-ind-addon-buddy': {
+    name: 'Workout Buddy Add-On',
     credits: 1,
-    amountVal: '2118.00',
-    gstVal: '381.00',
-    totalPrice: '2499.00',
+    amountVal: '499.00',
+    gstVal: '25.00',
+    totalPrice: '524.00',
+  },
+  // Couple Plans (Train Together) - 5% GST
+  'plan-cpl-1': {
+    name: 'Single Couple Session',
+    credits: 1,
+    amountVal: '1899.00',
+    gstVal: '95.00',
+    totalPrice: '1994.00',
   },
   'plan-cpl-2': {
-    name: 'Couple Starter Pack',
+    name: '8-Session Couple Package',
     credits: 8,
-    amountVal: '15253.00',
-    gstVal: '2746.00',
-    totalPrice: '17999.00',
+    amountVal: '13000.00',
+    gstVal: '650.00',
+    totalPrice: '13650.00',
   },
   'plan-cpl-3': {
-    name: 'Couple Active Pack',
-    credits: 12,
-    amountVal: '16270.00',
-    gstVal: '2929.00',
-    totalPrice: '19199.00',
+    name: '16-Session Couple Package',
+    credits: 16,
+    amountVal: '24400.00',
+    gstVal: '1220.00',
+    totalPrice: '25620.00',
   },
   'plan-cpl-4': {
-    name: 'Couple Elite Pack',
-    credits: 15,
-    amountVal: '25423.00',
-    gstVal: '4576.00',
-    totalPrice: '29999.00',
+    name: '32-Session Couple Package',
+    credits: 32,
+    amountVal: '47200.00',
+    gstVal: '2360.00',
+    totalPrice: '49560.00',
   },
 }
 
@@ -158,17 +166,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    const envType = (Deno.env.get('PAYPHI_ENV') || 'PROD').toUpperCase();
-    const isProd = envType === 'PROD' || envType === 'PRD';
+    const envType = 'PROD';
 
-    // Dual-environment credential resolution:
-    // On ICICI/PayPhi Prod:
-    // - 100000000527738 is the parentMID / aggregatorID (used in /merapp/login and aggregatorID field)
-    // - 100000000527739 is the sub-merchant ID "VIRLA" (used in makePayment MerchantID & SecureToken)
-    const merchantId = Deno.env.get('PAYPHI_MERCHANT_ID') || (isProd ? '100000000527739' : '100000000007164');
-    const aggregatorId = Deno.env.get('PAYPHI_AGGREGATOR_ID') || (isProd ? '100000000527738' : 'A100000000007164');
-    const merchantName = Deno.env.get('PAYPHI_MERCHANT_NAME') || (isProd ? 'VIRLA' : 'Sapphire Test');
-    const secretKey = Deno.env.get('PAYPHI_SECRET_KEY') || (isProd ? '29037ef8-b1b3-4bc7-a887-02c8ad12c46c' : 'db06cca0-838b-4e01-8b20-6ac446ffb6bd');
+    // Official Production Credentials exclusively:
+    // - 100000000527738 is the parentMID / aggregatorID
+    // - 100000000527739 is the sub-merchant ID
+    const merchantId = Deno.env.get('PAYPHI_MERCHANT_ID') || '100000000527739';
+    const aggregatorId = Deno.env.get('PAYPHI_AGGREGATOR_ID') || '100000000527738';
+    const merchantName = Deno.env.get('PAYPHI_MERCHANT_NAME') || 'NAMRATHA JAUNI';
+    const secretKey = Deno.env.get('PAYPHI_SECRET_KEY') || '29037ef8-b1b3-4bc7-a887-02c8ad12c46c';
     const appId = Deno.env.get('PAYPHI_APP_ID') || '80bc18249511f868';
     const currencyCode = '356';
 

@@ -950,20 +950,35 @@ export default function ProfileScreen() {
                         VIRLA PASS
                       </Text>
                     </View>
-                    <Text className="text-white text-2xl font-black mt-1 tracking-tight">
-                      {(() => {
-                        const bal = creditBalance ?? profile.creditsBalance ?? membership.availableCredits ?? 0;
-                        if (bal <= 0) return 'STANDARD';
+                    {(() => {
+                      const bal = creditBalance ?? profile.creditsBalance ?? membership.availableCredits ?? 0;
+                      let passTier = 'STANDARD';
+                      let passColor = '#FFFFFF';
+
+                      if (bal <= 0) {
+                        passTier = 'STANDARD';
+                        passColor = '#94A3B8';
+                      } else if (bal >= 15) {
+                        passTier = 'ELITE';
+                        passColor = '#FACC15'; // Vibrant Bright Yellow
+                      } else if (bal >= 12) {
+                        passTier = 'ACTIVE PASS';
+                        passColor = '#38BDF8'; // Sky Blue
+                      } else if (bal >= 8) {
+                        passTier = 'STARTER PASS';
+                        passColor = '#A78BFA'; // Purple
+                      } else {
                         const status = (profile.membershipStatus || membership.tier || '').trim().toUpperCase();
-                        if (status && status !== 'STANDARD' && status !== 'NONE') {
-                          return status;
-                        }
-                        if (bal >= 15) return 'ELITE PASS';
-                        if (bal >= 12) return 'ACTIVE PASS';
-                        if (bal >= 8) return 'STARTER PASS';
-                        return 'PREMIUM';
-                      })()}
-                    </Text>
+                        passTier = (status && status !== 'STANDARD' && status !== 'NONE') ? status : 'PREMIUM';
+                        passColor = '#34D399'; // Emerald
+                      }
+
+                      return (
+                        <Text style={{ color: passColor }} className="text-2xl font-black mt-1 tracking-tight">
+                          {passTier}
+                        </Text>
+                      );
+                    })()}
                   </TouchableOpacity>
                   <View className="bg-white p-1.5 rounded-xl shadow-xs">
                     <Ionicons name="qr-code" size={32} color="#0B1528" />
@@ -1375,28 +1390,7 @@ export default function ProfileScreen() {
               </View>
 
 
-              {/* Admin Control Panel direct entry button */}
-              {(user?.role === 'admin' || isWildcardTestAccount(user, profile.mobile)) && (
-                <View className="mb-4">
-                  <LuxuryCard 
-                    className="p-4 bg-indigo-950 border border-indigo-800 shadow-md rounded-[24px]"
-                    onPress={() => router.push('/admin-panel' as any)}
-                  >
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-row items-center gap-3">
-                        <View className="w-9 h-9 rounded-xl bg-indigo-600 items-center justify-center">
-                          <Feather name="shield" size={16} color="white" />
-                        </View>
-                        <View className="gap-0.5">
-                          <Text className="text-indigo-300 text-[8px] font-black uppercase tracking-widest">Administrator Access</Text>
-                          <Text className="text-white text-sm font-black tracking-tight">Open Admin Control Panel</Text>
-                        </View>
-                      </View>
-                      <Feather name="chevron-right" size={16} color="#A5B4FC" />
-                    </View>
-                  </LuxuryCard>
-                </View>
-              )}
+
 
               {/* Become a Trainer Option */}
               {user?.role !== 'trainer' && !hasApplied && (

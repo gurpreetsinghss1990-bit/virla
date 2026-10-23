@@ -3278,6 +3278,24 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     return (data || []) as SupportTicket[];
   }
 
+  async getRecentTicketForBooking(bookingId: string): Promise<SupportTicket | null> {
+    try {
+      const { data, error } = await supabase
+        .from('support_tickets')
+        .select('*')
+        .eq('booking_id', bookingId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        return data[0] as SupportTicket;
+      }
+    } catch (e) {
+      console.warn('[Database] getRecentTicketForBooking warning:', e);
+    }
+    return null;
+  }
+
   async fetchAllSupportTickets(): Promise<SupportTicket[]> {
     const { data, error } = await supabase
       .from('support_tickets')

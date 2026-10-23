@@ -17,6 +17,7 @@ import '../global.css';
 // Suppress known upstream React Native Fabric / Expo Router useLinking race condition warning
 LogBox.ignoreLogs([
   "Can't perform a React state update on a component that hasn't mounted yet",
+  "setLayoutAnimationEnabledExperimental is currently a no-op in the New Architecture",
 ]);
 
 // Keep the splash screen visible while we fetch resources

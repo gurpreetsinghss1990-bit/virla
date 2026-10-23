@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, ActivityIndicator, Linking, Share, InteractionManager } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,13 +39,13 @@ export default function WalletScreen() {
         Database.setCurrentUserId(storedUser.id);
       }
       
-      // 1. Instant sync from local store state - zero screen freeze
-      useWalletStore.getState().syncFromDB();
-      useMembershipStore.getState().syncFromDB();
-      useBookingStore.getState().syncFromDB();
-
-      // 2. Perform background async sync & self-healing reconciliation after screen transition
+      // Perform sync & self-healing reconciliation after screen transition to eliminate opening delay
       const task = InteractionManager.runAfterInteractions(() => {
+        // Instant sync from local store state
+        useWalletStore.getState().syncFromDB();
+        useMembershipStore.getState().syncFromDB();
+        useBookingStore.getState().syncFromDB();
+
         if (!Database.getIsLoaded()) {
           Database.load().then(() => {
             syncAllDomainStores();
@@ -74,7 +74,15 @@ export default function WalletScreen() {
   );
 
   const [activeTab, setActiveTab] = useState<'lots' | 'transfer' | 'ledger'>('lots');
+  const [isReady, setIsReady] = useState(false);
   const [dismissPriorityNotice, setDismissPriorityNotice] = useState(false);
+
+  useEffect(() => {
+    const handle = InteractionManager.runAfterInteractions(() => {
+      setIsReady(true);
+    });
+    return () => handle.cancel();
+  }, []);
   const [transferPhone, setTransferPhone] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
   const [recipientStatus, setRecipientStatus] = useState<'idle' | 'searching' | 'not_found' | 'self' | 'found'>('idle');
@@ -838,43 +846,45 @@ export default function WalletScreen() {
                 )}
               </View>
 
-              {/* Contextual Benefit / Tip Card */}
-              {isEliteUser && approachingLots.length > 0 ? (
-                <View className="bg-[#EDF3FC] p-4 rounded-2xl flex-row items-start gap-3 border border-blue-100/60 mt-1">
-                  <View className="w-9 h-9 rounded-full bg-[#FCE7F3] items-center justify-center">
-                    <Ionicons name="heart-outline" size={17} color="#E11D48" />
+              {/* Contextual Benefit / Tip Card (Deferred until transition finishes) */}
+              {isReady && (
+                isEliteUser && approachingLots.length > 0 ? (
+                  <View className="bg-[#EDF3FC] p-4 rounded-2xl flex-row items-start gap-3 border border-blue-100/60 mt-1">
+                    <View className="w-9 h-9 rounded-full bg-[#FCE7F3] items-center justify-center">
+                      <Ionicons name="heart-outline" size={17} color="#E11D48" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-zinc-950 text-xs font-bold">A special benefit for you ❤️</Text>
+                      <Text className="text-zinc-600 text-xs font-medium mt-1 leading-relaxed">
+                        Your credits are approaching their expiry date. Because you&apos;re a premium Virla client, we&apos;re giving you an additional 7 days to use your remaining credits.
+                      </Text>
+                    </View>
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-zinc-950 text-xs font-bold">A special benefit for you ❤️</Text>
-                    <Text className="text-zinc-600 text-xs font-medium mt-1 leading-relaxed">
-                      Your credits are approaching their expiry date. Because you&apos;re a premium Virla client, we&apos;re giving you an additional 7 days to use your remaining credits.
-                    </Text>
+                ) : role === 'trainer' ? (
+                  <View className="bg-[#EDF3FC] p-4 rounded-2xl flex-row items-start gap-3 border border-blue-100/60 mt-1">
+                    <View className="w-9 h-9 rounded-full bg-[#FCE7F3] items-center justify-center">
+                      <Ionicons name="information-circle-outline" size={17} color="#E11D48" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-zinc-950 text-xs font-bold">Transfer-Only Credits</Text>
+                      <Text className="text-zinc-600 text-xs font-medium mt-1 leading-relaxed">
+                        As a trainer, you can receive and transfer credits, but you cannot use credits to book sessions for yourself.
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              ) : role === 'trainer' ? (
-                <View className="bg-[#EDF3FC] p-4 rounded-2xl flex-row items-start gap-3 border border-blue-100/60 mt-1">
-                  <View className="w-9 h-9 rounded-full bg-[#FCE7F3] items-center justify-center">
-                    <Ionicons name="information-circle-outline" size={17} color="#E11D48" />
+                ) : (
+                  <View className="bg-[#EDF3FC] p-4 rounded-2xl flex-row items-start gap-3 border border-blue-100/60 mt-1">
+                    <View className="w-9 h-9 rounded-full bg-[#FCE7F3] items-center justify-center">
+                      <Ionicons name="bulb-outline" size={17} color="#E11D48" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-zinc-950 text-xs font-bold">Session Scheduling Tip</Text>
+                      <Text className="text-zinc-600 text-xs font-medium mt-1 leading-relaxed">
+                        Schedule your workout sessions in advance to ensure your available credits are utilized effectively before expiration.
+                      </Text>
+                    </View>
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-zinc-950 text-xs font-bold">Transfer-Only Credits</Text>
-                    <Text className="text-zinc-600 text-xs font-medium mt-1 leading-relaxed">
-                      As a trainer, you can receive and transfer credits, but you cannot use credits to book sessions for yourself.
-                    </Text>
-                  </View>
-                </View>
-              ) : (
-                <View className="bg-[#EDF3FC] p-4 rounded-2xl flex-row items-start gap-3 border border-blue-100/60 mt-1">
-                  <View className="w-9 h-9 rounded-full bg-[#FCE7F3] items-center justify-center">
-                    <Ionicons name="bulb-outline" size={17} color="#E11D48" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-zinc-950 text-xs font-bold">Session Scheduling Tip</Text>
-                    <Text className="text-zinc-600 text-xs font-medium mt-1 leading-relaxed">
-                      Schedule your workout sessions in advance to ensure your available credits are utilized effectively before expiration.
-                    </Text>
-                  </View>
-                </View>
+                )
               )}
             </View>
           )}

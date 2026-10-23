@@ -84,12 +84,11 @@ Deno.serve(async (req) => {
     }
 
     const prodSecret = '29037ef8-b1b3-4bc7-a887-02c8ad12c46c';
-    const uatSecret = 'db06cca0-838b-4e01-8b20-6ac446ffb6bd';
     const configuredSecret = Deno.env.get('PAYPHI_SECRET_KEY') || prodSecret;
 
-    // Multi-Candidate Checksum Verification (PayPhi HMAC variations supporting both prod and test)
+    // Multi-Candidate Checksum Verification (PayPhi HMAC SHA-256)
     if (receivedChecksum && amount) {
-      const secretsToTest = Array.from(new Set([configuredSecret, prodSecret, uatSecret]));
+      const secretsToTest = Array.from(new Set([configuredSecret, prodSecret]));
       let matchesAny = false;
 
       for (const key of secretsToTest) {

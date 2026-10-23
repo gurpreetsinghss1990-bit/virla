@@ -1,0 +1,8 @@
+node_modules
+.expo
+.git
+ios
+android
+web-build
+dist
+.npm_cache

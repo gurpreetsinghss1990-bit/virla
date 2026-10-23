@@ -107,14 +107,12 @@ export async function fetchGooglePlacesAutocomplete(
     if (!res.ok) {
       const errText = await res.text();
       console.warn(`Autocomplete HTTP ${res.status}: ${errText}`);
-      if (typeof __DEV__ !== 'undefined' && __DEV__) {
-        return getMockSuggestions(input);
-      }
-      return [];
+      // Fallback to OSM Nominatim Search for places suggestions
+      return fetchOsmPlacesAutocomplete(input);
     }
 
     const data = await res.json();
-    if (data && data.suggestions) {
+    if (data && data.suggestions && data.suggestions.length > 0) {
       return data.suggestions.map((s: any) => {
         const pred = s.placePrediction;
         return {
@@ -125,17 +123,64 @@ export async function fetchGooglePlacesAutocomplete(
         };
       });
     }
-    if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      return getMockSuggestions(input);
-    }
-    return [];
+    
+    // If Google returned no suggestions, try OSM
+    return fetchOsmPlacesAutocomplete(input);
   } catch (error) {
-    console.error('Autocomplete error:', error);
-    if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      return getMockSuggestions(input);
-    }
-    return [];
+    console.error('Autocomplete error, falling back to OSM:', error);
+    return fetchOsmPlacesAutocomplete(input);
   }
+}
+
+/**
+ * Free OSM (OpenStreetMap / Nominatim) Autocomplete Search Fallback
+ */
+async function fetchOsmPlacesAutocomplete(input: string): Promise<AutocompleteSuggestion[]> {
+  try {
+    const trimmed = input.trim();
+    if (trimmed.length < 2) return [];
+
+    // Query Nominatim restricted to India (with Mumbai prioritization)
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(trimmed)}&countrycodes=in&limit=6&addressdetails=1`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'VirlaFitnessApp/1.0',
+        'Accept-Language': 'en',
+      },
+    });
+
+    if (res.ok) {
+      const items = await res.json();
+      if (Array.isArray(items) && items.length > 0) {
+        return items.map((item: any) => {
+          const addr = item.address || {};
+          const mainTitle = addr.building || addr.amenity || addr.road || addr.suburb || addr.neighbourhood || item.name || trimmed;
+          const secondary = [
+            addr.suburb || addr.neighbourhood,
+            addr.city || addr.town || addr.city_district || 'Mumbai',
+            addr.state || 'Maharashtra',
+          ].filter(Boolean).join(', ');
+
+          // Encode coordinates directly into placeId for 0-latency resolution: "osm_<lat>_<lng>_<name>"
+          const encodedPlaceId = `osm_${item.lat}_${item.lon}_${encodeURIComponent(item.display_name || mainTitle)}`;
+
+          return {
+            placeId: encodedPlaceId,
+            description: item.display_name || `${mainTitle}, ${secondary}`,
+            mainText: mainTitle,
+            secondaryText: secondary || 'Mumbai, India',
+          };
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('[OSM Autocomplete] search failed:', e);
+  }
+
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    return getMockSuggestions(input);
+  }
+  return [];
 }
 
 export async function fetchGooglePlaceDetails(placeId: string): Promise<{
@@ -146,6 +191,22 @@ export async function fetchGooglePlaceDetails(placeId: string): Promise<{
   types?: string[];
   addressComponents?: any[];
 }> {
+  // 1. Check if place was generated via OSM Nominatim fallback: "osm_<lat>_<lng>_<name>"
+  if (placeId.startsWith('osm_')) {
+    const parts = placeId.split('_');
+    const lat = parseFloat(parts[1]);
+    const lng = parseFloat(parts[2]);
+    const decodedName = parts[3] ? decodeURIComponent(parts[3]) : 'Selected Location';
+    return {
+      address: decodedName,
+      latitude: !isNaN(lat) ? lat : 19.0176,
+      longitude: !isNaN(lng) ? lng : 72.8164,
+      placeName: decodedName.split(',')[0],
+      types: ['sublocality', 'point_of_interest'],
+      addressComponents: []
+    };
+  }
+
   if (placeId.startsWith('mock-')) {
     const mock = getMockPlaceDetails(placeId);
     let placeName = 'Selected Location';
@@ -228,25 +289,64 @@ export async function reverseGeocodeCoords(
   // Native Expo Location fallback
   try {
     const Location = require('expo-location');
-    const addressList = await Location.reverseGeocodeAsync({ latitude, longitude });
-    if (addressList && addressList.length > 0) {
-      const addr = addressList[0];
-      const parts = [
-        addr.name,
-        addr.street,
-        addr.district,
-        addr.subregion,
-        addr.city,
-        addr.region,
-        addr.postalCode,
-        addr.country
-      ].filter(p => !!p);
-      return {
-        address: parts.join(', ') || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
-      };
+    const { status } = await Location.getForegroundPermissionsAsync();
+    if (status === 'granted') {
+      const addressList = await Location.reverseGeocodeAsync({ latitude, longitude });
+      if (addressList && addressList.length > 0) {
+        const addr = addressList[0];
+        const parts = [
+          addr.name,
+          addr.street,
+          addr.district,
+          addr.subregion,
+          addr.city,
+          addr.region,
+          addr.postalCode,
+          addr.country
+        ].filter(p => !!p);
+        const resolved = parts.join(', ');
+        if (resolved) {
+          return { address: resolved };
+        }
+      }
     }
   } catch (error: any) {
-    console.error('Native reverse geocode failed:', error);
+    console.warn('Native reverse geocode unavailable:', error.message || error);
+  }
+
+  // Resilient Web/HTTP reverse geocode fallback (OSM Nominatim)
+  try {
+    const osmUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`;
+    const osmRes = await fetch(osmUrl, {
+      headers: {
+        'User-Agent': 'VirlaFitnessApp/1.0',
+        'Accept-Language': 'en',
+      },
+    });
+    if (osmRes.ok) {
+      const osmData = await osmRes.json();
+      if (osmData && osmData.display_name) {
+        const addrObj = osmData.address || {};
+        const shortParts = [
+          addrObj.building || addrObj.amenity || addrObj.neighbourhood || addrObj.suburb || osmData.name,
+          addrObj.road,
+          addrObj.suburb || addrObj.neighbourhood,
+          addrObj.city || addrObj.town || addrObj.city_district || 'Mumbai',
+          addrObj.postcode,
+        ].filter(Boolean);
+
+        const shortAddress = shortParts.length > 0 
+          ? Array.from(new Set(shortParts)).join(', ')
+          : osmData.display_name;
+
+        return {
+          address: shortAddress,
+          placeId: osmData.place_id ? String(osmData.place_id) : undefined,
+        };
+      }
+    }
+  } catch (osmErr) {
+    console.warn('OSM reverse geocode fallback error:', osmErr);
   }
 
   return {

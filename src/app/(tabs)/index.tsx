@@ -32,6 +32,7 @@ import { locationTrackerService } from '../../services/LocationTrackerService';
 import { Booking } from '../../types';
 import { normalizeDate, canonicalizeTimeRange, getBookingISTDateRange, getDisplayWorkoutTitle, formatToDDMMYYYY } from '../../utils/date';
 import { MASTER_TRAINER_AVATAR_IMAGE } from '../../constants/masterTrainerAvatar';
+import { getDefaultAvatarForGender } from './profile';
 
 
 function getClientGender(booking: Booking): string {
@@ -891,8 +892,8 @@ export default function HomeScreen() {
   }, [savedPlan?.workoutFrequency]);
 
   // Animations
-  const [fadeAnim] = useState(() => new Animated.Value(0));
-  const [slideAnim] = useState(() => new Animated.Value(20));
+  const [fadeAnim] = useState(() => new Animated.Value(1));
+  const [slideAnim] = useState(() => new Animated.Value(0));
   const [pulseAnim] = useState(() => new Animated.Value(1));
 
   // AI recommendations array
@@ -921,20 +922,12 @@ export default function HomeScreen() {
   }, [recs]);
 
   useEffect(() => {
-    fadeAnim.setValue(0);
-    slideAnim.setValue(20);
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      })
-    ]).start();
+    slideAnim.setValue(10);
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 350,
+      useNativeDriver: true,
+    }).start();
 
     Animated.loop(
       Animated.sequence([
@@ -942,7 +935,7 @@ export default function HomeScreen() {
         Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: true })
       ])
     ).start();
-  }, [role, fadeAnim, slideAnim, pulseAnim]);
+  }, [role, slideAnim, pulseAnim]);
 
   useEffect(() => {
     if (user.id) {
@@ -1160,20 +1153,21 @@ export default function HomeScreen() {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => navigateSafely('/(tabs)/profile')}
-            className="w-11 h-11 rounded-full border border-zinc-200 overflow-hidden relative"
+            className="w-11 h-11 rounded-full border border-zinc-200 overflow-hidden relative bg-zinc-100 items-center justify-center"
             style={{ minWidth: 44, minHeight: 44 }}
           >
             <Image 
               source={(() => {
-                const isMale = (user.gender || '').toLowerCase() === 'male' || role === 'trainer';
-                const rawAvatar = user.avatar;
+                const userGender = ((user as any)?.gender || profile?.gender || '').toLowerCase();
+                const isMale = userGender === 'male' || role === 'trainer';
+                const rawAvatar = profile?.avatar || user?.avatar;
                 if (isMale && (!rawAvatar || rawAvatar.includes('photo-1534528741775') || rawAvatar.includes('photo-1544005313') || rawAvatar.includes('selfie.jpg'))) {
                   return MASTER_TRAINER_AVATAR_IMAGE;
                 }
                 if (rawAvatar && typeof rawAvatar === 'string' && (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:')) && !rawAvatar.includes('selfie.jpg')) {
                   return { uri: rawAvatar };
                 }
-                return isMale ? MASTER_TRAINER_AVATAR_IMAGE : { uri: rawAvatar };
+                return isMale ? MASTER_TRAINER_AVATAR_IMAGE : { uri: getDefaultAvatarForGender(userGender) };
               })()} 
               className="w-full h-full" 
             />
@@ -1262,7 +1256,7 @@ export default function HomeScreen() {
             className="bg-[#FCF5F5] flex-1"
           >
             <Animated.View
-          style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
+          style={{ opacity: 1, transform: [{ translateY: slideAnim }] }}
           className="px-6 pt-6 gap-8"
         >
           {/* ==================== CLIENT MODE DASHBOARD ==================== */}

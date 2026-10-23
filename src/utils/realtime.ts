@@ -1,7 +1,6 @@
 import { AppState, AppStateStatus } from 'react-native';
 import { supabase } from '../database/supabaseClient';
 import { Database, mapBooking, mapCoach, mapChatMessage, mapNotificationItem, mapWorkoutAssignment } from '../database/Database';
-import { useBookingStore } from '../store/bookingStore';
 import { useCoachStore } from '../store/coachStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useUserStore } from '../store/userStore';
@@ -29,6 +28,13 @@ export function broadcastBookingUpdate(bookingId?: string, status?: string) {
   }
 }
 
+const syncBookingStore = () => {
+  try {
+    const { useBookingStore } = require('../store/bookingStore');
+    useBookingStore.getState().syncFromDB();
+  } catch (_) {}
+};
+
 async function performSmartBookingSync() {
   // 1. Never poll when app is in background or inactive (prevents battery drain / heating)
   if (currentAppState !== 'active') return;
@@ -46,7 +52,7 @@ async function performSmartBookingSync() {
 
   const changed = await Database.syncBookingsOnly();
   if (changed) {
-    useBookingStore.getState().syncFromDB();
+    syncBookingStore();
   }
 }
 
@@ -67,7 +73,7 @@ export function setupRealtimeSubscriptions() {
     .on('broadcast', { event: 'booking-sync' }, async () => {
       const changed = await Database.syncBookingsOnly();
       if (changed) {
-        useBookingStore.getState().syncFromDB();
+        syncBookingStore();
         useUserStore.getState().syncFromDB();
       }
     })
@@ -88,7 +94,7 @@ export function setupRealtimeSubscriptions() {
       }
       
       // Notify stores to re-sync state immediately
-      useBookingStore.getState().syncFromDB();
+      syncBookingStore();
       useUserStore.getState().syncFromDB();
     })
     // 2. Listen to Trainers changes
@@ -156,7 +162,7 @@ export function setupRealtimeSubscriptions() {
       }
       
       // Notify stores
-      useBookingStore.getState().syncFromDB();
+      syncBookingStore();
     })
     // 6. Listen to Trainer Workout Assignments changes
     .on('postgres_changes', { event: '*', schema: 'public', table: 'trainer_workout_assignments' }, (payload: any) => {
@@ -179,7 +185,7 @@ export function setupRealtimeSubscriptions() {
       
       // Notify stores to re-sync
       useCoachStore.getState().syncFromDB();
-      useBookingStore.getState().syncFromDB();
+      syncBookingStore();
     });
 
   let isInitialSubscription = true;
@@ -190,7 +196,7 @@ export function setupRealtimeSubscriptions() {
         console.log('[REALTIME] Reconnected. Syncing bookings...');
         try {
           await Database.syncBookingsOnly();
-          useBookingStore.getState().syncFromDB();
+          syncBookingStore();
           useCoachStore.getState().syncFromDB();
           useNotificationStore.getState().syncFromDB();
           useUserStore.getState().syncFromDB();

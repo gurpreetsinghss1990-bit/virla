@@ -130,8 +130,20 @@ export default function BookingsScreen() {
   const [cursorHistory, setCursorHistory] = useState<(string | null)[]>([]);
   const [loading, setLoading] = useState(() => !Database.getIsLoaded());
 
-  const handleOpenSupport = React.useCallback((b: Booking) => {
+  const handleOpenSupport = React.useCallback(async (b: Booking) => {
     setSupportBooking(b);
+    try {
+      // If a ticket already exists for this booking, open support chatbox directly
+      const existingTicket = await Database.getRecentTicketForBooking(b.id);
+      if (existingTicket) {
+        setActiveChatTicket(existingTicket);
+        setShowSupportChatModal(true);
+        return;
+      }
+    } catch (e) {
+      console.warn('[Bookings] Check existing ticket error:', e);
+    }
+    // Otherwise open the raise support ticket modal
     setShowRaiseTicketModal(true);
   }, []);
 

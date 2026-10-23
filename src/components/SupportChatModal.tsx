@@ -8,8 +8,10 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
   ActivityIndicator
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../database/supabaseClient';
@@ -28,13 +30,64 @@ export function SupportChatModal({
   currentRole,
   onClose,
 }: SupportChatModalProps) {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState<string>('');
   const [isSending, setIsSending] = useState<boolean>(false);
+  const [userCredits, setUserCredits] = useState<number | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const chatId = ticket ? `support_ticket_${ticket.ticket_id || ticket.id}` : '';
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Fetch client user credits if admin
+  useEffect(() => {
+    if (!visible || !ticket?.user_id) return;
+    
+    // 1. Try local cache
+    const profile = Database.getProfile(ticket.user_id);
+    if (profile && typeof profile.creditsBalance === 'number') {
+      setUserCredits(profile.creditsBalance);
+    }
+
+    // 2. Fetch fresh credits balance from Supabase
+    supabase
+      .from('user_profiles')
+      .select('credits_balance')
+      .eq('user_id', ticket.user_id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data && typeof data.credits_balance === 'number') {
+          setUserCredits(data.credits_balance);
+        }
+      })
+      .catch((err) => {
+        console.warn('[SupportChatModal] Fetch user credits error:', err);
+      });
+  }, [visible, ticket?.user_id]);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      const h = e.endCoordinates ? e.endCoordinates.height : 0;
+      setKeyboardHeight(h);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // Load and subscribe to real-time chat messages
   useEffect(() => {
@@ -162,6 +215,16 @@ export function SupportChatModal({
               </Text>
             </View>
           </View>
+
+          {/* User Credits Balance Tag (Visible to Admin in Support Chat) */}
+          {currentRole === 'admin' && (
+            <View className="flex-row items-center gap-1.5 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl">
+              <Feather name="credit-card" size={11} color="#D97706" />
+              <Text className="text-amber-800 text-[10px] font-black uppercase">
+                {userCredits !== null ? `${userCredits} Credits` : 'Credits: ...'}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Ticket Diagnostic Overview Header */}
@@ -186,7 +249,10 @@ export function SupportChatModal({
 
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ flex: 1 }}
+          style={{ 
+            flex: 1, 
+            paddingBottom: Platform.OS === 'android' ? keyboardHeight : 0 
+          }}
           keyboardVerticalOffset={Platform.OS === 'ios' ? insets.bottom + 8 : 0}
         >
           {/* Messages Stream */}
@@ -205,9 +271,14 @@ export function SupportChatModal({
               </View>
             ) : (
               messages.map((m) => {
-                const isMe = currentRole === 'admin' 
-                  ? (m.sender === 'virla' || m.sender === 'coach') 
-                  : (m.sender === 'customer' || m.sender === 'user');
+                const isTicketSummary = m.text?.startsWith('[Concierge Ticket #') || m.text?.includes('Issue regarding');
+                
+                // If it is the issue create message, show on left side for admin (as it comes from the user ticket)
+                const isMe = isTicketSummary 
+                  ? false 
+                  : (currentRole === 'admin' 
+                      ? (m.sender === 'virla' || m.sender === 'coach') 
+                      : (m.sender === 'customer' || m.sender === 'user'));
 
                 return (
                   <View
@@ -219,12 +290,26 @@ export function SupportChatModal({
                     className={`max-w-[82%] p-3.5 rounded-2xl ${
                       isMe
                         ? 'self-end bg-[#101828] rounded-br-xs'
-                        : 'self-start bg-zinc-100 border border-zinc-200/60 rounded-bl-xs'
+                        : isTicketSummary
+                          ? 'self-start bg-rose-50/70 border border-rose-200/80 rounded-bl-xs'
+                          : 'self-start bg-zinc-100 border border-zinc-200/60 rounded-bl-xs'
                     }`}
                   >
+                    {isTicketSummary && (
+                      <View className="flex-row items-center gap-1.5 mb-1 pb-1 border-b border-rose-200/60">
+                        <Feather name="alert-circle" size={11} color="#E11D48" />
+                        <Text className="text-[#E11D48] text-[9px] font-black uppercase tracking-wider">
+                          Reported Issue
+                        </Text>
+                      </View>
+                    )}
                     <Text
                       className={`text-xs font-medium leading-relaxed ${
-                        isMe ? 'text-white' : 'text-zinc-900'
+                        isMe 
+                          ? 'text-white' 
+                          : isTicketSummary 
+                            ? 'text-rose-950 font-semibold' 
+                            : 'text-zinc-900'
                       }`}
                     >
                       {m.text}
@@ -236,39 +321,82 @@ export function SupportChatModal({
                     >
                       {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </Text>
+
+                    {/* Admin option to view session details attached below the issue report card */}
+                    {isTicketSummary && currentRole === 'admin' && ticket.booking_id && (
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          onClose();
+                          router.push({
+                            pathname: '/session-detail',
+                            params: { id: ticket.booking_id },
+                          });
+                        }}
+                        className="mt-2.5 pt-2 border-t border-rose-200/80 flex-row items-center justify-between"
+                      >
+                        <View className="flex-row items-center gap-1.5">
+                          <Feather name="external-link" size={12} color="#E11D48" />
+                          <Text className="text-[#E11D48] text-[10px] font-black uppercase tracking-wider">
+                            User & Trainer Session Details
+                          </Text>
+                        </View>
+                        <Feather name="chevron-right" size={12} color="#E11D48" />
+                      </TouchableOpacity>
+                    )}
                   </View>
                 );
               })
             )}
           </ScrollView>
 
-          {/* Chat Input Bar */}
-          <View
-            className="px-4 py-3 bg-white border-t border-zinc-150 flex-row items-center gap-2"
-            style={{ paddingBottom: Math.max(insets.bottom, 12) }}
-          >
-            <TextInput
-              value={inputText}
-              onChangeText={setInputText}
-              placeholder={currentRole === 'admin' ? "Reply to client as Support Admin..." : "Type your message to Virla Support..."}
-              placeholderTextColor="#9CA3AF"
-              className="flex-1 bg-zinc-100 border border-zinc-200/80 rounded-2xl px-4 py-3 text-xs font-semibold text-zinc-900 max-h-24"
-              multiline
-            />
-            <TouchableOpacity
-              onPress={handleSend}
-              disabled={!inputText.trim() || isSending}
-              className={`w-11 h-11 rounded-2xl items-center justify-center ${
-                inputText.trim() ? 'bg-[#101828]' : 'bg-zinc-200'
-              }`}
+          {/* Chat Input Bar or Resolved/Closed Notice */}
+          {ticket?.status === 'RESOLVED' || ticket?.status === 'CLOSED' ? (
+            <View
+              className="px-5 py-4 bg-zinc-50 border-t border-zinc-200 items-center justify-center gap-1.5"
+              style={{ paddingBottom: Math.max(insets.bottom, 16) }}
             >
-              {isSending ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Feather name="arrow-up" size={18} color={inputText.trim() ? '#FFFFFF' : '#9CA3AF'} />
-              )}
-            </TouchableOpacity>
-          </View>
+              <View className="flex-row items-center gap-1.5 bg-emerald-100/70 border border-emerald-200 px-3 py-1 rounded-full">
+                <Feather name="check-circle" size={13} color="#059669" />
+                <Text className="text-emerald-800 text-[11px] font-black uppercase tracking-wider">
+                  Ticket {ticket.status}
+                </Text>
+              </View>
+              <Text className="text-zinc-600 text-xs font-bold text-center mt-0.5">
+                This Support was Resolved and Closed
+              </Text>
+              <Text className="text-zinc-400 text-[10px] font-medium text-center">
+                New replies are disabled for this ticket.
+              </Text>
+            </View>
+          ) : (
+            <View
+              className="px-4 py-3 bg-white border-t border-zinc-150 flex-row items-center gap-2"
+              style={{ paddingBottom: Math.max(insets.bottom, 12) }}
+            >
+              <TextInput
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder={currentRole === 'admin' ? "Reply to client as Support Admin..." : "Type your message to Virla Support..."}
+                placeholderTextColor="#9CA3AF"
+                className="flex-1 bg-zinc-100 border border-zinc-200/80 rounded-2xl px-4 py-3 text-xs font-semibold text-zinc-900 max-h-24"
+                multiline
+              />
+              <TouchableOpacity
+                onPress={handleSend}
+                disabled={!inputText.trim() || isSending}
+                className={`w-11 h-11 rounded-2xl items-center justify-center ${
+                  inputText.trim() ? 'bg-[#101828]' : 'bg-zinc-200'
+                }`}
+              >
+                {isSending ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Feather name="arrow-up" size={18} color={inputText.trim() ? '#FFFFFF' : '#9CA3AF'} />
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
         </KeyboardAvoidingView>
       </View>
     </Modal>

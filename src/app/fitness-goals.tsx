@@ -61,10 +61,11 @@ export default function FitnessGoalsScreen() {
   const isNavigatingRef = useRef(false);
 
   // Local state for instant, isolated UI updates with zero background tab churn
-  const [selectedGoals, setSelectedGoals] = useState<string[]>(() => {
+  const [initialGoals] = useState<string[]>(() => {
     const storeGoals = useUserProfileStore.getState().selectedGoals;
     return Array.isArray(storeGoals) && storeGoals.length > 0 ? [...storeGoals] : ['Strength'];
   });
+  const [selectedGoals, setSelectedGoals] = useState<string[]>(() => [...initialGoals]);
 
   const selectedGoalsRef = useRef(selectedGoals);
   selectedGoalsRef.current = selectedGoals;
@@ -78,6 +79,15 @@ export default function FitnessGoalsScreen() {
   const persistGoals = useCallback(() => {
     const goalsToSave = selectedGoalsRef.current;
     
+    // Check if goals actually changed before doing any DB write or network sync
+    const hasChanged = 
+      goalsToSave.length !== initialGoals.length ||
+      goalsToSave.some((g) => !initialGoals.includes(g));
+
+    if (!hasChanged) {
+      return;
+    }
+
     // 1. Instantly update Zustand store so profile tab displays them without lag
     useUserProfileStore.setState({
       selectedGoals: goalsToSave,
@@ -100,7 +110,7 @@ export default function FitnessGoalsScreen() {
         });
       });
     }
-  }, []);
+  }, [initialGoals]);
 
   const handleExitScreen = useCallback(() => {
     if (isNavigatingRef.current) return;
