@@ -234,7 +234,7 @@ export const PayPhiService = {
         merchantTxnNo: order.merchantTxnNo,
         currencyCode: order.currencyCode,
         customerEmailID: order.customerEmail,
-        secretKey: order.secretKey || 'db06cca0-838b-4e01-8b20-6ac446ffb6bd',
+        secretKey: order.secretKey || '29037ef8-b1b3-4bc7-a887-02c8ad12c46c',
         aggregatorID: order.aggregatorId || '100000000527738',
         apiVersion: '4',
       });

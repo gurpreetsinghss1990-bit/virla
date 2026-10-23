@@ -166,17 +166,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    const envType = (Deno.env.get('PAYPHI_ENV') || 'PROD').toUpperCase();
-    const isProd = envType === 'PROD' || envType === 'PRD';
+    const envType = 'PROD';
 
-    // Dual-environment credential resolution:
-    // On ICICI/PayPhi Prod:
-    // - 100000000527738 is the parentMID / aggregatorID (used in /merapp/login and aggregatorID field)
-    // - 100000000527739 is the sub-merchant ID "VIRLA" (used in makePayment MerchantID & SecureToken)
-    const merchantId = Deno.env.get('PAYPHI_MERCHANT_ID') || (isProd ? '100000000527739' : '100000000007164');
-    const aggregatorId = Deno.env.get('PAYPHI_AGGREGATOR_ID') || (isProd ? '100000000527738' : 'A100000000007164');
-    const merchantName = Deno.env.get('PAYPHI_MERCHANT_NAME') || (isProd ? 'VIRLA' : 'Sapphire Test');
-    const secretKey = Deno.env.get('PAYPHI_SECRET_KEY') || (isProd ? '29037ef8-b1b3-4bc7-a887-02c8ad12c46c' : 'db06cca0-838b-4e01-8b20-6ac446ffb6bd');
+    // Official Production Credentials exclusively:
+    // - 100000000527738 is the parentMID / aggregatorID
+    // - 100000000527739 is the sub-merchant ID
+    const merchantId = Deno.env.get('PAYPHI_MERCHANT_ID') || '100000000527739';
+    const aggregatorId = Deno.env.get('PAYPHI_AGGREGATOR_ID') || '100000000527738';
+    const merchantName = Deno.env.get('PAYPHI_MERCHANT_NAME') || 'NAMRATHA JAUNI';
+    const secretKey = Deno.env.get('PAYPHI_SECRET_KEY') || '29037ef8-b1b3-4bc7-a887-02c8ad12c46c';
     const appId = Deno.env.get('PAYPHI_APP_ID') || '80bc18249511f868';
     const currencyCode = '356';
 

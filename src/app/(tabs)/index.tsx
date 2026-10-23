@@ -32,6 +32,7 @@ import { locationTrackerService } from '../../services/LocationTrackerService';
 import { Booking } from '../../types';
 import { normalizeDate, canonicalizeTimeRange, getBookingISTDateRange, getDisplayWorkoutTitle, formatToDDMMYYYY } from '../../utils/date';
 import { MASTER_TRAINER_AVATAR_IMAGE } from '../../constants/masterTrainerAvatar';
+import { getDefaultAvatarForGender } from './profile';
 
 
 function getClientGender(booking: Booking): string {
@@ -1152,20 +1153,21 @@ export default function HomeScreen() {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => navigateSafely('/(tabs)/profile')}
-            className="w-11 h-11 rounded-full border border-zinc-200 overflow-hidden relative"
+            className="w-11 h-11 rounded-full border border-zinc-200 overflow-hidden relative bg-zinc-100 items-center justify-center"
             style={{ minWidth: 44, minHeight: 44 }}
           >
             <Image 
               source={(() => {
-                const isMale = (user.gender || '').toLowerCase() === 'male' || role === 'trainer';
-                const rawAvatar = user.avatar;
+                const userGender = ((user as any)?.gender || profile?.gender || '').toLowerCase();
+                const isMale = userGender === 'male' || role === 'trainer';
+                const rawAvatar = profile?.avatar || user?.avatar;
                 if (isMale && (!rawAvatar || rawAvatar.includes('photo-1534528741775') || rawAvatar.includes('photo-1544005313') || rawAvatar.includes('selfie.jpg'))) {
                   return MASTER_TRAINER_AVATAR_IMAGE;
                 }
                 if (rawAvatar && typeof rawAvatar === 'string' && (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:')) && !rawAvatar.includes('selfie.jpg')) {
                   return { uri: rawAvatar };
                 }
-                return isMale ? MASTER_TRAINER_AVATAR_IMAGE : { uri: rawAvatar };
+                return isMale ? MASTER_TRAINER_AVATAR_IMAGE : { uri: getDefaultAvatarForGender(userGender) };
               })()} 
               className="w-full h-full" 
             />

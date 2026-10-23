@@ -287,8 +287,16 @@ export default function MembershipScreen() {
     setSelectedPlan(null); // Keep unselected on tab change
   };
 
+  const [buddyNotice, setBuddyNotice] = useState(false);
+
   const handlePlanCardPress = (plan: Plan) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    // Rule: Workout Buddy (₹499 addon) is disabled if user has 0 credits
+    if (plan.id === 'plan-ind-addon-buddy' && (creditBalance || 0) <= 0) {
+      setBuddyNotice(true);
+      return;
+    }
+    setBuddyNotice(false);
     if (selectedPlan?.id === plan.id) {
       setSelectedPlan(null);
     } else {
@@ -520,27 +528,49 @@ export default function MembershipScreen() {
         </View>
 
         {/* Plan Cards - Accordion replicating exact screenshot feel */}
-        <View className="gap-4 mb-6">
+        <View style={{ marginBottom: 28 }}>
           {activePlans.map((plan, idx) => {
             const isExpanded = selectedPlan?.id === plan.id;
             const displayName = plan.name;
+            const isBuddyAddon = plan.id === 'plan-ind-addon-buddy';
+            const isBuddyDisabled = isBuddyAddon && (creditBalance || 0) <= 0;
+
+            // Extra callout text between key packages
+            let sectionCallout: { text: string; icon: any; color: string } | null = null;
+            if (plan.id === 'plan-ind-2' || plan.id === 'plan-cpl-2') {
+              sectionCallout = { text: 'POPULAR CHOICE • SAVE 18%', icon: 'award', color: '#E11D48' };
+            } else if (plan.id === 'plan-ind-addon-buddy') {
+              sectionCallout = { text: 'FLEXIBILITY PASS • BRING A FRIEND', icon: 'users', color: '#059669' };
+            }
 
             return (
-              <View
-                key={`plan-card-${idx}`}
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: 22,
-                  borderWidth: isExpanded ? 1.5 : 0,
-                  borderColor: isExpanded ? '#E11D48' : 'transparent',
-                  shadowColor: '#000000',
-                  shadowOffset: { width: 0, height: 7 },
-                  shadowOpacity: isExpanded ? 0.16 : 0.08,
-                  shadowRadius: isExpanded ? 14 : 9,
-                  elevation: isExpanded ? 6 : 3,
-                  position: 'relative',
-                }}
-              >
+              <React.Fragment key={`plan-card-${idx}`}>
+                {/* Attractive inline divider text with extra spacing */}
+                {sectionCallout && (
+                  <View style={{ marginTop: 14, marginBottom: 12, paddingHorizontal: 6, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Feather name={sectionCallout.icon} size={12} color={sectionCallout.color} />
+                    <Text style={{ fontSize: 10.5, fontWeight: '900', color: sectionCallout.color, letterSpacing: 0.8, textTransform: 'uppercase' }}>
+                      {sectionCallout.text}
+                    </Text>
+                  </View>
+                )}
+
+                <View
+                  style={{
+                    backgroundColor: isBuddyDisabled ? '#FAFAFA' : '#FFFFFF',
+                    borderRadius: 22,
+                    borderWidth: isExpanded ? 1.5 : (isBuddyDisabled ? 1 : 0),
+                    borderColor: isExpanded ? '#E11D48' : (isBuddyDisabled ? '#E4E4E7' : 'transparent'),
+                    shadowColor: '#000000',
+                    shadowOffset: { width: 0, height: 7 },
+                    shadowOpacity: isExpanded ? 0.16 : (isBuddyDisabled ? 0.02 : 0.08),
+                    shadowRadius: isExpanded ? 14 : (isBuddyDisabled ? 4 : 9),
+                    elevation: isExpanded ? 6 : (isBuddyDisabled ? 1 : 3),
+                    position: 'relative',
+                    opacity: isBuddyDisabled ? 0.72 : 1,
+                    marginBottom: 16, // Clean increased spacing between cards
+                  }}
+                >
                 {/* Floating Flag/Ribbon Badge at top-left outside */}
                 {(plan.badge || plan.ribbon) && (
                   <View 
@@ -549,7 +579,7 @@ export default function MembershipScreen() {
                       top: -10,
                       left: 18,
                       zIndex: 10,
-                      backgroundColor: plan.popular ? '#6366F1' : (plan.isHighlighted ? '#E11D48' : '#18181B'),
+                      backgroundColor: isBuddyDisabled ? '#71717A' : (plan.popular ? '#6366F1' : (plan.isHighlighted ? '#E11D48' : '#18181B')),
                       paddingHorizontal: 10,
                       paddingVertical: 3,
                       borderRadius: 6,
@@ -561,30 +591,40 @@ export default function MembershipScreen() {
                     }}
                   >
                     <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.6, textTransform: 'uppercase' }}>
-                      {plan.ribbon || plan.badge}
+                      {isBuddyDisabled ? 'ADD-ON LOCKED' : (plan.ribbon || plan.badge)}
                     </Text>
                   </View>
                 )}
 
                 {/* Card Collapsed/Expanded Top Summary Bar */}
                 <TouchableOpacity
-                  activeOpacity={0.85}
+                  activeOpacity={isBuddyDisabled ? 0.95 : 0.85}
                   onPress={() => handlePlanCardPress(plan)}
                   style={{
                     padding: 18,
-                    paddingTop: (plan.badge || plan.ribbon) ? 16 : 18,
+                    paddingTop: (plan.badge || plan.ribbon) ? 20 : 18,
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                   }}
                 >
                   <View style={{ flex: 1, paddingRight: 10 }}>
-                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#18181B', letterSpacing: -0.2 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: isBuddyDisabled ? '#71717A' : '#18181B', letterSpacing: -0.2 }}>
                       {displayName}
                     </Text>
                     <Text style={{ fontSize: 12, color: '#71717A', marginTop: 2, fontWeight: '500' }}>
                       {plan.idealFor}
                     </Text>
+
+                    {/* Inline helper message when user with 0 credits clicks Workout Buddy */}
+                    {isBuddyAddon && isBuddyDisabled && buddyNotice && (
+                      <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                        <Feather name="info" size={12} color="#E11D48" />
+                        <Text style={{ fontSize: 11, color: '#E11D48', fontWeight: '700' }}>
+                          This is an add-on plan, not a standalone pack.
+                        </Text>
+                      </View>
+                    )}
                   </View>
 
                   <View style={{ alignItems: 'flex-end', flexDirection: 'row', gap: 6 }}>
@@ -594,7 +634,7 @@ export default function MembershipScreen() {
                           {plan.originalPrice}
                         </Text>
                       )}
-                      <Text style={{ fontSize: 21, fontWeight: '900', color: isExpanded ? '#E11D48' : '#18181B', letterSpacing: -0.5 }}>
+                      <Text style={{ fontSize: 21, fontWeight: '900', color: isExpanded ? '#E11D48' : (isBuddyDisabled ? '#71717A' : '#18181B'), letterSpacing: -0.5 }}>
                         {plan.price}
                       </Text>
                       <Text style={{ fontSize: 10, color: '#A1A1AA', fontWeight: '600' }}>
@@ -614,8 +654,8 @@ export default function MembershipScreen() {
                       }}
                     >
                       <Feather 
-                        name={isExpanded ? 'chevron-up' : 'chevron-down'} 
-                        size={16} 
+                        name={isBuddyDisabled ? 'lock' : (isExpanded ? 'chevron-up' : 'chevron-down')} 
+                        size={15} 
                         color={isExpanded ? '#E11D48' : '#71717A'} 
                       />
                     </View>
@@ -625,22 +665,11 @@ export default function MembershipScreen() {
                 {/* Expanded Details Section */}
                 {isExpanded && (
                   <View style={{ paddingHorizontal: 18, paddingBottom: 16, borderTopWidth: 1, borderTopColor: '#F4F4F6', paddingTop: 14 }}>
-                    {/* Bullet Points with Check / Tick mark */}
+                    {/* Bullet Points with Clean Check / Tick mark */}
                     <View style={{ gap: 8 }}>
                       {plan.bulletPoints?.map((bullet, bIdx) => (
                         <View key={bIdx} style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
-                          <View 
-                            style={{ 
-                              width: 16, 
-                              height: 16, 
-                              borderRadius: 8, 
-                              backgroundColor: '#FFF1F2',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }} 
-                          >
-                            <Feather name="check" size={11} color="#E11D48" />
-                          </View>
+                          <Feather name="check" size={14} color="#E11D48" />
                           <Text style={{ fontSize: 12.5, color: '#3F3F46', fontWeight: '500', flex: 1, lineHeight: 17 }}>
                             {bullet}
                           </Text>
@@ -650,9 +679,10 @@ export default function MembershipScreen() {
                   </View>
                 )}
               </View>
-            );
-          })}
-        </View>
+            </React.Fragment>
+          );
+        })}
+      </View>
 
         {/* HOW WORKOUTS WORK — Lightweight Clean Editorial Section */}
         <View className="mt-6 mb-4 px-1 py-1">
@@ -755,7 +785,7 @@ export default function MembershipScreen() {
       {selectedPlan && (
         <Animated.View 
           style={{ 
-            paddingBottom: Math.max((insets.bottom || 0), 10),
+            paddingBottom: Math.max((insets.bottom || 0) + (Platform.OS === 'android' ? 24 : 8), Platform.OS === 'android' ? 36 : 14),
             opacity: footerBarAnim,
             transform: [
               {
@@ -774,37 +804,44 @@ export default function MembershipScreen() {
             shadowRadius: 12,
             elevation: 12,
           }}
-          className="border-t border-zinc-100 px-5 pt-2.5 pb-2.5 flex-row items-center justify-between"
+          className="border-t border-zinc-100 px-5 pt-3 pb-2.5 flex-row items-center justify-between"
         >
-          <View>
-            <Text className="text-zinc-950 text-[14px] font-black leading-tight">
+          <View className="flex-1 pr-3">
+            <Text className="text-zinc-950 text-[15px] font-black tracking-tight leading-tight">
               {selectedPlan.name}
             </Text>
-            <Text className="text-zinc-500 text-[11px] font-semibold mt-0.5">
-              {selectedPlan.credits} {selectedPlan.credits === 1 ? 'Session' : 'Sessions'} • Total: {selectedPlan.finalPrice || selectedPlan.price}
-            </Text>
+            <View className="flex-row items-center gap-1.5 mt-0.5">
+              <Text className="text-zinc-400 text-[11px] font-medium">
+                {selectedPlan.credits} {selectedPlan.credits === 1 ? 'Session' : 'Sessions'}
+              </Text>
+              <Text className="text-zinc-300 text-[10px]">•</Text>
+              <Text className="text-zinc-400 text-[11px] font-normal">Price:</Text>
+              <Text style={{ color: '#E11D48' }} className="text-[13.5px] font-black tracking-tight">
+                {selectedPlan.price}
+              </Text>
+            </View>
           </View>
 
           <TouchableOpacity
             activeOpacity={0.88}
             onPress={() => openPlanDetails(selectedPlan)}
             style={{
-              backgroundColor: '#E11D48',
-              borderRadius: 13,
-              paddingHorizontal: 15,
-              paddingVertical: 9,
+              backgroundColor: '#E11D48', // Virla signature primary red
+              borderRadius: 24, // Fully rounded pill shape
+              paddingHorizontal: 16,
+              height: 38,
               flexDirection: 'row',
               alignItems: 'center',
               gap: 6,
               shadowColor: '#E11D48',
-              shadowOffset: { width: 0, height: 2 },
+              shadowOffset: { width: 0, height: 3 },
               shadowOpacity: 0.25,
-              shadowRadius: 5,
-              elevation: 2,
+              shadowRadius: 6,
+              elevation: 3,
             }}
           >
-            <Text className="text-white text-[12px] font-extrabold tracking-wide uppercase">
-              Checkout
+            <Text className="text-white text-[12px] font-black tracking-wider uppercase">
+              Pay {selectedPlan.price}
             </Text>
             <Feather name="arrow-right" size={13} color="#FFFFFF" />
           </TouchableOpacity>
@@ -814,8 +851,11 @@ export default function MembershipScreen() {
       {/* Details & Checkout Overlay Modal (Feature 2) */}
       {isModalOpen && selectedPlan && (
         <Animated.View 
-          style={{ opacity: overlayOpacity }}
-          className="absolute top-0 left-0 right-0 bottom-0 bg-black/60 z-50 justify-end pb-6 px-4"
+          style={{ 
+            opacity: overlayOpacity,
+            paddingBottom: Math.max((insets.bottom || 0) + (Platform.OS === 'android' ? 24 : 12), Platform.OS === 'android' ? 36 : 16)
+          }}
+          className="absolute top-0 left-0 right-0 bottom-0 bg-black/60 z-50 justify-end px-3.5"
         >
           {/* Transparent dismiss header */}
           <TouchableOpacity onPress={closeDetails} className="flex-1" />
@@ -829,48 +869,45 @@ export default function MembershipScreen() {
               shadowRadius: 20,
               elevation: 16,
             }}
-            className="bg-white rounded-[32px] p-6 pb-8 gap-5 min-h-[480px] border border-zinc-100/80"
+            className="bg-white rounded-[28px] p-5 pt-3.5 pb-5 border border-zinc-100"
           >
             {/* Modal Drag handle indicator */}
-            <View className="w-10 h-1 bg-zinc-200 rounded-full align-self-center mx-auto" />
-
-            {/* Demo payment simulation notice hidden — dev only
-            <View className="bg-red-50 border border-red-200 p-3.5 rounded-2xl flex-row items-center gap-3">
-              <Feather name="info" size={16} color="#DC2626" />
-              <Text className="text-red-700 text-xs font-bold leading-tight flex-1">
-                This is just a demo payment simulation. Real payment gateway will integrate after the production approval.
-              </Text>
-            </View>
-            */}
+            <View className="w-9 h-1 bg-zinc-200 rounded-full align-self-center mx-auto mb-2" />
 
             {!isProcessing && !isSuccess && (
               <>
                 {!checkoutActive ? (
                   // Plan details list (Feature 2)
-                  <View className="gap-5">
-                    <View className="flex-row justify-between items-center border-b border-zinc-100 pb-4">
-                      <View className="gap-1 flex-1 pr-3">
-                        <Text className="text-zinc-400 text-[10px] font-bold uppercase">Plan Selected</Text>
-                        <Text className="text-zinc-950 text-lg font-bold mt-0.5">{selectedPlan.name}</Text>
-                        <View className="flex-row items-center gap-1.5 mt-1.5">
-                          <Feather name="tag" size={11} color="#4F46E5" />
-                          <Text className="text-[#4F46E5] text-[10px] font-semibold">GST Tax Note: {selectedPlan.gstText}</Text>
+                  <View className="gap-3.5">
+                    <View className="flex-row justify-between items-center border-b border-zinc-100 pb-2.5">
+                      <View className="flex-1 pr-3">
+                        <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Plan Selected</Text>
+                        <Text className="text-zinc-950 text-xl font-black tracking-tight mt-0.5">{selectedPlan.name}</Text>
+                        <View className="flex-row items-center gap-1.5 mt-1">
+                          <Feather name="tag" size={11} color="#E11D48" />
+                          <Text style={{ color: '#E11D48' }} className="text-[10px] font-bold">
+                            GST Tax Note: {selectedPlan.gstText}
+                          </Text>
                         </View>
                       </View>
-                      <TouchableOpacity onPress={closeDetails} className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center">
-                        <Feather name="x" size={14} color="#101828" />
+                      <TouchableOpacity 
+                        onPress={closeDetails} 
+                        activeOpacity={0.7}
+                        className="w-10 h-10 rounded-full bg-zinc-100 items-center justify-center border border-zinc-200"
+                      >
+                        <Feather name="x" size={19} color="#18181B" />
                       </TouchableOpacity>
                     </View>
 
-                    <View className="gap-1.5">
-                      <Text className="text-zinc-950 text-[10px] font-bold uppercase">Plan overview</Text>
-                      <Text className="text-zinc-500 text-xs font-normal leading-relaxed pl-0.5">
+                    <View className="gap-0.5">
+                      <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Plan overview</Text>
+                      <Text className="text-zinc-600 text-xs font-normal leading-snug">
                         {selectedPlan.idealFor}
                       </Text>
                     </View>
 
-                    <View className="gap-2.5">
-                      <Text className="text-zinc-950 text-[10px] font-bold uppercase">Package Highlights</Text>
+                    <View className="gap-2">
+                      <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Package Highlights</Text>
                       {(selectedPlan.bulletPoints && selectedPlan.bulletPoints.length > 0
                         ? selectedPlan.bulletPoints
                         : [
@@ -880,69 +917,128 @@ export default function MembershipScreen() {
                             'Unused credits follow the VIRLA renewal policy.'
                           ]
                       ).map((item, idx) => (
-                        <View key={idx} className="flex-row gap-2.5 items-start pl-1">
-                          <View className="mt-0.5">
-                            <Feather name="check" size={12} color="#10B981" />
-                          </View>
-                          <Text className="text-zinc-600 text-xs font-medium leading-relaxed flex-1">{item}</Text>
+                        <View key={idx} className="flex-row gap-2 items-center">
+                          <Feather name="check" size={13} color="#E11D48" />
+                          <Text className="text-zinc-700 text-xs font-medium flex-1">{item}</Text>
                         </View>
                       ))}
                     </View>
 
                     <TouchableOpacity
-                      activeOpacity={0.8}
+                      activeOpacity={0.85}
                       onPress={startCheckout}
-                      className="bg-zinc-950 rounded-2xl items-center justify-center mt-3 shadow-sm"
-                      style={{ height: 52 }}
+                      style={{ 
+                        backgroundColor: '#E11D48', // Virla signature primary red
+                        height: 42,
+                        borderRadius: 21,
+                        shadowColor: '#E11D48',
+                        shadowOffset: { width: 0, height: 3 },
+                        shadowOpacity: 0.25,
+                        shadowRadius: 6,
+                        elevation: 3,
+                      }}
+                      className="items-center justify-center mt-2"
                     >
-                      <Text className="text-white text-xs font-bold uppercase">Continue →</Text>
+                      <Text className="text-white text-xs font-black uppercase tracking-wider">Continue →</Text>
                     </TouchableOpacity>
                   </View>
                 ) : (
                   // Slide To Purchase Checkout (Feature 5)
-                  <View className="gap-5 py-2">
-                    <View className="flex-row justify-between items-center border-b border-zinc-100 pb-4">
-                      <Text className="text-zinc-950 text-base font-bold uppercase pl-1">Checkout</Text>
-                      <TouchableOpacity onPress={() => setCheckoutActive(false)} className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center">
-                        <Feather name="arrow-left" size={14} color="#101828" />
-                      </TouchableOpacity>
-                    </View>
-
-                    <View className="bg-zinc-50 border border-zinc-100 p-[18px] rounded-2xl gap-3">
-                      <View className="flex-row justify-between items-center">
-                        <Text className="text-zinc-500 text-xs font-semibold">{selectedPlan.name}</Text>
-                        <Text className="text-zinc-900 text-xs font-extrabold">{selectedPlan.amountVal}</Text>
-                      </View>
-                      <View className="flex-row justify-between items-center">
-                        <Text className="text-zinc-500 text-xs font-semibold">GST (5%)</Text>
-                        <Text className="text-zinc-900 text-xs font-extrabold">{selectedPlan.gstVal}</Text>
-                      </View>
-                      <View className="h-[1px] bg-zinc-200 my-1" />
-                      <View className="flex-row justify-between items-center">
-                        <Text className="text-zinc-950 text-sm font-extrabold">Total Amount</Text>
-                        <Text className="text-[#4F46E5] text-base font-extrabold">{selectedPlan.finalPrice || selectedPlan.price}</Text>
+                  <View className="gap-3.5">
+                    <View className="flex-row justify-between items-center border-b border-zinc-100 pb-2.5">
+                      <Text className="text-zinc-950 text-base font-black uppercase tracking-tight">Checkout</Text>
+                      <View className="flex-row items-center gap-2">
+                        <TouchableOpacity 
+                          onPress={() => setCheckoutActive(false)} 
+                          activeOpacity={0.7}
+                          className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center border border-zinc-200"
+                        >
+                          <Feather name="arrow-left" size={16} color="#18181B" />
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          onPress={closeDetails} 
+                          activeOpacity={0.7}
+                          className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center border border-zinc-200"
+                        >
+                          <Feather name="x" size={16} color="#18181B" />
+                        </TouchableOpacity>
                       </View>
                     </View>
 
-                    {/* Universal Real Payment Gateway Button (Both iOS & Android) */}
-                    <View className="gap-3 mt-2">
+                    <View className="bg-zinc-50 border border-zinc-200 p-3.5 rounded-2xl gap-2">
+                      {/* Base Pack Price */}
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-zinc-600 text-xs font-semibold">{selectedPlan.name}</Text>
+                        <Text className="text-zinc-950 text-xs font-black">{selectedPlan.amountVal}</Text>
+                      </View>
+
+                      {/* Plus Separator with Black accent line */}
+                      <View className="flex-row items-center justify-center my-0.5">
+                        <View className="h-[1px] bg-zinc-900 flex-1" />
+                        <View className="w-5 h-5 rounded-full bg-zinc-900 items-center justify-center mx-2">
+                          <Feather name="plus" size={12} color="#FFFFFF" />
+                        </View>
+                        <View className="h-[1px] bg-zinc-900 flex-1" />
+                      </View>
+
+                      {/* GST (5%) */}
+                      <View className="flex-row justify-between items-center">
+                        <View className="flex-row items-center gap-1.5">
+                          <Text className="text-zinc-900 text-xs font-bold">GST (5%)</Text>
+                          <View className="bg-zinc-900 px-1.5 py-0.5 rounded-md">
+                            <Text className="text-white text-[9px] font-black uppercase">5% Govt GST</Text>
+                          </View>
+                        </View>
+                        <Text className="text-zinc-900 text-xs font-black">{selectedPlan.gstVal}</Text>
+                      </View>
+
+                      {/* Solid Black Separator Line */}
+                      <View className="h-[1.5px] bg-zinc-900 my-1" />
+
+                      {/* Total Amount with Bold = icon */}
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">Total Amount</Text>
+                        <View className="flex-row items-center gap-1.5">
+                          <Text style={{ color: '#E11D48' }} className="text-base font-black">
+                            =
+                          </Text>
+                          <Text style={{ color: '#E11D48' }} className="text-[19px] font-black tracking-tight">
+                            {selectedPlan.finalPrice || selectedPlan.price}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Compact Natural-Width Payment Gateway Button - App Primary Red Style */}
+                    <View className="items-center gap-2 mt-2">
                       <TouchableOpacity
-                        activeOpacity={0.85}
+                        activeOpacity={0.75}
                         disabled={isProcessing}
                         onPress={handlePayPhiPayment}
-                        className="h-14 bg-[#4F46E5] rounded-2xl items-center justify-center shadow-md"
-                        style={{ height: 54 }}
+                        style={{ 
+                          backgroundColor: '#E11D48', // Virla signature primary red
+                          height: 40,
+                          borderRadius: 20, // Curvy pill shape
+                          paddingHorizontal: 28, // Content-hugging natural width
+                          shadowColor: '#E11D48',
+                          shadowOffset: { width: 0, height: 4 },
+                          shadowOpacity: 0.28,
+                          shadowRadius: 8,
+                          elevation: 4,
+                        }}
+                        className="items-center justify-center flex-row gap-2"
                       >
-                        <Text className="text-white text-xs font-extrabold uppercase tracking-wide">
-                          Pay {selectedPlan.finalPrice || selectedPlan.price} with Payment Gateway
+                        <Text className="text-white text-xs font-black uppercase tracking-wider">
+                          Pay {selectedPlan.finalPrice || selectedPlan.price}
                         </Text>
+                        <Feather name="arrow-right" size={13} color="#FFFFFF" />
                       </TouchableOpacity>
 
-                      {/* Safety Guidance Warning */}
-                      <View className="bg-amber-50/80 border border-amber-200/90 rounded-xl p-3 flex-row items-center gap-2.5">
-                        <Feather name="alert-circle" size={14} color="#D97706" />
-                        <Text className="text-amber-900 text-[11px] font-bold flex-1 leading-tight">
-                          Please don't close the App or press back during payment operations.
+                      {/* Clean Safety Guidance Note in Red */}
+                      <View className="flex-row items-center justify-center gap-1.5 pt-0.5 px-2">
+                        <Feather name="shield" size={12} color="#EF4444" />
+                        <Text className="text-red-500 text-[11px] font-semibold text-center">
+                          Please don't close the app or press back during checkout
                         </Text>
                       </View>
                     </View>
