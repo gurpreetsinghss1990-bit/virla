@@ -455,14 +455,8 @@ export default function MembershipScreen() {
 
           {/* Centered Editorial Title */}
           <View className="items-center justify-center">
-            <View className="flex-row items-center gap-1.5">
-              <View className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
-              <Text className="text-zinc-400 text-[10px] font-bold tracking-[0.8px] uppercase">
-                MEMBERSHIP & PACKS
-              </Text>
-            </View>
-            <Text className="text-zinc-950 text-[15px] font-extrabold tracking-tight mt-0.5">
-              VIRLA Credits
+            <Text className="text-zinc-950 text-[16px] font-black tracking-tight">
+              Virla Membership
             </Text>
           </View>
 
@@ -537,13 +531,13 @@ export default function MembershipScreen() {
                 style={{
                   backgroundColor: '#FFFFFF',
                   borderRadius: 22,
-                  borderWidth: 1.5,
-                  borderColor: isExpanded ? '#E11D48' : '#ECECF0',
-                  shadowColor: isExpanded ? '#E11D48' : '#000',
-                  shadowOffset: { width: 0, height: isExpanded ? 5 : 2 },
-                  shadowOpacity: isExpanded ? 0.12 : 0.03,
-                  shadowRadius: isExpanded ? 12 : 6,
-                  elevation: isExpanded ? 4 : 1,
+                  borderWidth: isExpanded ? 1.5 : 0,
+                  borderColor: isExpanded ? '#E11D48' : 'transparent',
+                  shadowColor: '#000000',
+                  shadowOffset: { width: 0, height: 7 },
+                  shadowOpacity: isExpanded ? 0.16 : 0.08,
+                  shadowRadius: isExpanded ? 14 : 9,
+                  elevation: isExpanded ? 6 : 3,
                   position: 'relative',
                 }}
               >
@@ -604,7 +598,7 @@ export default function MembershipScreen() {
                         {plan.price}
                       </Text>
                       <Text style={{ fontSize: 10, color: '#A1A1AA', fontWeight: '600' }}>
-                        {plan.perSessionText || '+5% GST'}
+                        {plan.perSessionText || 'per session'}
                       </Text>
                     </View>
 
@@ -631,21 +625,22 @@ export default function MembershipScreen() {
                 {/* Expanded Details Section */}
                 {isExpanded && (
                   <View style={{ paddingHorizontal: 18, paddingBottom: 18, borderTopWidth: 1, borderTopColor: '#F4F4F6', paddingTop: 14 }}>
-                    {/* Bullet Points with clean round circles like screenshot */}
-                    <View style={{ gap: 8, marginBottom: 14 }}>
+                    {/* Bullet Points with Check / Tick mark */}
+                    <View style={{ gap: 8, marginBottom: 16 }}>
                       {plan.bulletPoints?.map((bullet, bIdx) => (
                         <View key={bIdx} style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
                           <View 
                             style={{ 
-                              width: 13, 
-                              height: 13, 
-                              borderRadius: 6.5, 
-                              borderWidth: 1.5, 
-                              borderColor: '#E11D48',
+                              width: 16, 
+                              height: 16, 
+                              borderRadius: 8, 
+                              backgroundColor: '#FFF1F2',
                               alignItems: 'center',
                               justifyContent: 'center'
                             }} 
-                          />
+                          >
+                            <Feather name="check" size={11} color="#E11D48" />
+                          </View>
                           <Text style={{ fontSize: 12.5, color: '#3F3F46', fontWeight: '500', flex: 1, lineHeight: 17 }}>
                             {bullet}
                           </Text>
@@ -653,31 +648,14 @@ export default function MembershipScreen() {
                       ))}
                     </View>
 
-                    {/* Breakdown & Calculation Note */}
-                    <View style={{ backgroundColor: '#F8FAFC', borderRadius: 12, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
-                        <Text style={{ fontSize: 11.5, color: '#64748B', fontWeight: '500' }}>Base Price</Text>
-                        <Text style={{ fontSize: 11.5, color: '#1E293B', fontWeight: '700' }}>{plan.amountVal}</Text>
-                      </View>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
-                        <Text style={{ fontSize: 11.5, color: '#64748B', fontWeight: '500' }}>GST (5%)</Text>
-                        <Text style={{ fontSize: 11.5, color: '#1E293B', fontWeight: '700' }}>{plan.gstVal}</Text>
-                      </View>
-                      <View style={{ height: 1, backgroundColor: '#E2E8F0', marginVertical: 3 }} />
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text style={{ fontSize: 12, color: '#0F172A', fontWeight: '800' }}>Total Amount</Text>
-                        <Text style={{ fontSize: 13.5, color: '#E11D48', fontWeight: '900' }}>{plan.finalPrice || plan.price}</Text>
-                      </View>
-                    </View>
-
-                    {/* Sleek, Balanced Red Button (Not bulky/motaa) */}
+                    {/* Sleek, Balanced Red Button (No GST box in accordion) */}
                     <TouchableOpacity
                       activeOpacity={0.85}
                       onPress={() => openPlanDetails(plan)}
                       style={{
                         backgroundColor: '#E11D48',
                         borderRadius: 14,
-                        paddingVertical: 11,
+                        paddingVertical: 12,
                         alignItems: 'center',
                         justifyContent: 'center',
                         shadowColor: '#E11D48',
@@ -687,8 +665,8 @@ export default function MembershipScreen() {
                         elevation: 2,
                       }}
                     >
-                      <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase' }}>
-                        GET STARTED • {plan.finalPrice || plan.price}
+                      <Text style={{ color: '#FFFFFF', fontSize: 12.5, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase' }}>
+                        GET STARTED • {plan.price}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -795,11 +773,11 @@ export default function MembershipScreen() {
         </View>
       </ScrollView>
 
-      {/* Sticky Bottom Bar with smooth slide-up animation and glassmorphic shadow */}
+      {/* Sticky Bottom Bar with smooth slide-up animation and curved top corners with ambient dark shadow */}
       {selectedPlan && (
         <Animated.View 
           style={{ 
-            paddingBottom: Math.max((insets.bottom || 0), 12),
+            paddingBottom: Math.max((insets.bottom || 0), 14),
             opacity: footerBarAnim,
             transform: [
               {
@@ -809,13 +787,16 @@ export default function MembershipScreen() {
                 }),
               },
             ],
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: -6 },
-            shadowOpacity: 0.08,
-            shadowRadius: 12,
-            elevation: 10,
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            backgroundColor: '#FFFFFF',
+            shadowColor: '#000000',
+            shadowOffset: { width: 0, height: -8 },
+            shadowOpacity: 0.12,
+            shadowRadius: 16,
+            elevation: 16,
           }}
-          className="border-t border-zinc-100 bg-white/95 px-5 pt-3.5 flex-row items-center justify-between"
+          className="border-t border-zinc-100 px-6 pt-4 flex-row items-center justify-between"
         >
           <View className="gap-0.5">
             <View className="flex-row items-center gap-1.5">
