@@ -34,10 +34,10 @@ const PLANS: Plan[] = [
   // Developer Test Plan (₹1 Verification)
   {
     id: 'plan-dev-test',
-    name: 'Dev Test 1 Rupee Verification',
+    name: 'Dev Test Verification',
     credits: 1,
     price: '₹1',
-    savings: 'Live Gateway Verification',
+    savings: 'Gateway verification',
     gstText: '₹1.00 Incl. Taxes',
     gstVal: '₹0',
     amountVal: '₹1',
@@ -56,11 +56,12 @@ const PLANS: Plan[] = [
     gstVal: '₹75',
     amountVal: '₹1,499',
     finalPrice: '₹1,574',
-    perSessionText: '₹1,499 per session',
-    idealFor: 'Start your journey - Ideal for a single trial session.',
+    perSessionText: '₹1,499 / session',
+    idealFor: 'Ideal for trial sessions or flexible occasional workouts.',
     bulletPoints: [
-      'One trainer, one participant, personalized 60-minute session.',
-      'Designed to test the experience or for occasional workout needs.',
+      '1-on-1 private training (60 min)',
+      'Certified trainer at your doorstep',
+      'Full equipment & personalized routine',
     ],
     category: 'individual'
   },
@@ -70,20 +71,20 @@ const PLANS: Plan[] = [
     credits: 8,
     price: '₹9,800',
     originalPrice: '₹11,992',
-    savings: 'Save ₹2,192 · 18.27% off',
+    savings: 'Save ₹2,192 · 18% off',
     gstText: '₹9,800 + 5% GST',
     gstVal: '₹490',
     amountVal: '₹9,800',
     finalPrice: '₹10,290',
-    perSessionText: '₹1,225 per session',
-    idealFor: 'Build consistency - Best entry package for regular workouts.',
+    perSessionText: '₹1,225 / session',
+    idealFor: 'Best entry routine for regular fitness habits at home.',
     bulletPoints: [
-      'FOUNDING 100 - EXCLUSIVE LAUNCH OFFER for first 100 members at ₹9,800.',
-      'Save ₹2,192 compared with booking 8 single sessions at ₹1,499 each.',
-      'Designed to establish a consistent, progressive training routine.',
+      'Founding 100 exclusive launch price',
+      'Save ₹2,192 vs single sessions',
+      'Consistent weekly trainer tracking',
     ],
     badge: 'LAUNCH OFFER',
-    ribbon: 'FOUNDING 100 · SAVE ₹2,192',
+    ribbon: 'FOUNDING 100',
     category: 'individual',
     isHighlighted: true,
   },
@@ -93,21 +94,21 @@ const PLANS: Plan[] = [
     credits: 16,
     price: '₹18,000',
     originalPrice: '₹23,984',
-    savings: 'Save ₹5,984 · 24.95% off',
+    savings: 'Save ₹5,984 · 25% off',
     gstText: '₹18,000 + 5% GST',
     gstVal: '₹900',
     amountVal: '₹18,000',
     finalPrice: '₹18,900',
-    perSessionText: '₹1,125 per session',
-    idealFor: 'Better results - Ideal for committed individuals targeting measurable goals.',
+    perSessionText: '₹1,125 / session',
+    idealFor: 'Targeted results with progressive multi-week training.',
     bulletPoints: [
-      'Save ₹5,984 compared with booking 16 single sessions at ₹1,499 each.',
-      'Structured progression across multiple weeks for sustained fitness.',
-      'A lower per-session rate for members committed to regular workouts.',
+      'Save ₹5,984 vs single bookings',
+      'Structured workout progression',
+      'Priority trainer matching & schedule',
     ],
     popular: true,
     badge: 'MOST POPULAR',
-    ribbon: 'BEST RESULTS · SAVE ₹5,984',
+    ribbon: 'BEST RESULTS',
     category: 'individual'
   },
   {
@@ -116,17 +117,17 @@ const PLANS: Plan[] = [
     credits: 32,
     price: '₹34,400',
     originalPrice: '₹47,968',
-    savings: 'Save ₹13,568 · 28.29% off',
+    savings: 'Save ₹13,568 · 28% off',
     gstText: '₹34,400 + 5% GST',
     gstVal: '₹1,720',
     amountVal: '₹34,400',
     finalPrice: '₹36,120',
-    perSessionText: '₹1,075 per session',
-    idealFor: 'Maximum transformation - Long-term wellness routine at the lowest per-session cost.',
+    perSessionText: '₹1,075 / session',
+    idealFor: 'Full body lifestyle transformation with maximum savings.',
     bulletPoints: [
-      'Save ₹13,568 compared with booking 32 single sessions at ₹1,499 each.',
-      'Lowest per-session rate in our individual package range.',
-      'Full lifestyle transformation program with steady trainer tracking.',
+      'Lowest per-session rate (₹1,075)',
+      'Save ₹13,568 across 32 sessions',
+      'Long-term dedicated coach continuity',
     ],
     badge: 'BEST VALUE',
     category: 'individual'
@@ -141,14 +142,14 @@ const PLANS: Plan[] = [
     gstVal: '₹25',
     amountVal: '₹499',
     finalPrice: '₹524',
-    perSessionText: '₹499 per session add-on',
-    idealFor: 'Bring a friend, partner, or family member to your existing solo session.',
+    perSessionText: '₹499 / session add-on',
+    idealFor: 'Add a partner or friend to your existing solo workout.',
     bulletPoints: [
-      'Add a partner to an individual personal training session.',
-      'Both participants train together in the same 60-minute slot.',
-      'Valid as an add-on per session.',
+      'Shared 60-min session at same location',
+      'Train together with 1 coach',
+      'Applicable on any individual booking',
     ],
-    badge: 'OPTIONAL ADD-ON',
+    badge: 'ADD-ON',
     category: 'individual'
   },
   // Couple Plans (Train Together) - Image 1000080407.jpg
@@ -162,11 +163,12 @@ const PLANS: Plan[] = [
     gstVal: '₹95',
     amountVal: '₹1,899',
     finalPrice: '₹1,994',
-    perSessionText: '₹1,899 per 60-min session for both',
-    idealFor: 'Train together - One trainer for two people.',
+    perSessionText: '₹1,899 / session for two',
+    idealFor: 'Single trial session for two people at the same location.',
     bulletPoints: [
-      'One trainer leads both participants in the same session.',
-      'Both participants must attend together at the same location.',
+      '1 coach for two participants',
+      'Simultaneous 60-minute training',
+      'Doorstep personalized workout',
     ],
     category: 'couple'
   },
@@ -176,21 +178,20 @@ const PLANS: Plan[] = [
     credits: 8,
     price: '₹13,000',
     originalPrice: '₹15,192',
-    savings: 'Save ₹2,192 · 14.43% off',
+    savings: 'Save ₹2,192 · 14% off',
     gstText: '₹13,000 + 5% GST',
     gstVal: '₹650',
     amountVal: '₹13,000',
     finalPrice: '₹13,650',
-    perSessionText: '₹1,625 per session for both',
-    idealFor: 'Couple entry package - Train together consistently.',
+    perSessionText: '₹1,625 / session for two',
+    idealFor: 'Consistent shared training routine for couples or friends.',
     bulletPoints: [
-      'FOUNDING 100 - EXCLUSIVE COUPLE LAUNCH OFFER at ₹13,000 (First 100 couples).',
-      '8 shared personal training sessions for two people.',
-      'Save ₹2,192 compared with booking 8 single couple sessions at ₹1,899 each.',
-      'A convenient way to train together while sharing one trainer and session.',
+      'Founding 100 exclusive launch offer',
+      '8 shared workouts for 2 people',
+      'Save ₹2,192 vs single couple bookings',
     ],
-    badge: 'COUPLE LAUNCH',
-    ribbon: 'FOUNDING 100 · SAVE ₹2,192',
+    badge: 'LAUNCH OFFER',
+    ribbon: 'FOUNDING 100',
     category: 'couple',
     isHighlighted: true,
   },
@@ -200,21 +201,21 @@ const PLANS: Plan[] = [
     credits: 16,
     price: '₹24,400',
     originalPrice: '₹30,384',
-    savings: 'Save ₹5,984 · 19.69% off',
+    savings: 'Save ₹5,984 · 20% off',
     gstText: '₹24,400 + 5% GST',
     gstVal: '₹1,220',
     amountVal: '₹24,400',
     finalPrice: '₹25,620',
-    perSessionText: '₹1,525 per session for both',
-    idealFor: 'More consistency - Better shared value for partner training.',
+    perSessionText: '₹1,525 / session for two',
+    idealFor: 'Regular partner fitness consistency with deeper value.',
     bulletPoints: [
-      '16 shared personal training sessions for two people.',
-      'Save ₹5,984 compared with booking 16 single couple sessions at ₹1,899 each.',
-      'A lower per-session rate for couples who want to train together regularly.',
+      'Save ₹5,984 compared to single sessions',
+      'Shared goal progression & tracking',
+      'Dedicated partner workout scheduling',
     ],
     popular: true,
     badge: 'MOST POPULAR',
-    ribbon: 'BEST VALUE COUPLE · SAVE ₹5,984',
+    ribbon: 'BEST VALUE',
     category: 'couple'
   },
   {
@@ -223,18 +224,17 @@ const PLANS: Plan[] = [
     credits: 32,
     price: '₹47,200',
     originalPrice: '₹60,768',
-    savings: 'Save ₹13,568 · 22.32% off',
+    savings: 'Save ₹13,568 · 22% off',
     gstText: '₹47,200 + 5% GST',
     gstVal: '₹2,360',
     amountVal: '₹47,200',
     finalPrice: '₹49,560',
-    perSessionText: '₹1,475 per session for both',
-    idealFor: 'Best shared value - Long-term commitment and lifestyle change.',
+    perSessionText: '₹1,475 / session for two',
+    idealFor: 'Maximum transformation commitment at lowest shared rate.',
     bulletPoints: [
-      '32 shared personal training sessions for two people.',
-      'Save ₹13,568 compared with booking 32 single couple sessions at ₹1,899 each.',
-      'Lowest per-session rate in the couple package range.',
-      'Designed for partners who want a consistent shared training routine.',
+      'Lowest couple rate (₹1,475 / session)',
+      'Save ₹13,568 across 32 shared workouts',
+      'Year-round trainer commitment',
     ],
     badge: 'BEST VALUE',
     category: 'couple'
@@ -514,30 +514,34 @@ export default function MembershipScreen() {
                   activeOpacity={0.92}
                   onPress={() => openPlanDetails(plan)}
                   style={{
-                    backgroundColor: plan.isHighlighted ? '#1A0710' : '#0B0C15',
-                    borderRadius: 20,
-                    padding: 18,
-                    marginBottom: 12,
+                    backgroundColor: '#121216',
+                    borderRadius: 22,
+                    padding: 20,
+                    marginBottom: 14,
                     borderWidth: 1.5,
-                    borderColor: plan.isHighlighted ? '#E11D48' : 'rgba(49, 46, 129, 0.6)',
-                    shadowColor: plan.isHighlighted ? '#E11D48' : '#4F46E5',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.22,
-                    shadowRadius: 12,
-                    elevation: 4,
+                    borderColor: '#18181B',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 14,
+                    elevation: 5,
                   }}
                 >
-                  {/* Badges */}
+                  {/* Clean Text Badge Tag */}
                   {(plan.badge || plan.ribbon) && (
                     <View className="flex-row items-center gap-2 mb-3">
                       {plan.badge && (
-                        <View className={plan.isHighlighted ? "bg-white border border-rose-200 px-2.5 py-1 rounded-[6px]" : "bg-white border border-indigo-200 px-2.5 py-1 rounded-[6px]"}>
-                          <Text className="text-zinc-950 text-[10px] font-black uppercase tracking-wider">{plan.badge}</Text>
+                        <View className="bg-zinc-800 px-2.5 py-1 rounded-md">
+                          <Text className="text-zinc-200 text-[10px] font-bold tracking-wider uppercase">
+                            {plan.badge}
+                          </Text>
                         </View>
                       )}
                       {plan.ribbon && (
-                        <View className="bg-white px-2.5 py-1 rounded-[6px]">
-                          <Text className="text-zinc-950 text-[10px] font-black uppercase tracking-wider">{plan.ribbon}</Text>
+                        <View className="bg-white px-2.5 py-1 rounded-md">
+                          <Text className="text-zinc-950 text-[10px] font-extrabold tracking-wider uppercase">
+                            {plan.ribbon}
+                          </Text>
                         </View>
                       )}
                     </View>
@@ -545,26 +549,23 @@ export default function MembershipScreen() {
 
                   <View className="flex-row items-start justify-between">
                     <View className="flex-row items-start gap-3.5 flex-1 pr-3">
-                      <View 
-                        style={{ backgroundColor: plan.isHighlighted ? '#E11D48' : '#4F46E5' }}
-                        className="w-[22px] h-[22px] rounded-full items-center justify-center mt-0.5"
-                      >
-                        <Feather name="check" size={13} color="white" />
+                      <View className="w-[22px] h-[22px] rounded-full bg-white items-center justify-center mt-0.5">
+                        <Feather name="check" size={13} color="#09090B" />
                       </View>
                       <View className="flex-1">
-                        <Text className="text-white text-[16px] font-bold tracking-tight">{displayName}</Text>
+                        <Text className="text-white text-[17px] font-extrabold tracking-tight">{displayName}</Text>
                         <View className="flex-row items-center gap-1.5 mt-1">
-                          <Feather name="zap" size={11} color="#FB7185" />
-                          <Text className="text-[#FB7185] text-[12px] font-semibold">
+                          <Feather name="zap" size={12} color="#F43F5E" />
+                          <Text className="text-[#F43F5E] text-[12.5px] font-bold">
                             {plan.credits} {plan.credits === 1 ? 'Session / Credit' : 'Sessions / Credits'}
                           </Text>
+                          {plan.perSessionText && (
+                            <Text className="text-zinc-400 text-[12px] font-medium">
+                              • {plan.perSessionText}
+                            </Text>
+                          )}
                         </View>
-                        {plan.perSessionText && (
-                          <Text className={plan.isHighlighted ? "text-rose-200 text-[11px] font-bold mt-0.5" : "text-zinc-300 text-[11px] font-semibold mt-0.5"}>
-                            {plan.perSessionText}
-                          </Text>
-                        )}
-                        <Text className="text-zinc-400 text-[12px] font-normal leading-[17px] mt-1">
+                        <Text className="text-zinc-300 text-[12.5px] font-normal leading-[18px] mt-1.5">
                           {plan.idealFor}
                         </Text>
                       </View>
@@ -572,11 +573,26 @@ export default function MembershipScreen() {
 
                     <View className="items-end justify-start">
                       {plan.originalPrice && (
-                        <Text className="text-zinc-400 text-[11.5px] line-through font-medium mb-0.5">{plan.originalPrice}</Text>
+                        <Text className="text-zinc-500 text-[12px] line-through font-semibold mb-0.5">{plan.originalPrice}</Text>
                       )}
-                      <Text className={plan.isHighlighted ? "text-[#FDA4AF] text-[22px] font-extrabold tracking-tight" : "text-white text-[22px] font-extrabold tracking-tight"}>{plan.price}</Text>
+                      <Text className="text-white text-[24px] font-black tracking-tight">{plan.price}</Text>
+                      <Text className="text-zinc-400 text-[10px] font-medium mt-0.5">+5% GST</Text>
                     </View>
                   </View>
+
+                  {/* Highlights Bullet List without clumsy boxes */}
+                  {plan.bulletPoints && plan.bulletPoints.length > 0 && (
+                    <View className="mt-3.5 pt-3.5 border-t border-zinc-800/80 gap-1.5">
+                      {plan.bulletPoints.map((pt, pIdx) => (
+                        <View key={pIdx} className="flex-row items-center gap-2">
+                          <View className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
+                          <Text className="text-zinc-300 text-[11.5px] font-medium leading-[16px] flex-1">
+                            {pt}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
                 </TouchableOpacity>
               );
             }
@@ -584,28 +600,37 @@ export default function MembershipScreen() {
             return (
               <TouchableOpacity
                 key={`plan-card-${idx}`}
-                activeOpacity={0.85}
+                activeOpacity={0.88}
                 onPress={() => setSelectedPlan(plan)}
                 style={{
-                  backgroundColor: plan.isHighlighted ? '#FFF1F2' : '#FFFFFF',
-                  borderRadius: 20,
-                  padding: 18,
-                  marginBottom: 12,
-                  borderWidth: plan.isHighlighted ? 1.5 : 1,
-                  borderColor: plan.isHighlighted ? '#E11D48' : '#E4E4E7',
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: 22,
+                  padding: 20,
+                  marginBottom: 14,
+                  borderWidth: 1,
+                  borderColor: plan.isHighlighted ? '#18181B' : '#E4E4E7',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.04,
+                  shadowRadius: 8,
+                  elevation: 2,
                 }}
               >
-                {/* Badges for unselected highlighted cards */}
+                {/* Header Tag for unselected */}
                 {(plan.badge || plan.ribbon) && (
                   <View className="flex-row items-center gap-2 mb-3">
                     {plan.badge && (
-                      <View className={plan.isHighlighted ? "bg-rose-100 border border-rose-300 px-2.5 py-1 rounded-[6px]" : "bg-zinc-100 px-2.5 py-1 rounded-[6px]"}>
-                        <Text className={plan.isHighlighted ? "text-[#E11D48] text-[10px] font-extrabold uppercase" : "text-zinc-600 text-[10px] font-extrabold uppercase"}>{plan.badge}</Text>
+                      <View className={plan.isHighlighted ? "bg-zinc-950 px-2.5 py-1 rounded-md" : "bg-zinc-100 px-2.5 py-1 rounded-md"}>
+                        <Text className={plan.isHighlighted ? "text-white text-[10px] font-bold tracking-wider uppercase" : "text-zinc-700 text-[10px] font-bold tracking-wider uppercase"}>
+                          {plan.badge}
+                        </Text>
                       </View>
                     )}
                     {plan.ribbon && (
-                      <View className={plan.isHighlighted ? "bg-[#E11D48] px-2.5 py-1 rounded-[6px]" : "bg-zinc-800 px-2.5 py-1 rounded-[6px]"}>
-                        <Text className="text-white text-[10px] font-extrabold uppercase">{plan.ribbon}</Text>
+                      <View className="bg-zinc-100 border border-zinc-200 px-2.5 py-1 rounded-md">
+                        <Text className="text-zinc-900 text-[10px] font-bold tracking-wider uppercase">
+                          {plan.ribbon}
+                        </Text>
                       </View>
                     )}
                   </View>
@@ -613,24 +638,21 @@ export default function MembershipScreen() {
 
                 <View className="flex-row items-start justify-between">
                   <View className="flex-row items-start gap-3.5 flex-1 pr-3">
-                    <View 
-                      style={{ borderColor: plan.isHighlighted ? '#E11D48' : '#D4D4D8' }}
-                      className="w-[22px] h-[22px] rounded-full border-[1.5px] bg-white items-center justify-center mt-0.5" 
-                    />
+                    <View className="w-[22px] h-[22px] rounded-full border-[1.5px] border-zinc-300 bg-white items-center justify-center mt-0.5" />
                     <View className="flex-1">
-                      <Text className="text-zinc-950 text-[16px] font-bold tracking-tight">{displayName}</Text>
+                      <Text className="text-zinc-950 text-[17px] font-extrabold tracking-tight">{displayName}</Text>
                       <View className="flex-row items-center gap-1.5 mt-1">
-                        <Feather name="zap" size={11} color="#E11D48" />
-                        <Text className="text-[#E11D48] text-[12px] font-semibold">
+                        <Feather name="zap" size={12} color="#E11D48" />
+                        <Text className="text-[#E11D48] text-[12.5px] font-bold">
                           {plan.credits} {plan.credits === 1 ? 'Session / Credit' : 'Sessions / Credits'}
                         </Text>
+                        {plan.perSessionText && (
+                          <Text className="text-zinc-500 text-[12px] font-medium">
+                            • {plan.perSessionText}
+                          </Text>
+                        )}
                       </View>
-                      {plan.perSessionText && (
-                        <Text className={plan.isHighlighted ? "text-[#BE123C] text-[11px] font-bold mt-0.5" : "text-zinc-600 text-[11px] font-semibold mt-0.5"}>
-                          {plan.perSessionText}
-                        </Text>
-                      )}
-                      <Text className="text-zinc-500 text-[12px] font-normal leading-[17px] mt-1">
+                      <Text className="text-zinc-600 text-[12.5px] font-normal leading-[18px] mt-1.5">
                         {plan.idealFor}
                       </Text>
                     </View>
@@ -638,57 +660,65 @@ export default function MembershipScreen() {
 
                   <View className="items-end justify-start">
                     {plan.originalPrice && (
-                      <Text className="text-zinc-400 text-[11.5px] line-through font-medium mb-0.5">{plan.originalPrice}</Text>
+                      <Text className="text-zinc-400 text-[12px] line-through font-semibold mb-0.5">{plan.originalPrice}</Text>
                     )}
-                    <Text className={plan.isHighlighted ? "text-[#E11D48] text-[19px] font-extrabold tracking-tight mt-0.5" : "text-zinc-950 text-[17px] font-bold tracking-tight mt-0.5"}>
+                    <Text className="text-zinc-950 text-[20px] font-black tracking-tight mt-0.5">
                       {plan.price}
                     </Text>
+                    <Text className="text-zinc-400 text-[10px] font-medium mt-0.5">+5% GST</Text>
                   </View>
                 </View>
+
+                {/* Highlights Bullet List without clumsy boxes */}
+                {plan.bulletPoints && plan.bulletPoints.length > 0 && (
+                  <View className="mt-3.5 pt-3.5 border-t border-zinc-100 gap-1.5">
+                    {plan.bulletPoints.map((pt, pIdx) => (
+                      <View key={pIdx} className="flex-row items-center gap-2">
+                        <View className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
+                        <Text className="text-zinc-600 text-[11.5px] font-medium leading-[16px] flex-1">
+                          {pt}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </TouchableOpacity>
             );
           })}
         </View>
 
-        {/* HOW WORKOUTS WORK — Informative Section from Posters */}
-        <View className="mt-5 mb-4 p-4 rounded-2xl bg-zinc-50 border border-zinc-200/80">
+        {/* HOW WORKOUTS WORK — Lightweight Clean Editorial Section */}
+        <View className="mt-6 mb-4 px-1 py-1">
           <View className="flex-row items-center gap-2 mb-2">
-            <Feather name="info" size={14} color="#18181B" />
-            <Text className="text-zinc-950 text-xs font-bold uppercase tracking-wider">
-              {activeCategory === 'individual' ? 'HOW INDIVIDUAL WORKOUTS WORK' : 'HOW COUPLE WORKOUTS WORK'}
+            <Feather name="info" size={13} color="#71717A" />
+            <Text className="text-zinc-500 text-[11px] font-bold uppercase tracking-wider">
+              {activeCategory === 'individual' ? 'How 1-on-1 Workouts Work' : 'How Couple Workouts Work'}
             </Text>
           </View>
-          <Text className="text-zinc-600 text-[12.5px] font-normal leading-[19px]">
+          <Text className="text-zinc-600 text-[13px] font-normal leading-[20px]">
             {activeCategory === 'individual'
-              ? 'Individual packages cover one participant training 1-on-1 with a certified trainer for a personalized 60-minute session at your home or doorstep. The optional ₹499 Workout Buddy add-on allows you to bring a friend or partner to your solo session.'
-              : 'Couple packages cover two people training together with one trainer, at the same location, for the same 60-minute session. They cannot be used to book separate solo sessions. The ₹499 individual workout-buddy add-on is a separate option for occasional shared sessions and is not a standalone service.'}
-          </Text>
-          <Text className="text-zinc-400 text-[10.5px] font-medium leading-[15px] mt-2.5">
-            {activeCategory === 'individual'
-              ? 'Individual package savings are calculated against the single session price of ₹1,499, before 5% GST. Founding 100 offer applies to the 8-session package.'
-              : 'Couple package savings are calculated against the single couple session price of ₹1,899, before 5% GST. Founding 100 offer applies to the 8-session couple package.'}
+              ? 'Individual packages cover 1 participant training 1-on-1 with a private certified coach for a personalized 60-minute session at your home or doorstep. Need a friend along occasionally? Use the ₹499 Workout Buddy add-on.'
+              : 'Couple packages cover two partners training together with one private coach, at the same location, for a simultaneous 60-minute workout.'}
           </Text>
         </View>
 
-        {/* GOOD TO KNOW — Clean Seamless Section */}
-        <View className="mt-2 mb-4 px-0.5">
+        {/* GOOD TO KNOW — Clean Minimal List */}
+        <View className="mt-3 mb-4 px-1 py-1">
           <View className="flex-row items-center gap-2 mb-3">
-            <Feather name="check-circle" size={14} color="#18181B" />
-            <Text className="text-zinc-950 text-xs font-bold uppercase tracking-wider">GOOD TO KNOW</Text>
+            <Feather name="shield" size={13} color="#71717A" />
+            <Text className="text-zinc-500 text-[11px] font-bold uppercase tracking-wider">Membership Perks & Terms</Text>
           </View>
 
           <View className="gap-2.5">
             {[
-              'Each session equals one 60-minute training session at your doorstep.',
-              'All package prices are exclusive of 5% GST (GST charged at 5% checkout).',
-              'Sessions can be used for any available workout style (Strength, Flow, Cardio, Reset, Combat).',
-              'Credits/Sessions can be scheduled flexibly with top verified VIRLA coaches.',
-              'Individual packages: 1 participant. Couple packages: 2 participants together.',
-              'Unused sessions follow the VIRLA renewal & validity policy.'
+              'Each session equals one full 60-minute private workout at your doorstep.',
+              'All workouts are flexible across Strength, Flow, Cardio, Reset, or Combat.',
+              'Prices shown are base rates · 5% GST added cleanly at checkout.',
+              'Unused credits carry over smoothly under the standard VIRLA policy.'
             ].map((text, idx) => (
               <View key={idx} className="flex-row items-start gap-2.5">
                 <View className="w-1.5 h-1.5 rounded-full bg-zinc-400 mt-2" />
-                <Text className="text-zinc-700 text-[13px] font-normal leading-[19px] flex-1">
+                <Text className="text-zinc-600 text-[13px] font-normal leading-[19px] flex-1">
                   {text}
                 </Text>
               </View>
