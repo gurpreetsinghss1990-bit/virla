@@ -34,7 +34,7 @@ const PLANS: Plan[] = [
   // Developer Test Plan (₹1 Verification)
   {
     id: 'plan-dev-test',
-    name: 'Dev Test Verification',
+    name: 'DEV TEST',
     credits: 1,
     price: '₹1',
     savings: 'Gateway verification',
@@ -44,11 +44,16 @@ const PLANS: Plan[] = [
     idealFor: 'Safe real bank & gateway verification without charges.',
     category: 'individual',
     badge: 'DEV TEST (₹1)',
+    bulletPoints: [
+      '₹1 live gateway test',
+      'Instant test transaction',
+      'Safe verification'
+    ]
   },
   // Individual Plans (1 Person) - Image 1000080404.jpg
   {
     id: 'plan-ind-1',
-    name: 'Single Session',
+    name: 'SINGLE SESSION',
     credits: 1,
     price: '₹1,499',
     savings: 'Standard rate',
@@ -56,18 +61,19 @@ const PLANS: Plan[] = [
     gstVal: '₹75',
     amountVal: '₹1,499',
     finalPrice: '₹1,574',
-    perSessionText: '₹1,499 / session',
-    idealFor: 'Ideal for trial sessions or flexible occasional workouts.',
+    perSessionText: '1 session / 60 min',
+    idealFor: 'For exploring private fitness at your doorstep',
     bulletPoints: [
       '1-on-1 private training (60 min)',
-      'Certified trainer at your doorstep',
-      'Full equipment & personalized routine',
+      'Certified doorstep trainer',
+      'Full equipment included',
+      'Flexible time slots'
     ],
     category: 'individual'
   },
   {
     id: 'plan-ind-2',
-    name: '8-Session Package',
+    name: '8-SESSION PACK',
     credits: 8,
     price: '₹9,800',
     originalPrice: '₹11,992',
@@ -77,11 +83,12 @@ const PLANS: Plan[] = [
     amountVal: '₹9,800',
     finalPrice: '₹10,290',
     perSessionText: '₹1,225 / session',
-    idealFor: 'Best entry routine for regular fitness habits at home.',
+    idealFor: 'For consistent weekly workout routines',
     bulletPoints: [
-      'Founding 100 exclusive launch price',
+      'Founding 100 exclusive offer (₹9,800)',
       'Save ₹2,192 vs single sessions',
-      'Consistent weekly trainer tracking',
+      'Dedicated weekly coach tracking',
+      'Priority slot reservation'
     ],
     badge: 'LAUNCH OFFER',
     ribbon: 'FOUNDING 100',
@@ -90,7 +97,7 @@ const PLANS: Plan[] = [
   },
   {
     id: 'plan-ind-3',
-    name: '16-Session Package',
+    name: '16-SESSION PACK',
     credits: 16,
     price: '₹18,000',
     originalPrice: '₹23,984',
@@ -100,11 +107,12 @@ const PLANS: Plan[] = [
     amountVal: '₹18,000',
     finalPrice: '₹18,900',
     perSessionText: '₹1,125 / session',
-    idealFor: 'Targeted results with progressive multi-week training.',
+    idealFor: 'For serious fitness and progressive body goals',
     bulletPoints: [
       'Save ₹5,984 vs single bookings',
-      'Structured workout progression',
-      'Priority trainer matching & schedule',
+      'Structured progressive programming',
+      'Dedicated trainer continuity',
+      'Free session rescheduling'
     ],
     popular: true,
     badge: 'MOST POPULAR',
@@ -113,7 +121,7 @@ const PLANS: Plan[] = [
   },
   {
     id: 'plan-ind-4',
-    name: '32-Session Package',
+    name: '32-SESSION PACK',
     credits: 32,
     price: '₹34,400',
     originalPrice: '₹47,968',
@@ -123,18 +131,19 @@ const PLANS: Plan[] = [
     amountVal: '₹34,400',
     finalPrice: '₹36,120',
     perSessionText: '₹1,075 / session',
-    idealFor: 'Full body lifestyle transformation with maximum savings.',
+    idealFor: 'For complete lifestyle transformation',
     bulletPoints: [
       'Lowest per-session rate (₹1,075)',
       'Save ₹13,568 across 32 sessions',
-      'Long-term dedicated coach continuity',
+      'VIP coach dedicated matching',
+      'Unlimited validity & pause anytime'
     ],
     badge: 'BEST VALUE',
     category: 'individual'
   },
   {
     id: 'plan-ind-addon-buddy',
-    name: 'Workout Buddy Add-On',
+    name: 'WORKOUT BUDDY',
     credits: 1,
     price: '₹499',
     savings: 'Bring a friend',
@@ -142,20 +151,20 @@ const PLANS: Plan[] = [
     gstVal: '₹25',
     amountVal: '₹499',
     finalPrice: '₹524',
-    perSessionText: '₹499 / session add-on',
-    idealFor: 'Add a partner or friend to your existing solo workout.',
+    perSessionText: 'per session add-on',
+    idealFor: 'Bring a partner or friend to your solo session',
     bulletPoints: [
-      'Shared 60-min session at same location',
-      'Train together with 1 coach',
-      'Applicable on any individual booking',
+      'Shared 60-min workout at same venue',
+      'Train together with 1 private coach',
+      'Valid as an add-on per session'
     ],
-    badge: 'ADD-ON',
+    badge: 'OPTIONAL ADD-ON',
     category: 'individual'
   },
   // Couple Plans (Train Together) - Image 1000080407.jpg
   {
     id: 'plan-cpl-1',
-    name: 'Single Couple Session',
+    name: 'COUPLE SINGLE',
     credits: 1,
     price: '₹1,899',
     savings: 'Train together',
@@ -163,18 +172,18 @@ const PLANS: Plan[] = [
     gstVal: '₹95',
     amountVal: '₹1,899',
     finalPrice: '₹1,994',
-    perSessionText: '₹1,899 / session for two',
-    idealFor: 'Single trial session for two people at the same location.',
+    perSessionText: 'for two participants',
+    idealFor: 'Single trial workout session for two partners',
     bulletPoints: [
-      '1 coach for two participants',
-      'Simultaneous 60-minute training',
-      'Doorstep personalized workout',
+      '1 coach for two people (60 min)',
+      'Same location doorstep session',
+      'Tailored dual workout routine'
     ],
     category: 'couple'
   },
   {
     id: 'plan-cpl-2',
-    name: '8-Session Couple Package',
+    name: '8-SESSION COUPLE',
     credits: 8,
     price: '₹13,000',
     originalPrice: '₹15,192',
@@ -184,20 +193,21 @@ const PLANS: Plan[] = [
     amountVal: '₹13,000',
     finalPrice: '₹13,650',
     perSessionText: '₹1,625 / session for two',
-    idealFor: 'Consistent shared training routine for couples or friends.',
+    idealFor: 'Couple entry package for regular joint workouts',
     bulletPoints: [
-      'Founding 100 exclusive launch offer',
+      'Founding 100 launch offer (₹13,000)',
       '8 shared workouts for 2 people',
-      'Save ₹2,192 vs single couple bookings',
+      'Save ₹2,192 vs single couple sessions',
+      'Punctual doorstep trainer delivery'
     ],
-    badge: 'LAUNCH OFFER',
+    badge: 'COUPLE LAUNCH',
     ribbon: 'FOUNDING 100',
     category: 'couple',
     isHighlighted: true,
   },
   {
     id: 'plan-cpl-3',
-    name: '16-Session Couple Package',
+    name: '16-SESSION COUPLE',
     credits: 16,
     price: '₹24,400',
     originalPrice: '₹30,384',
@@ -207,11 +217,12 @@ const PLANS: Plan[] = [
     amountVal: '₹24,400',
     finalPrice: '₹25,620',
     perSessionText: '₹1,525 / session for two',
-    idealFor: 'Regular partner fitness consistency with deeper value.',
+    idealFor: 'Consistent shared training with maximum value',
     bulletPoints: [
-      'Save ₹5,984 compared to single sessions',
-      'Shared goal progression & tracking',
-      'Dedicated partner workout scheduling',
+      'Save ₹5,984 vs single couple sessions',
+      '16 shared personal training workouts',
+      'Progressive couples training program',
+      'Priority slot matching'
     ],
     popular: true,
     badge: 'MOST POPULAR',
@@ -220,7 +231,7 @@ const PLANS: Plan[] = [
   },
   {
     id: 'plan-cpl-4',
-    name: '32-Session Couple Package',
+    name: '32-SESSION COUPLE',
     credits: 32,
     price: '₹47,200',
     originalPrice: '₹60,768',
@@ -230,11 +241,12 @@ const PLANS: Plan[] = [
     amountVal: '₹47,200',
     finalPrice: '₹49,560',
     perSessionText: '₹1,475 / session for two',
-    idealFor: 'Maximum transformation commitment at lowest shared rate.',
+    idealFor: 'Long-term joint transformation routine',
     bulletPoints: [
       'Lowest couple rate (₹1,475 / session)',
-      'Save ₹13,568 across 32 shared workouts',
-      'Year-round trainer commitment',
+      'Save ₹13,568 across 32 workouts',
+      'Dedicated premier couple trainer',
+      'Full lifestyle consistency'
     ],
     badge: 'BEST VALUE',
     category: 'couple'
@@ -270,8 +282,18 @@ export default function MembershipScreen() {
   };
 
   const handleSelectCategory = (cat: 'individual' | 'couple') => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setActiveCategory(cat);
     setSelectedPlan(null); // Keep unselected on tab change
+  };
+
+  const handlePlanCardPress = (plan: Plan) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    if (selectedPlan?.id === plan.id) {
+      setSelectedPlan(null);
+    } else {
+      setSelectedPlan(plan);
+    }
   };
 
   // Animations using useMemo to avoid render-phase ref reads
@@ -451,238 +473,208 @@ export default function MembershipScreen() {
         className="flex-1" 
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 24 }}
       >
-        {/* Hero Title */}
-        <View className="mb-4">
-          <Text className="text-zinc-950 text-[28px] font-extrabold tracking-[-0.6px] leading-[34px]">Select Credits Pack</Text>
-          <Text className="text-zinc-500 text-[13px] font-normal leading-[19px] mt-1.5">
-            Book wellness sessions instantly with top-tier private coaches.
+        {/* Hero Title - matching design screenshot */}
+        <View className="mb-6 items-center">
+          <Text className="text-zinc-950 text-[30px] font-black tracking-tight text-center">Pricing plans</Text>
+          <Text className="text-zinc-500 text-[14px] font-medium leading-[20px] mt-1 text-center">
+            Choose a plan that fits your needs
           </Text>
         </View>
 
-        {/* Segmented Switcher Category Selector */}
-        <View style={{ backgroundColor: '#F2F2F5', padding: 4, borderRadius: 16, flexDirection: 'row', marginBottom: 20 }}>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => handleSelectCategory('individual')}
-            style={{
-              flex: 1,
-              paddingVertical: 12,
-              borderRadius: 12,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: activeCategory === 'individual' ? '#141416' : 'transparent',
-            }}
-          >
-            <Text style={{ fontSize: 13, fontWeight: '700', color: activeCategory === 'individual' ? '#FFFFFF' : '#71717A' }}>
-              Individual (1 Person)
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => handleSelectCategory('couple')}
-            style={{
-              flex: 1,
-              paddingVertical: 12,
-              borderRadius: 12,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: activeCategory === 'couple' ? '#141416' : 'transparent',
-            }}
-          >
-            <Text style={{ fontSize: 13, fontWeight: '700', color: activeCategory === 'couple' ? '#FFFFFF' : '#71717A' }}>
-              Train Together
-            </Text>
-          </TouchableOpacity>
+        {/* Minimal Pill Segmented Switcher Category Selector */}
+        <View className="flex-row items-center justify-center mb-6">
+          <View style={{ backgroundColor: '#F4F4F6', padding: 4, borderRadius: 24, flexDirection: 'row' }}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => handleSelectCategory('individual')}
+              style={{
+                paddingVertical: 8,
+                paddingHorizontal: 18,
+                borderRadius: 20,
+                backgroundColor: activeCategory === 'individual' ? '#18181B' : 'transparent',
+              }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: '700', color: activeCategory === 'individual' ? '#FFFFFF' : '#71717A' }}>
+                Solo Training
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => handleSelectCategory('couple')}
+              style={{
+                paddingVertical: 8,
+                paddingHorizontal: 18,
+                borderRadius: 20,
+                backgroundColor: activeCategory === 'couple' ? '#18181B' : 'transparent',
+              }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: '700', color: activeCategory === 'couple' ? '#FFFFFF' : '#71717A' }}>
+                Train Together
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Available Packs Header */}
-        <View className="flex-row justify-between items-center mb-2.5 px-0.5">
-          <Text className="text-zinc-400 text-[11px] font-bold tracking-[0.6px] uppercase">AVAILABLE PACKS</Text>
-          <Text className="text-zinc-400 text-[12px] font-normal">Instant Activation</Text>
-        </View>
-
-        {/* Plan Cards */}
-        <View>
+        {/* Plan Cards - Accordion replicating exact screenshot feel */}
+        <View className="gap-3.5 mb-6">
           {activePlans.map((plan, idx) => {
-            const isSelected = selectedPlan?.id === plan.id;
-            const displayName = plan.name === 'Active Pack' ? 'Active' : plan.name;
+            const isExpanded = selectedPlan?.id === plan.id;
+            const displayName = plan.name;
 
-            if (isSelected) {
-              return (
-                <TouchableOpacity
-                  key={`plan-card-${idx}`}
-                  activeOpacity={0.92}
-                  onPress={() => openPlanDetails(plan)}
-                  style={{
-                    backgroundColor: '#121216',
-                    borderRadius: 22,
-                    padding: 20,
-                    marginBottom: 14,
-                    borderWidth: 1.5,
-                    borderColor: '#18181B',
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 6 },
-                    shadowOpacity: 0.25,
-                    shadowRadius: 14,
-                    elevation: 5,
-                  }}
-                >
-                  {/* Clean Text Badge Tag */}
-                  {(plan.badge || plan.ribbon) && (
-                    <View className="flex-row items-center gap-2 mb-3">
-                      {plan.badge && (
-                        <View className="bg-zinc-800 px-2.5 py-1 rounded-md">
-                          <Text className="text-zinc-200 text-[10px] font-bold tracking-wider uppercase">
-                            {plan.badge}
-                          </Text>
-                        </View>
-                      )}
-                      {plan.ribbon && (
-                        <View className="bg-white px-2.5 py-1 rounded-md">
-                          <Text className="text-zinc-950 text-[10px] font-extrabold tracking-wider uppercase">
-                            {plan.ribbon}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  )}
-
-                  <View className="flex-row items-start justify-between">
-                    <View className="flex-row items-start gap-3.5 flex-1 pr-3">
-                      <View className="w-[22px] h-[22px] rounded-full bg-white items-center justify-center mt-0.5">
-                        <Feather name="check" size={13} color="#09090B" />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-white text-[17px] font-extrabold tracking-tight">{displayName}</Text>
-                        <View className="flex-row items-center gap-1.5 mt-1">
-                          <Feather name="zap" size={12} color="#F43F5E" />
-                          <Text className="text-[#F43F5E] text-[12.5px] font-bold">
-                            {plan.credits} {plan.credits === 1 ? 'Session / Credit' : 'Sessions / Credits'}
-                          </Text>
-                          {plan.perSessionText && (
-                            <Text className="text-zinc-400 text-[12px] font-medium">
-                              • {plan.perSessionText}
-                            </Text>
-                          )}
-                        </View>
-                        <Text className="text-zinc-300 text-[12.5px] font-normal leading-[18px] mt-1.5">
-                          {plan.idealFor}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View className="items-end justify-start">
-                      {plan.originalPrice && (
-                        <Text className="text-zinc-500 text-[12px] line-through font-semibold mb-0.5">{plan.originalPrice}</Text>
-                      )}
-                      <Text className="text-white text-[24px] font-black tracking-tight">{plan.price}</Text>
-                      <Text className="text-zinc-400 text-[10px] font-medium mt-0.5">+5% GST</Text>
+            return (
+              <View
+                key={`plan-card-${idx}`}
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: 24,
+                  borderWidth: 1,
+                  borderColor: isExpanded ? '#E11D48' : '#EBEBEF',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: isExpanded ? 6 : 2 },
+                  shadowOpacity: isExpanded ? 0.08 : 0.03,
+                  shadowRadius: isExpanded ? 14 : 8,
+                  elevation: isExpanded ? 4 : 1,
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Popular / Highlighted Mini Header Tab */}
+                {(plan.badge || plan.ribbon) && (
+                  <View className="flex-row">
+                    <View 
+                      style={{
+                        backgroundColor: plan.popular ? '#6366F1' : '#18181B',
+                        paddingHorizontal: 12,
+                        paddingVertical: 3.5,
+                        borderBottomRightRadius: 10,
+                      }}
+                    >
+                      <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                        {plan.ribbon || plan.badge}
+                      </Text>
                     </View>
                   </View>
+                )}
 
-                  {/* Highlights Bullet List without clumsy boxes */}
-                  {plan.bulletPoints && plan.bulletPoints.length > 0 && (
-                    <View className="mt-3.5 pt-3.5 border-t border-zinc-800/80 gap-1.5">
-                      {plan.bulletPoints.map((pt, pIdx) => (
-                        <View key={pIdx} className="flex-row items-center gap-2">
-                          <View className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
-                          <Text className="text-zinc-300 text-[11.5px] font-medium leading-[16px] flex-1">
-                            {pt}
+                {/* Card Collapsed/Expanded Top Summary Bar */}
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => handlePlanCardPress(plan)}
+                  style={{
+                    padding: 20,
+                    paddingTop: (plan.badge || plan.ribbon) ? 14 : 20,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'between',
+                  }}
+                >
+                  <View style={{ flex: 1, paddingRight: 12 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#18181B', letterSpacing: -0.2 }}>
+                      {displayName}
+                    </Text>
+                    <Text style={{ fontSize: 12.5, color: '#71717A', marginTop: 2, fontWeight: '500' }}>
+                      {plan.idealFor}
+                    </Text>
+                  </View>
+
+                  <View style={{ alignItems: 'flex-end', flexDirection: 'row', gap: 6 }}>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      {plan.originalPrice && (
+                        <Text style={{ fontSize: 11, color: '#A1A1AA', textDecorationLine: 'line-through', fontWeight: '600' }}>
+                          {plan.originalPrice}
+                        </Text>
+                      )}
+                      <Text style={{ fontSize: 22, fontWeight: '900', color: '#18181B', letterSpacing: -0.5 }}>
+                        {plan.price}
+                      </Text>
+                      <Text style={{ fontSize: 10, color: '#A1A1AA', fontWeight: '500' }}>
+                        {plan.perSessionText || '+5% GST'}
+                      </Text>
+                    </View>
+
+                    <View 
+                      style={{ 
+                        width: 24, 
+                        height: 24, 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        marginLeft: 4,
+                      }}
+                    >
+                      <Feather 
+                        name={isExpanded ? 'chevron-up' : 'chevron-down'} 
+                        size={18} 
+                        color={isExpanded ? '#E11D48' : '#71717A'} 
+                      />
+                    </View>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Expanded Details Section */}
+                {isExpanded && (
+                  <View style={{ paddingHorizontal: 20, paddingBottom: 20, borderTopWidth: 1, borderTopColor: '#F4F4F6', paddingTop: 16 }}>
+                    {/* Bullet Points with clean round circles like screenshot */}
+                    <View style={{ gap: 10, marginBottom: 18 }}>
+                      {plan.bulletPoints?.map((bullet, bIdx) => (
+                        <View key={bIdx} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <View 
+                            style={{ 
+                              width: 14, 
+                              height: 14, 
+                              borderRadius: 7, 
+                              borderWidth: 1.5, 
+                              borderColor: '#A1A1AA',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }} 
+                          />
+                          <Text style={{ fontSize: 13, color: '#3F3F46', fontWeight: '500', flex: 1, lineHeight: 18 }}>
+                            {bullet}
                           </Text>
                         </View>
                       ))}
                     </View>
-                  )}
-                </TouchableOpacity>
-              );
-            }
 
-            return (
-              <TouchableOpacity
-                key={`plan-card-${idx}`}
-                activeOpacity={0.88}
-                onPress={() => setSelectedPlan(plan)}
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: 22,
-                  padding: 20,
-                  marginBottom: 14,
-                  borderWidth: 1,
-                  borderColor: plan.isHighlighted ? '#18181B' : '#E4E4E7',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 8,
-                  elevation: 2,
-                }}
-              >
-                {/* Header Tag for unselected */}
-                {(plan.badge || plan.ribbon) && (
-                  <View className="flex-row items-center gap-2 mb-3">
-                    {plan.badge && (
-                      <View className={plan.isHighlighted ? "bg-zinc-950 px-2.5 py-1 rounded-md" : "bg-zinc-100 px-2.5 py-1 rounded-md"}>
-                        <Text className={plan.isHighlighted ? "text-white text-[10px] font-bold tracking-wider uppercase" : "text-zinc-700 text-[10px] font-bold tracking-wider uppercase"}>
-                          {plan.badge}
-                        </Text>
+                    {/* Breakdown & Calculation Note */}
+                    <View style={{ backgroundColor: '#FAFAFA', borderRadius: 14, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: '#F4F4F5' }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <Text style={{ fontSize: 12, color: '#71717A', fontWeight: '500' }}>Base Price</Text>
+                        <Text style={{ fontSize: 12, color: '#18181B', fontWeight: '700' }}>{plan.amountVal}</Text>
                       </View>
-                    )}
-                    {plan.ribbon && (
-                      <View className="bg-zinc-100 border border-zinc-200 px-2.5 py-1 rounded-md">
-                        <Text className="text-zinc-900 text-[10px] font-bold tracking-wider uppercase">
-                          {plan.ribbon}
-                        </Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <Text style={{ fontSize: 12, color: '#71717A', fontWeight: '500' }}>GST (5%)</Text>
+                        <Text style={{ fontSize: 12, color: '#18181B', fontWeight: '700' }}>{plan.gstVal}</Text>
                       </View>
-                    )}
-                  </View>
-                )}
-
-                <View className="flex-row items-start justify-between">
-                  <View className="flex-row items-start gap-3.5 flex-1 pr-3">
-                    <View className="w-[22px] h-[22px] rounded-full border-[1.5px] border-zinc-300 bg-white items-center justify-center mt-0.5" />
-                    <View className="flex-1">
-                      <Text className="text-zinc-950 text-[17px] font-extrabold tracking-tight">{displayName}</Text>
-                      <View className="flex-row items-center gap-1.5 mt-1">
-                        <Feather name="zap" size={12} color="#E11D48" />
-                        <Text className="text-[#E11D48] text-[12.5px] font-bold">
-                          {plan.credits} {plan.credits === 1 ? 'Session / Credit' : 'Sessions / Credits'}
-                        </Text>
-                        {plan.perSessionText && (
-                          <Text className="text-zinc-500 text-[12px] font-medium">
-                            • {plan.perSessionText}
-                          </Text>
-                        )}
+                      <View style={{ height: 1, backgroundColor: '#E4E4E7', marginVertical: 4 }} />
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={{ fontSize: 13, color: '#18181B', fontWeight: '800' }}>Total Amount</Text>
+                        <Text style={{ fontSize: 14, color: '#E11D48', fontWeight: '900' }}>{plan.finalPrice || plan.price}</Text>
                       </View>
-                      <Text className="text-zinc-600 text-[12.5px] font-normal leading-[18px] mt-1.5">
-                        {plan.idealFor}
-                      </Text>
                     </View>
-                  </View>
 
-                  <View className="items-end justify-start">
-                    {plan.originalPrice && (
-                      <Text className="text-zinc-400 text-[12px] line-through font-semibold mb-0.5">{plan.originalPrice}</Text>
-                    )}
-                    <Text className="text-zinc-950 text-[20px] font-black tracking-tight mt-0.5">
-                      {plan.price}
-                    </Text>
-                    <Text className="text-zinc-400 text-[10px] font-medium mt-0.5">+5% GST</Text>
-                  </View>
-                </View>
-
-                {/* Highlights Bullet List without clumsy boxes */}
-                {plan.bulletPoints && plan.bulletPoints.length > 0 && (
-                  <View className="mt-3.5 pt-3.5 border-t border-zinc-100 gap-1.5">
-                    {plan.bulletPoints.map((pt, pIdx) => (
-                      <View key={pIdx} className="flex-row items-center gap-2">
-                        <View className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
-                        <Text className="text-zinc-600 text-[11.5px] font-medium leading-[16px] flex-1">
-                          {pt}
-                        </Text>
-                      </View>
-                    ))}
+                    {/* Prominent Red Button (replaces green in screenshot) */}
+                    <TouchableOpacity
+                      activeOpacity={0.88}
+                      onPress={() => openPlanDetails(plan)}
+                      style={{
+                        backgroundColor: '#E11D48',
+                        borderRadius: 18,
+                        paddingVertical: 14,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        shadowColor: '#E11D48',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.28,
+                        shadowRadius: 8,
+                        elevation: 3,
+                      }}
+                    >
+                      <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '900', letterSpacing: 0.8, textTransform: 'uppercase' }}>
+                        GET STARTED • {plan.finalPrice || plan.price}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 )}
-              </TouchableOpacity>
+              </View>
             );
           })}
         </View>
