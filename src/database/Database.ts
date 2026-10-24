@@ -2947,14 +2947,28 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     const booking = this.schema.bookings.find(b => b.id === bookingId);
     if (!booking) return;
 
+    const questionnairePayload = {
+      mobilityScore: report.mobilityScore || 0,
+      workoutSummary: report.workoutSummary || '',
+      coachNotes: report.nextTrainerInfo || report.coachNotes || '',
+      coachSignature: report.coachSignature || '',
+      clientHealthStatus: report.clientHealthStatus || [],
+      hasInjuryOrLimitation: Boolean(report.hasInjuryOrLimitation),
+      affectedAreas: report.affectedAreas || [],
+      injuryDetails: report.injuryDetails || '',
+      hasExerciseModifications: Boolean(report.hasExerciseModifications),
+      exercisesToAvoidDetails: report.exercisesToAvoidDetails || '',
+      healthChangeStatus: report.healthChangeStatus || '',
+      healthChangeDetails: report.healthChangeDetails || '',
+      nextTrainerInfo: report.nextTrainerInfo || '',
+      trainerConfirmed: Boolean(report.trainerConfirmed),
+      isLimitationResolved: Boolean(report.isLimitationResolved),
+      submittedAt: new Date().toISOString(),
+    };
+
     const { error } = await supabase.rpc('submit_trainer_report', {
       p_booking_id: bookingId,
-      p_questionnaire: {
-        mobilityScore: report.mobilityScore || 0,
-        workoutSummary: report.workoutSummary || '',
-        coachNotes: report.coachNotes || '',
-        coachSignature: report.coachSignature || ''
-      }
+      p_questionnaire: questionnairePayload
     });
 
     if (error) {
@@ -2969,7 +2983,27 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     }
   }
 
-  async getClientAssessmentHistory(clientId: string): Promise<{ bookingId: string; date: string; time: string; coachName: string; assessment: string }[]> {
+  async submitLimitationResolution(bookingId: string, resolved: boolean): Promise<void> {
+    const booking = this.schema.bookings.find(b => b.id === bookingId);
+    if (!booking) return;
+    const existing = booking.questionnaire || {};
+    const updated = {
+      ...existing,
+      isLimitationResolved: resolved,
+      resolvedAt: new Date().toISOString()
+    };
+    await supabase.from('bookings').update({ questionnaire: updated }).eq('id', bookingId);
+    await this.refreshBookings();
+  }
+
+  async getClientAssessmentHistory(clientId: string): Promise<{
+    bookingId: string;
+    date: string;
+    time: string;
+    coachName: string;
+    assessment: string;
+    healthData?: NonNullable<Booking['questionnaire']>;
+  }[]> {
     try {
       const { data, error } = await supabase.rpc('get_client_assessment_history', {
         p_client_id: clientId
@@ -2981,7 +3015,8 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
           date: row.session_date,
           time: row.session_time,
           coachName: row.coach_name,
-          assessment: row.assessment
+          assessment: row.assessment,
+          healthData: row.health_data
         }));
       }
     } catch {
@@ -2992,7 +3027,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     const localPastBookings = this.schema.bookings.filter(b => 
       b.clientId === clientId && 
       (b.status === 'completed' || b.timelineStatus === 'workout_completed' || b.timelineStatus === 'trainer_report_submitted' || b.timelineStatus === 'customer_review_pending' || b.timelineStatus === 'session_closed') &&
-      Boolean(b.questionnaire?.coachNotes)
+      Boolean(b.questionnaire?.nextTrainerInfo || b.questionnaire?.coachNotes)
     );
 
     return localPastBookings.map(b => ({
@@ -3000,7 +3035,8 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       date: b.date,
       time: b.time,
       coachName: b.trainerName,
-      assessment: b.questionnaire?.coachNotes || ''
+      assessment: b.questionnaire?.nextTrainerInfo || b.questionnaire?.coachNotes || '',
+      healthData: b.questionnaire
     }));
   }
 

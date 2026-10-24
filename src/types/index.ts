@@ -92,10 +92,23 @@ export interface Booking {
   // Sprint 6 additions
   otp?: string;
   questionnaire?: {
-    mobilityScore: number;
-    workoutSummary: string;
-    coachNotes: string;
-    coachSignature: string;
+    mobilityScore?: number;
+    workoutSummary?: string;
+    coachNotes?: string;
+    coachSignature?: string;
+    // VIRLA Standard Client Health & Limitation Update
+    clientHealthStatus?: string[];
+    hasInjuryOrLimitation?: boolean;
+    affectedAreas?: string[];
+    injuryDetails?: string;
+    hasExerciseModifications?: boolean;
+    exercisesToAvoidDetails?: string;
+    healthChangeStatus?: string;
+    healthChangeDetails?: string;
+    nextTrainerInfo?: string;
+    trainerConfirmed?: boolean;
+    isLimitationResolved?: boolean;
+    submittedAt?: string;
   };
   clientName?: string;
   clientPhone?: string;

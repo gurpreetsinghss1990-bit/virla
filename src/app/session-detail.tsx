@@ -25,6 +25,7 @@ import { SupportChatModal } from '../components/SupportChatModal';
 import { RaiseSupportTicketModal } from '../components/RaiseSupportTicketModal';
 import { SupportTicket } from '../database/Database';
 import { useAddressStore } from '../store/addressStore';
+import { PostSessionHealthReportModal } from '../components/PostSessionHealthReportModal';
 
 function formatToIndianDate(dateStr: string): string {
   return formatToDDMMYYYY(dateStr);
@@ -56,7 +57,17 @@ const waypoints = [
 export default function SessionDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams();
+  // Navigation context can briefly disappear while this screen re-renders from store/poll
+  // updates (e.g. after session status changes). Fall back to the last known params instead of crashing.
+  const lastParamsRef = React.useRef<Record<string, any>>({});
+  let params: Record<string, any> = lastParamsRef.current;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    params = useLocalSearchParams();
+    lastParamsRef.current = params;
+  } catch {
+    params = lastParamsRef.current;
+  }
   const bookingId = params.id as string;
 
   const handleSafeBack = () => {
@@ -136,7 +147,15 @@ export default function SessionDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [isAccepting, setIsAccepting] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
-  const [assessments, setAssessments] = useState<{ bookingId: string; date: string; time: string; coachName: string; assessment: string }[]>([]);
+  const [showHealthReportModal, setShowHealthReportModal] = useState(false);
+  const [assessments, setAssessments] = useState<{
+    bookingId: string;
+    date: string;
+    time: string;
+    coachName: string;
+    assessment: string;
+    healthData?: any;
+  }[]>([]);
   const [loadingAssessments, setLoadingAssessments] = useState(false);
 
   useEffect(() => {
@@ -274,11 +293,14 @@ export default function SessionDetailScreen() {
   }, [bookingId, currentStatus, role]);
 
   // Real-time timeline synchronization: updates screen instantly when either Trainer or User advances stage
+  const syncStateRef = React.useRef({ closed: false, missed: false, cancelled: false });
+  syncStateRef.current = { closed: currentStatus === 'session_closed', missed: isMissed, cancelled: isCancelled };
+
   useEffect(() => {
     if (!bookingId) return;
 
     // 1. Dedicated Supabase Realtime channel for this booking
-    const channelName = `realtime-session-${bookingId.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+    const channelName = `realtime-session-${bookingId.replace(/[^a-zA-Z0-9_-]/g, '_')}-${Date.now()}`;
     const channel = supabase
       .channel(channelName)
       .on(
@@ -298,21 +320,24 @@ export default function SessionDetailScreen() {
       .subscribe();
 
     // 2. Smart lightweight safety poll (every 6s while session is active, only re-renders if data actually changed)
-    let pollInterval: any = null;
-    if (currentStatus !== 'session_closed' && !isMissed && !isCancelled) {
-      pollInterval = setInterval(async () => {
+    const pollInterval: any = setInterval(async () => {
+      const s = syncStateRef.current;
+      if (s.closed || s.missed || s.cancelled) return;
+      try {
         const changed = await Database.syncBookingsOnly();
         if (changed) {
           syncFromDB();
         }
-      }, 6000);
-    }
+      } catch (e) {
+        console.warn('[Session Poll] sync failed:', e);
+      }
+    }, 6000);
 
     return () => {
-      if (pollInterval) clearInterval(pollInterval);
+      clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
-  }, [bookingId, currentStatus, isMissed, isCancelled, syncFromDB]);
+  }, [bookingId, syncFromDB]);
 
   const calculateHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371; // km
@@ -411,8 +436,19 @@ export default function SessionDetailScreen() {
     };
 
     updateTimers();
-    const interval = setInterval(updateTimers, 1000);
 
+    // Only run the 1-second interval if there are active countdowns needed
+    // (e.g. pending trainer accept timeout, trainer arrived grace period, or workout running)
+    const needsSecondInterval =
+      (role === 'trainer' && currentStatus === 'booked') ||
+      currentStatus === 'trainer_arrived' ||
+      currentStatus === 'workout_started';
+
+    if (!needsSecondInterval) {
+      return;
+    }
+
+    const interval = setInterval(updateTimers, 1000);
     return () => clearInterval(interval);
   }, [booking?.id, booking?.createdAt, currentStatus, role]);
 
@@ -726,30 +762,24 @@ export default function SessionDetailScreen() {
     }
   };
 
-  // Submit report questionnaire
-  const handleQuestionnaireSubmit = async () => {
-    if (!coachSignature.trim()) {
-      Alert.alert('Signature Required', 'Please input your digital signature to authorize report closure.');
-      return;
-    }
+  // Submit VIRLA Standard Post-Session Health & Limitation Report
+  const handleHealthReportSubmit = async (reportData: any) => {
     try {
-      await submitQuestionnaire(booking.id, {
-        mobilityScore,
-        workoutSummary,
-        coachNotes: coachNotes.trim() || 'Client executed exercises with excellent range of motion.',
-        coachSignature: coachSignature.trim(),
-      });
+      await submitQuestionnaire(booking.id, reportData);
       addNotification({
-        title: 'Workout Completed 🏆',
-        body: `Coach ${booking.trainerName} submitted your post-workout mobility index report.`,
+        title: 'Health Update Recorded 📋',
+        body: `Post-workout health update filed by Coach ${booking.trainerName || 'Trainer'}.`,
         icon: 'award'
       });
-
-      setShowQuestionnaire(false);
       syncFromDB();
-      Alert.alert('Report Submitted', 'Session report finalized. Customer can now review the session.');
+      // Refresh assessments
+      if (booking?.clientId) {
+        Database.getClientAssessmentHistory(booking.clientId).then(setAssessments).catch(() => {});
+      }
+      Alert.alert('Health Update Saved ✅', "Client's health profile and limitations have been updated for future trainers.");
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Could not submit report.');
+      Alert.alert('Error', err.message || 'Could not submit health update.');
+      throw err;
     }
   };
 
@@ -1016,7 +1046,7 @@ export default function SessionDetailScreen() {
               </Text>
             </View>
 
-            {/* Client One-Brain Assessment Card */}
+            {/* Client Health Alert & Assessment Card (Latest from previous trainer) */}
             <View 
               className="bg-white border border-[#E5E7EB] p-5 rounded-[28px]"
               style={{
@@ -1027,36 +1057,59 @@ export default function SessionDetailScreen() {
                 elevation: 1,
               }}
             >
-              <View className="flex-row items-center gap-2.5 mb-3">
-                <View className="w-7 h-7 rounded-full bg-indigo-50 items-center justify-center">
-                  <Feather name="cpu" size={13} color="#4F46E5" />
+              <View className="flex-row items-center justify-between mb-3">
+                <View className="flex-row items-center gap-2.5">
+                  <View className="w-7 h-7 rounded-full bg-indigo-50 items-center justify-center">
+                    <Feather name="activity" size={13} color="#4F46E5" />
+                  </View>
+                  <Text className="text-zinc-955 text-xs font-black uppercase tracking-wider">Health Alert & Assessment</Text>
                 </View>
-                <Text className="text-zinc-955 text-xs font-black uppercase tracking-wider">Client Assessment</Text>
+                {assessments.length > 0 && assessments[0].healthData?.hasInjuryOrLimitation && !assessments[0].healthData?.isLimitationResolved && (
+                  <View className="bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+                    <Text className="text-rose-600 text-[9px] font-black uppercase">Active Injury Alert</Text>
+                  </View>
+                )}
               </View>
+
               {loadingAssessments ? (
                 <ActivityIndicator size="small" color="#4F46E5" className="py-2" />
               ) : assessments.length > 0 ? (
                 <View className="gap-2.5">
-                  <Text className="text-zinc-400 text-[9px] font-black uppercase tracking-widest">
-                    Important client history:
-                  </Text>
-                  <Text className="text-zinc-700 text-xs font-semibold leading-relaxed italic">
-                    {`"${assessments[0].assessment}"`}
-                  </Text>
-                  {assessments.length > 1 && (
-                    <View className="border-t border-zinc-100 pt-2.5 mt-1">
-                      <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-widest mb-1">
-                        Previous notes:
-                      </Text>
-                      <Text className="text-zinc-500 text-[11px] font-medium leading-relaxed italic">
-                        {`"${assessments[1].assessment}"`}
-                      </Text>
+                  {/* Active Injury or Limitation Details from latest session */}
+                  {assessments[0].healthData?.hasInjuryOrLimitation && !assessments[0].healthData?.isLimitationResolved && (
+                    <View className="bg-rose-50/70 border border-rose-200/90 p-3 rounded-2xl gap-1.5">
+                      <View className="flex-row items-center gap-1.5">
+                        <Feather name="alert-triangle" size={13} color="#E11D48" />
+                        <Text className="text-rose-700 text-xs font-black uppercase">
+                          Reported Limitation ({assessments[0].healthData?.affectedAreas?.join(', ') || 'Physical'})
+                        </Text>
+                      </View>
+                      {assessments[0].healthData?.injuryDetails ? (
+                        <Text className="text-rose-950 text-xs font-medium">
+                          {assessments[0].healthData.injuryDetails}
+                        </Text>
+                      ) : null}
+                      {assessments[0].healthData?.exercisesToAvoidDetails ? (
+                        <Text className="text-rose-800 text-[11px] font-semibold mt-0.5">
+                          ⚠️ Avoid / Modify: {assessments[0].healthData.exercisesToAvoidDetails}
+                        </Text>
+                      ) : null}
                     </View>
                   )}
+
+                  <Text className="text-zinc-400 text-[9px] font-black uppercase tracking-widest">
+                    Important Information For Coach:
+                  </Text>
+                  <Text className="text-zinc-800 text-xs font-semibold leading-relaxed">
+                    {`"${assessments[0].assessment}"`}
+                  </Text>
+                  <Text className="text-zinc-400 text-[9px] font-bold">
+                    Recorded by Coach {assessments[0].coachName || 'Trainer'} • {formatToDDMMYYYY(assessments[0].date)}
+                  </Text>
                 </View>
               ) : (
                 <Text className="text-zinc-500 text-xs font-semibold italic">
-                  No previous assessment available.
+                  No previous health alerts or physical limitations reported. Client is clear to train.
                 </Text>
               )}
             </View>
@@ -1360,81 +1413,50 @@ export default function SessionDetailScreen() {
         <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-5" contentContainerStyle={{ paddingBottom: 100 }}>
           <View className="gap-5">
 
-            {/* Status Content (Direct content without black card for customer, dark card for trainer) */}
-            {role === 'trainer' ? (
-              <View className="bg-zinc-950 border border-zinc-800 p-5 rounded-[26px] shadow-md gap-2.5">
-                <View className="flex-row items-center justify-between">
-                  <View className="flex-row items-center gap-2.5">
-                    <View className={`w-2.5 h-2.5 rounded-full ${isMissed ? 'bg-amber-500' : isCancelled ? 'bg-rose-500' : 'bg-[#E11D48]'}`} />
-                    <Text className={`text-xs font-black uppercase tracking-wider ${isMissed ? 'text-amber-400' : isCancelled ? 'text-rose-400' : 'text-rose-400'}`}>
-                      {isMissed || isCancelled ? 'Session Status' : 'Live Concierge Status'}
-                    </Text>
-                  </View>
-                  <View className={`border px-2.5 py-0.5 rounded-full ${
-                    isMissed 
-                      ? 'bg-amber-950/40 border-amber-800/50' 
-                      : isCancelled 
-                      ? 'bg-red-950/40 border-red-800/50' 
-                      : 'bg-zinc-900 border border-zinc-800'
-                  }`}>
-                    <Text className={`text-[10px] font-extrabold uppercase tracking-wider ${
-                      isMissed 
-                        ? 'text-amber-400' 
-                        : isCancelled 
-                        ? 'text-rose-400' 
-                        : 'text-emerald-400'
-                    }`}>
-                      {isMissed ? 'Missed' : isCancelled ? 'Cancelled' : 'Live Active'}
-                    </Text>
-                  </View>
-                </View>
-                <Text className="text-white text-xl font-black tracking-tight">{getStatusText(currentStatus)}</Text>
-                {isMissed ? (
-                  <Text className="text-zinc-400 text-xs font-medium leading-5">
-                    {booking.status === 'client_no_show' 
-                      ? 'This session was marked as missed due to client no-show.'
-                      : booking.status === 'trainer_no_show'
-                      ? 'This session was marked as missed due to coach no-show.'
-                      : 'This session was not started and has been marked as missed.'}
+            {/* Status Content (Clean, lightweight presentation without heavy dark background box) */}
+            <View className="py-2 gap-2">
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center gap-2">
+                  <View className={`w-2.5 h-2.5 rounded-full ${isMissed ? 'bg-amber-500' : isCancelled ? 'bg-rose-500' : 'bg-[#E11D48]'}`} />
+                  <Text className={`text-xs font-black uppercase tracking-wider ${isMissed ? 'text-amber-600' : isCancelled ? 'text-rose-600' : 'text-[#E11D48]'}`}>
+                    {isMissed || isCancelled ? 'Session Status' : 'Live Concierge Status'}
                   </Text>
-                ) : isCancelled ? (
-                  <Text className="text-zinc-400 text-xs font-medium leading-5">
-                    {(booking as any)?.cancellationReason 
-                      ? `Cancellation reason: ${(booking as any).cancellationReason}`
-                      : 'This booking has been cancelled.'}
-                  </Text>
-                ) : null}
-              </View>
-            ) : (
-              <View className="py-2 gap-2">
-                <View className="flex-row items-center justify-between">
-                  <View className="flex-row items-center gap-2">
-                    <View className={`w-2 h-2 rounded-full ${isMissed ? 'bg-amber-500' : isCancelled ? 'bg-rose-500' : 'bg-[#E11D48]'}`} />
-                    <Text className={`text-xs font-black uppercase tracking-wider ${isMissed ? 'text-amber-600' : isCancelled ? 'text-rose-600' : 'text-[#E11D48]'}`}>
-                      {isMissed || isCancelled ? 'Session Status' : 'Live Concierge Status'}
-                    </Text>
-                  </View>
-                  <View className={`border px-2.5 py-0.5 rounded-full ${
-                    isMissed 
-                      ? 'bg-amber-50 border-amber-200' 
-                      : isCancelled 
-                      ? 'bg-red-50 border-red-200' 
-                      : 'bg-emerald-50 border-emerald-200'
-                  }`}>
-                    <Text className={`text-[10px] font-extrabold uppercase tracking-wider ${
-                      isMissed 
-                        ? 'text-amber-700' 
-                        : isCancelled 
-                        ? 'text-rose-600' 
-                        : 'text-emerald-700'
-                    }`}>
-                      {isMissed ? 'Missed' : isCancelled ? 'Cancelled' : 'Live Active'}
-                    </Text>
-                  </View>
                 </View>
-                <Text className="text-zinc-950 text-xl font-black tracking-tight">{getStatusText(currentStatus)}</Text>
+                <View className={`border px-2.5 py-0.5 rounded-full ${
+                  isMissed 
+                    ? 'bg-amber-50 border-amber-200' 
+                    : isCancelled 
+                    ? 'bg-red-50 border-red-200' 
+                    : 'bg-emerald-50 border-emerald-200'
+                }`}>
+                  <Text className={`text-[10px] font-extrabold uppercase tracking-wider ${
+                    isMissed 
+                      ? 'text-amber-700' 
+                      : isCancelled 
+                      ? 'text-rose-600' 
+                      : 'text-emerald-700'
+                  }`}>
+                    {isMissed ? 'Missed' : isCancelled ? 'Cancelled' : 'Live Active'}
+                  </Text>
+                </View>
               </View>
-            )}
+              <Text className="text-zinc-950 text-xl font-black tracking-tight">{getStatusText(currentStatus)}</Text>
+              {isMissed ? (
+                <Text className="text-zinc-500 text-xs font-medium leading-5 mt-0.5">
+                  {booking.status === 'client_no_show' 
+                    ? 'This session was marked as missed due to client no-show.'
+                    : booking.status === 'trainer_no_show'
+                    ? 'This session was marked as missed due to coach no-show.'
+                    : 'This session was not started and has been marked as missed.'}
+                </Text>
+              ) : isCancelled ? (
+                <Text className="text-zinc-500 text-xs font-medium leading-5 mt-0.5">
+                  {(booking as any)?.cancellationReason 
+                    ? `Cancellation reason: ${(booking as any).cancellationReason}`
+                    : 'This booking has been cancelled.'}
+                </Text>
+              ) : null}
+            </View>
 
             {/* Section 2: Booking Summary (without white card container) */}
             {(role === 'customer' || role === 'trainer') && (
@@ -1564,7 +1586,7 @@ export default function SessionDetailScreen() {
               </View>
             )}
 
-            {/* Client One-Brain Assessment Card for Trainer (Accepted view) */}
+            {/* Client Health Alert & Assessment Card for Trainer (Accepted view) */}
             {role === 'trainer' && (
               <View 
                 className="bg-white border border-zinc-200/80 p-5 rounded-[28px] shadow-sm"
@@ -1576,36 +1598,99 @@ export default function SessionDetailScreen() {
                   elevation: 1,
                 }}
               >
-                <View className="flex-row items-center gap-2.5 mb-3">
-                  <View className="w-7 h-7 rounded-full bg-indigo-50 items-center justify-center">
-                    <Feather name="cpu" size={14} color="#4F46E5" />
+                <View className="flex-row items-center justify-between mb-3">
+                  <View className="flex-row items-center gap-2.5">
+                    <View className="w-7 h-7 rounded-full bg-indigo-50 items-center justify-center">
+                      <Feather name="activity" size={14} color="#4F46E5" />
+                    </View>
+                    <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">Health Alert & Assessment</Text>
                   </View>
-                  <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">Client Assessment</Text>
+                  {assessments.length > 0 && assessments[0].healthData?.hasInjuryOrLimitation && !assessments[0].healthData?.isLimitationResolved && (
+                    <View className="bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full">
+                      <Text className="text-rose-600 text-[9px] font-black uppercase">Active Limitation</Text>
+                    </View>
+                  )}
                 </View>
+
                 {loadingAssessments ? (
                   <ActivityIndicator size="small" color="#4F46E5" className="py-2" />
                 ) : assessments.length > 0 ? (
-                  <View className="gap-2.5">
-                    <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">
-                      Important client history:
-                    </Text>
-                    <Text className="text-zinc-800 text-sm font-semibold leading-relaxed italic">
-                      {`"${assessments[0].assessment}"`}
-                    </Text>
-                    {assessments.length > 1 && (
-                      <View className="border-t border-zinc-100 pt-2.5 mt-1">
-                        <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-1">
-                          Previous notes:
-                        </Text>
-                        <Text className="text-zinc-600 text-xs font-medium leading-relaxed italic">
-                          {`"${assessments[1].assessment}"`}
-                        </Text>
+                  <View className="gap-3">
+                    {/* Active Injury / Limitation Details from latest session */}
+                    {assessments[0].healthData?.hasInjuryOrLimitation && (
+                      <View className={`p-3.5 rounded-2xl border gap-2 ${
+                        assessments[0].healthData?.isLimitationResolved 
+                          ? 'bg-emerald-50/60 border-emerald-200' 
+                          : 'bg-rose-50/70 border-rose-200'
+                      }`}>
+                        <View className="flex-row items-center justify-between">
+                          <View className="flex-row items-center gap-1.5 flex-1 pr-2">
+                            <Feather 
+                              name={assessments[0].healthData?.isLimitationResolved ? 'check-circle' : 'alert-triangle'} 
+                              size={14} 
+                              color={assessments[0].healthData?.isLimitationResolved ? '#059669' : '#E11D48'} 
+                            />
+                            <Text className={`text-xs font-black uppercase ${
+                              assessments[0].healthData?.isLimitationResolved ? 'text-emerald-700' : 'text-rose-700'
+                            }`}>
+                              {assessments[0].healthData?.isLimitationResolved
+                                ? 'Resolved Limitation'
+                                : `Active Issue (${assessments[0].healthData?.affectedAreas?.join(', ') || 'Physical'})`}
+                            </Text>
+                          </View>
+
+                          {/* Toggle limitation resolved */}
+                          <TouchableOpacity
+                            onPress={async () => {
+                              try {
+                                const current = Boolean(assessments[0].healthData?.isLimitationResolved);
+                                await Database.submitLimitationResolution(assessments[0].bookingId, !current);
+                                Database.getClientAssessmentHistory(booking.clientId).then(setAssessments).catch(() => {});
+                              } catch (e: any) {
+                                Alert.alert('Error', e.message || 'Could not update status');
+                              }
+                            }}
+                            className={`px-2.5 py-1 rounded-lg border ${
+                              assessments[0].healthData?.isLimitationResolved
+                                ? 'bg-white border-zinc-200'
+                                : 'bg-white border-emerald-300'
+                            }`}
+                          >
+                            <Text className="text-[10px] font-bold text-zinc-800">
+                              {assessments[0].healthData?.isLimitationResolved ? 'Mark Active' : 'Mark Resolved ✓'}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        {assessments[0].healthData?.injuryDetails ? (
+                          <Text className="text-zinc-800 text-xs font-medium">
+                            {assessments[0].healthData.injuryDetails}
+                          </Text>
+                        ) : null}
+
+                        {assessments[0].healthData?.exercisesToAvoidDetails ? (
+                          <Text className="text-zinc-700 text-xs font-semibold">
+                            ⚠️ Avoid / Modify: {assessments[0].healthData.exercisesToAvoidDetails}
+                          </Text>
+                        ) : null}
                       </View>
                     )}
+
+                    <View className="gap-1">
+                      <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">
+                        Important Info for Coach:
+                      </Text>
+                      <Text className="text-zinc-800 text-sm font-semibold leading-relaxed">
+                        {`"${assessments[0].assessment}"`}
+                      </Text>
+                      <Text className="text-zinc-400 text-[10px] font-semibold mt-1">
+                        From Coach {assessments[0].coachName || 'Trainer'} • {formatToDDMMYYYY(assessments[0].date)}
+                      </Text>
+                    </View>
                   </View>
                 ) : (
                   <Text className="text-zinc-500 text-sm font-medium italic">
-                    No previous assessment available.
+                    No previous health alerts or physical limitations reported. Client is clear to train.
                   </Text>
                 )}
               </View>
@@ -2184,57 +2269,45 @@ export default function SessionDetailScreen() {
               </View>
             )}
 
-            {/* Questionnaire Report Panel (For Trainer right after completing workout) */}
-            {(showQuestionnaire || (currentStatus === 'workout_completed' && role === 'trainer')) && !isMissed && !isCancelled && (
-              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-lg gap-4">
-                <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider border-b border-zinc-50 pb-3">Finalize workout report</Text>
-                
-                <View className="gap-2">
-                  <Text className="text-zinc-500 text-[8px] font-black uppercase">Mobility star score</Text>
-                  <View className="flex-row gap-3">
-                    {[1,2,3,4,5].map(s => (
-                      <TouchableOpacity key={s} onPress={() => setMobilityScore(s)}>
-                        <Feather name="star" size={18} color={s <= mobilityScore ? '#F59E0B' : '#9CA3AF'} fill={s <= mobilityScore ? '#F59E0B' : 'transparent'} />
-                      </TouchableOpacity>
-                    ))}
+            {/* Mandatory Health Update Action Card (For Trainer right after completing workout) */}
+            {currentStatus === 'workout_completed' && role === 'trainer' && !isMissed && !isCancelled && (
+              <View className="bg-white border-2 border-[#E11D48] p-5 rounded-[28px] shadow-lg gap-3.5">
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-center gap-2">
+                    <View className="w-2.5 h-2.5 rounded-full bg-[#E11D48]" />
+                    <Text className="text-[#E11D48] text-xs font-black uppercase tracking-wider">Mandatory Next Step</Text>
+                  </View>
+                  <View className="bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
+                    <Text className="text-rose-600 text-[10px] font-black uppercase">Action Required</Text>
                   </View>
                 </View>
 
-                <View className="gap-1">
-                  <Text className="text-zinc-500 text-[8px] font-black uppercase">Session Summary</Text>
-                  <TextInput
-                    value={workoutSummary}
-                    onChangeText={setWorkoutSummary}
-                    className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs bg-zinc-50 font-semibold"
-                  />
-                </View>
+                <Text className="text-zinc-950 text-base font-extrabold">Complete Client Health Update 📋</Text>
+                <Text className="text-zinc-600 text-xs font-medium leading-relaxed">
+                  Record client health status, ongoing injuries, and notes for the next trainer before authorizing session closure.
+                </Text>
 
-                <View className="gap-1">
-                  <Text className="text-zinc-500 text-[8px] font-black uppercase">Coach Signature</Text>
-                  <TextInput
-                    value={coachSignature}
-                    onChangeText={setCoachSignature}
-                    placeholder="Enter name to sign"
-                    className="border border-[#E5E7EB] p-3.5 rounded-xl text-xs bg-zinc-50 font-black"
-                  />
-                </View>
-
-                <TouchableOpacity onPress={handleQuestionnaireSubmit} className="w-full bg-[#4F46E5] py-3.5 rounded-xl items-center justify-center mt-2">
-                  <Text className="text-white text-xs font-black uppercase">Authorize & Close Workout</Text>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => setShowHealthReportModal(true)}
+                  className="w-full bg-[#E11D48] py-4 rounded-2xl items-center justify-center flex-row gap-2 shadow-md active:opacity-90 mt-1"
+                >
+                  <Feather name="clipboard" size={16} color="white" />
+                  <Text className="text-white text-xs font-black uppercase tracking-wider">Open Health Update Form</Text>
                 </TouchableOpacity>
               </View>
             )}
 
             {/* Trainer status banner after filing report */}
-            {(currentStatus === 'trainer_report_submitted' || currentStatus === 'customer_review_pending') && !showQuestionnaire && !isMissed && !isCancelled && role === 'trainer' && (
+            {(currentStatus === 'trainer_report_submitted' || currentStatus === 'customer_review_pending') && !isMissed && !isCancelled && role === 'trainer' && (
               <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-3">
                 <View className="flex-row items-center gap-2">
-                  <View className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
-                  <Text className="text-indigo-600 text-[10px] font-black uppercase tracking-wider">Report Submitted</Text>
+                  <View className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  <Text className="text-emerald-600 text-[10px] font-black uppercase tracking-wider">Health Update Recorded</Text>
                 </View>
-                <Text className="text-zinc-950 text-base font-bold">Post-Workout Summary Filed 📋</Text>
+                <Text className="text-zinc-950 text-base font-bold">Health Form Successfully Submitted ✅</Text>
                 <Text className="text-zinc-500 text-xs leading-relaxed">
-                  Your mobility score and notes have been filed. Waiting for client to submit review and close the session.
+                  Client health record and alerts have been updated. Waiting for client to submit review and close the session.
                 </Text>
               </View>
             )}
@@ -2678,6 +2751,32 @@ export default function SessionDetailScreen() {
           setActiveChatTicket(null);
         }}
       />
+
+      {/* Mandatory VIRLA Post-Session Health & Limitation Modal (Trainer Only) */}
+      {role === 'trainer' && (
+        <PostSessionHealthReportModal
+          visible={showHealthReportModal}
+          clientName={booking?.clientName || 'Client'}
+          onClose={() => setShowHealthReportModal(false)}
+          onSubmit={handleHealthReportSubmit}
+        />
+      )}
+    </View>
+  );
+}
+
+// Self-healing route error boundary: if a transient navigation-context error happens while
+// the screen re-renders after a session data update, remount the screen instead of crashing.
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<unknown> }) {
+  useEffect(() => {
+    console.warn('[SessionDetail] Recovering from render error:', error?.message);
+    const t = setTimeout(() => { retry(); }, 300);
+    return () => clearTimeout(t);
+  }, [error, retry]);
+
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F8FC' }}>
+      <ActivityIndicator size="large" color="#E11D48" />
     </View>
   );
 }

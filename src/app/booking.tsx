@@ -1625,7 +1625,15 @@ export default function BookingScreen() {
     }
   };
 
+  const hasActiveSession = bookings.some(b =>
+    (!user?.id || b.clientId === user?.id) &&
+    b.status === 'upcoming' &&
+    !!b.timelineStatus &&
+    ['trainer_travelling', 'trainer_arrived', 'otp_verified', 'workout_started'].includes(b.timelineStatus)
+  );
+
   const handleNext = () => {
+    if (hasActiveSession && step <= 5) return;
     if (step === 1 && !selectedExperience) {
       Alert.alert('Selection Required', 'Please select a training experience.');
       return;
@@ -2137,6 +2145,14 @@ export default function BookingScreen() {
           {step <= 7 ? (
           <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
             <View className="gap-6">
+              {hasActiveSession && step <= 5 && (
+                <View className="flex-row items-center gap-2 bg-rose-50 border border-rose-200 rounded-2xl px-4 py-3">
+                  <Feather name="alert-circle" size={16} color="#E11D48" />
+                  <Text className="text-[#E11D48] text-[13px] font-semibold flex-1">
+                    You already have an active session.
+                  </Text>
+                </View>
+              )}
               
               {/* STEP 1: EXPERIENCE SELECTOR */}
               {step === 1 && (
