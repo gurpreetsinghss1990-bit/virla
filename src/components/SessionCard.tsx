@@ -63,7 +63,7 @@ export function SessionCard({ booking }: SessionCardProps) {
       <View className="flex-row items-center justify-between mb-4 border-b border-zinc-50 pb-4">
         <View className="flex-row items-center gap-3">
           <Image
-            source={{ uri: booking.trainerPhoto }}
+            source={{ uri: (booking.trainerPhoto && booking.trainerPhoto.trim().length > 0) ? booking.trainerPhoto : 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }}
             className="w-12 h-12 rounded-full border border-zinc-50"
           />
           <View>

@@ -1852,7 +1852,7 @@ export default function HomeScreen() {
                             </View>
                           ) : (
                             <Image 
-                              source={{ uri: bookingData.trainerPhoto }} 
+                              source={{ uri: (bookingData.trainerPhoto && bookingData.trainerPhoto.trim().length > 0) ? bookingData.trainerPhoto : 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }} 
                               className="w-14 h-14 rounded-full border border-zinc-150" 
                             />
                           )}
@@ -2193,69 +2193,94 @@ export default function HomeScreen() {
                         </Text>
                       </View>
 
-                      <View className="flex-row gap-2 flex-wrap">
-                        <TouchableOpacity
-                          onPress={() => {
-                            if (SessionEngine.isTravelWindowOpen(nextSession)) {
-                              navigateSafely({ pathname: '/session-detail', params: { id: nextSession.id, openMap: 'true' } });
-                            } else {
-                              Alert.alert(
-                                'Travel Window Locked ⚠️',
-                                'You can start travel and view the navigation map 25 minutes before the scheduled session.'
-                              );
-                            }
-                          }}
-                          className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-800 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
-                        >
-                          <Feather name="navigation" size={12} color="white" />
-                          <Text numberOfLines={1} className="text-white text-[11px] font-semibold uppercase">Navigate</Text>
-                        </TouchableOpacity>
+                      {nextSession.timelineStatus !== 'workout_started' && (
+                        <View className="flex-row gap-2 flex-wrap">
+                          <TouchableOpacity
+                            onPress={() => {
+                              if (SessionEngine.isTravelWindowOpen(nextSession)) {
+                                navigateSafely({ pathname: '/session-detail', params: { id: nextSession.id, openMap: 'true' } });
+                              } else {
+                                Alert.alert(
+                                  'Travel Window Locked ⚠️',
+                                  'You can start travel and view the navigation map 30 minutes before the scheduled session.'
+                                );
+                              }
+                            }}
+                            className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-800 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
+                          >
+                            <Feather name="navigation" size={12} color="white" />
+                            <Text numberOfLines={1} className="text-white text-[11px] font-semibold uppercase">Navigate</Text>
+                          </TouchableOpacity>
 
-                        <TouchableOpacity
-                          onPress={() => {
-                            if (getMinutesToSession(nextSession) <= 60) {
-                              Alert.alert('Secure Call', 'Connecting call to customer using masked calling...');
-                            } else {
-                              Alert.alert('Call Locked', 'Calling will be available 60 minutes before the session.');
-                            }
-                          }}
-                          className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-800 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
-                        >
-                          <Feather name="phone" size={12} color="white" />
-                          <Text numberOfLines={1} className="text-white text-[11px] font-semibold uppercase">Call Client</Text>
-                        </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => {
+                              if (getMinutesToSession(nextSession) <= 60) {
+                                Alert.alert('Secure Call', 'Connecting call to customer using masked calling...');
+                              } else {
+                                Alert.alert('Call Locked', 'Calling will be available 60 minutes before the session.');
+                              }
+                            }}
+                            className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-800 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
+                          >
+                            <Feather name="phone" size={12} color="white" />
+                            <Text numberOfLines={1} className="text-white text-[11px] font-semibold uppercase">Call Client</Text>
+                          </TouchableOpacity>
 
-                        <TouchableOpacity
-                          onPress={() => navigateSafely({ pathname: '/communication', params: { id: nextSession.id } })}
-                          className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-800 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
-                        >
-                          <Feather name="message-square" size={12} color="white" />
-                          <Text numberOfLines={1} className="text-white text-[11px] font-semibold uppercase">Message</Text>
-                        </TouchableOpacity>
-                      </View>
+                          <TouchableOpacity
+                            onPress={() => navigateSafely({ pathname: '/communication', params: { id: nextSession.id } })}
+                            className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-800 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
+                          >
+                            <Feather name="message-square" size={12} color="white" />
+                            <Text numberOfLines={1} className="text-white text-[11px] font-semibold uppercase">Message</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
 
                       <View className="h-[1px] bg-zinc-800" />
 
                       {nextSession.timelineStatus === 'trainer_accepted' ? (
-                        <TouchableOpacity
-                          onPress={async () => {
-                            try {
-                              await locationTrackerService.startTracking(nextSession.id, true);
-                              await updateTimelineStatus(nextSession.id, 'trainer_travelling');
-                              useNotificationStore.getState().addNotification({
-                                title: 'Coach On The Way 🚗',
-                                body: 'Coach has started travelling to your venue.',
-                                icon: 'user-check'
-                              });
-                              router.push({ pathname: '/session-detail', params: { id: nextSession.id, openMap: 'true' } });
-                            } catch (err: any) {
-                              Alert.alert('Error', err.message || 'Could not start travel.');
-                            }
-                          }}
-                          className="w-full bg-indigo-600 py-3.5 rounded-xl items-center justify-center"
-                        >
-                          <Text className="text-white text-xs font-bold uppercase tracking-wider">Start Travel</Text>
-                        </TouchableOpacity>
+                        <View className="gap-2 w-full">
+                          <View className="bg-zinc-800/80 px-3 py-2 rounded-xl flex-row items-center gap-2 border border-zinc-700/60">
+                            <Feather name="navigation" size={12} color="#818CF8" />
+                            <Text className="text-zinc-300 text-[10.5px] font-medium flex-1 leading-tight">
+                              App uses background location permission to track your live location until you reach the client venue.
+                            </Text>
+                          </View>
+                          {SessionEngine.isTravelWindowOpen(nextSession) ? (
+                            <TouchableOpacity
+                              onPress={async () => {
+                                try {
+                                  await locationTrackerService.startTracking(nextSession.id, true);
+                                  await updateTimelineStatus(nextSession.id, 'trainer_travelling');
+                                  useNotificationStore.getState().addNotification({
+                                    title: 'Coach On The Way 🚗',
+                                    body: 'Coach has started travelling to your venue.',
+                                    icon: 'user-check'
+                                  });
+                                  router.push({ pathname: '/session-detail', params: { id: nextSession.id, openMap: 'true' } });
+                                } catch (err: any) {
+                                  Alert.alert('Error', err.message || 'Could not start travel.');
+                                }
+                              }}
+                              className="w-full bg-indigo-600 py-3.5 rounded-xl items-center justify-center"
+                            >
+                              <Text className="text-white text-xs font-bold uppercase tracking-wider">Start Travel</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <TouchableOpacity
+                              activeOpacity={0.8}
+                              onPress={() => {
+                                Alert.alert(
+                                  'Travel Window Locked ⚠️',
+                                  'You can start travel 30 minutes before the scheduled session.'
+                                );
+                              }}
+                              className="w-full bg-zinc-800/70 border border-zinc-700/50 py-3.5 rounded-xl items-center justify-center"
+                            >
+                              <Text className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Start Travel (Unlocks 30m prior)</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       ) : nextSession.timelineStatus === 'trainer_travelling' ? (
                         <TouchableOpacity
                           onPress={async () => {

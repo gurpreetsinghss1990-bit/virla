@@ -592,7 +592,23 @@ export default function BookingScreen() {
     return null;
   };
 
-  const openAddressModal = () => {
+  const openAddressModal = async () => {
+    // Prominently request permission FIRST before opening the map page
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Location Permission Required 📍',
+          'Virla requires location access to pinpoint your doorstep workout address and check service availability. Please allow location access to proceed.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    } catch (err) {
+      console.warn('[Booking] Location permission check error:', err);
+      return;
+    }
+
     geocodeRequestCounterRef.current++;
     if (reverseGeocodeTimerRef.current) {
       clearTimeout(reverseGeocodeTimerRef.current);
@@ -614,8 +630,26 @@ export default function BookingScreen() {
     setHasConfirmedSearchSelection(false);
     setIsPinSelectionAuthoritative(true);
     
-    const lat = activeCoords.lat !== 0 ? activeCoords.lat : 19.0176;
-    const lng = activeCoords.lng !== 0 ? activeCoords.lng : 72.8164;
+    // Automatically fetch current GPS location so user starts at their current spot
+    let lat = activeCoords.lat !== 0 ? activeCoords.lat : 19.0176;
+    let lng = activeCoords.lng !== 0 ? activeCoords.lng : 72.8164;
+
+    try {
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced
+      });
+      lat = loc.coords.latitude;
+      lng = loc.coords.longitude;
+      setGpsAccuracy(loc.coords.accuracy || null);
+      reverseGeocodeCoords(lat, lng).then((res) => {
+        setSearchQuery(res.address);
+        setPlaceId(res.placeId || '');
+        setResolvedPlaceName(res.name || 'Current Location');
+      }).catch(() => {});
+    } catch (locErr) {
+      console.warn('[Booking] Initial GPS position fetch error:', locErr);
+    }
+
     setActiveCoords({ lat, lng });
 
     setTimeout(() => {
@@ -2403,11 +2437,11 @@ export default function BookingScreen() {
                       </View>
                     )}
 
-                    {/* Add New Location Trigger */}
+                    {/* Add New Location Trigger with In-line Prominent Disclosure */}
                     <TouchableOpacity
                       activeOpacity={0.8}
                       onPress={() => openAddressModal()}
-                      className="p-5 rounded-[24px] border border-dashed border-zinc-300 bg-white flex-row items-center justify-center gap-2.5"
+                      className="p-4 rounded-[24px] border border-dashed border-zinc-300 bg-white flex-row items-center justify-between"
                       style={{
                         shadowColor: '#101828',
                         shadowOffset: { width: 0, height: 2 },
@@ -2416,10 +2450,24 @@ export default function BookingScreen() {
                         elevation: 1,
                       }}
                     >
-                      <View className="w-7 h-7 rounded-full bg-zinc-100 items-center justify-center">
-                        <Feather name="plus" size={15} color="#18181B" />
+                      <View className="flex-row items-center gap-3 flex-1 pr-2">
+                        <View className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center">
+                          <Feather name="plus" size={15} color="#18181B" />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">
+                            Add New Location
+                          </Text>
+                          <Text className="text-zinc-500 text-[10.5px] font-medium mt-0.5 leading-tight">
+                            Virla uses location to pinpoint your doorstep workout address
+                          </Text>
+                        </View>
                       </View>
-                      <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">Add New Location</Text>
+                      <View className="bg-zinc-900 px-3 py-1.5 rounded-full">
+                        <Text className="text-white text-[10px] font-bold uppercase tracking-wider">
+                          Enable
+                        </Text>
+                      </View>
                     </TouchableOpacity>
                   </View>
 

@@ -159,19 +159,44 @@ export default function TrackingMap({
       }
 
       if (pointsToFit.length >= 2) {
-        mapRef.current.fitToCoordinates(pointsToFit, {
-          edgePadding: isFullScreen
-            ? { top: 110, right: 70, bottom: 220, left: 70 }
-            : { top: 58, right: 52, bottom: 48, left: 52 },
-          animated,
-        });
+        // Check physical distance between origin and destination
+        const distKm = (trainerLatLng && clientCoords)
+          ? calculateDistanceKm(
+              trainerLatLng.latitude,
+              trainerLatLng.longitude,
+              clientCoords.latitude,
+              clientCoords.longitude
+            )
+          : 0;
+
+        // When side-by-side or very close (< 100 meters), provide extra tight zoom so both markers are clearly distinct
+        if (distKm < 0.1 && trainerLatLng && clientCoords) {
+          const midLat = (trainerLatLng.latitude + clientCoords.latitude) / 2;
+          const midLng = (trainerLatLng.longitude + clientCoords.longitude) / 2;
+          mapRef.current.animateToRegion(
+            {
+              latitude: midLat,
+              longitude: midLng,
+              latitudeDelta: 0.0018, // Extra high-detail zoom
+              longitudeDelta: 0.0018,
+            },
+            animated ? 500 : 0
+          );
+        } else {
+          mapRef.current.fitToCoordinates(pointsToFit, {
+            edgePadding: isFullScreen
+              ? { top: 90, right: 60, bottom: 200, left: 60 }
+              : { top: 40, right: 40, bottom: 40, left: 40 },
+            animated,
+          });
+        }
       } else if (pointsToFit.length === 1) {
         mapRef.current.animateToRegion(
           {
             latitude: pointsToFit[0].latitude,
             longitude: pointsToFit[0].longitude,
-            latitudeDelta: 0.012,
-            longitudeDelta: 0.012,
+            latitudeDelta: 0.003, // Extra close zoom
+            longitudeDelta: 0.003,
           },
           animated ? 500 : 0
         );
@@ -195,21 +220,21 @@ export default function TrackingMap({
     ? {
         latitude: trainerLatLng.latitude,
         longitude: trainerLatLng.longitude,
-        latitudeDelta: 0.018,
-        longitudeDelta: 0.018,
+        latitudeDelta: 0.0035,
+        longitudeDelta: 0.0035,
       }
     : clientCoords
     ? {
         latitude: clientCoords.latitude,
         longitude: clientCoords.longitude,
-        latitudeDelta: 0.018,
-        longitudeDelta: 0.018,
+        latitudeDelta: 0.0035,
+        longitudeDelta: 0.0035,
       }
     : {
         latitude: 19.1076,
         longitude: 72.8264,
-        latitudeDelta: 0.025,
-        longitudeDelta: 0.025,
+        latitudeDelta: 0.012,
+        longitudeDelta: 0.012,
       };
 
   const headingRotation =

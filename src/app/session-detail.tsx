@@ -24,6 +24,7 @@ import { parseBookingAddress } from '../utils/LocationParser';
 import { SupportChatModal } from '../components/SupportChatModal';
 import { RaiseSupportTicketModal } from '../components/RaiseSupportTicketModal';
 import { SupportTicket } from '../database/Database';
+import { useAddressStore } from '../store/addressStore';
 
 function formatToIndianDate(dateStr: string): string {
   return formatToDDMMYYYY(dateStr);
@@ -58,6 +59,18 @@ export default function SessionDetailScreen() {
   const params = useLocalSearchParams();
   const bookingId = params.id as string;
 
+  const handleSafeBack = () => {
+    try {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)');
+      }
+    } catch {
+      router.replace('/(tabs)');
+    }
+  };
+
   const { 
     bookings, 
     updateTimelineStatus, 
@@ -83,7 +96,33 @@ export default function SessionDetailScreen() {
   const [showSupportChatModal, setShowSupportChatModal] = useState(false);
 
   const booking = bookings.find((b) => b.id === bookingId) || bookings[0];
-  const parsedAddress = useMemo(() => parseBookingAddress(booking?.address), [booking?.address]);
+  const { addresses } = useAddressStore();
+
+  // Resolved venue address string: fallback to customer's saved address if booking.address is missing/empty
+  const effectiveAddressStr = useMemo(() => {
+    if (booking?.address && booking.address.trim().length > 0) {
+      return booking.address;
+    }
+    // Fallback: look in user's saved addresses
+    if (addresses && addresses.length > 0) {
+      const defaultAddr = addresses.find((a) => a.isDefault) || addresses[0];
+      if (defaultAddr && defaultAddr.lat && defaultAddr.lng) {
+        return JSON.stringify({
+          addressLine: defaultAddr.addressLine || '',
+          lat: defaultAddr.lat,
+          lng: defaultAddr.lng,
+          buildingName: defaultAddr.building || '',
+          flatNumber: defaultAddr.apartment || '',
+          floor: defaultAddr.floor || '',
+          landmark: defaultAddr.landmark || '',
+          arrivalInstructions: defaultAddr.notes || '',
+        });
+      }
+    }
+    return '';
+  }, [booking?.address, addresses]);
+
+  const parsedAddress = useMemo(() => parseBookingAddress(effectiveAddressStr), [effectiveAddressStr]);
 
   // Status checks
   const isMissed = booking?.status === 'missed_session_not_started' || booking?.status === 'client_no_show' || booking?.status === 'trainer_no_show';
@@ -130,7 +169,7 @@ export default function SessionDetailScreen() {
       } else {
         Alert.alert(
           'Travel Window Locked ⚠️',
-          'You can start travel and view the navigation map 25 minutes before the scheduled session.'
+          'You can start travel and view the navigation map 30 minutes before the scheduled session.'
         );
       }
     }
@@ -335,7 +374,7 @@ export default function SessionDetailScreen() {
           const isFresh = elapsed < 605;
           if (isFresh) {
             reassignTrainer(booking.id, 'timeout');
-            router.back();
+            handleSafeBack();
             return;
           }
         }
@@ -561,12 +600,13 @@ export default function SessionDetailScreen() {
   // Handle active status tickers & animations
   useEffect(() => {
     // Stage pulsing animation
-    Animated.loop(
+    const pulseLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseScale, { toValue: 1.2, duration: 1000, useNativeDriver: true }),
         Animated.timing(pulseScale, { toValue: 1, duration: 1000, useNativeDriver: true })
       ])
-    ).start();
+    );
+    pulseLoop.start();
 
     // Active session stopwatch
     let stopwatchTimer: any = null;
@@ -578,6 +618,7 @@ export default function SessionDetailScreen() {
     }
 
     return () => {
+      pulseLoop.stop();
       if (stopwatchTimer) clearInterval(stopwatchTimer);
     };
   }, [currentStatus, pulseScale]);
@@ -628,7 +669,7 @@ export default function SessionDetailScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: 'white', paddingTop: insets.top }} className="justify-center items-center">
         <Text className="text-zinc-400 font-semibold">No booking details found.</Text>
-        <TouchableOpacity onPress={() => router.back()} className="mt-4 bg-zinc-900 px-6 py-2 rounded-full">
+        <TouchableOpacity onPress={handleSafeBack} className="mt-4 bg-zinc-900 px-6 py-2 rounded-full">
           <Text className="text-white font-bold text-xs">Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -862,7 +903,7 @@ export default function SessionDetailScreen() {
       <View style={{ flex: 1, backgroundColor: '#F8F9FC', paddingTop: insets.top }}>
         {/* Header */}
         <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
-          <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
+          <TouchableOpacity onPress={handleSafeBack} className="w-8 h-8 items-center justify-center">
             <Ionicons name="arrow-back" size={20} color="#101828" />
           </TouchableOpacity>
           <Text className="text-[#101828] text-xs font-black uppercase tracking-widest">
@@ -1189,7 +1230,7 @@ export default function SessionDetailScreen() {
       >
         <View className="h-14 flex-row items-center px-5 justify-between">
           <TouchableOpacity 
-            onPress={() => router.back()} 
+            onPress={handleSafeBack} 
             activeOpacity={0.6}
             className="w-9 h-9 items-center justify-center active:opacity-60"
           >
@@ -1646,11 +1687,11 @@ export default function SessionDetailScreen() {
                 </View>
 
                 {/* Real Live Map with Polyline & Mota Marker */}
-                <View className="h-60 overflow-hidden relative bg-slate-950">
+                <View className="h-96 rounded-2xl overflow-hidden relative bg-slate-950 border border-slate-800 shadow-xl">
                   <TrackingMap
                     liveTrainerCoords={activeTrainerCoords}
                     isStale={isLiveConnectionStale}
-                    clientAddress={booking?.address}
+                    clientAddress={effectiveAddressStr}
                     viewerRole={role as any}
                     onRouteMetricsChange={setRouteMetrics}
                     onExpandPress={() => setIsNavigationMapVisible(true)}
@@ -1696,7 +1737,7 @@ export default function SessionDetailScreen() {
                 }}
               >
                 <View className="flex-row gap-4 items-start">
-                  <Image source={{ uri: booking.trainerPhoto || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }} className="w-14 h-14 rounded-full border border-zinc-200" />
+                  <Image source={{ uri: (booking.trainerPhoto && booking.trainerPhoto.trim().length > 0) ? booking.trainerPhoto : 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }} className="w-14 h-14 rounded-full border border-zinc-200" />
                   <View className="flex-1">
                     <View className="flex-row items-center gap-1.5 flex-wrap">
                       <Text className="text-zinc-950 text-base font-extrabold">Coach {booking.trainerName}</Text>
@@ -1762,7 +1803,7 @@ export default function SessionDetailScreen() {
                         : isCancelled 
                         ? () => Alert.alert('Session Cancelled', 'This session has been cancelled and communications are closed.') 
                         : !isAccepted 
-                        ? () => Alert.alert('Security Lock', 'Waiting for Trainer Acceptance. Secure communications will unlock after a coach confirms.') 
+                        ? () => Alert.alert('Waiting for Coach', 'You can chat once the trainer has accepted your booking.') 
                         : handleMessage
                     } 
                     className={`flex-1 py-4 rounded-2xl items-center justify-center flex-row gap-2.5 shadow-sm border ${
@@ -1828,7 +1869,7 @@ export default function SessionDetailScreen() {
             )}
 
             {/* Original Module 5 for Trainers */}
-            {role !== 'customer' && !isMissed && !isCancelled && (
+            {role !== 'customer' && !isMissed && !isCancelled && currentStatus !== 'workout_started' && (
               <View className="gap-4 pl-1">
                 <View className="flex-row justify-between items-center">
                   <Text className="text-zinc-950 text-sm font-extrabold uppercase tracking-wider">Concierge Controls</Text>
@@ -1869,26 +1910,34 @@ export default function SessionDetailScreen() {
                   <View className="gap-3 mt-1">
                     {(currentStatus === 'trainer_accepted' || currentStatus === 'trainer_preparing') && (
                       SessionEngine.isTravelWindowOpen(booking) ? (
-                        <TouchableOpacity
-                          onPress={async () => {
-                            try {
-                              await locationTrackerService.startTracking(booking.id, true);
-                              await updateTimelineStatus(booking.id, 'trainer_travelling');
-                              handleNavigateAddress();
-                            } catch (err: any) {
-                              Alert.alert('Error', err.message || 'Could not start travel.');
-                            }
-                          }}
-                          className="w-full bg-[#E11D48] py-3.5 rounded-[18px] items-center justify-center flex-row gap-2 shadow-sm"
-                        >
-                          <Feather name="navigation" size={14} color="white" />
-                          <Text className="text-white text-xs font-black uppercase">Start Navigation</Text>
-                        </TouchableOpacity>
+                        <View className="gap-2 w-full">
+                          <View className="bg-zinc-100 p-2.5 rounded-xl flex-row items-center gap-2 border border-zinc-200">
+                            <Feather name="navigation" size={12} color="#E11D48" />
+                            <Text className="text-zinc-600 text-[10.5px] font-medium flex-1 leading-tight">
+                              App uses background location permission to share your live travel route with the client until you reach their venue.
+                            </Text>
+                          </View>
+                          <TouchableOpacity
+                            onPress={async () => {
+                              try {
+                                await locationTrackerService.startTracking(booking.id, true);
+                                await updateTimelineStatus(booking.id, 'trainer_travelling');
+                                handleNavigateAddress();
+                              } catch (err: any) {
+                                Alert.alert('Error', err.message || 'Could not start travel.');
+                              }
+                            }}
+                            className="w-full bg-[#E11D48] py-3.5 rounded-[18px] items-center justify-center flex-row gap-2 shadow-sm"
+                          >
+                            <Feather name="navigation" size={14} color="white" />
+                            <Text className="text-white text-xs font-black uppercase">Start Navigation</Text>
+                          </TouchableOpacity>
+                        </View>
                       ) : (
                         <View className="bg-zinc-950 p-4 rounded-xl items-center justify-center border border-zinc-800">
                           <Text className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Travel Window Locked</Text>
                           <Text className="text-zinc-500 text-xs font-medium text-center mt-1 leading-normal">
-                            You can start travel 25 minutes before the scheduled session.
+                            You can start travel 30 minutes before the scheduled session.
                           </Text>
                         </View>
                       )
@@ -2056,7 +2105,7 @@ export default function SessionDetailScreen() {
                         onPress={() => {
                           triggerClientNoShow(booking.id);
                           Alert.alert('Customer No-Show', 'Report logged successfully.');
-                          router.back();
+                          handleSafeBack();
                         }}
                         className="flex-1 bg-rose-950 border border-rose-900 py-3.5 rounded-xl items-center justify-center"
                       >
@@ -2509,7 +2558,7 @@ export default function SessionDetailScreen() {
               <TrackingMap
                 liveTrainerCoords={activeTrainerCoords}
                 isStale={isLiveConnectionStale}
-                clientAddress={booking?.address}
+                clientAddress={effectiveAddressStr}
                 viewerRole={role as any}
                 onRouteMetricsChange={setRouteMetrics}
                 isFullScreen={true}

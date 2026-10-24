@@ -5,11 +5,11 @@ import { supabase } from '../database/supabaseClient';
 import { broadcastBookingUpdate } from '../utils/realtime';
 
 export class SessionEngine {
-  static TRAVEL_WINDOW_MINUTES = 25;
+  static TRAVEL_WINDOW_MINUTES = 30;
 
   /**
    * Checks if current time is inside the pre-session travel window.
-   * Lock opens 25 minutes before scheduled start time.
+   * Lock opens 30 minutes before scheduled start time.
    */
   static isTravelWindowOpen(booking: Booking): boolean {
     if (!booking) return false;
