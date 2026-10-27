@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Alert, Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet, AppState, AppStateStatus, Vibration, Linking } from 'react-native';
@@ -2120,6 +2120,14 @@ export default function HomeScreen() {
                     </View>
 
                     <View className="gap-1.5">
+                      {(activeSession.isFavouriteTrainer || (activeSession as any)?.ratingDetails?.isFavouriteTrainer) && (
+                        <View className="flex-row items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1.5 rounded-xl self-start mb-1">
+                          <Ionicons name="star" size={13} color="#D97706" />
+                          <Text className="text-amber-700 text-[11px] font-bold">
+                            You are booked as a favourite trainer
+                          </Text>
+                        </View>
+                      )}
                       <Text className="text-zinc-500 text-xs font-semibold uppercase">Workout: {getDisplayWorkoutTitle(activeSession.workoutTitle)}</Text>
                       <Text className="text-[#101828] text-base font-bold tracking-tight mt-0.5">
                         Client: {activeSession.clientName || 'Viral'}
@@ -2181,6 +2189,14 @@ export default function HomeScreen() {
                       </View>
 
                       <View className="gap-1">
+                        {(nextSession.isFavouriteTrainer || (nextSession as any)?.ratingDetails?.isFavouriteTrainer) && (
+                          <View className="flex-row items-center gap-1.5 bg-amber-500/15 border border-amber-500/35 px-2.5 py-1.5 rounded-xl self-start mb-1">
+                            <Ionicons name="star" size={13} color="#FBBF24" />
+                            <Text className="text-amber-300 text-[11px] font-bold">
+                              You are booked as a favourite trainer
+                            </Text>
+                          </View>
+                        )}
                         <Text className="text-zinc-400 text-[11px] font-semibold uppercase">Workout: {getDisplayWorkoutTitle(nextSession.workoutTitle)}</Text>
                         <Text numberOfLines={1} className="text-white text-base font-semibold mt-1 leading-tight">
                           Client: {nextSession.clientName || 'Viral'}

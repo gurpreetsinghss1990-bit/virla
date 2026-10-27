@@ -4,7 +4,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import Svg, { Path, Defs, LinearGradient, Stop, Polygon, Polyline } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient, Stop, Polygon, Polyline, Rect } from 'react-native-svg';
 import { useUserStore } from '../../store/userStore';
 import { useMembershipStore } from '../../store/membershipStore';
 import { useCoachStore } from '../../store/coachStore';
@@ -99,6 +99,7 @@ export default function ProfileScreen() {
   const { ledger, creditBalance, creditLots, syncFromDB: syncWallet } = useWalletStore();
   const profile = useUserProfileStore();
   const [isSignOutModalVisible, setIsSignOutModalVisible] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
 
   const handleLogout = () => {
     setIsSignOutModalVisible(true);
@@ -409,6 +410,79 @@ export default function ProfileScreen() {
       Alert.alert('Save Error', err.message || 'Failed to save profile changes. Please try again.');
     } finally {
       setIsSavingProfile(false);
+    }
+  };
+
+  const [isUploadingTrainerPhoto, setIsUploadingTrainerPhoto] = useState(false);
+
+  const handlePickTrainerAvatar = async () => {
+    if (!coach?.id || isUploadingTrainerPhoto) return;
+    try {
+      Alert.alert(
+        'Upload Profile Photo',
+        'Choose an option to update your trainer profile picture:',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Take Photo',
+            onPress: async () => {
+              const { status } = await ImagePicker.requestCameraPermissionsAsync();
+              if (status !== 'granted') {
+                Alert.alert('Permission Required', 'Camera access is needed to capture your profile photo.');
+                return;
+              }
+              const res = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+              });
+              if (!res.canceled && res.assets?.[0]?.uri) {
+                await saveTrainerPhoto(res.assets[0].uri);
+              }
+            }
+          },
+          {
+            text: 'Choose from Gallery',
+            onPress: async () => {
+              const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (status !== 'granted') {
+                Alert.alert('Permission Required', 'Gallery access is needed to select your profile photo.');
+                return;
+              }
+              const res = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+              });
+              if (!res.canceled && res.assets?.[0]?.uri) {
+                await saveTrainerPhoto(res.assets[0].uri);
+              }
+            }
+          }
+        ]
+      );
+    } catch (e: any) {
+      console.warn('[TrainerPhotoPicker] Error:', e);
+      Alert.alert('Picker Error', 'Unable to pick photo. Please try again.');
+    }
+  };
+
+  const saveTrainerPhoto = async (photoUri: string) => {
+    if (!coach?.id) return;
+    try {
+      setIsUploadingTrainerPhoto(true);
+      await Database.updateCoach(coach.id, { photo: photoUri });
+      if (user?.id) {
+        await profile.updateCoreProfile({ avatar: photoUri });
+      }
+      useCoachStore.getState().syncFromDB();
+      Alert.alert('Success', 'Trainer profile photo updated successfully.');
+    } catch (err: any) {
+      console.error('[SaveTrainerPhoto] Error:', err);
+      Alert.alert('Error', err.message || 'Failed to update trainer profile photo.');
+    } finally {
+      setIsUploadingTrainerPhoto(false);
     }
   };
 
@@ -807,42 +881,39 @@ export default function ProfileScreen() {
   return (
     <SafeAreaViewWrapper>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
-        {/* Fixed Top Bar Header - Always stable like WhatsApp / Google, seamless without artificial divider line */}
-        <View className="bg-[#F7F8FC] px-6 pt-3 pb-2 z-30">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-[#101828] text-2xl font-black tracking-tight">
-              {activeRole === 'trainer' ? 'Trainer Profile' : 'Profile'}
-            </Text>
-          </View>
-        </View>
-
-        <ScrollView 
-          showsVerticalScrollIndicator={false}
-          className="flex-1 bg-[#F7F8FC]"
-          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 140 }}
-        >
-          {/* =============================================================== */}
-          {/* ======================= CLIENT PROFILE ======================== */}
-          {/* =============================================================== */}
-          {activeRole !== 'trainer' && (
-            <>
-              {/* Subtle botanical branch illustration on top right */}
-              <View pointerEvents="none" style={{ position: 'absolute', top: -18, right: -24, width: 140, height: 160, opacity: 0.85, zIndex: 0 }}>
-                <Svg width="140" height="160" viewBox="0 0 140 160" fill="none">
-                  <Defs>
-                    <LinearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <Stop offset="0%" stopColor="#C2D3C8" stopOpacity="0.85" />
-                      <Stop offset="100%" stopColor="#94AA9D" stopOpacity="0.45" />
-                    </LinearGradient>
-                    <LinearGradient id="stemGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <Stop offset="0%" stopColor="#B0C2B6" stopOpacity="0.8" />
-                      <Stop offset="100%" stopColor="#7E9688" stopOpacity="0.35" />
-                    </LinearGradient>
-                  </Defs>
-                  <Path d="M 140 10 Q 85 65 30 135" stroke="url(#stemGrad)" strokeWidth="1.6" strokeLinecap="round" />
-                  <Path d="M 125 32 Q 92 18 78 38 Q 106 48 125 32 Z" fill="url(#leafGrad)" />
-                  <Path d="M 110 48 Q 72 42 58 66 Q 90 72 110 48 Z" fill="url(#leafGrad)" />
-                  <Path d="M 90 68 Q 52 70 40 98 Q 72 98 90 68 Z" fill="url(#leafGrad)" />
+        <View className="flex-1 relative">
+          <ScrollView 
+            showsVerticalScrollIndicator={false}
+            scrollEventThrottle={16}
+            onScroll={(e) => {
+              const y = e.nativeEvent.contentOffset.y;
+              setScrollY(y);
+            }}
+            className="flex-1 bg-[#F7F8FC]"
+            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 62, paddingBottom: 140 }}
+          >
+            {/* =============================================================== */}
+            {/* ======================= CLIENT PROFILE ======================== */}
+            {/* =============================================================== */}
+            {activeRole !== 'trainer' && (
+              <>
+                {/* Subtle botanical branch illustration on top right */}
+                <View pointerEvents="none" style={{ position: 'absolute', top: -18, right: -24, width: 140, height: 160, opacity: 0.85, zIndex: 0 }}>
+                  <Svg width="140" height="160" viewBox="0 0 140 160" fill="none">
+                    <Defs>
+                      <LinearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <Stop offset="0%" stopColor="#C2D3C8" stopOpacity="0.85" />
+                        <Stop offset="100%" stopColor="#94AA9D" stopOpacity="0.45" />
+                      </LinearGradient>
+                      <LinearGradient id="stemGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <Stop offset="0%" stopColor="#B0C2B6" stopOpacity="0.8" />
+                        <Stop offset="100%" stopColor="#7E9688" stopOpacity="0.35" />
+                      </LinearGradient>
+                    </Defs>
+                    <Path d="M 140 10 Q 85 65 30 135" stroke="url(#stemGrad)" strokeWidth="1.6" strokeLinecap="round" />
+                    <Path d="M 125 32 Q 92 18 78 38 Q 106 48 125 32 Z" fill="url(#leafGrad)" />
+                    <Path d="M 110 48 Q 72 42 58 66 Q 90 72 110 48 Z" fill="url(#leafGrad)" />
+                    <Path d="M 90 68 Q 52 70 40 98 Q 72 98 90 68 Z" fill="url(#leafGrad)" />
                   <Path d="M 72 90 Q 38 100 30 128 Q 58 124 72 90 Z" fill="url(#leafGrad)" />
                   <Path d="M 48 114 Q 20 128 14 154 Q 38 144 48 114 Z" fill="url(#leafGrad)" />
                   <Path d="M 135 18 Q 112 4 98 20 Q 122 28 135 18 Z" fill="url(#leafGrad)" />
@@ -1313,7 +1384,14 @@ export default function ProfileScreen() {
                 {/* Goal Chips */}
                 {Array.isArray(profile.selectedGoals) && profile.selectedGoals.length > 0 ? (
                   <View className="flex-row flex-wrap gap-2 mb-3.5">
-                    {profile.selectedGoals.map((goal, idx) => (
+                    {profile.selectedGoals
+                      .filter((goal) => {
+                        if (goal === 'Post Pregnancy') {
+                          return (profile.gender || '').trim().toLowerCase() === 'female';
+                        }
+                        return true;
+                      })
+                      .map((goal, idx) => (
                       <View key={`${goal}-${idx}`} className="rounded-full overflow-hidden">
                         <Pressable
                           android_ripple={{
@@ -1478,8 +1556,8 @@ export default function ProfileScreen() {
                 <View className="relative">
                   <Image
                     source={(() => {
-                      const raw = coach?.avatar || coach?.photo || user?.avatar;
-                      if (raw && typeof raw === 'string' && (raw.startsWith('http') || raw.startsWith('data:')) && !raw.includes('photo-1534528741775') && !raw.includes('photo-1544005313') && !raw.includes('photo-1568602471122') && !raw.includes('selfie.jpg')) {
+                      const raw = coach?.photo || coach?.avatar || user?.avatar;
+                      if (raw && typeof raw === 'string' && (raw.startsWith('http') || raw.startsWith('data:') || raw.startsWith('file://')) && !raw.includes('photo-1534528741775') && !raw.includes('photo-1544005313') && !raw.includes('photo-1568602471122') && !raw.includes('selfie.jpg')) {
                         return { uri: raw };
                       }
                       return MASTER_TRAINER_AVATAR_IMAGE;
@@ -1487,9 +1565,19 @@ export default function ProfileScreen() {
                     className="w-24 h-24 rounded-full border-[3px] border-[#E11D48] mb-3 shadow-xl bg-zinc-900"
                     resizeMode="cover"
                   />
-                  <View className="absolute bottom-3 right-0 bg-[#E11D48] p-1.5 rounded-full border-2 border-white shadow-md">
-                    <MaterialCommunityIcons name="shield-check" size={14} color="#FFFFFF" />
-                  </View>
+                  {/* Bottom Right Edit Pencil Icon */}
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={handlePickTrainerAvatar}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    className="absolute bottom-2 right-0 bg-[#E11D48] w-8 h-8 rounded-full border-2 border-white shadow-md items-center justify-center"
+                  >
+                    {isUploadingTrainerPhoto ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Feather name="edit-2" size={13} color="#FFFFFF" />
+                    )}
+                  </TouchableOpacity>
                 </View>
                 <Text className="text-[#101828] text-2xl font-black tracking-tight">{coach?.name || user?.name || 'User'}</Text>
                 <Text className="text-[#4B5563] text-xs font-bold mt-1 tracking-wide uppercase">
@@ -2170,7 +2258,11 @@ export default function ProfileScreen() {
                             <View key={earn.id} className="flex-row justify-between items-center py-2 border-b border-zinc-100 last:border-b-0">
                               <View className="flex-1 pr-3">
                                 <Text className="text-zinc-900 text-xs font-medium leading-snug">
-                                  {earn.type === 'session' && `Visit Fee: ${earn.clientName}`}
+                                  {earn.type === 'session' && (
+                                    earn.isFavourite || (earn.clientName && earn.clientName.includes('(Favourite Trainer)'))
+                                      ? `Visit Fee: ${earn.clientName.replace(' (Favourite Trainer)', '')} (Favourite Trainer)`
+                                      : `Visit Fee: ${earn.clientName}`
+                                  )}
                                   {earn.type === 'no_show_compensation' && `Cancellation Fee: ${earn.clientName}`}
                                   {earn.type === 'penalty' && `Cancellation Penalty`}
                                 </Text>
@@ -2531,7 +2623,56 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
         </ScrollView>
-      </KeyboardAvoidingView>
+
+        {/* Floating Top Header: Inline title with ChatGPT-style subtle scrim right next to the element */}
+        <View 
+          pointerEvents="box-none" 
+          style={{ 
+            position: 'absolute', 
+            top: 10, 
+            left: 20, 
+            zIndex: 40,
+            flexDirection: 'row',
+            alignItems: 'center',
+          }}
+        >
+          {/* Inline Profile Badge with surrounding scrim backdrop */}
+          <View pointerEvents="none" className="relative flex-row items-center">
+            {/* Scrim Glow / Fade specifically localized behind and to the side of the profile element */}
+            <View 
+              style={{
+                position: 'absolute',
+                top: -8,
+                left: -12,
+                right: -45,
+                bottom: -8,
+              }}
+            >
+              <Svg width="100%" height="100%" preserveAspectRatio="none">
+                <Defs>
+                  <LinearGradient id="elementSideScrim" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <Stop offset="0%" stopColor="#F7F8FC" stopOpacity="0.95" />
+                    <Stop offset="65%" stopColor="#F7F8FC" stopOpacity="0.85" />
+                    <Stop offset="85%" stopColor="#F7F8FC" stopOpacity="0.4" />
+                    <Stop offset="100%" stopColor="#F7F8FC" stopOpacity="0" />
+                  </LinearGradient>
+                </Defs>
+                <Rect x="0" y="0" width="100%" height="100%" rx={20} ry={20} fill="url(#elementSideScrim)" />
+              </Svg>
+            </View>
+
+            {/* Profile Title Element: Clean, prominent Tab Name font without pill background */}
+            <View className="flex-row items-center py-1">
+              <Text className="text-[#101828] text-2xl font-black tracking-tight" numberOfLines={1}>
+                {scrollY > 60 
+                  ? (profile.name || user?.name || (activeRole === 'trainer' ? 'Trainer' : 'User'))
+                  : (activeRole === 'trainer' ? 'Trainer Profile' : 'Profile')}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
 
       <SignOutConfirmationModal
         visible={isSignOutModalVisible}

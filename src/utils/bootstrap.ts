@@ -11,6 +11,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { useAIStore } from '../store/aiStore';
 import { useAddressStore } from '../store/addressStore';
 import { setupRealtimeSubscriptions } from './realtime';
+import { locationTrackerService } from '../services/LocationTrackerService';
 
 /**
  * Perform all application initializations in parallel.
@@ -36,7 +37,10 @@ export async function bootstrapApp(): Promise<void> {
     // 3. Sync all store caches from the loaded database and setup subscription listeners
     await restoreAuthentication();
     
-    // 3. Init other assets in parallel
+    // 4. Clean up any leftover background location tasks if trainer is not currently travelling
+    locationTrackerService.cleanupZombieTracking().catch(() => {});
+
+    // 5. Init other assets in parallel
     await Promise.all([
       initializeFirebase(),
       preloadOnboardingAssets(),

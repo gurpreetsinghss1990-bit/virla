@@ -2,6 +2,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Database } from '../database/Database';
@@ -104,6 +105,39 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
       {/* Soft Ambient White Rays / Halo Glow */}
       <View style={styles.outerRaysGlow} />
       <View style={styles.innerRaysGlow} />
+
+      {/* Side-to-Side Soft White Scrim Vignette Effect */}
+      <View pointerEvents="none" style={styles.sideScrimWrapper}>
+        {/* Left Side Scrim */}
+        <View style={styles.leftScrim}>
+          <Svg width="100%" height="100%" preserveAspectRatio="none">
+            <Defs>
+              <LinearGradient id="tabBarLeftScrim" x1="0%" y1="0%" x2="100%" y2="0%">
+                <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.85" />
+                <Stop offset="45%" stopColor="#FFFFFF" stopOpacity="0.5" />
+                <Stop offset="75%" stopColor="#FFFFFF" stopOpacity="0.18" />
+                <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width="100%" height="100%" rx={30} ry={30} fill="url(#tabBarLeftScrim)" />
+          </Svg>
+        </View>
+
+        {/* Right Side Scrim */}
+        <View style={styles.rightScrim}>
+          <Svg width="100%" height="100%" preserveAspectRatio="none">
+            <Defs>
+              <LinearGradient id="tabBarRightScrim" x1="100%" y1="0%" x2="0%" y2="0%">
+                <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.85" />
+                <Stop offset="45%" stopColor="#FFFFFF" stopOpacity="0.5" />
+                <Stop offset="75%" stopColor="#FFFFFF" stopOpacity="0.18" />
+                <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width="100%" height="100%" rx={30} ry={30} fill="url(#tabBarRightScrim)" />
+          </Svg>
+        </View>
+      </View>
 
       <View style={styles.navContainer}>
         {visibleRoutes.map((route: any, index: number) => {
@@ -233,6 +267,30 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.95,
     shadowRadius: 10,
     elevation: 4,
+  },
+  sideScrimWrapper: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderRadius: 30,
+    overflow: 'hidden',
+    zIndex: 1,
+  },
+  leftScrim: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: 65,
+  },
+  rightScrim: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: 0,
+    width: 65,
   },
   navContainer: {
     borderRadius: 30,

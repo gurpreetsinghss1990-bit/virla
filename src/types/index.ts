@@ -52,6 +52,7 @@ export interface Booking {
   address?: string;
   goal?: string;
   preferredCoachId?: string;
+  isFavouriteTrainer?: boolean;
   trainerNote?: string;
   familyMember?: {
     name: string;
@@ -109,6 +110,12 @@ export interface Booking {
     trainerConfirmed?: boolean;
     isLimitationResolved?: boolean;
     submittedAt?: string;
+    // Health & Safety Profile (Step 5 questionnaire)
+    workoutFrequency?: string;
+    injuriesOrPain?: string[];
+    healthConditions?: string[];
+    doctorAdvice?: string;
+    safetyNotes?: string;
   };
   clientName?: string;
   clientPhone?: string;
@@ -229,6 +236,7 @@ export interface TrainerEarning {
   amount: number;
   date: string;
   type: 'session' | 'no_show_compensation' | 'penalty';
+  isFavourite?: boolean;
 }
 
 // Sprint 7 additions for availability planning

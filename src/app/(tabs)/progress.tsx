@@ -6,6 +6,7 @@ import { ProgressRing } from '../../components/ProgressRing';
 import { EmptyState } from '../../components/EmptyState';
 import { LuxuryCard } from '../../components/LuxuryCard';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 
 type RangeType = 'weekly' | 'monthly' | 'yearly';
 
@@ -21,6 +22,7 @@ export default function ProgressScreen() {
   const [activeRange, setActiveRange] = useState<RangeType>('weekly');
   const [simulateEmpty, setSimulateEmpty] = useState(false);
   const [forceShowDemo, setForceShowDemo] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
 
   useEffect(() => {
@@ -376,44 +378,31 @@ export default function ProgressScreen() {
     }
   };
 
+  const userProfile = useUserProfileStore();
+  const userName = userProfile.name || user?.name || (role === 'trainer' ? 'Trainer' : 'User');
+
   return (
     <SafeAreaViewWrapper>
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
-        contentContainerStyle={{ paddingBottom: 140 }}
-        className="bg-[#FCF5F5]"
-      >
-        <View className="px-6 pt-8 pb-4 gap-6">
-          <View className="flex-row justify-between items-start">
-            <View className="flex-row items-start gap-5 flex-1 pr-3">
-              <TouchableOpacity
-                activeOpacity={0.6}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                onPress={() => {
-                  if (router.canGoBack()) {
-                    router.back();
-                  } else {
-                    router.replace('/(tabs)');
-                  }
-                }}
-                className="w-8 h-8 items-center justify-center active:opacity-60 mt-1"
-                accessibilityRole="button"
-                accessibilityLabel="Back"
-              >
-                <Ionicons name="chevron-back" size={28} color="#101828" />
-              </TouchableOpacity>
-
-              <View className="flex-1">
-                <Text className="text-[#101828] text-2xl font-bold tracking-tight">
-                  {role === 'trainer' ? 'Performance' : 'My Progress'}
-                </Text>
-                <Text className="text-[#6B7280] text-[11px] font-semibold uppercase tracking-wider mt-0.5">
+      <View className="flex-1 relative">
+        <ScrollView 
+          showsVerticalScrollIndicator={false} 
+          scrollEventThrottle={16}
+          onScroll={(e) => {
+            const y = e.nativeEvent.contentOffset.y;
+            setScrollY(y);
+          }}
+          contentContainerStyle={{ paddingTop: 62, paddingBottom: 140 }}
+          className="bg-[#FCF5F5]"
+        >
+          <View className="px-6 pt-2 pb-4 gap-6">
+            <View className="flex-row justify-between items-start">
+              <View className="flex-1 pr-3">
+                <Text className="text-[#6B7280] text-[11px] font-semibold uppercase tracking-wider">
                   {role === 'trainer' ? 'Partner Insights & Metrics' : 'Analytics & Daily Metrics'}
                 </Text>
               </View>
-            </View>
 
-            {role !== 'trainer' && (
+              {role !== 'trainer' && (
               <TouchableOpacity 
                 activeOpacity={0.7}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -1074,8 +1063,55 @@ export default function ProgressScreen() {
           )}
         </View>
       </ScrollView>
-    </SafeAreaViewWrapper>
-  );
+
+      {/* Floating Top Header: Inline title with subtle scrim right next to the element */}
+      <View 
+        pointerEvents="box-none" 
+        style={{ 
+          position: 'absolute', 
+          top: 10, 
+          left: 20, 
+          zIndex: 40,
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}
+      >
+        {/* Inline Progress Badge with surrounding scrim backdrop */}
+        <View pointerEvents="none" className="relative flex-row items-center">
+          {/* Scrim Glow / Fade specifically localized behind and to the side of the progress element */}
+          <View 
+            style={{
+              position: 'absolute',
+              top: -8,
+              left: -12,
+              right: -45,
+              bottom: -8,
+            }}
+          >
+            <Svg width="100%" height="100%" preserveAspectRatio="none">
+              <Defs>
+                <LinearGradient id="progressSideScrim" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <Stop offset="0%" stopColor="#FCF5F5" stopOpacity="0.95" />
+                  <Stop offset="65%" stopColor="#FCF5F5" stopOpacity="0.85" />
+                  <Stop offset="85%" stopColor="#FCF5F5" stopOpacity="0.4" />
+                  <Stop offset="100%" stopColor="#FCF5F5" stopOpacity="0" />
+                </LinearGradient>
+              </Defs>
+              <Rect x="0" y="0" width="100%" height="100%" rx={20} ry={20} fill="url(#progressSideScrim)" />
+            </Svg>
+          </View>
+
+          {/* Progress Title Element: Clean, prominent Tab Name font without pill background */}
+          <View className="flex-row items-center py-1">
+            <Text className="text-[#101828] text-2xl font-black tracking-tight" numberOfLines={1}>
+              {role === 'trainer' ? 'Performance' : 'My Progress'}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  </SafeAreaViewWrapper>
+);
 }
 
 function SafeAreaViewWrapper({ children }: { children: React.ReactNode }) {

@@ -1,11 +1,11 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, Platform, InteractionManager, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, TouchableOpacity, Platform, InteractionManager, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore } from '../store/userProfileStore';
 import { Database } from '../database/Database';
-import { Feather } from '@expo/vector-icons';
-import { ScreenHeader } from '../components/ScreenHeader';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 
 const allGoals = [
   'Weight Loss',
@@ -59,6 +59,12 @@ export default function FitnessGoalsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const isNavigatingRef = useRef(false);
+
+  const profileGender = useUserProfileStore((s) => s.gender);
+  const isFemale = (profileGender || '').trim().toLowerCase() === 'female';
+
+  // Filter goals: 'Post Pregnancy' is only displayed for women profiles
+  const visibleGoals = allGoals.filter((g) => g !== 'Post Pregnancy' || isFemale);
 
   // Local state for instant, isolated UI updates with zero background tab churn
   const [initialGoals] = useState<string[]>(() => {
@@ -127,15 +133,14 @@ export default function FitnessGoalsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
-      <ScreenHeader 
-        title="Fitness Goals" 
-        category="VIRLA TARGETS"
-        backgroundColor="#FCF5F5"
-        showBorder={false}
-        onBack={handleExitScreen}
-      />
-
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 24) + 40 }}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        className="flex-1 px-6" 
+        contentContainerStyle={{ 
+          paddingTop: insets.top + 56, 
+          paddingBottom: Math.max(insets.bottom, 24) + 40 
+        }}
+      >
         <View className="gap-6">
           
           <View>
@@ -147,7 +152,7 @@ export default function FitnessGoalsScreen() {
 
           {/* Goals Selection list */}
           <View className="flex-row flex-wrap gap-3">
-            {allGoals.map((goal) => {
+            {visibleGoals.map((goal) => {
               const isSelected = selectedGoals.includes(goal);
               return (
                 <GoalCapsuleButton
@@ -174,6 +179,63 @@ export default function FitnessGoalsScreen() {
 
         </View>
       </ScrollView>
+
+      {/* Floating Pill Back Button with Soft Pill Scrim Blur/Fade */}
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: 'absolute',
+          top: insets.top + 10,
+          left: 18,
+          zIndex: 99,
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}
+      >
+        {/* Localized Pill-shaped Scrim Fade */}
+        <View pointerEvents="box-none" className="relative flex-row items-center">
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: -6,
+              left: -8,
+              right: -32,
+              bottom: -6,
+            }}
+          >
+            <Svg width="100%" height="100%" preserveAspectRatio="none">
+              <Defs>
+                <LinearGradient id="backBtnPillScrim" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <Stop offset="0%" stopColor="#FCF5F5" stopOpacity="0.95" />
+                  <Stop offset="65%" stopColor="#FCF5F5" stopOpacity="0.85" />
+                  <Stop offset="85%" stopColor="#FCF5F5" stopOpacity="0.4" />
+                  <Stop offset="100%" stopColor="#FCF5F5" stopOpacity="0" />
+                </LinearGradient>
+              </Defs>
+              <Rect x="0" y="0" width="100%" height="100%" rx={25} ry={25} fill="url(#backBtnPillScrim)" />
+            </Svg>
+          </View>
+
+          {/* Back Pill Button */}
+          <TouchableOpacity
+            activeOpacity={0.6}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace('/(tabs)/profile' as any);
+              }
+            }}
+            className="w-10 h-10 rounded-full bg-white/90 border border-zinc-200/80 shadow-xs items-center justify-center"
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <Ionicons name="chevron-back" size={22} color="#101828" style={{ marginLeft: -1 }} />
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 }

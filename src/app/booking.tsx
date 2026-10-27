@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Image, Animated, Modal, KeyboardAvoidingView, Platform, ActivityIndicator, Share, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Image, Animated, Modal, KeyboardAvoidingView, Platform, ActivityIndicator, Share, StyleSheet, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -16,10 +16,11 @@ import { useUserStore } from '../store/userStore';
 import { EmptyState, ApplePayConfirmation, BookingSuccessAnimation } from '../components';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import MapView, { Marker, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
-import Svg, { Circle, Line } from 'react-native-svg';
+import Svg, { Circle, Line, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { AssignmentEngine } from '../services/AssignmentEngine';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
 import { WORKOUT_CATEGORY_MAPPING, getCategoryFromTitle } from '../config/WorkoutMapping';
+import { MASTER_TRAINER_AVATAR_IMAGE } from '../constants/masterTrainerAvatar';
 
 // Error boundary to prevent MapView crash if native Google Maps API Key is uninitialized on older client builds
 class SafeMapWrapper extends React.Component<{ children: React.ReactNode; fallback?: React.ReactNode }, { hasError: boolean }> {
@@ -406,6 +407,10 @@ export default function BookingScreen() {
     ? Math.min(Math.max(parseInt(params.step as string, 10), 1), 7)
     : (initialBookingId ? 7 : 1);
   const [step, setStep] = useState<number>(initialStep);
+  const [scrollY, setScrollY] = useState(0);
+
+  // Animated slide-up and fade for the floating Continue button
+  const continueButtonAnim = useRef(new Animated.Value(0)).current;
 
   const getInitialExperience = () => {
     const searchString = [initialWorkoutId, initialWorkoutType, initialWorkoutName]
@@ -528,7 +533,7 @@ export default function BookingScreen() {
   const [isLocationOutsideCoverage, setIsLocationOutsideCoverage] = useState(false);
   const [successBookingId, setSuccessBookingId] = useState(initialBookingId);
 
-  // Fallback to latest booking if step 7 is mounted/refreshed without a specific bookingId
+  // Fallback to latest booking if step 7 (success) is mounted/refreshed without a specific bookingId
   useEffect(() => {
     if (step === 7 && !successBookingId) {
       const userBookings = bookings.filter(b => !user?.id || b.clientId === user?.id);
@@ -710,6 +715,19 @@ export default function BookingScreen() {
   const [matchedCoach, setMatchedCoach] = useState<any>(null);
   const [trainerNote, setTrainerNote] = useState('');
   const [isConfirming, setIsConfirming] = useState(false);
+
+  // Step 5: Health & Safety Questionnaire States
+  const [workoutFrequency, setWorkoutFrequency] = useState<string>('3–4 days a week');
+  const [injuriesOrPain, setInjuriesOrPain] = useState<string[]>(['No injuries or pain']);
+  const [healthConditions, setHealthConditions] = useState<string[]>(['None']);
+  const [doctorAdvice, setDoctorAdvice] = useState<string>('No');
+  const [safetyNotes, setSafetyNotes] = useState<string>('');
+  const [otherInjuryText, setOtherInjuryText] = useState<string>('');
+  const [otherHealthText, setOtherHealthText] = useState<string>('');
+  const [healthValidationErrors, setHealthValidationErrors] = useState<Record<string, string>>({});
+  const [hasAttemptedSafetySubmit, setHasAttemptedSafetySubmit] = useState<boolean>(false);
+  const [showHealthDetailsModal, setShowHealthDetailsModal] = useState<boolean>(false);
+
   // Reservation states (Phase 3.1)
   const [reservationId, setReservationId] = useState<string>('');
   const [reservationTimeLeft, setReservationTimeLeft] = useState<number>(0);
@@ -857,6 +875,136 @@ export default function BookingScreen() {
       workloadFilter,
       customerLocationError: false
     };
+  };
+
+  const checkDateHasAvailableSlots = (dateStr: string): boolean => {
+    if (!selectedExperience) return false;
+    const targetCategory = WORKOUT_CATEGORY_MAPPING[selectedExperience.id] || '';
+    if (!targetCategory) return false;
+
+    const customerAddress = addresses.find(a => a.id === selectedAddressId);
+    if (!customerAddress || customerAddress.lat === undefined || customerAddress.lng === undefined || customerAddress.lat === null || customerAddress.lng === null) {
+      return false;
+    }
+
+    const customerLat = customerAddress.lat;
+    const customerLng = customerAddress.lng;
+    const normalizedDateStr = normalizeDate(dateStr);
+    const dateParts = normalizedDateStr.split('-');
+    const targetYear = parseInt(dateParts[0], 10);
+    const targetMonth = parseInt(dateParts[1], 10) - 1;
+
+    const monthlyDaySlots = generateMonthlySlots(targetMonth, targetYear);
+    const defaultDaySlots = monthlyDaySlots.find(d => normalizeDate(d.date) === normalizedDateStr)?.slots || [];
+
+    const now = getCurrentServerTime();
+    const nowUtc = now.getTime();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istTime = new Date(nowUtc + istOffset);
+    const istYear = istTime.getUTCFullYear();
+    const istMonth = istTime.getUTCMonth() + 1;
+    const istDay = istTime.getUTCDate();
+    const istHours = istTime.getUTCHours();
+    const istMinutes = istTime.getUTCMinutes();
+    const istSeconds = istTime.getUTCSeconds();
+    const nowIst = new Date(Date.UTC(istYear, istMonth - 1, istDay, istHours, istMinutes, istSeconds));
+
+    for (const coach of coaches) {
+      if (trainerPref === 'favourite' && selectedTrainerId && coach.id !== selectedTrainerId) {
+        continue;
+      }
+      const isOnline = coach.preferences?.online !== false;
+      const isPartnerApproved = coach.verifiedBadge !== false;
+      if (!isOnline || !isPartnerApproved) continue;
+
+      const assignments = Database.getWorkoutAssignments(coach.id);
+      const isApproved = assignments.some(a => a.workoutCategory === targetCategory && a.status === 'APPROVED');
+      const acceptsAll = assignments.some(a => a.workoutCategory === 'All Workouts' && a.status === 'APPROVED');
+      if (!acceptsAll && !isApproved) continue;
+
+      const locationStatus = coach.preferences?.operatingLocationStatus;
+      const locationApproved = locationStatus === 'verified' || locationStatus === 'pending' || !locationStatus;
+      if (!locationApproved) continue;
+
+      const trainerGender = (coach.gender || '').toLowerCase();
+      const genderValid = !trainerGender || trainerGender === 'male' || trainerGender === 'female';
+      if (!genderValid) continue;
+
+      let genderApproved = false;
+      if (trainerPref === 'any') {
+        genderApproved = true;
+      } else if (trainerPref === 'male') {
+        genderApproved = trainerGender === 'male';
+      } else if (trainerPref === 'female') {
+        genderApproved = trainerGender === 'female';
+      } else if (trainerPref === 'favourite') {
+        const clientPref = (Database.getProfile(user.id || '')?.trainerPreference || 'no_preference').toLowerCase();
+        genderApproved = clientPref === 'male' ? trainerGender === 'male' : clientPref === 'female' ? trainerGender === 'female' : true;
+      }
+      if (!genderApproved) continue;
+
+      const trainerLat = coach.preferences?.operatingLatitude;
+      const trainerLng = coach.preferences?.operatingLongitude;
+      const radiusLimit = coach.preferences?.radiusKm || 15;
+      if (trainerLat !== undefined && trainerLat !== null && trainerLng !== undefined && trainerLng !== null) {
+        const distance = calculateDistanceKm(trainerLat, trainerLng, customerLat, customerLng);
+        if (distance > radiusLimit) continue;
+      } else {
+        continue;
+      }
+
+      const activeCount = bookings.filter(b => 
+        b.trainerId === coach.id && 
+        normalizeDate(b.date) === normalizedDateStr &&
+        b.status === 'upcoming'
+      ).length;
+      const maxSessions = coach.preferences?.maxDailySessions || 5;
+      if (activeCount >= maxSessions) continue;
+
+      const overrides = coach.preferences?.availabilityOverrides || [];
+      const dailySlots = defaultDaySlots.map(slot => {
+        const override = overrides.find(o => 
+          normalizeDate(o.date) === normalizedDateStr && 
+          canonicalizeTimeRange(o.time) === canonicalizeTimeRange(slot.time)
+        );
+        const isAvailable = override ? override.isAvailable : true;
+        const slotCategory = override?.category || '';
+        return {
+          ...slot,
+          isAvailable,
+          category: slotCategory
+        };
+      }).filter((s: any) => {
+        if (!s.isAvailable) return false;
+        const categoryMatch = !s.category || s.category === 'All Workouts' || s.category === 'ANY WORKOUT' || s.category === targetCategory;
+        if (!categoryMatch) return false;
+
+        const startPart = s.time.split('-')[0].trim();
+        const match = startPart.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        if (match) {
+          let hour = parseInt(match[1], 10);
+          const minute = parseInt(match[2], 10);
+          const ampm = match[3].toUpperCase();
+          if (ampm === 'PM' && hour < 12) hour += 12;
+          if (ampm === 'AM' && hour === 12) hour = 0;
+
+          const slotStartIst = new Date(Date.UTC(targetYear, targetMonth, parseInt(dateParts[2], 10), hour, minute, 0));
+          if (nowIst.getTime() > slotStartIst.getTime() - 15 * 60 * 1000) return false;
+        }
+        return true;
+      });
+
+      for (const slot of dailySlots) {
+        const hasBooking = bookings.some(b => 
+          b.trainerId === coach.id && 
+          b.status === 'upcoming' && 
+          normalizeDate(b.date) === normalizedDateStr && 
+          canonicalizeTimeRange(b.time) === canonicalizeTimeRange(slot.time)
+        );
+        if (!hasBooking) return true; // Found at least 1 available slot on this date!
+      }
+    }
+    return false;
   };
 
   const getDynamicAvailableSlots = (): any[] => {
@@ -1400,6 +1548,13 @@ export default function BookingScreen() {
       status: 'upcoming' as const,
       createdAt: Date.now()
     };
+    if (trainerPref === 'favourite' && selectedTrainerId) {
+      const fav = coaches.find(c => c.id === selectedTrainerId);
+      if (fav && eligibleTrainerIds.includes(fav.id)) {
+        setMatchedCoach(fav);
+        return;
+      }
+    }
     const rated = AssignmentEngine.rankTrainers(tempBooking as any);
     const matched = rated.find(rt => eligibleTrainerIds.includes(rt.coach.id));
     if (matched) {
@@ -1427,7 +1582,7 @@ export default function BookingScreen() {
             clearInterval(timer);
             handleReleaseReservation();
             Alert.alert('Reservation Expired ⚠️', 'Your temporary slot holding time has expired. Please re-select the slot.');
-            setStep(5);
+            setStep(4);
             return 0;
           }
           return prev - 1;
@@ -1541,8 +1696,13 @@ export default function BookingScreen() {
   }, [selectedAddressId, step, addresses]);
 
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
+  const availabilityLoadedRef = useRef(false);
 
-  const loadAvailabilityForSelectedDate = useCallback(async (dateStr: string) => {
+  const loadAvailabilityForSelectedDate = useCallback(async (dateStr: string, forceReload = false) => {
+    // Only hit DB reload if not already loaded or explicitly forced
+    if (availabilityLoadedRef.current && !forceReload) {
+      return;
+    }
     setIsLoadingAvailability(true);
     try {
       console.log(`[AVAILABILITY] Loading availability for date: ${dateStr}`);
@@ -1550,6 +1710,7 @@ export default function BookingScreen() {
       useCoachStore.getState().syncFromDB();
       useBookingStore.getState().syncFromDB();
       useAddressStore.getState().syncFromDB();
+      availabilityLoadedRef.current = true;
     } catch (err) {
       console.warn('Failed to reload database for availability:', err);
     } finally {
@@ -1609,11 +1770,11 @@ export default function BookingScreen() {
             setStep(6);
           } else {
             Alert.alert('Slot Unavailable ⚠️', 'That slot has just been reserved by another user. Please choose another time.');
-            setStep(5);
+            setStep(4);
           }
         }).catch(() => {
           if (isMountedRef.current) {
-            setStep(5);
+            setStep(4);
           }
         });
         return;
@@ -1633,7 +1794,7 @@ export default function BookingScreen() {
   );
 
   const handleNext = () => {
-    if (hasActiveSession && step <= 5) return;
+    if (hasActiveSession && step <= 4) return;
     if (step === 1 && !selectedExperience) {
       Alert.alert('Selection Required', 'Please select a training experience.');
       return;
@@ -1657,7 +1818,7 @@ export default function BookingScreen() {
         Alert.alert('Outside Coverage', 'The selected address lies outside the VIRLA active fitness coverage zone.');
         return;
       }
-      // Navigate to step 4 (Select Date) with Today selected by default
+      // Navigate to step 4 (Select Date & Time) with Today selected by default
       setDateSelectionType('today');
       setShowCalendarPicker(false);
       const istNow = getCurrentServerTime();
@@ -1665,6 +1826,7 @@ export default function BookingScreen() {
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const formatted = `${months[info.month - 1]} ${info.day}, ${info.year}`;
       setSelectedDate(formatted);
+      setSelectedTime('');
       triggerTransition(4);
       loadAvailabilityForSelectedDate(formatted);
       return;
@@ -1674,16 +1836,45 @@ export default function BookingScreen() {
         Alert.alert('Date Required', 'Please select a date.');
         return;
       }
+      if (!selectedTime) {
+        Alert.alert('Time Required', 'Please select an available time slot.');
+        return;
+      }
+      finalizeMatch();
       triggerTransition(5);
       return;
     }
     if (step === 5) {
-      if (!selectedTime) {
-        Alert.alert('Time Required', 'Please select a time slot.');
+      setHasAttemptedSafetySubmit(true);
+      const errors: Record<string, string> = {};
+      if (!workoutFrequency) {
+        errors.workoutFrequency = 'Please select how often you work out.';
+      }
+      if (!injuriesOrPain || injuriesOrPain.length === 0) {
+        errors.injuriesOrPain = 'Please select at least one option.';
+      } else if (injuriesOrPain.includes('Other injury or pain') && !otherInjuryText.trim()) {
+        errors.otherInjury = 'Please specify your injury or pain details.';
+      }
+      if (!healthConditions || healthConditions.length === 0) {
+        errors.healthConditions = 'Please select at least one health option.';
+      } else if (healthConditions.includes('Other health condition') && !otherHealthText.trim()) {
+        errors.otherHealth = 'Please specify your health condition details.';
+      }
+      if (!doctorAdvice) {
+        errors.doctorAdvice = 'Please select an option regarding doctor advice.';
+      }
+      if (safetyNotes && safetyNotes.length > 250) {
+        errors.safetyNotes = 'Safety notes cannot exceed 250 characters.';
+      }
+
+      setHealthValidationErrors(errors);
+      if (Object.keys(errors).length > 0) {
+        Alert.alert('Incomplete Information ⚠️', 'Please answer all required health & safety questions marked below.');
         return;
       }
-      // Synchronously finalize coach match when transitioning to step 6
-      finalizeMatch();
+
+      triggerTransition(6);
+      return;
     }
     triggerTransition(step + 1);
   };
@@ -1864,6 +2055,15 @@ export default function BookingScreen() {
       trainerNote: trainerNote.trim() || undefined,
       durationMinutes: selectedExperience?.duration || 60,
       createdAt: Date.now(),
+      preferredCoachId: (trainerPref === 'favourite' && selectedTrainerId) ? selectedTrainerId : undefined,
+      isFavouriteTrainer: (trainerPref === 'favourite' && !!selectedTrainerId && (selectedTrainerId === activeCoach.id)),
+      questionnaire: {
+        workoutFrequency,
+        injuriesOrPain,
+        healthConditions,
+        doctorAdvice,
+        safetyNotes: safetyNotes.trim() || undefined,
+      },
       participantCount: isCouple ? 2 : 1,
       sessionType: (isCouple ? 'COUPLE' : 'SINGLE') as 'SINGLE' | 'COUPLE',
       originalPackageType: (isCouple ? 'COUPLE' : 'SINGLE') as 'SINGLE' | 'COUPLE',
@@ -1962,6 +2162,25 @@ export default function BookingScreen() {
     }
     return allAvailable;
   };
+
+  const isContinueVisible = step <= 4 && (step !== 1 || !!selectedExperience) && (step !== 4 || !!selectedTime);
+
+  useEffect(() => {
+    if (isContinueVisible) {
+      Animated.spring(continueButtonAnim, {
+        toValue: 1,
+        friction: 8,
+        tension: 50,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(continueButtonAnim, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isContinueVisible, continueButtonAnim]);
 
   const renderBadge = (slotObj: any) => {
     if (slotObj.isBooked) {
@@ -2070,71 +2289,6 @@ export default function BookingScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
       <StatusBar style="dark" />
-      {/* Header extending to the very top */}
-      <View 
-        style={{ paddingTop: insets.top }} 
-        className="bg-white border-b border-zinc-100 shadow-xs"
-      >
-        <View className="h-14 flex-row items-center px-5 justify-between">
-          {step < 7 ? (
-            <TouchableOpacity 
-              onPress={handleBack} 
-              activeOpacity={0.7}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} 
-              className="w-9 h-9 items-center justify-center rounded-full"
-            >
-              <Ionicons name="arrow-back" size={20} color="#09090B" />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity 
-              onPress={() => router.replace('/(tabs)')} 
-              activeOpacity={0.7}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} 
-              className="w-9 h-9 items-center justify-center rounded-full"
-            >
-              <Ionicons name="arrow-back" size={20} color="#09090B" />
-            </TouchableOpacity>
-          )}
-
-          {/* Premium Editorial Header Title */}
-          <View className="items-center flex-1 mx-2">
-            <View className="flex-row items-center gap-1.5">
-              <View className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
-              <Text 
-                style={{ letterSpacing: 2.2 }}
-                className="text-zinc-500 text-[9.5px] font-bold uppercase"
-              >
-                VIRLA AT-HOME
-              </Text>
-            </View>
-            <Text 
-              numberOfLines={1}
-              className="text-zinc-950 text-base font-extrabold tracking-tight mt-0.5"
-            >
-              {step === 6 ? 'Review & Confirm' : step === 7 ? 'Session Confirmed' : 'Schedule Home Session'}
-            </Text>
-          </View>
-
-          {step <= 5 ? (
-            <View className="bg-zinc-100/80 border border-zinc-200/60 px-2.5 py-1 rounded-full items-center justify-center">
-              <Text className="text-zinc-600 text-[10px] font-bold uppercase tracking-wider">
-                {step}/5
-              </Text>
-            </View>
-          ) : step === 7 ? (
-            <TouchableOpacity
-              onPress={handleShareBooking}
-              activeOpacity={0.8}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              className="w-9 h-9 items-center justify-center rounded-full bg-zinc-100/80 border border-zinc-200/60"
-            >
-              <Feather name="share-2" size={16} color="#09090B" />
-            </TouchableOpacity>
-          ) : (
-            <View className="w-9" />
-          )}
-        </View>
-      </View>
 
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
@@ -2143,9 +2297,23 @@ export default function BookingScreen() {
       >
         <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
           {step <= 7 ? (
-          <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
+          <ScrollView 
+            showsVerticalScrollIndicator={false} 
+            scrollEnabled={step !== 4}
+            style={{ flex: 1 }} 
+            contentContainerStyle={{ 
+              paddingHorizontal: 24, 
+              paddingTop: insets.top + 60, 
+              paddingBottom: (step === 4 || step === 5) ? 0 : 100,
+              flexGrow: (step === 4 || step === 5) ? 1 : undefined
+            }}
+            scrollEventThrottle={16}
+            onScroll={(e) => {
+              setScrollY(e.nativeEvent.contentOffset.y);
+            }}
+          >
             <View className="gap-6">
-              {hasActiveSession && step <= 5 && (
+              {hasActiveSession && step <= 4 && (
                 <View className="flex-row items-center gap-2 bg-rose-50 border border-rose-200 rounded-2xl px-4 py-3">
                   <Feather name="alert-circle" size={16} color="#E11D48" />
                   <Text className="text-[#E11D48] text-[13px] font-semibold flex-1">
@@ -2177,7 +2345,11 @@ export default function BookingScreen() {
                           key={exp.id}
                           activeOpacity={0.75}
                           onPress={() => {
-                            setSelectedExperience(exp);
+                            if (isSelected) {
+                              setSelectedExperience(null);
+                            } else {
+                              setSelectedExperience(exp);
+                            }
                           }}
                           className="rounded-[24px] border flex-row items-center justify-between"
                           style={[
@@ -2310,41 +2482,99 @@ export default function BookingScreen() {
                   {trainerPref === 'favourite' && (
                     <View className="mt-4 gap-3">
                       <Text className="text-[#101828] text-xs font-black uppercase tracking-wider pl-1">Select Favorite Coach</Text>
-                      {coaches.filter(c => c.isFavourite).length > 0 ? (
-                        coaches.filter(c => c.isFavourite).map((coach) => {
-                          const isSelected = selectedTrainerId === coach.id;
-                          return (
-                            <TouchableOpacity
-                              key={coach.id}
-                              activeOpacity={0.8}
-                              onPress={() => {
-                                setSelectedTrainerId(coach.id);
-                                // No auto-advance: user confirms via the Continue button (handleNext -> step 3)
-                              }}
-                              className={`p-4 rounded-2xl border flex-row items-center justify-between ${
-                                isSelected ? 'bg-indigo-50/50 border-indigo-500' : 'bg-white border-[#E5E7EB]'
-                              }`}
-                            >
-                              <View className="flex-row items-center gap-3">
-                                <Image source={{ uri: coach.photo }} className="w-10 h-10 rounded-full" />
-                                <View>
-                                  <Text className="text-[#101828] text-xs font-black">{coach.name}</Text>
-                                  <Text className="text-[#6B7280] text-[9px] font-bold mt-0.5">{coach.specialty} • ⭐ {coach.rating}</Text>
-                                </View>
-                              </View>
-                              {isSelected ? (
-                                <View className="w-4 h-4 rounded-full bg-[#4F46E5] items-center justify-center">
-                                  <Feather name="check" size={10} color="white" />
-                                </View>
-                              ) : (
-                                <View className="w-4 h-4 rounded-full border border-zinc-300" />
-                              )}
-                            </TouchableOpacity>
-                          );
-                        })
-                      ) : (
-                        <EmptyState type="no-favourite-trainer" />
-                      )}
+                      {(() => {
+                        // Find coaches who trained this user in past bookings (strictly real trainers, exclude test mock trainers)
+                        const pastTrainerIds = Array.from(
+                          new Set(
+                            bookings
+                              .filter(b => (!user?.id || b.clientId === user?.id) && (b.trainerId || b.coachId))
+                              .map(b => b.trainerId || b.coachId)
+                              .filter(Boolean)
+                          )
+                        );
+
+                        // Only show real trainers who trained the user before; exclude mock/test trainers (e.g. 'c-', 'test', etc.)
+                        const favoriteCoaches = coaches.filter(c => 
+                          pastTrainerIds.includes(c.id) &&
+                          !c.id.toLowerCase().includes('test') &&
+                          !c.name.toLowerCase().includes('test') &&
+                          !c.id.startsWith('c-')
+                        );
+
+                        if (favoriteCoaches.length === 0) {
+                          return <EmptyState type="no-favourite-trainer" />;
+                        }
+
+                        return (
+                          <ScrollView 
+                            horizontal 
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={{ gap: 16, paddingHorizontal: 4, paddingVertical: 8 }}
+                          >
+                            {favoriteCoaches.map((coach) => {
+                              const isSelected = selectedTrainerId === coach.id;
+                              // Image source matching trainer's own profile page (handles master trainer profile image correctly)
+                              const imageSource = (() => {
+                                const raw = coach.photo;
+                                if (raw && typeof raw === 'string' && (raw.startsWith('http') || raw.startsWith('data:')) && !raw.includes('photo-1534528741775') && !raw.includes('photo-1544005313') && !raw.includes('photo-1568602471122') && !raw.includes('selfie.jpg')) {
+                                  return { uri: raw };
+                                }
+                                return MASTER_TRAINER_AVATAR_IMAGE;
+                              })();
+
+                              return (
+                                <TouchableOpacity
+                                  key={coach.id}
+                                  activeOpacity={0.8}
+                                  onPress={() => {
+                                    if (isSelected) {
+                                      setSelectedTrainerId('');
+                                    } else {
+                                      setSelectedTrainerId(coach.id);
+                                    }
+                                  }}
+                                  className="items-center gap-2"
+                                  style={{ minWidth: 80, maxWidth: 96 }}
+                                >
+                                  {/* Circular Profile Picture */}
+                                  <View 
+                                    className={`w-16 h-16 rounded-full items-center justify-center border-2 ${
+                                      isSelected ? 'border-[#E11D48] bg-rose-50' : 'border-zinc-200 bg-zinc-100'
+                                    }`}
+                                    style={{
+                                      shadowColor: isSelected ? '#E11D48' : '#101828',
+                                      shadowOffset: { width: 0, height: 2 },
+                                      shadowOpacity: isSelected ? 0.25 : 0.04,
+                                      shadowRadius: 4,
+                                      elevation: isSelected ? 3 : 1,
+                                    }}
+                                  >
+                                    <Image 
+                                      source={imageSource} 
+                                      className="w-14 h-14 rounded-full" 
+                                      resizeMode="cover"
+                                    />
+                                    {isSelected && (
+                                      <View className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-[#E11D48] items-center justify-center border-2 border-white">
+                                        <Feather name="check" size={10} color="white" />
+                                      </View>
+                                    )}
+                                  </View>
+                                  {/* Trainer Full Name */}
+                                  <Text 
+                                    numberOfLines={2}
+                                    className={`text-[11px] font-black text-center ${
+                                      isSelected ? 'text-[#E11D48]' : 'text-zinc-900'
+                                    }`}
+                                  >
+                                    {coach.name}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </ScrollView>
+                        );
+                      })()}
                     </View>
                   )}
                 </View>
@@ -3242,22 +3472,22 @@ export default function BookingScreen() {
                 </View>
               )}
 
-              {/* STEP 4: DATE SELECTOR */}
+              {/* STEP 4: DATE & TIME SELECTOR */}
               {step === 4 && (
-                <View className="gap-5">
+                <View style={{ height: Dimensions.get('window').height - insets.top - 80 }} className="gap-4">
                   <View>
                     <Text className="text-[#E11D48] text-xs font-black uppercase tracking-[1.8px] mb-1">
-                      Schedule Day
+                      Schedule Day & Time
                     </Text>
                     <Text className="text-zinc-950 text-2xl font-black tracking-tight leading-tight">
-                      Select Date
+                      Select Date & Time
                     </Text>
                     <Text className="text-zinc-500 text-sm font-normal mt-1 leading-relaxed">
-                      Choose which calendar day works best for your home session.
+                      Choose which calendar day and available hour works best for your home session.
                     </Text>
                   </View>
 
-                  {/* Horizontal Date Capsules (Feature 4) */}
+                  {/* Horizontal Date Capsules (Today, Tomorrow, Day After, Calendar) */}
                   <View className="flex-row justify-between gap-2.5">
                     {((istNow) => {
                       const infoToday = getISTDateInfo(istNow);
@@ -3275,7 +3505,7 @@ export default function BookingScreen() {
                         { id: 'today', label: 'TODAY', sub: `${infoToday.day} ${months[infoToday.month - 1].toUpperCase()}` },
                         { id: 'tomorrow', label: 'TOMORROW', sub: `${infoTomorrow.day} ${months[infoTomorrow.month - 1].toUpperCase()}` },
                         { id: 'dayafter', label: dayAfterLabel, sub: `${infoDayAfter.day} ${months[infoDayAfter.month - 1].toUpperCase()}` },
-                        { id: 'calendar', label: 'CALENDAR', sub: 'Open Grid' }
+                        { id: 'calendar', label: 'CALENDAR', sub: showCalendarPicker ? 'Hide' : 'Pick Date' }
                       ];
                     })(getCurrentServerTime()).map((capsule) => {
                       const isSelected = dateSelectionType === capsule.id;
@@ -3284,29 +3514,34 @@ export default function BookingScreen() {
                           key={capsule.id}
                           activeOpacity={0.8}
                           onPress={async () => {
-                            setDateSelectionType(capsule.id as any);
-                            setShowCalendarPicker(capsule.id === 'calendar');
-                            if (capsule.id !== 'calendar') {
-                              const istNow = getCurrentServerTime();
-                              const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                              let targetDateFormatted = '';
-                              if (capsule.id === 'today') {
-                                const info = getISTDateInfo(istNow);
-                                targetDateFormatted = `${months[info.month - 1]} ${info.day}, ${info.year}`;
-                              } else if (capsule.id === 'tomorrow') {
-                                const tomorrowTime = new Date(istNow.getTime() + 24 * 60 * 60 * 1000);
-                                const info = getISTDateInfo(tomorrowTime);
-                                targetDateFormatted = `${months[info.month - 1]} ${info.day}, ${info.year}`;
-                              } else if (capsule.id === 'dayafter') {
-                                const dayAfterTime = new Date(istNow.getTime() + 2 * 24 * 60 * 60 * 1000);
-                                const info = getISTDateInfo(dayAfterTime);
-                                targetDateFormatted = `${months[info.month - 1]} ${info.day}, ${info.year}`;
-                              }
-                              
-                              setSelectedDate(targetDateFormatted);
-                              triggerTransition(5);
-                              await loadAvailabilityForSelectedDate(targetDateFormatted);
+                            if (capsule.id === 'calendar') {
+                              setDateSelectionType('calendar');
+                              setShowCalendarPicker(true);
+                              setSelectedDate('');
+                              setSelectedTime('');
+                              return;
                             }
+                            setDateSelectionType(capsule.id as any);
+                            setShowCalendarPicker(false);
+                            const istNow = getCurrentServerTime();
+                            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                            let targetDateFormatted = '';
+                            if (capsule.id === 'today') {
+                              const info = getISTDateInfo(istNow);
+                              targetDateFormatted = `${months[info.month - 1]} ${info.day}, ${info.year}`;
+                            } else if (capsule.id === 'tomorrow') {
+                              const tomorrowTime = new Date(istNow.getTime() + 24 * 60 * 60 * 1000);
+                              const info = getISTDateInfo(tomorrowTime);
+                              targetDateFormatted = `${months[info.month - 1]} ${info.day}, ${info.year}`;
+                            } else if (capsule.id === 'dayafter') {
+                              const dayAfterTime = new Date(istNow.getTime() + 2 * 24 * 60 * 60 * 1000);
+                              const info = getISTDateInfo(dayAfterTime);
+                              targetDateFormatted = `${months[info.month - 1]} ${info.day}, ${info.year}`;
+                            }
+                            
+                            setSelectedDate(targetDateFormatted);
+                            setSelectedTime('');
+                            loadAvailabilityForSelectedDate(targetDateFormatted);
                           }}
                           className={`flex-1 px-1 py-3.5 rounded-2xl border items-center justify-center gap-1 ${
                             isSelected ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-[#E5E7EB]'
@@ -3337,353 +3572,359 @@ export default function BookingScreen() {
                     })}
                   </View>
 
-                  {/* Date picker grid panel */}
+                  {/* Horizontal Bar under Calendar when Calendar is selected */}
                   {showCalendarPicker && (
-                    <View 
-                      className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4"
-                      style={{
-                        shadowColor: '#101828',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.04,
-                        shadowRadius: 6,
-                        elevation: 2,
-                      }}
-                    >
-                      <Text className="text-[#101828] text-xs font-black uppercase tracking-wider text-center">Select Available Date</Text>
-                      {(() => {
-                        const istNow = getCurrentServerTime();
-                        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                        const fullMonths = [
-                          'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
-                          'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
-                        ];
-                        const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                    <View className="bg-white border border-[#E5E7EB] p-3 rounded-2xl gap-2 shadow-2xs">
+                      <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={{ gap: 8, paddingVertical: 2, alignItems: 'center' }}
+                      >
+                        {(() => {
+                          const istNow = getCurrentServerTime();
+                          const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                          const monthsFull = [
+                            'January', 'February', 'March', 'April', 'May', 'June',
+                            'July', 'August', 'September', 'October', 'November', 'December'
+                          ];
+                          const weekdaysShort = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
-                        const dates = Array.from({ length: 12 }).map((_, i) => {
-                          const dateObj = new Date(istNow.getTime() + (i + 2) * 24 * 60 * 60 * 1000);
-                          const info = getISTDateInfo(dateObj);
-                          const dateString = `${months[info.month - 1]} ${info.day}, ${info.year}`;
-                          
-                          const dayObj = new Date(info.year, info.month - 1, info.day);
-                          const weekdayName = weekdays[dayObj.getDay()];
-                          
-                          return {
-                            dateString,
-                            day: String(info.day).padStart(2, '0'),
-                            monthName: fullMonths[info.month - 1],
-                            displayDate: `${info.day} ${months[info.month - 1].toUpperCase()}`,
-                            weekday: weekdayName,
-                          };
-                        });
+                          const items: any[] = [];
+                          let lastMonthIdx = -1;
 
-                        const grouped: Record<string, typeof dates> = {};
-                        const monthOrder: string[] = [];
-                        for (const d of dates) {
-                          if (!grouped[d.monthName]) {
-                            grouped[d.monthName] = [];
-                            monthOrder.push(d.monthName);
+                          // Show 21 days forward from day after tomorrow onwards
+                          for (let i = 2; i < 25; i++) {
+                            const dateObj = new Date(istNow.getTime() + i * 24 * 60 * 60 * 1000);
+                            const info = getISTDateInfo(dateObj);
+                            const currentMonthIdx = info.month - 1;
+
+                            if (currentMonthIdx !== lastMonthIdx) {
+                              items.push({
+                                type: 'month-badge',
+                                key: `cal-month-${info.year}-${currentMonthIdx}`,
+                                shortName: monthsShort[currentMonthIdx].toUpperCase(),
+                                fullName: monthsFull[currentMonthIdx],
+                              });
+                              lastMonthIdx = currentMonthIdx;
+                            }
+
+                            const dateFormatted = `${monthsShort[currentMonthIdx]} ${info.day}, ${info.year}`;
+                            const dayDate = new Date(info.year, currentMonthIdx, info.day);
+                            const weekday = weekdaysShort[dayDate.getDay()];
+
+                            items.push({
+                              type: 'date-capsule',
+                              key: `cal-date-${info.year}-${info.month}-${info.day}`,
+                              dateString: dateFormatted,
+                              dayNum: info.day,
+                              monthShort: monthsShort[currentMonthIdx].toUpperCase(),
+                              weekday,
+                            });
                           }
-                          grouped[d.monthName].push(d);
-                        }
 
-                        return monthOrder.map((mName) => (
-                          <View key={mName} className="gap-3.5 mb-2 w-full">
-                            <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider text-center mt-2">
-                              {mName}
-                            </Text>
-                            <View className="flex-row flex-wrap justify-between gap-y-3">
-                              {grouped[mName].map((dObj, idx) => {
-                                const isPicked = selectedDate === dObj.dateString;
-                                return (
-                                  <TouchableOpacity
-                                    key={idx}
-                                    activeOpacity={0.8}
-                                    onPress={async () => {
-                                      setSelectedDate(dObj.dateString);
-                                      triggerTransition(5);
-                                      await loadAvailabilityForSelectedDate(dObj.dateString);
-                                    }}
-                                    className={`w-[47%] py-4 rounded-[18px] border items-center justify-center gap-1 ${
-                                      isPicked ? 'bg-[#101828] border-[#101828]' : 'bg-white border-[#E5E7EB]'
-                                    }`}
-                                    style={{
-                                      shadowColor: '#101828',
-                                      shadowOffset: { width: 0, height: 1 },
-                                      shadowOpacity: 0.01,
-                                      shadowRadius: 2,
-                                      elevation: 1,
-                                    }}
-                                  >
-                                    <Text className={`text-xs font-black uppercase tracking-wider ${isPicked ? 'text-white' : 'text-zinc-900'}`}>
-                                      {dObj.displayDate}
-                                    </Text>
-                                    <Text className={`text-[10px] font-bold ${isPicked ? 'text-zinc-400' : 'text-[#6B7280]'}`}>
-                                      {dObj.weekday}
-                                    </Text>
-                                  </TouchableOpacity>
-                                );
-                              })}
-                            </View>
-                          </View>
-                        ));
-                      })()}
+                          return items.map((item) => {
+                            if (item.type === 'month-badge') {
+                              return (
+                                <View 
+                                  key={item.key}
+                                  className="px-2 py-1 justify-center mr-1"
+                                >
+                                  <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">
+                                    {item.shortName}
+                                  </Text>
+                                  <Text className="text-zinc-400 text-[9px] font-semibold">
+                                    {item.fullName}
+                                  </Text>
+                                </View>
+                              );
+                            }
+
+                            const isPicked = selectedDate === item.dateString;
+                            const isAvailable = checkDateHasAvailableSlots(item.dateString);
+                            return (
+                              <TouchableOpacity
+                                key={item.key}
+                                activeOpacity={0.8}
+                                onPress={() => {
+                                  setSelectedDate(item.dateString);
+                                  setSelectedTime('');
+                                  loadAvailabilityForSelectedDate(item.dateString);
+                                }}
+                                className={`w-14 h-14 rounded-full border items-center justify-center relative ${
+                                  isPicked ? 'bg-[#E11D48] border-[#E11D48]' : 'bg-zinc-50 border-[#E5E7EB]'
+                                }`}
+                                style={{
+                                  shadowColor: '#101828',
+                                  shadowOffset: { width: 0, height: 1 },
+                                  shadowOpacity: isPicked ? 0.15 : 0.02,
+                                  shadowRadius: 3,
+                                  elevation: 1,
+                                }}
+                              >
+                                <Text className={`text-[8px] font-black uppercase tracking-wider text-center ${
+                                  isPicked ? 'text-white/80' : 'text-zinc-400'
+                                }`}>
+                                  {item.weekday}
+                                </Text>
+                                <Text className={`text-sm font-black tracking-tight text-center ${
+                                  isPicked ? 'text-white' : 'text-zinc-900'
+                                }`}>
+                                  {item.dayNum}
+                                </Text>
+                                {/* Availability Status Indicator Dot (Green = Available, Red = Full/Unavailable) */}
+                                <View 
+                                  className={`w-1.5 h-1.5 rounded-full absolute bottom-1 ${
+                                    isPicked 
+                                      ? (isAvailable ? 'bg-emerald-300' : 'bg-rose-300')
+                                      : (isAvailable ? 'bg-emerald-500' : 'bg-red-500')
+                                  }`} 
+                                />
+                              </TouchableOpacity>
+                            );
+                          });
+                        })()}
+                      </ScrollView>
                     </View>
                   )}
 
-                  {/* Summary date selected bar */}
-                  <View className="bg-white border border-[#E5E7EB] px-5 py-5 rounded-[24px] flex-row justify-between items-center">
-                    <View className="flex-row items-center gap-2.5">
-                      <Feather name="calendar" size={16} color="#4F46E5" />
-                      <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Selected Date</Text>
+                  {/* Available Time Slots Section (Embedded in Date & Time Step) */}
+                  <View className="flex-1 mt-1">
+                    <View className="mb-2">
+                      <Text className="text-zinc-950 text-lg font-black tracking-tight">
+                        Select Time Slot
+                      </Text>
+                      <Text className="text-zinc-500 text-xs font-normal mt-0.5 leading-relaxed">
+                        Choose an available hour for your coach visit.
+                      </Text>
                     </View>
-                    <Text className="text-[#4F46E5] text-xs font-extrabold">{formatToDDMMYYYY(selectedDate) || 'Select a date'}</Text>
-                  </View>
-                </View>
-              )}
 
-              {/* STEP 5: TIME SELECTOR */}
-              {step === 5 && (
-                <View className="gap-5">
-                  <View>
-                    <Text className="text-[#E11D48] text-xs font-black uppercase tracking-[1.8px] mb-1">
-                      Training Schedule
-                    </Text>
-                    <Text className="text-zinc-950 text-2xl font-black tracking-tight leading-tight">
-                      Select Time Slot
-                    </Text>
-                    <Text className="text-zinc-500 text-sm font-normal mt-1 leading-relaxed">
-                      Choose an available hour for your coach visit.
-                    </Text>
-                  </View>
+                    <ScrollView
+                      showsVerticalScrollIndicator={false}
+                      style={{ flex: 1 }}
+                      contentContainerStyle={{ paddingBottom: 160, gap: 10 }}
+                    >
 
-
-                  {(() => {
-                    if (isLoadingAvailability) {
-                      return (
-                        <View 
-                          className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center justify-center mt-2 shadow-sm"
-                          style={{
-                            shadowColor: '#101828',
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: 0.02,
-                            shadowRadius: 6,
-                            elevation: 1,
-                            minHeight: 200
-                          }}
-                        >
-                          <ActivityIndicator size="large" color="#4F46E5" />
-                          <Text className="text-zinc-650 text-xs font-black uppercase tracking-widest text-center mt-4">
-                            Checking availability for {formatToDDMMYYYY(selectedDate)}...
-                          </Text>
-                        </View>
-                      );
-                    }
-
-                    const customerAddress = addresses.find(a => a.id === selectedAddressId);
-                    const customerHasNoCoords = selectedAddressId ? (!customerAddress || customerAddress.lat === undefined || customerAddress.lng === undefined || customerAddress.lat === null || customerAddress.lng === null) : false;
-
-                    if (customerHasNoCoords) {
-                      return (
-                        <View 
-                          className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center gap-6 mt-2 shadow-sm"
-                          style={{
-                            shadowColor: '#101828',
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: 0.02,
-                            shadowRadius: 6,
-                            elevation: 1
-                          }}
-                        >
-                          <View className="w-16 h-16 rounded-full bg-rose-50 items-center justify-center">
-                            <Feather name="map-pin" size={32} color="#E11D48" />
-                          </View>
-                          <View className="items-center gap-2">
-                            <Text className="text-[#101828] text-base font-black tracking-tight text-center">
-                              Location Coordinates Missing
-                            </Text>
-                            <Text className="text-[#6B7280] text-[10px] font-medium leading-relaxed text-center max-w-[80%]">
-                              The selected address does not have valid GPS coordinates. Please select or edit your address with a valid location.
-                            </Text>
-                          </View>
-                          <TouchableOpacity
-                            activeOpacity={0.8}
-                            onPress={() => triggerTransition(3)}
-                            className="bg-[#101828] py-4 px-8 rounded-xl items-center justify-center w-full"
+                    {(() => {
+                      if (!selectedDate) {
+                        return (
+                          <View 
+                            className="bg-white border border-[#E5E7EB] p-8 rounded-[24px] items-center justify-center mt-2 shadow-2xs gap-2"
+                            style={{ minHeight: 160 }}
                           >
-                            <Text className="text-white text-xs font-black uppercase tracking-wider">Select Location</Text>
-                          </TouchableOpacity>
-                        </View>
-                      );
-                    }
-
-                    const availableSlots = getDynamicAvailableSlots();
-                    const targetCategory = selectedExperience ? (WORKOUT_CATEGORY_MAPPING[selectedExperience.id] || '') : '';
-                    const customerLat = customerAddress?.lat || 0;
-                    const customerLng = customerAddress?.lng || 0;
-                    const finalEligibleTrainers = coaches.filter(coach => {
-                      const assignments = Database.getWorkoutAssignments(coach.id);
-                      const isApproved = assignments.some(a => a.workoutCategory === targetCategory && a.status === 'APPROVED');
-                      const acceptsAll = assignments.some(a => a.workoutCategory === 'All Workouts' && a.status === 'APPROVED');
-                      const workoutApproved = acceptsAll || isApproved;
-
-                      const isOnline = coach.preferences?.online !== false;
-                      const isPartnerApproved = coach.verifiedBadge !== false;
-
-                      const locationStatus = coach.preferences?.operatingLocationStatus;
-                      const locationApproved = locationStatus === 'verified';
-
-                      const trainerLat = coach.preferences?.operatingLatitude;
-                      const trainerLng = coach.preferences?.operatingLongitude;
-                      const radiusLimit = coach.preferences?.radiusKm || 15;
-
-                      let distance = 999999;
-                      let insideRadius = false;
-                      if (trainerLat !== undefined && trainerLat !== null && trainerLng !== undefined && trainerLng !== null) {
-                        distance = calculateDistanceKm(trainerLat, trainerLng, customerLat, customerLng);
-                        insideRadius = distance <= radiusLimit;
+                            <Feather name="calendar" size={28} color="#9CA3AF" />
+                            <Text className="text-zinc-900 text-sm font-bold text-center">
+                              Select a date from calendar
+                            </Text>
+                            <Text className="text-zinc-500 text-xs text-center">
+                              Choose any date from the bar above to view available time slots.
+                            </Text>
+                          </View>
+                        );
                       }
 
-                      // Apply gender filters
-                      const trainerGender = (coach.gender || '').toLowerCase();
-                      const genderValid = trainerGender === 'male' || trainerGender === 'female';
-                      
-                      let genderApproved = false;
-                      if (genderValid) {
-                        if (trainerPref === 'any') {
-                          genderApproved = true;
-                        } else if (trainerPref === 'male') {
-                          genderApproved = trainerGender === 'male';
-                        } else if (trainerPref === 'female') {
-                          genderApproved = trainerGender === 'female';
-                        } else if (trainerPref === 'favourite') {
-                          const clientPref = (Database.getProfile(user.id || '')?.trainerPreference || 'no_preference').toLowerCase();
-                          if (clientPref === 'male') {
-                            genderApproved = trainerGender === 'male';
-                          } else if (clientPref === 'female') {
-                            genderApproved = trainerGender === 'female';
-                          } else {
+                      if (isLoadingAvailability) {
+                        return (
+                          <View 
+                            className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center justify-center mt-2 shadow-sm"
+                            style={{
+                              shadowColor: '#101828',
+                              shadowOffset: { width: 0, height: 2 },
+                              shadowOpacity: 0.02,
+                              shadowRadius: 6,
+                              elevation: 1,
+                              minHeight: 180
+                            }}
+                          >
+                            <ActivityIndicator size="large" color="#4F46E5" />
+                            <Text className="text-zinc-650 text-xs font-black uppercase tracking-widest text-center mt-4">
+                              Checking availability for {formatToDDMMYYYY(selectedDate)}...
+                            </Text>
+                          </View>
+                        );
+                      }
+
+                      const customerAddress = addresses.find(a => a.id === selectedAddressId);
+                      const customerHasNoCoords = selectedAddressId ? (!customerAddress || customerAddress.lat === undefined || customerAddress.lng === undefined || customerAddress.lat === null || customerAddress.lng === null) : false;
+
+                      if (customerHasNoCoords) {
+                        return (
+                          <View 
+                            className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center gap-6 mt-2 shadow-sm"
+                            style={{
+                              shadowColor: '#101828',
+                              shadowOffset: { width: 0, height: 2 },
+                              shadowOpacity: 0.02,
+                              shadowRadius: 6,
+                              elevation: 1
+                            }}
+                          >
+                            <View className="w-16 h-16 rounded-full bg-rose-50 items-center justify-center">
+                              <Feather name="map-pin" size={32} color="#E11D48" />
+                            </View>
+                            <View className="items-center gap-2">
+                              <Text className="text-[#101828] text-base font-black tracking-tight text-center">
+                                Location Coordinates Missing
+                              </Text>
+                              <Text className="text-[#6B7280] text-[10px] font-medium leading-relaxed text-center max-w-[80%]">
+                                The selected address does not have valid GPS coordinates. Please select or edit your address with a valid location.
+                              </Text>
+                            </View>
+                            <TouchableOpacity
+                              activeOpacity={0.8}
+                              onPress={() => triggerTransition(3)}
+                              className="bg-[#101828] py-4 px-8 rounded-xl items-center justify-center w-full"
+                            >
+                              <Text className="text-white text-xs font-black uppercase tracking-wider">Select Location</Text>
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      }
+
+                      const availableSlots = getDynamicAvailableSlots();
+                      const targetCategory = selectedExperience ? (WORKOUT_CATEGORY_MAPPING[selectedExperience.id] || '') : '';
+                      const customerLat = customerAddress?.lat || 0;
+                      const customerLng = customerAddress?.lng || 0;
+                      const finalEligibleTrainers = coaches.filter(coach => {
+                        const assignments = Database.getWorkoutAssignments(coach.id);
+                        const isApproved = assignments.some(a => a.workoutCategory === targetCategory && a.status === 'APPROVED');
+                        const acceptsAll = assignments.some(a => a.workoutCategory === 'All Workouts' && a.status === 'APPROVED');
+                        const workoutApproved = acceptsAll || isApproved;
+
+                        const isOnline = coach.preferences?.online !== false;
+                        const isPartnerApproved = coach.verifiedBadge !== false;
+
+                        const locationStatus = coach.preferences?.operatingLocationStatus;
+                        const locationApproved = locationStatus === 'verified';
+
+                        const trainerLat = coach.preferences?.operatingLatitude;
+                        const trainerLng = coach.preferences?.operatingLongitude;
+                        const radiusLimit = coach.preferences?.radiusKm || 15;
+
+                        let distance = 999999;
+                        let insideRadius = false;
+                        if (trainerLat !== undefined && trainerLat !== null && trainerLng !== undefined && trainerLng !== null) {
+                          distance = calculateDistanceKm(trainerLat, trainerLng, customerLat, customerLng);
+                          insideRadius = distance <= radiusLimit;
+                        }
+
+                        // Apply gender filters
+                        const trainerGender = (coach.gender || '').toLowerCase();
+                        const genderValid = trainerGender === 'male' || trainerGender === 'female';
+                        
+                        let genderApproved = false;
+                        if (genderValid) {
+                          if (trainerPref === 'any') {
                             genderApproved = true;
+                          } else if (trainerPref === 'male') {
+                            genderApproved = trainerGender === 'male';
+                          } else if (trainerPref === 'female') {
+                            genderApproved = trainerGender === 'female';
+                          } else if (trainerPref === 'favourite') {
+                            const clientPref = (Database.getProfile(user.id || '')?.trainerPreference || 'no_preference').toLowerCase();
+                            if (clientPref === 'male') {
+                              genderApproved = trainerGender === 'male';
+                            } else if (clientPref === 'female') {
+                              genderApproved = trainerGender === 'female';
+                            } else {
+                              genderApproved = true;
+                            }
                           }
                         }
-                      }
 
-                      return isOnline && isPartnerApproved && workoutApproved && locationApproved && insideRadius && genderValid && genderApproved;
-                    });
+                        return isOnline && isPartnerApproved && workoutApproved && locationApproved && insideRadius && genderValid && genderApproved;
+                      });
 
-                    const slotsToDisplay = getFilteredSlotsForPeriod();
+                      const slotsToDisplay = getFilteredSlotsForPeriod();
 
-                    console.log('CUSTOMER_EMPTY_STATE_DEBUG', JSON.stringify({
-                      finalEligibleTrainerCount: finalEligibleTrainers.length,
-                      finalEligibleTrainerIds: finalEligibleTrainers.map(t => t.id),
-                      finalEligibleTrainerNames: finalEligibleTrainers.map(t => t.name),
-                      uiTrainerCount: finalEligibleTrainers.length,
-                      uiSlotCount: slotsToDisplay.length,
-                      loading: false,
-                      refreshing: false,
-                      matching: false,
-                      emptyStateCondition: slotsToDisplay.length === 0,
-                      emptyStateReason: slotsToDisplay.length === 0 ? 'No available slot found for eligible trainers on selected date' : 'None'
-                    }, null, 2));
+                      if (slotsToDisplay.length === 0) {
+                        const selectedNormalized = normalizeDate(selectedDate);
+                        const todayNormalized = normalizeDate(getCurrentServerTime());
+                        const tomorrowTime = new Date(getCurrentServerTime().getTime() + 24 * 60 * 60 * 1000);
+                        const tomorrowNormalized = normalizeDate(tomorrowTime);
 
-                    if (slotsToDisplay.length === 0) {
-                      const selectedNormalized = normalizeDate(selectedDate);
-                      const todayNormalized = normalizeDate(getCurrentServerTime());
-                      const tomorrowTime = new Date(getCurrentServerTime().getTime() + 24 * 60 * 60 * 1000);
-                      const tomorrowNormalized = normalizeDate(tomorrowTime);
+                        const isTodayVal = (selectedNormalized === todayNormalized);
+                        const isTomorrowVal = (selectedNormalized === tomorrowNormalized);
+                        
+                        let dateLabel = '';
+                        if (isTodayVal) {
+                          dateLabel = 'today';
+                        } else if (isTomorrowVal) {
+                          dateLabel = 'tomorrow';
+                        } else {
+                          const parts = selectedNormalized.split('-');
+                          const y = parseInt(parts[0], 10);
+                          const m = parseInt(parts[1], 10) - 1;
+                          const d = parseInt(parts[2], 10);
+                          const dateObj = new Date(y, m, d);
+                          const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                          dateLabel = weekdays[dateObj.getDay()];
+                        }
 
-                      const isTodayVal = (selectedNormalized === todayNormalized);
-                      const isTomorrowVal = (selectedNormalized === tomorrowNormalized);
-                      
-                      let dateLabel = '';
-                      if (isTodayVal) {
-                        dateLabel = 'today';
-                      } else if (isTomorrowVal) {
-                        dateLabel = 'tomorrow';
-                      } else {
-                        const parts = selectedNormalized.split('-');
-                        const y = parseInt(parts[0], 10);
-                        const m = parseInt(parts[1], 10) - 1;
-                        const d = parseInt(parts[2], 10);
-                        const dateObj = new Date(y, m, d);
-                        const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                        dateLabel = weekdays[dateObj.getDay()];
-                      }
+                        const mainText = `Sorry, we're fully booked for ${dateLabel}. Our trainers are in high demand and unfortunately, we don't have any sessions available ${isTodayVal ? 'today' : 'on this date'}.`;
+                        const subText = `Try ${isTodayVal ? 'tomorrow or choose ' : ''}another date to find an available session.`;
 
-                      const mainText = `Sorry, we're fully booked for ${dateLabel}. Our trainers are in high demand and unfortunately, we don't have any sessions available ${isTodayVal ? 'today' : 'on this date'}.`;
-                      const subText = `Try ${isTodayVal ? 'tomorrow or choose ' : ''}another date to find an available session.`;
-
-                      return (
-                        <View 
-                          className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center gap-6 mt-2 shadow-sm"
-                          style={{
-                            shadowColor: '#101828',
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: 0.02,
-                            shadowRadius: 6,
-                            elevation: 1
-                          }}
-                        >
-                          <View className="w-16 h-16 rounded-full bg-amber-50 items-center justify-center">
-                            <Feather name="flame" size={30} color="#F59E0B" />
-                          </View>
-                          <View className="items-center gap-2">
-                            <Text className="text-zinc-900 text-[10px] font-black uppercase tracking-widest text-center">
-                              WE&apos;RE IN HIGH DEMAND
-                            </Text>
-                            <Text className="text-[#101828] text-base font-black tracking-tight text-center mt-1">
-                              Fully Booked
-                            </Text>
-                            <Text className="text-[#6B7280] text-[11px] font-semibold leading-relaxed text-center max-w-[90%] mt-1">
-                              {mainText}
-                            </Text>
-                            <Text className="text-zinc-400 text-[10px] font-bold text-center max-w-[90%] mt-1">
-                              {subText}
-                            </Text>
-                          </View>
-                          <View className="w-full gap-3">
-                            <TouchableOpacity
-                              activeOpacity={0.8}
-                              onPress={() => {
-                                Alert.alert('Notification Set 🔔', `We will alert you as soon as a coach for ${selectedExperience?.title || 'this workout'} becomes available on this date.`);
-                              }}
-                              className="bg-[#101828] py-4 rounded-xl items-center justify-center"
-                            >
-                              <Text className="text-white text-xs font-black uppercase tracking-wider">Notify Me</Text>
-                            </TouchableOpacity>
-                            
-                            <TouchableOpacity
-                              activeOpacity={0.8}
-                              onPress={() => triggerTransition(1)}
-                              className="bg-zinc-50 border border-zinc-200 py-4 rounded-xl items-center justify-center"
-                            >
-                              <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Try Another Workout</Text>
-                            </TouchableOpacity>
-
-                            {trainerPref === 'favourite' && (
+                        return (
+                          <View 
+                            className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center gap-6 mt-2 shadow-sm"
+                            style={{
+                              shadowColor: '#101828',
+                              shadowOffset: { width: 0, height: 2 },
+                              shadowOpacity: 0.02,
+                              shadowRadius: 6,
+                              elevation: 1
+                            }}
+                          >
+                            <View className="w-16 h-16 rounded-full bg-amber-50 items-center justify-center">
+                              <Feather name="flame" size={30} color="#F59E0B" />
+                            </View>
+                            <View className="items-center gap-2">
+                              <Text className="text-zinc-900 text-[10px] font-black uppercase tracking-widest text-center">
+                                WE&apos;RE IN HIGH DEMAND
+                              </Text>
+                              <Text className="text-[#101828] text-base font-black tracking-tight text-center mt-1">
+                                Fully Booked
+                              </Text>
+                              <Text className="text-[#6B7280] text-[11px] font-semibold leading-relaxed text-center max-w-[90%] mt-1">
+                                {mainText}
+                              </Text>
+                              <Text className="text-zinc-400 text-[10px] font-bold text-center max-w-[90%] mt-1">
+                                {subText}
+                              </Text>
+                            </View>
+                            <View className="w-full gap-3">
                               <TouchableOpacity
                                 activeOpacity={0.8}
-                                onPress={() => triggerTransition(2)}
+                                onPress={() => {
+                                  Alert.alert('Notification Set 🔔', `We will alert you as soon as a coach for ${selectedExperience?.title || 'this workout'} becomes available on this date.`);
+                                }}
+                                className="bg-[#101828] py-4 rounded-xl items-center justify-center"
+                              >
+                                <Text className="text-white text-xs font-black uppercase tracking-wider">Notify Me</Text>
+                              </TouchableOpacity>
+                              
+                              <TouchableOpacity
+                                activeOpacity={0.8}
+                                onPress={() => triggerTransition(1)}
                                 className="bg-zinc-50 border border-zinc-200 py-4 rounded-xl items-center justify-center"
                               >
-                                <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Change Trainer Preference</Text>
+                                <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Try Another Workout</Text>
                               </TouchableOpacity>
-                            )}
 
-                            <TouchableOpacity
-                              activeOpacity={0.8}
-                              onPress={() => triggerTransition(4)}
-                              className="bg-zinc-50 border border-zinc-200 py-4 rounded-xl items-center justify-center"
-                            >
-                              <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Change Date</Text>
-                            </TouchableOpacity>
+                              {trainerPref === 'favourite' && (
+                                <TouchableOpacity
+                                  activeOpacity={0.8}
+                                  onPress={() => triggerTransition(2)}
+                                  className="bg-zinc-50 border border-zinc-200 py-4 rounded-xl items-center justify-center"
+                                >
+                                  <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Change Trainer Preference</Text>
+                                </TouchableOpacity>
+                              )}
+                            </View>
                           </View>
-                        </View>
-                      );
-                    }
+                        );
+                      }
 
-                    return (
-                      <>
-                        {/* Slots listing for period */}
+                      return (
                         <View className="gap-3.5">
                           {slotsToDisplay.map((slotObj, idx) => {
                             const isPicked = selectedTime === slotObj.time;
@@ -3696,8 +3937,11 @@ export default function BookingScreen() {
                                 disabled={isDisabled}
                                 activeOpacity={isDisabled ? 1 : 0.8}
                                 onPress={() => {
-                                  handleSelectSlot(slotObj.time, slotObj.trainers || []);
-                                  setTimeout(() => handleNext(), 250);
+                                  if (isPicked) {
+                                    setSelectedTime('');
+                                  } else {
+                                    handleSelectSlot(slotObj.time, slotObj.trainers || []);
+                                  }
                                 }}
                                 style={{
                                   height: 80,
@@ -3766,12 +4010,514 @@ export default function BookingScreen() {
                             );
                           })}
                         </View>
-                      </>
-                    );
-                  })()}
+                      );
+                    })()}
+                    </ScrollView>
+                  </View>
                 </View>
               )}
 
+              {/* STEP 5: HEALTH & SAFETY QUESTIONNAIRE */}
+              {step === 5 && (
+                <View className="gap-6 pb-28">
+                  {/* Header Title Section */}
+                  <View>
+                    <View className="flex-row items-center gap-1.5 mb-1">
+                      <Text className="text-[#E11D48] text-xs font-black uppercase tracking-[1.8px]">
+                        YOUR SAFETY COMES FIRST
+                      </Text>
+                      <Text className="text-sm">❤️</Text>
+                    </View>
+                    <Text className="text-zinc-950 text-2xl font-black tracking-tight leading-tight">
+                      Let’s personalise your workout
+                    </Text>
+                    <Text className="text-zinc-500 text-sm font-normal mt-1.5 leading-relaxed">
+                      Help us understand your fitness routine and health needs so your trainer can prepare a suitable session.
+                    </Text>
+                  </View>
+
+                  {/* Question 1: Workout Frequency (Radio - Select one) */}
+                  <View className={`bg-white border p-5 rounded-[24px] shadow-2xs gap-3.5 ${
+                    healthValidationErrors.workoutFrequency ? 'border-rose-400 bg-rose-50/20' : 'border-[#E5E7EB]'
+                  }`}>
+                    <View>
+                      <Text className="text-zinc-900 text-sm font-bold tracking-tight">
+                        1. How often do you work out?
+                      </Text>
+                      <Text className="text-zinc-400 text-xs font-medium mt-0.5">
+                        Select one.
+                      </Text>
+                      {healthValidationErrors.workoutFrequency && (
+                        <View className="flex-row items-center gap-1.5 mt-1.5">
+                          <Feather name="alert-circle" size={12} color="#E11D48" />
+                          <Text className="text-[#E11D48] text-[11px] font-semibold">
+                            {healthValidationErrors.workoutFrequency}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <View className="gap-2">
+                      {[
+                        'Rarely or never',
+                        '1–2 days a week',
+                        '3–4 days a week',
+                        '5 or more days a week',
+                      ].map((opt) => {
+                        const isSelected = workoutFrequency === opt;
+                        return (
+                          <TouchableOpacity
+                            key={opt}
+                            activeOpacity={0.75}
+                            onPress={() => {
+                              setWorkoutFrequency(opt);
+                              if (healthValidationErrors.workoutFrequency) {
+                                setHealthValidationErrors(prev => {
+                                  const n = { ...prev };
+                                  delete n.workoutFrequency;
+                                  return n;
+                                });
+                              }
+                            }}
+                            className={`flex-row items-center justify-between p-3.5 rounded-2xl border transition-all ${
+                              isSelected
+                                ? 'bg-rose-50/60 border-[#E11D48]'
+                                : 'bg-zinc-50/60 border-zinc-200/80'
+                            }`}
+                          >
+                            <Text
+                              className={`text-xs font-semibold ${
+                                isSelected ? 'text-zinc-950 font-bold' : 'text-zinc-700'
+                              }`}
+                            >
+                              {opt}
+                            </Text>
+                            <View
+                              className={`w-5 h-5 rounded-full items-center justify-center border ${
+                                isSelected
+                                  ? 'border-[#E11D48] bg-[#E11D48]'
+                                  : 'border-zinc-300 bg-white'
+                              }`}
+                            >
+                              {isSelected && (
+                                <View className="w-2 h-2 rounded-full bg-white" />
+                              )}
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Question 2: Injuries or Pain (Checkbox - Select all that apply) */}
+                  <View className={`bg-white border p-5 rounded-[24px] shadow-2xs gap-3.5 ${
+                    (healthValidationErrors.injuriesOrPain || healthValidationErrors.otherInjury) ? 'border-rose-400 bg-rose-50/20' : 'border-[#E5E7EB]'
+                  }`}>
+                    <View>
+                      <Text className="text-zinc-900 text-sm font-bold tracking-tight">
+                        2. Do you currently have any injuries or pain?
+                      </Text>
+                      <Text className="text-zinc-400 text-xs font-medium mt-0.5">
+                        Select all that apply.
+                      </Text>
+                      {healthValidationErrors.injuriesOrPain && (
+                        <View className="flex-row items-center gap-1.5 mt-1.5">
+                          <Feather name="alert-circle" size={12} color="#E11D48" />
+                          <Text className="text-[#E11D48] text-[11px] font-semibold">
+                            {healthValidationErrors.injuriesOrPain}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <View className="gap-2">
+                      {[
+                        'No injuries or pain',
+                        'Back or neck pain',
+                        'Knee or joint pain',
+                        'Shoulder or wrist injury',
+                        'Muscle injury or strain',
+                        'Other injury or pain',
+                      ].map((opt) => {
+                        const isSelected = injuriesOrPain.includes(opt);
+                        return (
+                          <TouchableOpacity
+                            key={opt}
+                            activeOpacity={0.75}
+                            onPress={() => {
+                              if (healthValidationErrors.injuriesOrPain) {
+                                setHealthValidationErrors(prev => {
+                                  const n = { ...prev };
+                                  delete n.injuriesOrPain;
+                                  return n;
+                                });
+                              }
+                              if (opt === 'No injuries or pain') {
+                                setInjuriesOrPain(['No injuries or pain']);
+                                setOtherInjuryText('');
+                              } else {
+                                const filtered = injuriesOrPain.filter(
+                                  (item) => item !== 'No injuries or pain'
+                                );
+                                if (isSelected) {
+                                  const next = filtered.filter((item) => item !== opt);
+                                  setInjuriesOrPain(
+                                    next.length > 0 ? next : ['No injuries or pain']
+                                  );
+                                  if (opt === 'Other injury or pain') {
+                                    setOtherInjuryText('');
+                                  }
+                                } else {
+                                  setInjuriesOrPain([...filtered, opt]);
+                                }
+                              }
+                            }}
+                            className={`flex-row items-center justify-between p-3.5 rounded-2xl border ${
+                              isSelected
+                                ? 'bg-rose-50/60 border-[#E11D48]'
+                                : 'bg-zinc-50/60 border-zinc-200/80'
+                            }`}
+                          >
+                            <Text
+                              className={`text-xs font-semibold ${
+                                isSelected ? 'text-zinc-950 font-bold' : 'text-zinc-700'
+                              }`}
+                            >
+                              {opt}
+                            </Text>
+                            <View
+                              className={`w-5 h-5 rounded-md items-center justify-center border ${
+                                isSelected
+                                  ? 'border-[#E11D48] bg-[#E11D48]'
+                                  : 'border-zinc-300 bg-white'
+                              }`}
+                            >
+                              {isSelected && (
+                                <Feather name="check" size={13} color="#FFFFFF" />
+                              )}
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+
+                    {/* Inline Input Box for "Other injury or pain" */}
+                    {injuriesOrPain.includes('Other injury or pain') && (
+                      <View className="mt-1 gap-1.5">
+                        <Text className="text-zinc-700 text-xs font-semibold">
+                          Specify injury or pain details <Text className="text-rose-500">*</Text>
+                        </Text>
+                        <TextInput
+                          value={otherInjuryText}
+                          onChangeText={(txt) => {
+                            setOtherInjuryText(txt);
+                            if (healthValidationErrors.otherInjury && txt.trim()) {
+                              setHealthValidationErrors(prev => {
+                                const n = { ...prev };
+                                delete n.otherInjury;
+                                return n;
+                              });
+                            }
+                          }}
+                          placeholder="e.g. Lower back stiffness, right ankle sprain"
+                          placeholderTextColor="#9CA3AF"
+                          className={`bg-zinc-50 border p-3.5 rounded-2xl text-xs font-medium text-zinc-900 ${
+                            healthValidationErrors.otherInjury ? 'border-rose-400 bg-rose-50/40' : 'border-zinc-200/90'
+                          }`}
+                          maxLength={120}
+                        />
+                        {healthValidationErrors.otherInjury && (
+                          <View className="flex-row items-center gap-1.5 pl-1">
+                            <Feather name="alert-circle" size={12} color="#E11D48" />
+                            <Text className="text-[#E11D48] text-[11px] font-semibold">
+                              {healthValidationErrors.otherInjury}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Question 3: Health Conditions (Checkbox - Select all that apply) */}
+                  <View className={`bg-white border p-5 rounded-[24px] shadow-2xs gap-3.5 ${
+                    (healthValidationErrors.healthConditions || healthValidationErrors.otherHealth) ? 'border-rose-400 bg-rose-50/20' : 'border-[#E5E7EB]'
+                  }`}>
+                    <View>
+                      <Text className="text-zinc-900 text-sm font-bold tracking-tight">
+                        3. Do you have any health conditions your trainer should know about?
+                      </Text>
+                      <Text className="text-zinc-400 text-xs font-medium mt-0.5">
+                        Select all that apply.
+                      </Text>
+                      {healthValidationErrors.healthConditions && (
+                        <View className="flex-row items-center gap-1.5 mt-1.5">
+                          <Feather name="alert-circle" size={12} color="#E11D48" />
+                          <Text className="text-[#E11D48] text-[11px] font-semibold">
+                            {healthValidationErrors.healthConditions}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <View className="gap-2">
+                      {[
+                        'None',
+                        'Heart or blood pressure condition',
+                        'Asthma or breathing condition',
+                        'Diabetes',
+                        'Other health condition',
+                        'Prefer not to say',
+                      ].map((opt) => {
+                        const isSelected = healthConditions.includes(opt);
+                        return (
+                          <TouchableOpacity
+                            key={opt}
+                            activeOpacity={0.75}
+                            onPress={() => {
+                              if (healthValidationErrors.healthConditions) {
+                                setHealthValidationErrors(prev => {
+                                  const n = { ...prev };
+                                  delete n.healthConditions;
+                                  return n;
+                                });
+                              }
+                              if (opt === 'None' || opt === 'Prefer not to say') {
+                                setHealthConditions([opt]);
+                                setOtherHealthText('');
+                              } else {
+                                const filtered = healthConditions.filter(
+                                  (item) => item !== 'None' && item !== 'Prefer not to say'
+                                );
+                                if (isSelected) {
+                                  const next = filtered.filter((item) => item !== opt);
+                                  setHealthConditions(
+                                    next.length > 0 ? next : ['None']
+                                  );
+                                  if (opt === 'Other health condition') {
+                                    setOtherHealthText('');
+                                  }
+                                } else {
+                                  setHealthConditions([...filtered, opt]);
+                                }
+                              }
+                            }}
+                            className={`flex-row items-center justify-between p-3.5 rounded-2xl border ${
+                              isSelected
+                                ? 'bg-rose-50/60 border-[#E11D48]'
+                                : 'bg-zinc-50/60 border-zinc-200/80'
+                            }`}
+                          >
+                            <Text
+                              className={`text-xs font-semibold ${
+                                isSelected ? 'text-zinc-950 font-bold' : 'text-zinc-700'
+                              }`}
+                            >
+                              {opt}
+                            </Text>
+                            <View
+                              className={`w-5 h-5 rounded-md items-center justify-center border ${
+                                isSelected
+                                  ? 'border-[#E11D48] bg-[#E11D48]'
+                                  : 'border-zinc-300 bg-white'
+                              }`}
+                            >
+                              {isSelected && (
+                                <Feather name="check" size={13} color="#FFFFFF" />
+                              )}
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+
+                    {/* Inline Input Box for "Other health condition" */}
+                    {healthConditions.includes('Other health condition') && (
+                      <View className="mt-1 gap-1.5">
+                        <Text className="text-zinc-700 text-xs font-semibold">
+                          Specify health condition details <Text className="text-rose-500">*</Text>
+                        </Text>
+                        <TextInput
+                          value={otherHealthText}
+                          onChangeText={(txt) => {
+                            setOtherHealthText(txt);
+                            if (healthValidationErrors.otherHealth && txt.trim()) {
+                              setHealthValidationErrors(prev => {
+                                const n = { ...prev };
+                                delete n.otherHealth;
+                                return n;
+                              });
+                            }
+                          }}
+                          placeholder="e.g. Hypertension, vertigo, post-surgery recovery"
+                          placeholderTextColor="#9CA3AF"
+                          className={`bg-zinc-50 border p-3.5 rounded-2xl text-xs font-medium text-zinc-900 ${
+                            healthValidationErrors.otherHealth ? 'border-rose-400 bg-rose-50/40' : 'border-zinc-200/90'
+                          }`}
+                          maxLength={120}
+                        />
+                        {healthValidationErrors.otherHealth && (
+                          <View className="flex-row items-center gap-1.5 pl-1">
+                            <Feather name="alert-circle" size={12} color="#E11D48" />
+                            <Text className="text-[#E11D48] text-[11px] font-semibold">
+                              {healthValidationErrors.otherHealth}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Question 4: Doctor Advice (Radio - Select one) */}
+                  <View className={`bg-white border p-5 rounded-[24px] shadow-2xs gap-3.5 ${
+                    healthValidationErrors.doctorAdvice ? 'border-rose-400 bg-rose-50/20' : 'border-[#E5E7EB]'
+                  }`}>
+                    <View>
+                      <Text className="text-zinc-900 text-sm font-bold tracking-tight">
+                        4. Has a doctor advised you to avoid any exercises or physical activities?
+                      </Text>
+                      <Text className="text-zinc-400 text-xs font-medium mt-0.5">
+                        Select one.
+                      </Text>
+                      {healthValidationErrors.doctorAdvice && (
+                        <View className="flex-row items-center gap-1.5 mt-1.5">
+                          <Feather name="alert-circle" size={12} color="#E11D48" />
+                          <Text className="text-[#E11D48] text-[11px] font-semibold">
+                            {healthValidationErrors.doctorAdvice}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <View className="gap-2">
+                      {[
+                        'No',
+                        'Yes',
+                        'Not sure',
+                        'Prefer not to say',
+                      ].map((opt) => {
+                        const isSelected = doctorAdvice === opt;
+                        return (
+                          <TouchableOpacity
+                            key={opt}
+                            activeOpacity={0.75}
+                            onPress={() => {
+                              setDoctorAdvice(opt);
+                              if (healthValidationErrors.doctorAdvice) {
+                                setHealthValidationErrors(prev => {
+                                  const n = { ...prev };
+                                  delete n.doctorAdvice;
+                                  return n;
+                                });
+                              }
+                            }}
+                            className={`flex-row items-center justify-between p-3.5 rounded-2xl border ${
+                              isSelected
+                                ? 'bg-rose-50/60 border-[#E11D48]'
+                                : 'bg-zinc-50/60 border-zinc-200/80'
+                            }`}
+                          >
+                            <Text
+                              className={`text-xs font-semibold ${
+                                isSelected ? 'text-zinc-950 font-bold' : 'text-zinc-700'
+                              }`}
+                            >
+                              {opt}
+                            </Text>
+                            <View
+                              className={`w-5 h-5 rounded-full items-center justify-center border ${
+                                isSelected
+                                  ? 'border-[#E11D48] bg-[#E11D48]'
+                                  : 'border-zinc-300 bg-white'
+                              }`}
+                            >
+                              {isSelected && (
+                                <View className="w-2 h-2 rounded-full bg-white" />
+                              )}
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Question 5: Additional note for trainer */}
+                  <View className="bg-white border border-[#E5E7EB] p-5 rounded-[24px] shadow-2xs gap-3">
+                    <View className="flex-row items-center justify-between">
+                      <Text className="text-zinc-900 text-sm font-bold tracking-tight">
+                        5. Is there anything else your trainer should know?
+                      </Text>
+                      <Text className="text-zinc-400 text-xs font-semibold">
+                        Optional
+                      </Text>
+                    </View>
+                    <View className={`bg-zinc-50 border rounded-2xl p-3.5 ${
+                      healthValidationErrors.safetyNotes ? 'border-rose-400 bg-rose-50/40' : 'border-zinc-200/90'
+                    }`}>
+                      <TextInput
+                        multiline
+                        numberOfLines={3}
+                        value={safetyNotes}
+                        onChangeText={(txt) => {
+                          setSafetyNotes(txt);
+                          if (txt.length <= 250 && healthValidationErrors.safetyNotes) {
+                            setHealthValidationErrors(prev => {
+                              const n = { ...prev };
+                              delete n.safetyNotes;
+                              return n;
+                            });
+                          }
+                        }}
+                        placeholder="Add a note (e.g. recovering from mild shoulder strain, prefers low impact)"
+                        placeholderTextColor="#9CA3AF"
+                        className="text-zinc-900 text-xs font-medium h-16 text-start"
+                        style={{ minHeight: 60, padding: 0, textAlignVertical: 'top' }}
+                        maxLength={250}
+                      />
+                      <Text className={`text-right text-[10px] font-medium mt-1 ${
+                        safetyNotes.length >= 240 ? 'text-rose-500 font-bold' : 'text-zinc-400'
+                      }`}>
+                        {safetyNotes.length}/250
+                      </Text>
+                    </View>
+                    {healthValidationErrors.safetyNotes && (
+                      <View className="flex-row items-center gap-1.5 pl-1">
+                        <Feather name="alert-circle" size={12} color="#E11D48" />
+                        <Text className="text-[#E11D48] text-[11px] font-semibold">
+                          {healthValidationErrors.safetyNotes}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Trust Banner */}
+                  <View className="bg-zinc-100/70 border border-zinc-200/70 p-4 rounded-2xl flex-row items-start gap-2.5">
+                    <Feather name="shield" size={16} color="#E11D48" style={{ marginTop: 2 }} />
+                    <Text className="text-zinc-600 text-xs font-medium flex-1 leading-5">
+                      Your safety matters. Please share any relevant health concerns or exercise restrictions with your trainer before your session.
+                    </Text>
+                  </View>
+
+                  {/* Save & Continue Primary Action */}
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={handleNext}
+                    style={{
+                      backgroundColor: '#E11D48',
+                      height: 52,
+                      borderRadius: 26,
+                      shadowColor: '#E11D48',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.28,
+                      shadowRadius: 10,
+                      elevation: 4,
+                    }}
+                    className="w-full items-center justify-center flex-row gap-2 mt-1"
+                  >
+                    <Text className="text-white text-xs font-black uppercase tracking-wider">
+                      SAVE & CONTINUE
+                    </Text>
+                    <Feather name="arrow-right" size={15} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* STEP 6: REVIEW & CONFIRM */}
               {step === 6 && (
                 <View className="gap-6 pb-6">
                   {/* Reservation countdown warning alert */}
@@ -3889,6 +4635,41 @@ export default function BookingScreen() {
                         <Text className="text-[#101828] text-[13px] font-bold">1 Credit will be used</Text>
                       </View>
                     </View>
+                  </View>
+
+                  {/* About Your Health Summary Card */}
+                  <View
+                    className="bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-2xs gap-3"
+                    style={{
+                      shadowColor: '#101828',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.02,
+                      shadowRadius: 6,
+                      elevation: 1,
+                    }}
+                  >
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-row items-center gap-2">
+                        <View className="w-7 h-7 rounded-full bg-rose-50 items-center justify-center">
+                          <Feather name="heart" size={13} color="#E11D48" />
+                        </View>
+                        <Text className="text-zinc-900 text-[13px] font-bold tracking-tight">
+                          About your health
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => setShowHealthDetailsModal(true)}
+                        className="px-2.5 py-1 rounded-full bg-rose-50 border border-rose-100"
+                      >
+                        <Text className="text-[#E11D48] text-[11px] font-black uppercase tracking-wider">
+                          View All
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    <Text className="text-zinc-500 text-xs font-normal leading-relaxed">
+                      Workout: {workoutFrequency} • Pain: {injuriesOrPain.join(', ')}
+                    </Text>
                   </View>
 
                   {/* Section 2 — Note to Your Trainer (Optional) */}
@@ -4073,6 +4854,103 @@ export default function BookingScreen() {
                 </View>
               )}
 
+              {/* Health & Safety Details Modal */}
+              <Modal
+                visible={showHealthDetailsModal}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowHealthDetailsModal(false)}
+              >
+                <View className="flex-1 bg-black/60 justify-end">
+                  <View 
+                    style={{ maxHeight: '82%', paddingBottom: Math.max(insets.bottom, 20) }}
+                    className="bg-white rounded-t-[32px] p-6 shadow-2xl"
+                  >
+                    {/* Modal Header */}
+                    <View className="flex-row items-center justify-between pb-4 border-b border-zinc-100">
+                      <View className="flex-row items-center gap-2">
+                        <View className="w-8 h-8 rounded-full bg-rose-50 items-center justify-center">
+                          <Feather name="heart" size={15} color="#E11D48" />
+                        </View>
+                        <Text className="text-zinc-950 text-base font-black tracking-tight">
+                          Health & Safety Details
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => setShowHealthDetailsModal(false)}
+                        className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center"
+                      >
+                        <Feather name="x" size={16} color="#71717A" />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Modal Content */}
+                    <ScrollView showsVerticalScrollIndicator={false} className="mt-4 gap-4">
+                      <View className="bg-zinc-50 border border-zinc-200/80 p-4 rounded-2xl gap-1">
+                        <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
+                          1. Workout Frequency
+                        </Text>
+                        <Text className="text-zinc-900 text-xs font-semibold">
+                          {workoutFrequency}
+                        </Text>
+                      </View>
+
+                      <View className="bg-zinc-50 border border-zinc-200/80 p-4 rounded-2xl gap-1">
+                        <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
+                          2. Current Injuries or Pain
+                        </Text>
+                        <Text className="text-zinc-900 text-xs font-semibold">
+                          {injuriesOrPain.join(', ')}
+                        </Text>
+                      </View>
+
+                      <View className="bg-zinc-50 border border-zinc-200/80 p-4 rounded-2xl gap-1">
+                        <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
+                          3. Health Conditions
+                        </Text>
+                        <Text className="text-zinc-900 text-xs font-semibold">
+                          {healthConditions.join(', ')}
+                        </Text>
+                      </View>
+
+                      <View className="bg-zinc-50 border border-zinc-200/80 p-4 rounded-2xl gap-1">
+                        <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
+                          4. Doctor Advised Restrictions
+                        </Text>
+                        <Text className="text-zinc-900 text-xs font-semibold">
+                          {doctorAdvice}
+                        </Text>
+                      </View>
+
+                      {safetyNotes.trim() ? (
+                        <View className="bg-zinc-50 border border-zinc-200/80 p-4 rounded-2xl gap-1">
+                          <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
+                            5. Additional Safety Note
+                          </Text>
+                          <Text className="text-zinc-900 text-xs font-semibold">
+                            {safetyNotes}
+                          </Text>
+                        </View>
+                      ) : null}
+
+                      <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={() => {
+                          setShowHealthDetailsModal(false);
+                          triggerTransition(5);
+                        }}
+                        className="py-3 rounded-2xl bg-zinc-100 border border-zinc-200/80 items-center justify-center mt-2"
+                      >
+                        <Text className="text-zinc-800 text-xs font-bold">
+                          Edit Safety Details
+                        </Text>
+                      </TouchableOpacity>
+                    </ScrollView>
+                  </View>
+                </View>
+              </Modal>
+
               {/* STEP 7: SUCCESS EXPERIENCE */}
               {step === 7 && (
                 <BookingSuccessAnimation
@@ -4101,41 +4979,163 @@ export default function BookingScreen() {
       </View>
     </KeyboardAvoidingView>
 
-      {/* Footer wizard navigation buttons (Steps 1 to 5) */}
-      {step <= 5 && (
-        <View 
-          className="px-6 pt-3.5 bg-[#F7F8FC] flex-row gap-3"
+      {/* Footer wizard navigation buttons (Steps 1 to 4) - Animated smooth slide-up red pill button */}
+      {step <= 4 && (
+        <Animated.View 
+          pointerEvents={isContinueVisible ? 'box-none' : 'none'}
+          className="absolute left-0 right-0 items-center justify-center"
           style={{
-            paddingBottom: Math.max(insets.bottom + 12, Platform.OS === 'android' ? 36 : 24),
+            bottom: Math.max(insets.bottom + 12, Platform.OS === 'android' ? 28 : 20),
+            zIndex: 40,
+            opacity: continueButtonAnim,
+            transform: [
+              {
+                translateY: continueButtonAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [50, 0],
+                }),
+              },
+            ],
           }}
         >
           <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleBack}
-            className="flex-1 bg-zinc-50 border border-[#E5E7EB] rounded-2xl items-center justify-center"
-            style={{ height: 56 }}
+            activeOpacity={0.85}
+            onPress={handleNext}
+            style={{
+              backgroundColor: '#E11D48', // Virla signature primary red
+              height: 44,
+              borderRadius: 22, // Curvy pill shape
+              paddingHorizontal: 32, // Content-hugging natural width
+              shadowColor: '#E11D48',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.32,
+              shadowRadius: 8,
+              elevation: 5,
+            }}
+            className="items-center justify-center flex-row gap-2"
           >
-            <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">Back</Text>
+            <Text className="text-white text-xs font-black uppercase tracking-wider">
+              Continue
+            </Text>
+            <Feather name="arrow-right" size={14} color="#FFFFFF" />
           </TouchableOpacity>
-          {(step < 5 || getFilteredSlotsForPeriod().length > 0) && (
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={handleNext}
-              className="flex-1 bg-zinc-950 rounded-2xl items-center justify-center"
-              style={{
-                height: 56,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.05,
-                shadowRadius: 4,
-                elevation: 2,
-              }}
-            >
-              <Text className="text-white text-xs font-black uppercase tracking-wider">Continue</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        </Animated.View>
       )}
+
+      {/* Floating Top Header: Left Back Button, Center Pill Section, Right Share/Slot status */}
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: 'absolute',
+          top: insets.top + 8,
+          left: 16,
+          right: 16,
+          zIndex: 40,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <View 
+          pointerEvents="box-none" 
+          className="relative flex-row items-center"
+          style={{ zIndex: 50 }}
+        >
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: -6,
+              left: -8,
+              right: -32,
+              bottom: -6,
+            }}
+          >
+            <Svg width="100%" height="100%" preserveAspectRatio="none">
+              <Defs>
+                <LinearGradient id="bookingBackBtnScrim" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <Stop offset="0%" stopColor="#F7F8FC" stopOpacity="0.95" />
+                  <Stop offset="65%" stopColor="#F7F8FC" stopOpacity="0.85" />
+                  <Stop offset="85%" stopColor="#F7F8FC" stopOpacity="0.4" />
+                  <Stop offset="100%" stopColor="#F7F8FC" stopOpacity="0" />
+                </LinearGradient>
+              </Defs>
+              <Rect x="0" y="0" width="100%" height="100%" rx={25} ry={25} fill="url(#bookingBackBtnScrim)" />
+            </Svg>
+          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.6}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+            onPress={() => {
+              console.log('[BOOKING] Back button pressed, current step:', step);
+              if (step < 6) {
+                handleBack();
+              } else {
+                router.replace('/(tabs)');
+              }
+            }}
+            style={{ zIndex: 51 }}
+            className="w-10 h-10 rounded-full bg-white/90 border border-zinc-200/80 shadow-xs items-center justify-center"
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <Ionicons name="chevron-back" size={22} color="#101828" style={{ marginLeft: -1 }} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Center Pill Section: Same styling as Credit Details, dynamically switches on scroll */}
+        <View pointerEvents="none" className="absolute left-0 right-0 items-center justify-center">
+          <View 
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.55)',
+              borderColor: 'rgba(226, 232, 240, 0.7)',
+              borderWidth: 1,
+            }}
+            className="flex-col items-center px-4 py-1.5 rounded-full shadow-2xs"
+          >
+            <View className="flex-row items-center gap-1">
+              <View className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
+              <Text 
+                style={{ letterSpacing: 1.5 }}
+                className="text-zinc-500 text-[8.5px] font-bold uppercase"
+              >
+                VIRLA AT-HOME
+              </Text>
+            </View>
+            <Text className="text-zinc-950 text-[12px] font-black tracking-tight">
+              {step === 5 ? 'Health & Safety' : step === 6 ? 'Review & Confirm' : step === 7 ? 'Session Confirmed' : 'Schedule Home Session'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Right side element: step/5 small pill for steps 1-5, Share button for step 7 */}
+        {step <= 5 ? (
+          <View 
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.65)',
+              borderColor: 'rgba(226, 232, 240, 0.8)',
+              borderWidth: 1,
+            }}
+            className="px-2.5 py-1 rounded-full items-center justify-center shadow-2xs"
+          >
+            <Text className="text-zinc-800 text-[10.5px] font-black uppercase tracking-wider">
+              {step}/5
+            </Text>
+          </View>
+        ) : step === 7 ? (
+          <TouchableOpacity
+            onPress={handleShareBooking}
+            activeOpacity={0.8}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            className="w-10 h-10 items-center justify-center rounded-full bg-white/90 border border-zinc-200/80 shadow-xs"
+          >
+            <Feather name="share-2" size={16} color="#09090B" />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 40 }} pointerEvents="none" />
+        )}
+      </View>
     </View>
   );
 }

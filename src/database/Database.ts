@@ -562,6 +562,9 @@ export function mapBooking(row: any): Booking {
     scheduledStartAt: row.scheduled_start_at || undefined,
     scheduledEndAt: row.scheduled_end_at || undefined,
     trainerAcknowledgement: row.trainer_acknowledgement || undefined,
+    preferredCoachId: row.preferred_coach_id || row.rating_details?.isFavouriteTrainer ? row.trainer_id : undefined,
+    isFavouriteTrainer: Boolean(row.is_favourite_trainer || (row.rating_details && row.rating_details.isFavouriteTrainer)),
+    questionnaire: row.questionnaire ? (typeof row.questionnaire === 'string' ? JSON.parse(row.questionnaire) : row.questionnaire) : undefined,
     isInvalidData: !validation.isValid,
     validationError: validation.reason,
   };
@@ -594,7 +597,7 @@ export function mapBookingToPostgres(b: Booking): any {
     trainer_arrival_time: b.trainerArrivalTime,
     calories_burned: b.caloriesBurned,
     duration_minutes: calculatedDuration,
-    rating_details: b.ratingDetails ? JSON.stringify(b.ratingDetails) : null,
+    rating_details: b.ratingDetails ? JSON.stringify(b.ratingDetails) : (b.isFavouriteTrainer ? JSON.stringify({ isFavouriteTrainer: true }) : null),
     trainer_note: b.trainerNote || null,
     created_at: b.createdAt || null,
     reminder_sent: b.reminderSent || false,
@@ -616,6 +619,7 @@ export function mapBookingToPostgres(b: Booking): any {
     otp_expires_at: b.otpExpiresAt ? new Date(b.otpExpiresAt).toISOString() : null,
     scheduled_start_at: b.scheduledStartAt || null,
     scheduled_end_at: b.scheduledEndAt || null,
+    questionnaire: b.questionnaire ? (typeof b.questionnaire === 'string' ? b.questionnaire : JSON.stringify(b.questionnaire)) : null,
   };
 }
 
@@ -850,13 +854,18 @@ export function mapWorkoutAssignmentToPostgres(assignment: TrainerWorkoutAssignm
 }
 
 export function mapTrainerEarning(row: any): TrainerEarning {
+  const isFav = row.type === 'session' && (
+    (row.client_name && row.client_name.includes('(Favourite Trainer)')) ||
+    row.amount === 650 || row.amount === 850
+  );
   return {
     id: row.id,
     bookingId: row.booking_id,
     clientName: row.client_name,
     amount: row.amount,
     date: row.date,
-    type: row.type
+    type: row.type,
+    isFavourite: isFav
   };
 }
 
@@ -1246,6 +1255,7 @@ class DatabaseClient {
           };
         }
       }
+
       this.syncCoachesWithAssignments();
       this.isLoaded = true;
       this.loadSource = 'cache';
@@ -2435,6 +2445,28 @@ class DatabaseClient {
       throw new Error(error.message || 'Database write operation failed. Rolled back booking transaction.');
     }
 
+    if (bookingData.address && bookingData.address.trim().startsWith('{')) {
+      const { error: addrErr } = await supabase.rpc('set_booking_address', {
+        p_booking_id: bookingId,
+        p_address: bookingData.address,
+      });
+      if (addrErr) {
+        console.warn('[DB WARN] set_booking_address failed:', addrErr.message);
+      }
+    }
+
+    if (bookingData.isFavouriteTrainer) {
+      await supabase.from('bookings').update({
+        rating_details: { isFavouriteTrainer: true }
+      }).eq('id', bookingId);
+    }
+
+    if (bookingData.questionnaire) {
+      await supabase.from('bookings').update({
+        questionnaire: bookingData.questionnaire
+      }).eq('id', bookingId);
+    }
+
     await this.refreshBookings();
     await this.refreshUserData(userId);
 
@@ -2974,6 +3006,36 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     if (error) {
       console.error('[DB ERROR] submit_trainer_report RPC failed:', error);
       throw new Error(error.message);
+    }
+
+    // Check if booking was booked as favourite trainer to award bonus
+    const isFavBooking = booking.isFavouriteTrainer || (booking.ratingDetails as any)?.isFavouriteTrainer;
+    if (isFavBooking) {
+      try {
+        const { data: latestEarning } = await supabase
+          .from('trainer_earnings')
+          .select('*')
+          .eq('booking_id', bookingId)
+          .eq('type', 'session')
+          .order('id', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (latestEarning) {
+          const clientNameWithTag = latestEarning.client_name.includes('(Favourite Trainer)')
+            ? latestEarning.client_name
+            : `${latestEarning.client_name} (Favourite Trainer)`;
+          await supabase
+            .from('trainer_earnings')
+            .update({
+              amount: (latestEarning.amount || 600) + 50,
+              client_name: clientNameWithTag
+            })
+            .eq('id', latestEarning.id);
+        }
+      } catch (earnErr) {
+        console.warn('[DB WARN] Failed to update favourite trainer earning bonus:', earnErr);
+      }
     }
 
     await this.refreshBookings();

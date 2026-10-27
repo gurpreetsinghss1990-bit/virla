@@ -10,7 +10,7 @@ import { useUserStore } from '../store/userStore';
 import { Database } from '../database/Database';
 import { syncAllDomainStores } from '../store/syncAllStores';
 import { Ionicons, Feather } from '@expo/vector-icons';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { formatToDDMMYYYY } from '../utils/date';
 import { supabase } from '../database/supabaseClient';
@@ -29,6 +29,8 @@ export default function WalletScreen() {
     if (!creditLots) return [];
     return creditLots.filter((l) => l.remaining_credits > 0);
   }, [creditLots]);
+
+  const [scrollY, setScrollY] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -438,28 +440,18 @@ export default function WalletScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F5F7FB' }}>
-      {/* Top Header — bleeds into page: same bg, no border/seam */}
-      <ScreenHeader
-        title="Credit Wallet"
-        category="UNIVERSAL SESSION PASS"
-        backgroundColor="#F5F7FB"
-        showBorder={false}
-        titleClassName="text-zinc-950 text-base font-bold mt-0.5"
-        onBack={() => {
-          if (router.canGoBack()) {
-            router.back();
-          } else {
-            router.replace('/(tabs)/profile');
-          }
-        }}
-      />
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         className="flex-1 px-4 pt-0"
-        contentContainerStyle={{ paddingBottom: Math.max((insets.bottom || 0) + 40, 110) }}
-        scrollEventThrottle={200}
+        contentContainerStyle={{ 
+          paddingTop: insets.top + 60,
+          paddingBottom: Math.max((insets.bottom || 0) + 40, 110) 
+        }}
+        scrollEventThrottle={16}
         onScroll={({ nativeEvent }) => {
+          const y = nativeEvent.contentOffset.y;
+          setScrollY(y);
+
           if (activeTab !== 'ledger') return;
           const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
           const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 120;
@@ -468,7 +460,7 @@ export default function WalletScreen() {
           }
         }}
       >
-        <View className="gap-4 pt-3">
+        <View className="gap-4 pt-1">
 
           {/* Dynamic Notice Banner */}
           {!dismissPriorityNotice && (
@@ -564,8 +556,8 @@ export default function WalletScreen() {
             ) : null
           )}
 
-          {/* Universal Session Pass Card */}
-          <View className="bg-white rounded-3xl p-5 shadow-sm border border-zinc-100/80 items-center gap-3">
+          {/* Universal Session Pass Section - Clean, lightweight container without bulky card box */}
+          <View className="items-center gap-3 py-2">
 
             {/* Circular Gauge */}
             <View className="relative w-[180px] h-[180px] items-center justify-center my-1">
@@ -1171,6 +1163,94 @@ export default function WalletScreen() {
           </View>
         </View>
       )}
+
+      {/* Floating Top Bar: Left Back Button & Center Dynamic Dynamic Pill */}
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: 'absolute',
+          top: insets.top + 8,
+          left: 16,
+          right: 16,
+          zIndex: 40,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        {/* Localized Pill-shaped Back Button Scrim */}
+        <View pointerEvents="box-none" className="relative flex-row items-center">
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: -6,
+              left: -8,
+              right: -32,
+              bottom: -6,
+            }}
+          >
+            <Svg width="100%" height="100%" preserveAspectRatio="none">
+              <Defs>
+                <LinearGradient id="walletBackBtnScrim" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <Stop offset="0%" stopColor="#F5F7FB" stopOpacity="0.95" />
+                  <Stop offset="65%" stopColor="#F5F7FB" stopOpacity="0.85" />
+                  <Stop offset="85%" stopColor="#F5F7FB" stopOpacity="0.4" />
+                  <Stop offset="100%" stopColor="#F5F7FB" stopOpacity="0" />
+                </LinearGradient>
+              </Defs>
+              <Rect x="0" y="0" width="100%" height="100%" rx={25} ry={25} fill="url(#walletBackBtnScrim)" />
+            </Svg>
+          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.6}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace('/(tabs)/profile');
+              }
+            }}
+            className="w-10 h-10 rounded-full bg-white/90 border border-zinc-200/80 shadow-xs items-center justify-center"
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <Ionicons name="chevron-back" size={22} color="#101828" style={{ marginLeft: -1 }} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Center Pill Section: Lightweight, seamless pill with ultra-subtle transparent frosted backdrop */}
+        <View pointerEvents="none" className="absolute left-0 right-0 items-center justify-center">
+          <View 
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.55)',
+              borderColor: 'rgba(226, 232, 240, 0.7)',
+              borderWidth: 1,
+            }}
+            className="flex-row items-center px-5 py-2 rounded-full shadow-2xs gap-2"
+          >
+            {scrollY > 120 ? (
+              <>
+                <Text className="text-[#E11D48] text-[15px] font-black tracking-tight">
+                  {creditBalance ?? 0}
+                </Text>
+                <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">
+                  Credits
+                </Text>
+              </>
+            ) : (
+              <Text className="text-zinc-950 text-[13.5px] font-black tracking-tight">
+                Credit Wallet
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {/* Right dummy balancer to keep center pill centered */}
+        <View style={{ width: 40 }} pointerEvents="none" />
+      </View>
 
     </View>
   );

@@ -3,6 +3,7 @@ import { getBookingISTDateRange } from '../utils/date';
 import { Booking } from '../types';
 import { supabase } from '../database/supabaseClient';
 import { broadcastBookingUpdate } from '../utils/realtime';
+import { locationTrackerService } from './LocationTrackerService';
 
 export class SessionEngine {
   static TRAVEL_WINDOW_MINUTES = 30;
@@ -98,6 +99,9 @@ export class SessionEngine {
       throw new Error(error.message);
     }
 
+    // Explicitly shut off all GPS background & foreground tracking as trainer has reached
+    locationTrackerService.stopTracking().catch(() => {});
+
     await Database.refreshBookings();
     broadcastBookingUpdate(bookingId, 'trainer_arrived');
   }
@@ -117,6 +121,9 @@ export class SessionEngine {
       return false;
     }
 
+    // Ensure GPS tracking is fully turned off on OTP verification
+    locationTrackerService.stopTracking().catch(() => {});
+
     await Database.refreshBookings();
     broadcastBookingUpdate(bookingId, 'otp_verified');
     return true;
@@ -134,6 +141,9 @@ export class SessionEngine {
       console.error('[SESSION ENGINE] startWorkout failed:', error);
       throw new Error(error.message);
     }
+
+    // Ensure GPS tracking is fully turned off when workout starts
+    locationTrackerService.stopTracking().catch(() => {});
 
     await Database.refreshBookings();
     broadcastBookingUpdate(bookingId, 'workout_started');

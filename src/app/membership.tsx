@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Animated, Platform, BackHandler, LayoutAnimation, UIManager, InteractionManager } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
-import { useRouter } from 'expo-router';
-import { useWalletStore } from '../store/walletStore';
-import { useUserStore } from '../store/userStore';
-import { PayPhiService } from '../services/payphiService';
 import { Feather, Ionicons } from '@expo/vector-icons';
-import Svg, { Circle } from 'react-native-svg';
+import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, Animated, BackHandler, InteractionManager, LayoutAnimation, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import { PayPhiService } from '../services/payphiService';
+import { useUserStore } from '../store/userStore';
+import { useWalletStore } from '../store/walletStore';
 
 interface Plan {
   id: string;
@@ -334,7 +334,7 @@ export default function MembershipScreen() {
     setCheckoutActive(false);
     setIsProcessing(false);
     setIsSuccess(false);
-    
+
     Animated.parallel([
       Animated.timing(overlayOpacity, { toValue: 1, duration: 250, useNativeDriver: true }),
       Animated.spring(slideUpAnim, { toValue: 0, friction: 8, tension: 40, useNativeDriver: true })
@@ -410,51 +410,15 @@ export default function MembershipScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <StatusBar style="dark" />
-      {/* Top Header — matching screenshot exactly */}
-      <View 
-        style={{ paddingTop: insets.top, backgroundColor: '#FFFFFF' }}
-        className="px-5 pb-2"
-      >
-        <View className="h-12 flex-row items-center justify-between">
-          {/* Circular Back Button */}
-          <TouchableOpacity 
-            onPress={() => {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.replace('/(tabs)/profile');
-              }
-            }}
-            activeOpacity={0.7}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            className="w-10 h-10 rounded-full items-center justify-center"
-          >
-            <Feather name="arrow-left" size={20} color="#18181B" />
-          </TouchableOpacity>
 
-          {/* Centered Editorial Title */}
-          <View className="items-center justify-center">
-            <Text className="text-zinc-950 text-[16px] font-black tracking-tight">
-              Virla Membership
-            </Text>
-          </View>
-
-          {/* Circular Help Button */}
-          <TouchableOpacity 
-            activeOpacity={0.7} 
-            onPress={() => router.push('/help-support' as any)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            className="w-10 h-10 rounded-full items-center justify-center"
-          >
-            <Feather name="help-circle" size={20} color="#18181B" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
-        className="flex-1" 
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 24 }}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        className="flex-1"
+        contentContainerStyle={{ 
+          paddingHorizontal: 16, 
+          paddingTop: insets.top + 60, 
+          paddingBottom: 24 
+        }}
       >
         {/* Hero Title - matching design screenshot */}
         <View className="mb-6 items-center">
@@ -465,7 +429,7 @@ export default function MembershipScreen() {
         </View>
 
         {/* Minimal Pill Segmented Switcher Category Selector */}
-        <View className="flex-row items-center justify-center mb-6">
+        <View className="flex-row items-center justify-center mb-3">
           <View style={{ backgroundColor: '#F4F4F6', padding: 4, borderRadius: 24, flexDirection: 'row' }}>
             <TouchableOpacity
               activeOpacity={0.85}
@@ -496,6 +460,13 @@ export default function MembershipScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Validity Notice right below Solo Training & Train Together */}
+        <View className="items-center mb-6 px-2">
+          <Text className="text-zinc-950 text-[13.5px] font-bold tracking-tight text-center">
+            * All Session Packs are subject to 6 Months Validity.
+          </Text>
         </View>
 
         {/* Plan Cards - Accordion replicating exact screenshot feel */}
@@ -529,11 +500,11 @@ export default function MembershipScreen() {
 
                 <View
                   style={{
-                    backgroundColor: isBuddyDisabled 
-                      ? '#FAFAFA' 
-                      : (is8SessionPack 
-                          ? '#FEFDF8' 
-                          : '#FFFFFF'),
+                    backgroundColor: isBuddyDisabled
+                      ? '#FAFAFA'
+                      : (is8SessionPack
+                        ? '#FEFDF8'
+                        : '#FFFFFF'),
                     borderRadius: 22,
                     borderWidth: is8SessionPack ? 1.2 : (isBuddyDisabled ? 1 : 0),
                     borderColor: is8SessionPack ? '#FDE68A' : (isBuddyDisabled ? '#E4E4E7' : 'transparent'),
@@ -547,139 +518,148 @@ export default function MembershipScreen() {
                     marginBottom: 16, // Clean increased spacing between cards
                   }}
                 >
-                {/* Floating Flag/Ribbon Badge at top-left outside */}
-                {(plan.badge || plan.ribbon) && (
-                  <View 
-                    style={{
-                      position: 'absolute',
-                      top: -10,
-                      left: 18,
-                      zIndex: 10,
-                      backgroundColor: isBuddyDisabled 
-                        ? '#71717A' 
-                        : (is8SessionPack 
-                            ? '#D97706' 
+                  {/* Floating Flag/Ribbon Badge at top-left outside */}
+                  {(plan.badge || plan.ribbon) && (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        top: -10,
+                        left: 18,
+                        zIndex: 10,
+                        backgroundColor: isBuddyDisabled
+                          ? '#71717A'
+                          : (is8SessionPack
+                            ? '#D97706'
                             : (plan.popular ? '#6366F1' : (plan.isHighlighted ? '#E11D48' : '#18181B'))),
-                      paddingHorizontal: 10,
-                      paddingVertical: 3,
-                      borderRadius: 6,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.15,
-                      shadowRadius: 4,
-                      elevation: 3,
-                    }}
-                  >
-                    <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.6, textTransform: 'uppercase' }}>
-                      {isBuddyDisabled ? 'ADD-ON LOCKED' : (is8SessionPack ? 'FIRST 100 EXCLUSIVE' : (plan.ribbon || plan.badge))}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Card Collapsed/Expanded Top Summary Bar */}
-                <TouchableOpacity
-                  activeOpacity={isBuddyDisabled ? 0.95 : 0.85}
-                  onPress={() => handlePlanCardPress(plan)}
-                  style={{
-                    padding: 18,
-                    paddingTop: (plan.badge || plan.ribbon) ? 20 : 18,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <View style={{ flex: 1, paddingRight: 10 }}>
-                    <Text style={{ fontSize: 16, fontWeight: '900', color: isBuddyDisabled ? '#71717A' : '#18181B', letterSpacing: -0.2 }}>
-                      {displayName}
-                    </Text>
-                    <Text style={{ fontSize: 12, color: '#71717A', marginTop: 2, fontWeight: '500' }}>
-                      {plan.idealFor}
-                    </Text>
-
-                    {/* Always visible promo point without enlarging / opening the card */}
-                    {is8SessionPack && (
-                      <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                        <Feather name="gift" size={12} color="#D97706" />
-                        <Text style={{ fontSize: 11, color: '#B45309', fontWeight: '800' }}>
-                          Limited time offer for first 100 users
-                        </Text>
-                      </View>
-                    )}
-
-                    {/* Inline helper message when user with 0 credits clicks Workout Buddy */}
-                    {isBuddyAddon && isBuddyDisabled && buddyNotice && (
-                      <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                        <Feather name="info" size={12} color="#E11D48" />
-                        <Text style={{ fontSize: 11, color: '#E11D48', fontWeight: '700' }}>
-                          This is an add-on plan, not a standalone pack.
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={{ alignItems: 'flex-end', flexDirection: 'row', gap: 6 }}>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      {plan.originalPrice && (
-                        <Text style={{ fontSize: 11, color: '#A1A1AA', textDecorationLine: 'line-through', fontWeight: '600' }}>
-                          {plan.originalPrice}
-                        </Text>
-                      )}
-                      <Text style={{ 
-                        fontSize: 21, 
-                        fontWeight: '900', 
-                        color: is8SessionPack 
-                          ? '#D97706' 
-                          : (isBuddyDisabled ? '#71717A' : '#18181B'), 
-                        letterSpacing: -0.5 
-                      }}>
-                        {plan.price}
-                      </Text>
-                      <Text style={{ fontSize: 10, color: '#A1A1AA', fontWeight: '600' }}>
-                        {plan.perSessionText || 'per session'}
-                      </Text>
-                    </View>
-
-                    <View 
-                      style={{ 
-                        width: 26, 
-                        height: 26, 
-                        borderRadius: 13,
-                        backgroundColor: isExpanded ? (is8SessionPack ? '#FEF3C7' : '#FFF1F2') : (is8SessionPack ? '#FEF3C7' : '#F4F4F6'),
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        marginLeft: 4,
+                        paddingHorizontal: 10,
+                        paddingVertical: 3,
+                        borderRadius: 6,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.15,
+                        shadowRadius: 4,
+                        elevation: 3,
                       }}
                     >
-                      <Feather 
-                        name={isBuddyDisabled ? 'lock' : (isExpanded ? 'chevron-up' : 'chevron-down')} 
-                        size={15} 
-                        color={is8SessionPack ? '#D97706' : (isExpanded ? '#E11D48' : '#71717A')} 
-                      />
+                      <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.6, textTransform: 'uppercase' }}>
+                        {isBuddyDisabled ? 'ADD-ON LOCKED' : (is8SessionPack ? 'FIRST 100 EXCLUSIVE' : (plan.ribbon || plan.badge))}
+                      </Text>
                     </View>
-                  </View>
-                </TouchableOpacity>
+                  )}
 
-                {/* Expanded Details Section */}
-                {isExpanded && (
-                  <View style={{ paddingHorizontal: 18, paddingBottom: 16, borderTopWidth: 1, borderTopColor: is8SessionPack ? '#FEF3C7' : '#F4F4F6', paddingTop: 14 }}>
-                    {/* Bullet Points with Clean Check / Tick mark */}
-                    <View style={{ gap: 8 }}>
-                      {plan.bulletPoints?.map((bullet, bIdx) => (
-                        <View key={bIdx} style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
-                          <Feather name="check" size={14} color={is8SessionPack ? '#D97706' : '#E11D48'} />
-                          <Text style={{ fontSize: 12.5, color: '#3F3F46', fontWeight: '500', flex: 1, lineHeight: 17 }}>
-                            {bullet}
+                  {/* Card Collapsed/Expanded Top Summary Bar */}
+                  <TouchableOpacity
+                    activeOpacity={isBuddyDisabled ? 0.95 : 0.85}
+                    onPress={() => handlePlanCardPress(plan)}
+                    style={{
+                      padding: 18,
+                      paddingTop: (plan.badge || plan.ribbon) ? 20 : 18,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <View style={{ flex: 1, paddingRight: 10 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '900', color: isBuddyDisabled ? '#71717A' : '#18181B', letterSpacing: -0.2 }}>
+                        {displayName}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#71717A', marginTop: 2, fontWeight: '500' }}>
+                        {plan.idealFor}
+                      </Text>
+
+                      {/* Always visible promo point without enlarging / opening the card */}
+                      {is8SessionPack && (
+                        <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                          <Feather name="gift" size={12} color="#D97706" />
+                          <Text style={{ fontSize: 11, color: '#B45309', fontWeight: '800' }}>
+                            Limited time offer for first 100 users
                           </Text>
                         </View>
-                      ))}
+                      )}
+
+                      {/* Inline helper message when user with 0 credits clicks Workout Buddy */}
+                      {isBuddyAddon && isBuddyDisabled && buddyNotice && (
+                        <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                          <Feather name="info" size={12} color="#E11D48" />
+                          <Text style={{ fontSize: 11, color: '#E11D48', fontWeight: '700' }}>
+                            This is an add-on plan, not a standalone pack.
+                          </Text>
+                        </View>
+                      )}
                     </View>
-                  </View>
-                )}
-              </View>
-            </React.Fragment>
-          );
-        })}
-      </View>
+
+                    <View style={{ alignItems: 'flex-end', flexDirection: 'row', gap: 6 }}>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        {plan.originalPrice && (
+                          <Text style={{ fontSize: 11, color: '#A1A1AA', textDecorationLine: 'line-through', fontWeight: '600' }}>
+                            {plan.originalPrice}
+                          </Text>
+                        )}
+                        <Text style={{
+                          fontSize: 21,
+                          fontWeight: '900',
+                          color: is8SessionPack
+                            ? '#D97706'
+                            : (isBuddyDisabled ? '#71717A' : '#18181B'),
+                          letterSpacing: -0.5
+                        }}>
+                          {plan.price}
+                        </Text>
+                        <Text style={{ fontSize: 10, color: '#A1A1AA', fontWeight: '600' }}>
+                          {plan.perSessionText || 'per session'}
+                        </Text>
+                      </View>
+
+                      <View
+                        style={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: 13,
+                          backgroundColor: isExpanded ? (is8SessionPack ? '#FEF3C7' : '#FFF1F2') : (is8SessionPack ? '#FEF3C7' : '#F4F4F6'),
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginLeft: 4,
+                        }}
+                      >
+                        <Feather
+                          name={isBuddyDisabled ? 'lock' : (isExpanded ? 'chevron-up' : 'chevron-down')}
+                          size={15}
+                          color={is8SessionPack ? '#D97706' : (isExpanded ? '#E11D48' : '#71717A')}
+                        />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* Expanded Details Section */}
+                  {isExpanded && (
+                    <View style={{ paddingHorizontal: 18, paddingBottom: 16, borderTopWidth: 1, borderTopColor: is8SessionPack ? '#FEF3C7' : '#F4F4F6', paddingTop: 14 }}>
+                      {/* Bullet Points with Clean Check / Tick mark */}
+                      <View style={{ gap: 8 }}>
+                        {plan.bulletPoints?.map((bullet, bIdx) => (
+                          <View key={bIdx} style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+                            <Feather name="check" size={14} color={is8SessionPack ? '#D97706' : '#E11D48'} />
+                            <Text style={{ fontSize: 12.5, color: '#3F3F46', fontWeight: '500', flex: 1, lineHeight: 17 }}>
+                              {bullet}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+
+                      {/* Add-on Specific Disclaimer below bullets */}
+                      {isBuddyAddon && (
+                        <View style={{ marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F4F4F5' }}>
+                          <Text style={{ fontSize: 11, color: '#71717A', fontStyle: 'italic', lineHeight: 16 }}>
+                            * This is an add-on plan, not a standalone pack so it does not follows 6 Months Validity.
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </View>
+              </React.Fragment>
+            );
+          })}
+        </View>
 
         {/* HOW WORKOUTS WORK — Lightweight Clean Editorial Section */}
         <View className="mt-6 mb-4 px-1 py-1">
@@ -772,6 +752,7 @@ export default function MembershipScreen() {
           <Text className="text-zinc-400 text-[10.5px] font-normal leading-[15px]">
             * All prices are subject to 5% GST as displayed at checkout.
           </Text>
+          
           <Text className="text-zinc-400 text-[10.5px] font-normal leading-[15px]">
             * Founding 100 promotional pricing applies exclusively to the 8-session packages.
           </Text>
@@ -780,8 +761,8 @@ export default function MembershipScreen() {
 
       {/* Sticky Bottom Bar with compact height and curved top corners */}
       {selectedPlan && (
-        <Animated.View 
-          style={{ 
+        <Animated.View
+          style={{
             paddingBottom: Math.max((insets.bottom || 0) + (Platform.OS === 'android' ? 24 : 8), Platform.OS === 'android' ? 36 : 14),
             opacity: footerBarAnim,
             transform: [
@@ -847,8 +828,8 @@ export default function MembershipScreen() {
 
       {/* Details & Checkout Overlay Modal (Feature 2) */}
       {isModalOpen && selectedPlan && (
-        <Animated.View 
-          style={{ 
+        <Animated.View
+          style={{
             opacity: overlayOpacity,
             paddingBottom: Math.max((insets.bottom || 0) + (Platform.OS === 'android' ? 24 : 12), Platform.OS === 'android' ? 36 : 16)
           }}
@@ -857,8 +838,8 @@ export default function MembershipScreen() {
           {/* Transparent dismiss header */}
           <TouchableOpacity onPress={closeDetails} className="flex-1" />
 
-          <Animated.View 
-            style={{ 
+          <Animated.View
+            style={{
               transform: [{ translateY: slideUpAnim }],
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 10 },
@@ -887,8 +868,8 @@ export default function MembershipScreen() {
                           </Text>
                         </View>
                       </View>
-                      <TouchableOpacity 
-                        onPress={closeDetails} 
+                      <TouchableOpacity
+                        onPress={closeDetails}
                         activeOpacity={0.7}
                         className="w-10 h-10 rounded-full bg-zinc-100 items-center justify-center border border-zinc-200"
                       >
@@ -908,11 +889,11 @@ export default function MembershipScreen() {
                       {(selectedPlan.bulletPoints && selectedPlan.bulletPoints.length > 0
                         ? selectedPlan.bulletPoints
                         : [
-                            'One trainer, private personalized 60-minute session.',
-                            'Book any workout category (Strength, Flow, Cardio, Reset, Combat)',
-                            'Premium verified VIRLA trainers automatically assigned',
-                            'Unused credits follow the VIRLA renewal policy.'
-                          ]
+                          'One trainer, private personalized 60-minute session.',
+                          'Book any workout category (Strength, Flow, Cardio, Reset, Combat)',
+                          'Premium verified VIRLA trainers automatically assigned',
+                          'Unused credits follow the VIRLA renewal policy.'
+                        ]
                       ).map((item, idx) => (
                         <View key={idx} className="flex-row gap-2 items-center">
                           <Feather name="check" size={13} color="#E11D48" />
@@ -924,7 +905,7 @@ export default function MembershipScreen() {
                     <TouchableOpacity
                       activeOpacity={0.85}
                       onPress={startCheckout}
-                      style={{ 
+                      style={{
                         backgroundColor: '#E11D48', // Virla signature primary red
                         height: 42,
                         borderRadius: 21,
@@ -945,15 +926,15 @@ export default function MembershipScreen() {
                     <View className="flex-row justify-between items-center border-b border-zinc-100 pb-2.5">
                       <Text className="text-zinc-950 text-base font-black uppercase tracking-tight">Checkout</Text>
                       <View className="flex-row items-center gap-2">
-                        <TouchableOpacity 
-                          onPress={() => setCheckoutActive(false)} 
+                        <TouchableOpacity
+                          onPress={() => setCheckoutActive(false)}
                           activeOpacity={0.7}
                           className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center border border-zinc-200"
                         >
                           <Feather name="arrow-left" size={16} color="#18181B" />
                         </TouchableOpacity>
-                        <TouchableOpacity 
-                          onPress={closeDetails} 
+                        <TouchableOpacity
+                          onPress={closeDetails}
                           activeOpacity={0.7}
                           className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center border border-zinc-200"
                         >
@@ -1012,7 +993,7 @@ export default function MembershipScreen() {
                         activeOpacity={0.75}
                         disabled={isProcessing}
                         onPress={handlePayPhiPayment}
-                        style={{ 
+                        style={{
                           backgroundColor: '#E11D48', // Virla signature primary red
                           height: 40,
                           borderRadius: 20, // Curvy pill shape
@@ -1073,7 +1054,7 @@ export default function MembershipScreen() {
                 <View className="items-center gap-1.5 px-6">
                   <Text className="text-zinc-900 text-sm font-extrabold uppercase">Securing Checkout Payout</Text>
                   <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-2">Connecting to payment hub</Text>
-                  
+
                   {/* Highlighted Warning on Loader */}
                   <View className="bg-amber-50 border border-amber-200 px-3.5 py-2 rounded-xl flex-row items-center gap-2">
                     <Feather name="alert-triangle" size={13} color="#D97706" />
@@ -1131,6 +1112,102 @@ export default function MembershipScreen() {
           </Animated.View>
         </Animated.View>
       )}
+
+      {/* Floating Pill Back Button & Help Button with Pill Scrim */}
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: 'absolute',
+          top: insets.top + 10,
+          left: 18,
+          right: 18,
+          zIndex: 40,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        {/* Localized Pill-shaped Scrim Fade for Back Button */}
+        <View pointerEvents="box-none" className="relative flex-row items-center">
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: -6,
+              left: -8,
+              right: -32,
+              bottom: -6,
+            }}
+          >
+            <Svg width="100%" height="100%" preserveAspectRatio="none">
+              <Defs>
+                <LinearGradient id="pricingBackBtnScrim" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.95" />
+                  <Stop offset="65%" stopColor="#FFFFFF" stopOpacity="0.85" />
+                  <Stop offset="85%" stopColor="#FFFFFF" stopOpacity="0.4" />
+                  <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+                </LinearGradient>
+              </Defs>
+              <Rect x="0" y="0" width="100%" height="100%" rx={25} ry={25} fill="url(#pricingBackBtnScrim)" />
+            </Svg>
+          </View>
+
+          {/* Back Pill Button */}
+          <TouchableOpacity
+            activeOpacity={0.6}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace('/(tabs)/profile');
+              }
+            }}
+            className="w-10 h-10 rounded-full bg-white/90 border border-zinc-200/80 shadow-xs items-center justify-center"
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <Ionicons name="chevron-back" size={22} color="#18181B" style={{ marginLeft: -1 }} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Localized Pill-shaped Scrim Fade for Help Button */}
+        <View pointerEvents="box-none" className="relative flex-row items-center">
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: -6,
+              left: -32,
+              right: -8,
+              bottom: -6,
+            }}
+          >
+            <Svg width="100%" height="100%" preserveAspectRatio="none">
+              <Defs>
+                <LinearGradient id="pricingHelpBtnScrim" x1="100%" y1="0%" x2="0%" y2="0%">
+                  <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.95" />
+                  <Stop offset="65%" stopColor="#FFFFFF" stopOpacity="0.85" />
+                  <Stop offset="85%" stopColor="#FFFFFF" stopOpacity="0.4" />
+                  <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+                </LinearGradient>
+              </Defs>
+              <Rect x="0" y="0" width="100%" height="100%" rx={25} ry={25} fill="url(#pricingHelpBtnScrim)" />
+            </Svg>
+          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.6}
+            onPress={() => router.push('/help-support' as any)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            className="w-10 h-10 rounded-full bg-white/90 border border-zinc-200/80 shadow-xs items-center justify-center"
+            accessibilityRole="button"
+            accessibilityLabel="Help"
+          >
+            <Feather name="help-circle" size={18} color="#18181B" />
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 }

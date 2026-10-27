@@ -267,6 +267,19 @@ class LocationTrackerService {
       listeners.forEach((cb) => cb(payloadData));
     }
 
+    // Guard: Verify if the booking is currently in active travelling status.
+    // If not travelling, kill tracking and abort upsert to avoid RLS / background leaks.
+    try {
+      // Check Zustand bookingStore state first (instant in-memory check)
+      const { useBookingStore } = require('../store/bookingStore');
+      const booking = useBookingStore.getState().bookings.find((b: any) => b.id === bookingId);
+      if (booking && booking.timelineStatus !== 'trainer_travelling') {
+        console.log(`[LocationTracker] Booking ${bookingId} status is '${booking.timelineStatus}' (not 'trainer_travelling'). Halting location tracking.`);
+        await this.stopTracking();
+        return payloadData;
+      }
+    } catch {}
+
     // 2. Publish to Supabase for real-time client map updates
     try {
       const { error } = await supabase.from('trainer_travel_locations').upsert({
@@ -280,6 +293,12 @@ class LocationTrackerService {
       });
 
       if (error) {
+        // If RLS blocked insert/update because booking is not active/trainer not matching, stop tracking immediately
+        if (error.message?.includes('violates row-level security policy') || error.code === '42501') {
+          console.warn('[LocationTracker] Supabase RLS restricted upsert (no active travel session). Stopping background tracking for:', bookingId);
+          await this.stopTracking();
+          return payloadData;
+        }
         console.warn('[LocationTracker] Supabase upsert warning:', error.message);
       }
     } catch (e) {
@@ -441,6 +460,45 @@ class LocationTrackerService {
   getLastKnownCoords(bookingId: string): LiveTrainerCoordinates | null {
     return this.lastKnownCoords.get(bookingId) || null;
   }
+
+  /**
+   * Cleans up any dangling background or foreground tracking tasks if there is no session
+   * currently in 'trainer_travelling' status. Safe to invoke during app bootstrap.
+   */
+  async cleanupZombieTracking(): Promise<void> {
+    try {
+      const storedBookingId = await AsyncStorage.getItem(ACTIVE_BOOKING_STORAGE_KEY);
+      if (!storedBookingId && !this.currentBookingId) {
+        // Also ensure background task is stopped if running with no booking ID
+        if (Platform.OS !== 'web' && TaskManager) {
+          const isRegistered = await Location.hasStartedLocationUpdatesAsync(VIRLA_TRAINER_BG_LOCATION_TASK).catch(() => false);
+          if (isRegistered) {
+            await Location.stopLocationUpdatesAsync(VIRLA_TRAINER_BG_LOCATION_TASK).catch(() => {});
+          }
+        }
+        return;
+      }
+
+      const activeId = storedBookingId || this.currentBookingId;
+      if (activeId) {
+        let isTravelling = false;
+        try {
+          const { useBookingStore } = require('../store/bookingStore');
+          const booking = useBookingStore.getState().bookings.find((b: any) => b.id === activeId);
+          if (booking && booking.timelineStatus === 'trainer_travelling') {
+            isTravelling = true;
+          }
+        } catch {}
+
+        if (!isTravelling) {
+          console.log('[LocationTracker] Cleaning up zombie tracking on startup for booking:', activeId);
+          await this.stopTracking(true);
+        }
+      }
+    } catch (e) {
+      console.warn('[LocationTracker] Cleanup zombie tracking error:', e);
+    }
+  }
 }
 
 export const locationTrackerService = new LocationTrackerService();
@@ -463,7 +521,23 @@ if (Platform.OS !== 'web' && TaskManager) {
             } catch {}
           }
           if (bookingId && latestLocation?.coords) {
+            // Guard: stop background task immediately if booking is no longer travelling
+            try {
+              const { useBookingStore } = require('../store/bookingStore');
+              const booking = useBookingStore.getState().bookings.find((b: any) => b.id === bookingId);
+              if (booking && booking.timelineStatus !== 'trainer_travelling') {
+                console.log(`[LocationTracker BG Task] Booking ${bookingId} is in '${booking.timelineStatus}'. Stopping background updates.`);
+                await locationTrackerService.stopTracking();
+                return;
+              }
+            } catch {}
+
             await locationTrackerService.publishLocation(bookingId, latestLocation.coords);
+          } else if (!bookingId) {
+            // No booking ID associated with running task, stop it
+            try {
+              await Location.stopLocationUpdatesAsync(VIRLA_TRAINER_BG_LOCATION_TASK).catch(() => {});
+            } catch {}
           }
         }
       });

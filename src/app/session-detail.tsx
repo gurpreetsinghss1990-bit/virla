@@ -1,31 +1,29 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Image, ScrollView, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, Linking, ActivityIndicator, Modal } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useBookingStore } from '../store/bookingStore';
-import { useNotificationStore } from '../store/notificationStore';
-import { useUserStore } from '../store/userStore';
-import { useUserProfileStore } from '../store/userProfileStore';
-import { useChatStore } from '../store/chatStore';
-import { Ionicons, Feather } from '@expo/vector-icons';
-import Svg, { Circle, Path } from 'react-native-svg';
-import { SkeletonLoader } from '../components/SkeletonLoader';
-import { SessionEngine } from '../services/SessionEngine';
-import { AssignmentConfig } from '../config/AssignmentConfig';
-import { AddPartnerModal } from '../components/AddPartnerModal';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
-import { getBookingISTDateRange, getDisplayWorkoutTitle, formatToDDMMYYYY } from '../utils/date';
-import { locationTrackerService } from '../services/LocationTrackerService';
-import { supabase } from '../database/supabaseClient';
-import TrackingMap from '../components/TrackingMap';
-import { parseBookingAddress } from '../utils/LocationParser';
-import { SupportChatModal } from '../components/SupportChatModal';
-import { RaiseSupportTicketModal } from '../components/RaiseSupportTicketModal';
-import { SupportTicket } from '../database/Database';
-import { useAddressStore } from '../store/addressStore';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AddPartnerModal } from '../components/AddPartnerModal';
 import { PostSessionHealthReportModal } from '../components/PostSessionHealthReportModal';
+import { RaiseSupportTicketModal } from '../components/RaiseSupportTicketModal';
+import { SkeletonLoader } from '../components/SkeletonLoader';
+import { SupportChatModal } from '../components/SupportChatModal';
+import TrackingMap from '../components/TrackingMap';
+import { AssignmentConfig } from '../config/AssignmentConfig';
+import { Database, getCurrentServerTime, SupportTicket } from '../database/Database';
+import { supabase } from '../database/supabaseClient';
+import { locationTrackerService } from '../services/LocationTrackerService';
+import { SessionEngine } from '../services/SessionEngine';
+import { useAddressStore } from '../store/addressStore';
+import { useBookingStore } from '../store/bookingStore';
+import { useChatStore } from '../store/chatStore';
+import { useNotificationStore } from '../store/notificationStore';
+import { useUserProfileStore } from '../store/userProfileStore';
+import { useUserStore } from '../store/userStore';
+import { formatToDDMMYYYY, getBookingISTDateRange, getDisplayWorkoutTitle } from '../utils/date';
+import { parseBookingAddress } from '../utils/LocationParser';
 
 function formatToIndianDate(dateStr: string): string {
   return formatToDDMMYYYY(dateStr);
@@ -82,18 +80,18 @@ export default function SessionDetailScreen() {
     }
   };
 
-  const { 
-    bookings, 
-    updateTimelineStatus, 
-    updateBookingRating, 
-    triggerClientNoShow, 
-    triggerTrainerNoShow, 
+  const {
+    bookings,
+    updateTimelineStatus,
+    updateBookingRating,
+    triggerClientNoShow,
+    triggerTrainerNoShow,
     submitQuestionnaire,
     updateBookingNote,
     reassignTrainer,
     syncFromDB
   } = useBookingStore();
-  
+
   const { addNotification } = useNotificationStore();
   const { user } = useUserStore();
   const { role } = useUserStore();
@@ -115,7 +113,7 @@ export default function SessionDetailScreen() {
       return booking.address;
     }
     // Fallback: look in user's saved addresses
-    if (addresses && addresses.length > 0) {
+    if (role !== 'trainer' && addresses && addresses.length > 0) {
       const defaultAddr = addresses.find((a) => a.isDefault) || addresses[0];
       if (defaultAddr && defaultAddr.lat && defaultAddr.lng) {
         return JSON.stringify({
@@ -131,7 +129,7 @@ export default function SessionDetailScreen() {
       }
     }
     return '';
-  }, [booking?.address, addresses]);
+  }, [booking?.address, addresses, role]);
 
   const parsedAddress = useMemo(() => parseBookingAddress(effectiveAddressStr), [effectiveAddressStr]);
 
@@ -139,8 +137,32 @@ export default function SessionDetailScreen() {
   const isMissed = booking?.status === 'missed_session_not_started' || booking?.status === 'client_no_show' || booking?.status === 'trainer_no_show';
   const isCancelled = booking?.status === 'cancelled';
 
-  // Fallback status alignment for 12-stage timeline
-  const currentStatus = booking?.timelineStatus || 'booked';
+  // Local state for 12-stage timeline status (drives UI smoothly without navigation re-renders)
+  const [currentStatus, setCurrentStatus] = useState<string>(booking?.timelineStatus || 'booked');
+  const isSelfUpdatingRef = React.useRef(false);
+  const selfUpdateTimerRef = React.useRef<any>(null);
+
+  const markSelfUpdate = () => {
+    isSelfUpdatingRef.current = true;
+    if (selfUpdateTimerRef.current) clearTimeout(selfUpdateTimerRef.current);
+    selfUpdateTimerRef.current = setTimeout(() => {
+      isSelfUpdatingRef.current = false;
+    }, 1500);
+  };
+
+  // Sync external booking timeline status (e.g. app restart / external update) only when not locally updating
+  useEffect(() => {
+    if (booking?.timelineStatus && !isSelfUpdatingRef.current && booking.timelineStatus !== currentStatus) {
+      setCurrentStatus(booking.timelineStatus);
+    }
+  }, [booking?.timelineStatus, currentStatus]);
+
+  useEffect(() => {
+    return () => {
+      if (selfUpdateTimerRef.current) clearTimeout(selfUpdateTimerRef.current);
+    };
+  }, []);
+
   const isAccepted = currentStatus !== 'booked' && currentStatus !== 'trainer_assigned';
   const isPendingDetails = (role === 'customer' || role === 'admin') && !isAccepted;
 
@@ -311,8 +333,21 @@ export default function SessionDetailScreen() {
           table: 'bookings',
           filter: `id=eq.${bookingId}`,
         },
-        async (payload) => {
+        async (payload: any) => {
           console.log('[Realtime Session] Booking update received:', payload);
+          // Double trigger protection: if this client just initiated the step update locally, ignore the echo
+          if (isSelfUpdatingRef.current) {
+            console.log('[Realtime Session] Ignoring self-triggered update echo');
+            return;
+          }
+
+          const newRow = payload?.new;
+          const incomingStatus = newRow?.timeline_status || newRow?.timelineStatus;
+          if (incomingStatus) {
+            // Update local step state immediately without routing/navigation
+            setCurrentStatus(incomingStatus);
+          }
+
           await Database.refreshBookings();
           syncFromDB();
         }
@@ -343,9 +378,9 @@ export default function SessionDetailScreen() {
     const R = 6371; // km
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
+    const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
       Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
@@ -479,10 +514,10 @@ export default function SessionDetailScreen() {
     if (booking.status === 'cancelled') {
       return 'Session Cancelled';
     }
-    
+
     const range = getBookingISTDateRange(booking);
     const now = getCurrentServerTime();
-    
+
     if (now < range.start) {
       if (status === 'trainer_travelling') return 'Trainer En Route';
       if (status === 'trainer_arrived') return 'Trainer Arrived';
@@ -528,9 +563,6 @@ export default function SessionDetailScreen() {
   // Active workout timer
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  // Pulse scales and animations
-  const pulseScale = useMemo(() => new Animated.Value(1), []);
-
   const stagesList = [
     'booked',
     'trainer_assigned',
@@ -553,19 +585,19 @@ export default function SessionDetailScreen() {
           title: booking?.status === 'client_no_show'
             ? 'Client No-Show'
             : booking?.status === 'trainer_no_show'
-            ? 'Coach No-Show'
-            : 'Session Missed',
+              ? 'Coach No-Show'
+              : 'Session Missed',
           desc: booking?.status === 'client_no_show'
             ? 'Client check-in was not completed within grace period'
             : booking?.status === 'trainer_no_show'
-            ? 'Coach was unable to arrive or start the session'
-            : 'Session was not started and marked as missed',
+              ? 'Coach was unable to arrive or start the session'
+              : 'Session was not started and marked as missed',
           icon: 'alert-circle' as const
         };
       case 'session_cancelled':
         return {
           title: 'Session Cancelled',
-          desc: (booking as any)?.cancellationReason 
+          desc: (booking as any)?.cancellationReason
             ? `Reason: ${(booking as any).cancellationReason}`
             : 'Booking was cancelled',
           icon: 'x-circle' as const
@@ -602,7 +634,7 @@ export default function SessionDetailScreen() {
   const timelineStages = useMemo(() => {
     const currentIdx = stagesList.indexOf(currentStatus);
     const validCurrentIdx = currentIdx >= 0 ? currentIdx : 0;
-    
+
     if (isMissed) {
       const past = stagesList.slice(0, validCurrentIdx + 1);
       return [...past, 'session_missed'];
@@ -623,10 +655,10 @@ export default function SessionDetailScreen() {
     const len = waypoints.length - 1;
     const activeSegment = Math.min(len - 1, Math.floor(journeyProgress * len));
     const segmentT = (journeyProgress * len) - activeSegment;
-    
+
     const p1 = waypoints[activeSegment];
     const p2 = waypoints[activeSegment + 1];
-    
+
     return {
       x: p1.x + (p2.x - p1.x) * segmentT,
       y: p1.y + (p2.y - p1.y) * segmentT
@@ -635,15 +667,6 @@ export default function SessionDetailScreen() {
 
   // Handle active status tickers & animations
   useEffect(() => {
-    // Stage pulsing animation
-    const pulseLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseScale, { toValue: 1.2, duration: 1000, useNativeDriver: true }),
-        Animated.timing(pulseScale, { toValue: 1, duration: 1000, useNativeDriver: true })
-      ])
-    );
-    pulseLoop.start();
-
     // Active session stopwatch
     let stopwatchTimer: any = null;
     if (currentStatus === 'workout_started') {
@@ -654,16 +677,17 @@ export default function SessionDetailScreen() {
     }
 
     return () => {
-      pulseLoop.stop();
       if (stopwatchTimer) clearInterval(stopwatchTimer);
     };
-  }, [currentStatus, pulseScale]);
+  }, [currentStatus]);
 
   // Automated travel simulation
   const startTravelSimulation = async () => {
     if (simIntervalId) clearInterval(simIntervalId);
     setJourneyProgress(0);
     try {
+      markSelfUpdate();
+      setCurrentStatus('trainer_travelling');
       await updateTimelineStatus(booking.id, 'trainer_travelling');
 
       const interval = setInterval(() => {
@@ -675,6 +699,8 @@ export default function SessionDetailScreen() {
             // Automatically transition to Arrived
             setTimeout(async () => {
               try {
+                markSelfUpdate();
+                setCurrentStatus('trainer_arrived');
                 await updateTimelineStatus(booking.id, 'trainer_arrived');
               } catch (e: any) {
                 Alert.alert('Error', e.message || 'Could not update to trainer_arrived.');
@@ -720,8 +746,10 @@ export default function SessionDetailScreen() {
 
   // Verification actions with double safeguards
   const handleVerifyOtp = async () => {
+    markSelfUpdate();
     const success = await SessionEngine.verifyOTP(booking.id, otpInput);
     if (success) {
+      setCurrentStatus('otp_verified');
       Alert.alert(
         'Check-In Verified',
         'Verification code correct. Click "Start Workout" under your console to begin.',
@@ -741,8 +769,10 @@ export default function SessionDetailScreen() {
   };
 
   const handleVerifyCustomerOtp = async () => {
+    markSelfUpdate();
     const success = await SessionEngine.verifyOTP(booking.id, customerOtpInput);
     if (success) {
+      setCurrentStatus('otp_verified');
       Alert.alert(
         'Check-In Verified',
         'Verification successful! Your coach will start the workout shortly.',
@@ -765,6 +795,8 @@ export default function SessionDetailScreen() {
   // Submit VIRLA Standard Post-Session Health & Limitation Report
   const handleHealthReportSubmit = async (reportData: any) => {
     try {
+      markSelfUpdate();
+      setCurrentStatus('trainer_report_submitted');
       await submitQuestionnaire(booking.id, reportData);
       addNotification({
         title: 'Health Update Recorded 📋',
@@ -774,7 +806,7 @@ export default function SessionDetailScreen() {
       syncFromDB();
       // Refresh assessments
       if (booking?.clientId) {
-        Database.getClientAssessmentHistory(booking.clientId).then(setAssessments).catch(() => {});
+        Database.getClientAssessmentHistory(booking.clientId).then(setAssessments).catch(() => { });
       }
       Alert.alert('Health Update Saved ✅', "Client's health profile and limitations have been updated for future trainers.");
     } catch (err: any) {
@@ -786,6 +818,8 @@ export default function SessionDetailScreen() {
   // User Rating review submit
   const handleClientFeedbackSubmit = async () => {
     try {
+      markSelfUpdate();
+      setCurrentStatus('session_closed');
       await updateBookingRating(booking.id, {
         overallRating,
         trainerRating,
@@ -860,13 +894,6 @@ export default function SessionDetailScreen() {
     );
   };
 
-  const handleSOS = () => {
-    Alert.alert(
-      '🚨 SOS Emergency Support',
-      'Emergency support initiated. Dispatching local response units and alerting emergency contact (Neha Sharma: +91 98200 11223).'
-    );
-  };
-
   const handleNavigateAddress = () => {
     if (!parsedAddress || !parsedAddress.lat || !parsedAddress.lng || isNaN(parsedAddress.lat) || isNaN(parsedAddress.lng) || (parsedAddress.lat === 0 && parsedAddress.lng === 0)) {
       Alert.alert(
@@ -881,13 +908,13 @@ export default function SessionDetailScreen() {
 
   const activeTrainerCoords = liveTrainerCoords || (role === 'trainer' && deviceCoords
     ? {
-        latitude: deviceCoords.latitude,
-        longitude: deviceCoords.longitude,
-        accuracy: 0,
-        heading: null,
-        speed: null,
-        updatedAt: new Date().toISOString(),
-      }
+      latitude: deviceCoords.latitude,
+      longitude: deviceCoords.longitude,
+      accuracy: 0,
+      heading: null,
+      speed: null,
+      updatedAt: new Date().toISOString(),
+    }
     : null);
 
   const getCalculatedDistance = () => {
@@ -944,9 +971,9 @@ export default function SessionDetailScreen() {
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 24, paddingBottom: 140 }}>
           <View className="gap-6">
-            
+
             {/* Status Banner */}
-            <View 
+            <View
               className="bg-rose-50 border border-rose-100 p-5 rounded-[28px] flex-row justify-between items-center"
               style={{
                 shadowColor: '#E11D48',
@@ -967,7 +994,7 @@ export default function SessionDetailScreen() {
             </View>
 
             {/* Booking Details Card */}
-            <View 
+            <View
               className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-4"
               style={{
                 shadowColor: '#101828',
@@ -1025,7 +1052,7 @@ export default function SessionDetailScreen() {
             </View>
 
             {/* Preparation Note Card */}
-            <View 
+            <View
               className="bg-white border border-[#E5E7EB] p-5 rounded-[28px]"
               style={{
                 shadowColor: '#101828',
@@ -1047,7 +1074,7 @@ export default function SessionDetailScreen() {
             </View>
 
             {/* Client Health Alert & Assessment Card (Latest from previous trainer) */}
-            <View 
+            <View
               className="bg-white border border-[#E5E7EB] p-5 rounded-[28px]"
               style={{
                 shadowColor: '#101828',
@@ -1115,7 +1142,7 @@ export default function SessionDetailScreen() {
             </View>
 
             {/* Session Policies Card */}
-            <View 
+            <View
               className="bg-amber-50/20 border border-amber-100/50 p-4.5 rounded-[28px] flex-row items-center justify-between"
             >
               <View className="flex-row items-center gap-3.5 flex-1 pr-3">
@@ -1156,7 +1183,7 @@ export default function SessionDetailScreen() {
                 <View className="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl flex-row items-start gap-2.5">
                   <Feather name={isSearching ? "search" : "clock"} size={13} color="#4F46E5" style={{ marginTop: 2 }} />
                   <Text className="text-indigo-700 text-[9px] font-semibold leading-relaxed flex-1">
-                    {isSearching 
+                    {isSearching
                       ? "Looking for the best trainer... Secure communication options and profile details will unlock after trainer acceptance."
                       : `Waiting for Coach ${booking?.trainerName} to accept your booking request. Secure communication options and profile details will unlock after trainer acceptance.`
                     }
@@ -1177,7 +1204,7 @@ export default function SessionDetailScreen() {
         </ScrollView>
 
         {/* Action Buttons Panel */}
-        <View 
+        <View
           className="absolute bottom-0 left-0 right-0 bg-white border-t border-zinc-100 p-6"
           style={{
             zIndex: 99,
@@ -1277,13 +1304,13 @@ export default function SessionDetailScreen() {
     <View style={{ flex: 1, backgroundColor: '#F8F9FC' }}>
       <StatusBar style="dark" />
       {/* Header extending to the very top */}
-      <View 
-        style={{ paddingTop: insets.top }} 
+      <View
+        style={{ paddingTop: insets.top }}
         className="bg-white border-b border-zinc-100 shadow-xs"
       >
         <View className="h-14 flex-row items-center px-5 justify-between">
-          <TouchableOpacity 
-            onPress={handleSafeBack} 
+          <TouchableOpacity
+            onPress={handleSafeBack}
             activeOpacity={0.6}
             className="w-9 h-9 items-center justify-center active:opacity-60"
           >
@@ -1292,7 +1319,7 @@ export default function SessionDetailScreen() {
 
           {/* Header Title */}
           <View className="items-center flex-1 mx-2">
-            <Text 
+            <Text
               numberOfLines={1}
               className="text-zinc-950 text-base font-extrabold tracking-tight"
             >
@@ -1312,15 +1339,6 @@ export default function SessionDetailScreen() {
                 <Text className="text-rose-700 text-xs font-black uppercase tracking-wider">Support</Text>
               </TouchableOpacity>
             )}
-
-            <TouchableOpacity 
-              onPress={handleSOS} 
-              activeOpacity={0.8}
-              className="bg-rose-50 px-3 py-1.5 rounded-full border border-rose-200/90 flex-row items-center gap-1.5"
-            >
-              <View className="w-1.5 h-1.5 rounded-full bg-rose-600" />
-              <Text className="text-rose-700 text-xs font-black uppercase tracking-wider">SOS</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -1335,6 +1353,8 @@ export default function SessionDetailScreen() {
                 activeOpacity={0.8}
                 onPress={async () => {
                   try {
+                    markSelfUpdate();
+                    setCurrentStatus('trainer_accepted');
                     await updateTimelineStatus(booking.id, 'trainer_accepted');
                   } catch (e: any) {
                     Alert.alert('Simulation Error', e.message);
@@ -1351,6 +1371,8 @@ export default function SessionDetailScreen() {
                 activeOpacity={0.8}
                 onPress={async () => {
                   try {
+                    markSelfUpdate();
+                    setCurrentStatus('trainer_preparing');
                     await updateTimelineStatus(booking.id, 'trainer_preparing');
                   } catch (e: any) {
                     Alert.alert('Simulation Error', e.message);
@@ -1379,6 +1401,8 @@ export default function SessionDetailScreen() {
                   if (simIntervalId) clearInterval(simIntervalId);
                   setJourneyProgress(1.0);
                   try {
+                    markSelfUpdate();
+                    setCurrentStatus('trainer_arrived');
                     await updateTimelineStatus(booking.id, 'trainer_arrived');
                   } catch (e: any) {
                     Alert.alert('Simulation Error', e.message);
@@ -1422,20 +1446,18 @@ export default function SessionDetailScreen() {
                     {isMissed || isCancelled ? 'Session Status' : 'Live Concierge Status'}
                   </Text>
                 </View>
-                <View className={`border px-2.5 py-0.5 rounded-full ${
-                  isMissed 
-                    ? 'bg-amber-50 border-amber-200' 
-                    : isCancelled 
-                    ? 'bg-red-50 border-red-200' 
-                    : 'bg-emerald-50 border-emerald-200'
-                }`}>
-                  <Text className={`text-[10px] font-extrabold uppercase tracking-wider ${
-                    isMissed 
-                      ? 'text-amber-700' 
-                      : isCancelled 
-                      ? 'text-rose-600' 
-                      : 'text-emerald-700'
+                <View className={`border px-2.5 py-0.5 rounded-full ${isMissed
+                    ? 'bg-amber-50 border-amber-200'
+                    : isCancelled
+                      ? 'bg-red-50 border-red-200'
+                      : 'bg-emerald-50 border-emerald-200'
                   }`}>
+                  <Text className={`text-[10px] font-extrabold uppercase tracking-wider ${isMissed
+                      ? 'text-amber-700'
+                      : isCancelled
+                        ? 'text-rose-600'
+                        : 'text-emerald-700'
+                    }`}>
                     {isMissed ? 'Missed' : isCancelled ? 'Cancelled' : 'Live Active'}
                   </Text>
                 </View>
@@ -1443,15 +1465,15 @@ export default function SessionDetailScreen() {
               <Text className="text-zinc-950 text-xl font-black tracking-tight">{getStatusText(currentStatus)}</Text>
               {isMissed ? (
                 <Text className="text-zinc-500 text-xs font-medium leading-5 mt-0.5">
-                  {booking.status === 'client_no_show' 
+                  {booking.status === 'client_no_show'
                     ? 'This session was marked as missed due to client no-show.'
                     : booking.status === 'trainer_no_show'
-                    ? 'This session was marked as missed due to coach no-show.'
-                    : 'This session was not started and has been marked as missed.'}
+                      ? 'This session was marked as missed due to coach no-show.'
+                      : 'This session was not started and has been marked as missed.'}
                 </Text>
               ) : isCancelled ? (
                 <Text className="text-zinc-500 text-xs font-medium leading-5 mt-0.5">
-                  {(booking as any)?.cancellationReason 
+                  {(booking as any)?.cancellationReason
                     ? `Cancellation reason: ${(booking as any).cancellationReason}`
                     : 'This booking has been cancelled.'}
                 </Text>
@@ -1463,25 +1485,23 @@ export default function SessionDetailScreen() {
               <View className="gap-4">
                 <View className="flex-row items-center justify-between pb-1 border-b border-zinc-100">
                   <Text className="text-zinc-950 text-sm font-black uppercase tracking-wider">Session Overview</Text>
-                  <View className={`px-2.5 py-0.5 rounded-full ${
-                    isMissed 
-                      ? 'bg-amber-50 border border-amber-200' 
-                      : isCancelled 
-                      ? 'bg-red-50 border border-red-200' 
-                      : 'bg-zinc-100'
-                  }`}>
-                    <Text className={`text-[10px] font-black uppercase tracking-wider ${
-                      isMissed 
-                        ? 'text-amber-700' 
-                        : isCancelled 
-                        ? 'text-rose-600' 
-                        : 'text-zinc-600'
+                  <View className={`px-2.5 py-0.5 rounded-full ${isMissed
+                      ? 'bg-amber-50 border border-amber-200'
+                      : isCancelled
+                        ? 'bg-red-50 border border-red-200'
+                        : 'bg-zinc-100'
                     }`}>
+                    <Text className={`text-[10px] font-black uppercase tracking-wider ${isMissed
+                        ? 'text-amber-700'
+                        : isCancelled
+                          ? 'text-rose-600'
+                          : 'text-zinc-600'
+                      }`}>
                       {isMissed ? 'Missed Session' : isCancelled ? 'Cancelled Session' : 'Verified Booking'}
                     </Text>
                   </View>
                 </View>
-                
+
                 <View className="gap-3.5">
                   <View className="flex-row justify-between items-center border-b border-zinc-100/80 pb-2.5">
                     <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Workout Type</Text>
@@ -1539,8 +1559,8 @@ export default function SessionDetailScreen() {
                     </Text>
                     <View className="bg-zinc-100 px-2.5 py-0.5 rounded-md border border-zinc-200">
                       <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">
-                        {booking.sessionType === 'COUPLE' 
-                          ? (role === 'trainer' ? '2 CREDITS' : '2 Credits') 
+                        {booking.sessionType === 'COUPLE'
+                          ? (role === 'trainer' ? '2 CREDITS' : '2 Credits')
                           : (role === 'trainer' ? '1 CREDIT' : '1 Credit')}
                       </Text>
                     </View>
@@ -1564,7 +1584,7 @@ export default function SessionDetailScreen() {
 
             {/* Preparation Note Card for Trainer (Accepted view) */}
             {role === 'trainer' && (
-              <View 
+              <View
                 className="bg-white border border-zinc-200/80 p-5 rounded-[28px] shadow-sm"
                 style={{
                   shadowColor: '#101828',
@@ -1588,7 +1608,7 @@ export default function SessionDetailScreen() {
 
             {/* Client Health Alert & Assessment Card for Trainer (Accepted view) */}
             {role === 'trainer' && (
-              <View 
+              <View
                 className="bg-white border border-zinc-200/80 p-5 rounded-[28px] shadow-sm"
                 style={{
                   shadowColor: '#101828',
@@ -1618,21 +1638,19 @@ export default function SessionDetailScreen() {
                   <View className="gap-3">
                     {/* Active Injury / Limitation Details from latest session */}
                     {assessments[0].healthData?.hasInjuryOrLimitation && (
-                      <View className={`p-3.5 rounded-2xl border gap-2 ${
-                        assessments[0].healthData?.isLimitationResolved 
-                          ? 'bg-emerald-50/60 border-emerald-200' 
+                      <View className={`p-3.5 rounded-2xl border gap-2 ${assessments[0].healthData?.isLimitationResolved
+                          ? 'bg-emerald-50/60 border-emerald-200'
                           : 'bg-rose-50/70 border-rose-200'
-                      }`}>
+                        }`}>
                         <View className="flex-row items-center justify-between">
                           <View className="flex-row items-center gap-1.5 flex-1 pr-2">
-                            <Feather 
-                              name={assessments[0].healthData?.isLimitationResolved ? 'check-circle' : 'alert-triangle'} 
-                              size={14} 
-                              color={assessments[0].healthData?.isLimitationResolved ? '#059669' : '#E11D48'} 
+                            <Feather
+                              name={assessments[0].healthData?.isLimitationResolved ? 'check-circle' : 'alert-triangle'}
+                              size={14}
+                              color={assessments[0].healthData?.isLimitationResolved ? '#059669' : '#E11D48'}
                             />
-                            <Text className={`text-xs font-black uppercase ${
-                              assessments[0].healthData?.isLimitationResolved ? 'text-emerald-700' : 'text-rose-700'
-                            }`}>
+                            <Text className={`text-xs font-black uppercase ${assessments[0].healthData?.isLimitationResolved ? 'text-emerald-700' : 'text-rose-700'
+                              }`}>
                               {assessments[0].healthData?.isLimitationResolved
                                 ? 'Resolved Limitation'
                                 : `Active Issue (${assessments[0].healthData?.affectedAreas?.join(', ') || 'Physical'})`}
@@ -1645,16 +1663,15 @@ export default function SessionDetailScreen() {
                               try {
                                 const current = Boolean(assessments[0].healthData?.isLimitationResolved);
                                 await Database.submitLimitationResolution(assessments[0].bookingId, !current);
-                                Database.getClientAssessmentHistory(booking.clientId).then(setAssessments).catch(() => {});
+                                Database.getClientAssessmentHistory(booking.clientId).then(setAssessments).catch(() => { });
                               } catch (e: any) {
                                 Alert.alert('Error', e.message || 'Could not update status');
                               }
                             }}
-                            className={`px-2.5 py-1 rounded-lg border ${
-                              assessments[0].healthData?.isLimitationResolved
+                            className={`px-2.5 py-1 rounded-lg border ${assessments[0].healthData?.isLimitationResolved
                                 ? 'bg-white border-zinc-200'
                                 : 'bg-white border-emerald-300'
-                            }`}
+                              }`}
                           >
                             <Text className="text-[10px] font-bold text-zinc-800">
                               {assessments[0].healthData?.isLimitationResolved ? 'Mark Active' : 'Mark Resolved ✓'}
@@ -1811,7 +1828,7 @@ export default function SessionDetailScreen() {
 
             {/* Module 4: Premium Coach Profile Card */}
             {!isPendingDetails && (
-              <View 
+              <View
                 className="bg-white border border-zinc-200/80 p-5 rounded-[28px] shadow-sm gap-4"
                 style={{
                   shadowColor: '#101828',
@@ -1834,7 +1851,7 @@ export default function SessionDetailScreen() {
                     <Text className="text-zinc-500 text-xs font-semibold mt-0.5">
                       {booking.trainerLevel || 'Certified'} Coach • {getDisplayWorkoutTitle(booking.workoutTitle)} Specialist
                     </Text>
-                    
+
                     <View className="flex-row items-center gap-1.5 mt-2 flex-wrap">
                       <Text className="text-zinc-800 text-xs font-semibold bg-zinc-100/90 border border-zinc-200/60 px-2.5 py-1 rounded-lg">⭐ {booking.trainerRating || 4.9}</Text>
                       <Text className="text-zinc-800 text-xs font-semibold bg-zinc-100/90 border border-zinc-200/60 px-2.5 py-1 rounded-lg">💼 {booking.trainerCompletedSessions || 154}+ sessions</Text>
@@ -1878,22 +1895,21 @@ export default function SessionDetailScreen() {
                     </Text>
                   </View>
                 </View>
-                
+
                 <View className="flex-row gap-3">
                   {/* Secure Message */}
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={
-                      isMissed 
-                        ? () => Alert.alert('Session Missed', 'This session has been marked as missed and communications are closed.') 
-                        : isCancelled 
-                        ? () => Alert.alert('Session Cancelled', 'This session has been cancelled and communications are closed.') 
-                        : !isAccepted 
-                        ? () => Alert.alert('Waiting for Coach', 'You can chat once the trainer has accepted your booking.') 
-                        : handleMessage
-                    } 
-                    className={`flex-1 py-4 rounded-2xl items-center justify-center flex-row gap-2.5 shadow-sm border ${
-                      isMissed || isCancelled ? 'bg-zinc-100 border-zinc-200 opacity-60' : 'bg-zinc-950 border border-zinc-900'
-                    }`}
+                      isMissed
+                        ? () => Alert.alert('Session Missed', 'This session has been marked as missed and communications are closed.')
+                        : isCancelled
+                          ? () => Alert.alert('Session Cancelled', 'This session has been cancelled and communications are closed.')
+                          : !isAccepted
+                            ? () => Alert.alert('Waiting for Coach', 'You can chat once the trainer has accepted your booking.')
+                            : handleMessage
+                    }
+                    className={`flex-1 py-4 rounded-2xl items-center justify-center flex-row gap-2.5 shadow-sm border ${isMissed || isCancelled ? 'bg-zinc-100 border-zinc-200 opacity-60' : 'bg-zinc-950 border border-zinc-900'
+                      }`}
                   >
                     <Feather name="message-square" size={16} color={isMissed || isCancelled ? '#6B7280' : 'white'} />
                     <Text className={`text-sm font-black tracking-wide ${isMissed || isCancelled ? 'text-zinc-500' : 'text-white'}`}>Message Coach</Text>
@@ -1902,20 +1918,19 @@ export default function SessionDetailScreen() {
                   {/* Secure Call */}
                   {currentStatus !== 'session_closed' && booking?.status !== 'completed' && (
                     <View className="flex-1">
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         onPress={
-                          isMissed 
-                            ? () => Alert.alert('Session Missed', 'This session has been marked as missed and communications are closed.') 
-                            : isCancelled 
-                            ? () => Alert.alert('Session Cancelled', 'This session has been cancelled and communications are closed.') 
-                            : !isAccepted 
-                            ? () => Alert.alert('Security Lock', 'Waiting for Trainer Acceptance. Secure communications will unlock after a coach confirms.') 
-                            : (getMinutesToSession() <= 60 ? handleCall : undefined)
-                        } 
+                          isMissed
+                            ? () => Alert.alert('Session Missed', 'This session has been marked as missed and communications are closed.')
+                            : isCancelled
+                              ? () => Alert.alert('Session Cancelled', 'This session has been cancelled and communications are closed.')
+                              : !isAccepted
+                                ? () => Alert.alert('Security Lock', 'Waiting for Trainer Acceptance. Secure communications will unlock after a coach confirms.')
+                                : (getMinutesToSession() <= 60 ? handleCall : undefined)
+                        }
                         activeOpacity={!isAccepted || isMissed || isCancelled ? 0.8 : (getMinutesToSession() <= 60 ? 0.8 : 1)}
-                        className={`py-4 rounded-2xl items-center justify-center flex-row gap-2.5 shadow-sm ${
-                          (!isMissed && !isCancelled && isAccepted && getMinutesToSession() <= 60) ? 'bg-zinc-950 border border-zinc-900' : 'bg-zinc-100 border border-zinc-200 opacity-60'
-                        }`}
+                        className={`py-4 rounded-2xl items-center justify-center flex-row gap-2.5 shadow-sm ${(!isMissed && !isCancelled && isAccepted && getMinutesToSession() <= 60) ? 'bg-zinc-950 border border-zinc-900' : 'bg-zinc-100 border border-zinc-200 opacity-60'
+                          }`}
                       >
                         <Feather name="phone" size={16} color={(!isMissed && !isCancelled && isAccepted && getMinutesToSession() <= 60) ? 'white' : '#6B7280'} />
                         <Text className={`text-sm font-black tracking-wide ${(!isMissed && !isCancelled && isAccepted && getMinutesToSession() <= 60) ? 'text-white' : 'text-zinc-500'}`}>Direct Call</Text>
@@ -1953,26 +1968,63 @@ export default function SessionDetailScreen() {
               </View>
             )}
 
+            {/* Client cancel booking (only after trainer acceptance) */}
+            {role === 'customer' && isAccepted && !isMissed && !isCancelled && booking?.status === 'upcoming' && currentStatus === 'booked' && (
+              <View className="mt-2 mb-4">
+                <TouchableOpacity
+                  onPress={() => {
+                    const mins = getMinutesToSession();
+                    if (mins < 30) {
+                      Alert.alert('Cannot Cancel', 'Bookings cannot be cancelled within 30 minutes of the session.');
+                      return;
+                    }
+                    const policy = mins >= 60
+                      ? '50% of the session credits will be refunded.'
+                      : 'This is a late cancellation. The full session credits will be deducted and no refund will be given.';
+                    Alert.alert('Cancel Booking?', policy, [
+                      { text: 'Keep Booking', style: 'cancel' },
+                      {
+                        text: 'Cancel Booking',
+                        style: 'destructive',
+                        onPress: async () => {
+                          try {
+                            await Database.cancelBooking(user?.id || '', booking!.id);
+                            router.back();
+                          } catch (e: any) {
+                            Alert.alert('Error', e.message || 'Could not cancel booking');
+                          }
+                        },
+                      },
+                    ]);
+                  }}
+                  activeOpacity={0.8}
+                  className="py-4 rounded-2xl items-center justify-center bg-white border border-rose-200"
+                >
+                  <Text className="text-rose-600 text-sm font-black tracking-wide">Cancel Booking</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Original Module 5 for Trainers */}
             {role !== 'customer' && !isMissed && !isCancelled && currentStatus !== 'workout_started' && (
               <View className="gap-4 pl-1">
                 <View className="flex-row justify-between items-center">
                   <Text className="text-zinc-950 text-sm font-extrabold uppercase tracking-wider">Concierge Controls</Text>
                 </View>
-                
+
                 <View className="flex-row justify-between">
                   {currentStatus !== 'session_closed' && booking?.status !== 'completed' && (
-                    <TouchableOpacity 
-                      onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Communication channel opens 5 hours prior to session.') : handleCall} 
+                    <TouchableOpacity
+                      onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Communication channel opens 5 hours prior to session.') : handleCall}
                       className="w-[30%] bg-zinc-950 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5 shadow-sm"
                     >
                       <Feather name="phone" size={14} color="white" />
                       <Text className="text-white text-xs font-bold uppercase">Call Client</Text>
                     </TouchableOpacity>
                   )}
-                  
-                  <TouchableOpacity 
-                    onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Communication channel opens 5 hours prior to session.') : handleMessage} 
+
+                  <TouchableOpacity
+                    onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Communication channel opens 5 hours prior to session.') : handleMessage}
                     className={`${(currentStatus === 'session_closed' || booking?.status === 'completed') ? 'w-full' : 'w-[30%]'} bg-zinc-950 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5 shadow-sm`}
                   >
                     <Feather name="message-square" size={14} color="white" />
@@ -1980,8 +2032,8 @@ export default function SessionDetailScreen() {
                   </TouchableOpacity>
 
                   {currentStatus !== 'session_closed' && booking?.status !== 'completed' && (
-                    <TouchableOpacity 
-                      onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Live tracking GPS details lock opens 5 hours prior.') : handleShareLocation} 
+                    <TouchableOpacity
+                      onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Live tracking GPS details lock opens 5 hours prior.') : handleShareLocation}
                       className="w-[30%] bg-zinc-950 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5 shadow-sm"
                     >
                       <Feather name="map-pin" size={14} color="white" />
@@ -2005,6 +2057,8 @@ export default function SessionDetailScreen() {
                           <TouchableOpacity
                             onPress={async () => {
                               try {
+                                markSelfUpdate();
+                                setCurrentStatus('trainer_travelling');
                                 await locationTrackerService.startTracking(booking.id, true);
                                 await updateTimelineStatus(booking.id, 'trainer_travelling');
                                 handleNavigateAddress();
@@ -2044,6 +2098,8 @@ export default function SessionDetailScreen() {
                               Alert.alert('Check-In Locked', 'You can check in 30 minutes before the scheduled session.');
                             } else {
                               try {
+                                markSelfUpdate();
+                                setCurrentStatus('trainer_arrived');
                                 await SessionEngine.checkIn(booking.id);
                                 await locationTrackerService.stopTracking();
                                 syncFromDB();
@@ -2065,6 +2121,8 @@ export default function SessionDetailScreen() {
                       <TouchableOpacity
                         onPress={async () => {
                           try {
+                            markSelfUpdate();
+                            setCurrentStatus('workout_started');
                             await SessionEngine.startWorkout(booking.id);
                             syncFromDB();
                             addNotification({
@@ -2095,7 +2153,7 @@ export default function SessionDetailScreen() {
                   <Text className="text-emerald-400 text-[10px] font-black uppercase tracking-wider">Trainer Checked In</Text>
                 </View>
                 <Text className="text-white text-base font-bold">Your trainer has arrived. Please begin your session.</Text>
-                
+
                 {!showCustomerOtpInput ? (
                   <TouchableOpacity
                     onPress={() => setShowCustomerOtpInput(true)}
@@ -2131,7 +2189,7 @@ export default function SessionDetailScreen() {
                         >
                           <Text className="text-zinc-400 text-xs font-black uppercase">Back</Text>
                         </TouchableOpacity>
-                        
+
                         <TouchableOpacity
                           onPress={handleVerifyCustomerOtp}
                           className="flex-[1.5] bg-[#E11D48] py-3.5 rounded-xl items-center justify-center"
@@ -2250,6 +2308,8 @@ export default function SessionDetailScreen() {
                     disabled={workoutTimeLeft > 0}
                     onPress={async () => {
                       try {
+                        markSelfUpdate();
+                        setCurrentStatus('workout_completed');
                         await SessionEngine.completeSession(booking.id);
                         syncFromDB();
                         setShowQuestionnaire(true);
@@ -2257,9 +2317,8 @@ export default function SessionDetailScreen() {
                         Alert.alert('Completion Error', err.message || 'Could not complete workout.');
                       }
                     }}
-                    className={`mt-2 px-8 py-3.5 rounded-2xl items-center justify-center ${
-                      workoutTimeLeft > 0 ? 'bg-zinc-800 opacity-50' : 'bg-emerald-600'
-                    }`}
+                    className={`mt-2 px-8 py-3.5 rounded-2xl items-center justify-center ${workoutTimeLeft > 0 ? 'bg-zinc-800 opacity-50' : 'bg-emerald-600'
+                      }`}
                   >
                     <Text className="text-white text-xs font-bold uppercase tracking-wider">
                       {workoutTimeLeft > 0 ? 'Workout in Progress' : 'Complete Session'}
@@ -2328,7 +2387,7 @@ export default function SessionDetailScreen() {
 
             {/* Module 8: Full Post-Session Customer Experience Panel */}
             {(currentStatus === 'customer_review_pending' || currentStatus === 'session_closed' || currentStatus === 'workout_completed' || currentStatus === 'trainer_report_submitted') && !isMissed && !isCancelled && (role === 'customer' || role === 'admin') && (
-              <View 
+              <View
                 className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4"
                 style={{
                   shadowColor: '#101828',
@@ -2413,9 +2472,9 @@ export default function SessionDetailScreen() {
                     <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1 border-b border-zinc-50 pb-2">
                       Rate Coach {booking?.trainerName ? booking.trainerName.replace(/^Coach\s+/i, '') : 'Trainer'}
                     </Text>
-                    
+
                     <View className="flex-row justify-around py-1">
-                      {[1,2,3,4,5].map(s => (
+                      {[1, 2, 3, 4, 5].map(s => (
                         <TouchableOpacity key={s} onPress={() => setOverallRating(s)}>
                           <Text className={`text-2xl ${overallRating === s ? 'scale-125' : 'opacity-35'}`}>⭐</Text>
                         </TouchableOpacity>
@@ -2437,14 +2496,14 @@ export default function SessionDetailScreen() {
 
                 {currentStatus === 'session_closed' && (
                   <View className="gap-2.5 mt-2 flex-row">
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       onPress={() => router.push('/booking')}
                       className="flex-1 bg-zinc-950 py-3 rounded-xl items-center justify-center"
                     >
                       <Text className="text-white text-[9px] font-black uppercase tracking-widest">Book Again</Text>
                     </TouchableOpacity>
-                    
-                    <TouchableOpacity 
+
+                    <TouchableOpacity
                       onPress={() => Alert.alert('Share Achievement', 'Achievement badge graphics shared successfully!')}
                       className="flex-1 bg-zinc-100 py-3 rounded-xl items-center justify-center border border-zinc-200"
                     >
@@ -2466,24 +2525,21 @@ export default function SessionDetailScreen() {
                     {isMissed || isCancelled ? 'Status history of your session' : 'Live progress of your session'}
                   </Text>
                 </View>
-                <View className={`px-2.5 py-1 rounded-full border flex-row items-center gap-1.5 ${
-                  isMissed 
-                    ? 'bg-amber-50 border-amber-200' 
-                    : isCancelled 
-                    ? 'bg-rose-50 border-rose-200' 
-                    : 'bg-emerald-50 border-emerald-200/80'
-                }`}>
-                  <View className={`w-2 h-2 rounded-full ${
-                    isMissed ? 'bg-amber-500' : isCancelled ? 'bg-rose-500' : 'bg-emerald-500'
-                  }`} />
-                  <Text className={`text-[11px] font-semibold tracking-wide uppercase ${
-                    isMissed ? 'text-amber-700' : isCancelled ? 'text-rose-700' : 'text-emerald-700'
+                <View className={`px-2.5 py-1 rounded-full border flex-row items-center gap-1.5 ${isMissed
+                    ? 'bg-amber-50 border-amber-200'
+                    : isCancelled
+                      ? 'bg-rose-50 border-rose-200'
+                      : 'bg-emerald-50 border-emerald-200/80'
                   }`}>
+                  <View className={`w-2 h-2 rounded-full ${isMissed ? 'bg-amber-500' : isCancelled ? 'bg-rose-500' : 'bg-emerald-500'
+                    }`} />
+                  <Text className={`text-[11px] font-semibold tracking-wide uppercase ${isMissed ? 'text-amber-700' : isCancelled ? 'text-rose-700' : 'text-emerald-700'
+                    }`}>
                     {isMissed ? 'Missed' : isCancelled ? 'Cancelled' : 'Live Sync'}
                   </Text>
                 </View>
               </View>
-              
+
               <View className="gap-0 mt-1">
                 {timelineStages.map((item, idx) => {
                   const isTerminalMissed = item === 'session_missed';
@@ -2498,21 +2554,17 @@ export default function SessionDetailScreen() {
                     <View key={item} className="flex-row items-start gap-3.5">
                       {/* Left icon node and vertical line */}
                       <View className="items-center">
-                        <Animated.View
-                          style={{
-                            transform: [{ scale: isCurrent ? pulseScale : 1 }]
-                          }}
-                          className={`w-7 h-7 rounded-full items-center justify-center border-2 ${
-                            isTerminalMissed
+                        <View
+                          className={`w-7 h-7 rounded-full items-center justify-center border-2 ${isTerminalMissed
                               ? 'bg-amber-500 border-amber-300 shadow-sm'
                               : isTerminalCancelled
-                              ? 'bg-rose-500 border-rose-300 shadow-sm'
-                              : isCompleted 
-                              ? 'bg-emerald-500 border-emerald-500 shadow-sm' 
-                              : isCurrent 
-                              ? 'bg-[#E11D48] border-rose-300 shadow-md' 
-                              : 'border-zinc-300 bg-white'
-                          }`}
+                                ? 'bg-rose-500 border-rose-300 shadow-sm'
+                                : isCompleted
+                                  ? 'bg-emerald-500 border-emerald-500 shadow-sm'
+                                  : isCurrent
+                                    ? 'bg-[#E11D48] border-rose-300 shadow-md'
+                                    : 'border-zinc-300 bg-white'
+                            }`}
                         >
                           {isTerminalMissed ? (
                             <Feather name="alert-triangle" size={13} color="white" />
@@ -2525,14 +2577,13 @@ export default function SessionDetailScreen() {
                           ) : (
                             <Text className="text-zinc-500 text-xs font-semibold">{idx + 1}</Text>
                           )}
-                        </Animated.View>
+                        </View>
 
                         {/* Connector line */}
                         {!isLast && (
-                          <View 
-                            className={`w-[2px] my-1 ${
-                              isCompleted ? 'bg-emerald-500' : isCurrent ? 'bg-rose-200' : 'bg-zinc-200'
-                            }`}
+                          <View
+                            className={`w-[2px] my-1 ${isCompleted ? 'bg-emerald-500' : isCurrent ? 'bg-rose-200' : 'bg-zinc-200'
+                              }`}
                             style={{ height: 28 }}
                           />
                         )}
@@ -2541,17 +2592,16 @@ export default function SessionDetailScreen() {
                       {/* Content details */}
                       <View className="flex-1 pt-0.5 pb-2">
                         <View className="flex-row items-center justify-between pr-1">
-                          <Text className={`text-sm tracking-tight ${
-                            isTerminalMissed
+                          <Text className={`text-sm tracking-tight ${isTerminalMissed
                               ? 'font-bold text-amber-700'
                               : isTerminalCancelled
-                              ? 'font-bold text-rose-700'
-                              : isCurrent 
-                              ? 'font-bold text-[#E11D48]' 
-                              : isCompleted 
-                              ? 'font-semibold text-zinc-900' 
-                              : 'font-medium text-zinc-600'
-                          }`}>
+                                ? 'font-bold text-rose-700'
+                                : isCurrent
+                                  ? 'font-bold text-[#E11D48]'
+                                  : isCompleted
+                                    ? 'font-semibold text-zinc-900'
+                                    : 'font-medium text-zinc-600'
+                            }`}>
                             {meta.title}
                           </Text>
 
@@ -2575,17 +2625,16 @@ export default function SessionDetailScreen() {
                           )}
                         </View>
 
-                        <Text className={`text-xs mt-0.5 leading-normal ${
-                          isTerminalMissed
+                        <Text className={`text-xs mt-0.5 leading-normal ${isTerminalMissed
                             ? 'text-amber-700/90 font-normal'
                             : isTerminalCancelled
-                            ? 'text-rose-700/90 font-normal'
-                            : isCurrent 
-                            ? 'text-rose-700/90 font-normal' 
-                            : isCompleted 
-                            ? 'text-zinc-600 font-normal' 
-                            : 'text-zinc-500 font-normal'
-                        }`}>
+                              ? 'text-rose-700/90 font-normal'
+                              : isCurrent
+                                ? 'text-rose-700/90 font-normal'
+                                : isCompleted
+                                  ? 'text-zinc-600 font-normal'
+                                  : 'text-zinc-500 font-normal'
+                          }`}>
                           {meta.desc}
                         </Text>
                       </View>
@@ -2608,8 +2657,8 @@ export default function SessionDetailScreen() {
         <View style={{ flex: 1, backgroundColor: '#0F172A', paddingTop: insets.top }}>
           {/* Header */}
           <View className="h-16 flex-row items-center px-6 border-b border-zinc-800 bg-slate-900 justify-between">
-            <TouchableOpacity 
-              onPress={() => setIsNavigationMapVisible(false)} 
+            <TouchableOpacity
+              onPress={() => setIsNavigationMapVisible(false)}
               className="w-10 h-10 items-center justify-center rounded-full bg-slate-800"
             >
               <Ionicons name="arrow-back" size={20} color="white" />
@@ -2707,7 +2756,7 @@ export default function SessionDetailScreen() {
                         ios: `http://maps.apple.com/?daddr=${dest}&dirflg=d`,
                         default: `https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`,
                       });
-                      if (url) Linking.openURL(url).catch(() => {});
+                      if (url) Linking.openURL(url).catch(() => { });
                     }}
                     className="flex-1 h-12 bg-emerald-600 rounded-2xl items-center justify-center flex-row gap-2 shadow-md"
                   >
