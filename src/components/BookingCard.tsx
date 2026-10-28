@@ -12,6 +12,7 @@ import { AddPartnerModal } from './AddPartnerModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
 import { getDisplayWorkoutTitle, getBookingISTDateRange, formatToDDMMYYYY, formatToDayMonthYear } from '../utils/date';
+import { getBookingDisplayAddress } from '../utils/LocationParser';
 
 interface BookingCardProps {
   booking: Booking;
@@ -391,7 +392,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
             <View className="flex-row items-center gap-1.5 mt-2">
               <Feather name="map-pin" size={12} color="#6B7280" />
               <Text className="text-zinc-600 text-xs font-semibold flex-1 leading-snug" numberOfLines={1}>
-                {booking.address || 'Laxmi Industrial Estate, Andheri West, Mumbai'}
+                {getBookingDisplayAddress(booking.address, 'Session Venue')}
               </Text>
             </View>
           </View>
@@ -657,7 +658,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
           <View className="bg-zinc-100/70 px-3.5 py-2 rounded-xl mt-3 flex-row items-center gap-2">
             <Feather name="map-pin" size={11} color="#6B7280" />
             <Text className="text-zinc-600 text-[10px] font-semibold flex-1 leading-snug">
-              {booking.address}
+              {getBookingDisplayAddress(booking.address)}
             </Text>
           </View>
         )}
@@ -745,7 +746,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
         <View className="bg-zinc-50 px-4 py-2 rounded-xl mb-3 flex-row items-center gap-2">
           <Feather name="map-pin" size={10} color="#6B7280" />
           <Text className="text-zinc-500 text-[10px] font-semibold flex-1 leading-snug">
-            {booking.address}
+            {getBookingDisplayAddress(booking.address)}
           </Text>
         </View>
       )}

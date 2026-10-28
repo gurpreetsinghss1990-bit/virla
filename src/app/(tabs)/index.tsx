@@ -532,6 +532,17 @@ export default function HomeScreen() {
     const range = getBookingISTDateRange(b);
     return getISTDateInfo(range.start).dateString === todayIstStr;
   });
+
+  // Sessions the trainer had accepted that the client later cancelled (shown on trainer home, non-interactive)
+  const todayCancelledByUser = trainerBookings.filter(b => {
+    if (b.status !== 'cancelled') return false;
+    if (!b.trainerAcceptedAt && !b.autoAcceptedAt) return false;
+    const range = getBookingISTDateRange(b);
+    return getISTDateInfo(range.start).dateString === todayIstStr;
+  });
+  const todayDisplayBookings = [...todayBookings, ...todayCancelledByUser].sort(
+    (a, b) => getBookingISTDateRange(a).start.getTime() - getBookingISTDateRange(b).start.getTime()
+  );
   
   const todaySessionsCount = todayBookings.length;
   const todaySessionsHours = todayBookings.reduce((sum, b) => sum + (b.durationMinutes || 60), 0) / 60;
@@ -2361,14 +2372,17 @@ export default function HomeScreen() {
                   ) : null}
                 </View>
 
-                {todayBookings.length > 0 ? (
+                {todayDisplayBookings.length > 0 ? (
                   <View className="gap-3">
-                    {todayBookings.map((booking) => (
+                    {todayDisplayBookings.map((booking) => {
+                      const isCancelledByUser = booking.status === 'cancelled';
+                      return (
                       <TouchableOpacity 
                         key={booking.id} 
-                        activeOpacity={0.8}
-                        onPress={() => navigateSafely({ pathname: '/session-detail', params: { id: booking.id } })}
-                        className="bg-white border border-[#E5E7EB] p-4 rounded-2xl flex-row justify-between items-center"
+                        activeOpacity={isCancelledByUser ? 1 : 0.8}
+                        disabled={isCancelledByUser}
+                        onPress={isCancelledByUser ? undefined : () => navigateSafely({ pathname: '/session-detail', params: { id: booking.id } })}
+                        className={`bg-white border border-[#E5E7EB] p-4 rounded-2xl flex-row justify-between items-center ${isCancelledByUser ? 'opacity-70' : ''}`}
                         style={{
                           shadowColor: '#101828',
                           shadowOffset: { width: 0, height: 3 },
@@ -2377,15 +2391,20 @@ export default function HomeScreen() {
                           elevation: 1,
                         }}
                       >
-                        <View className="flex-row items-center gap-3">
+                        <View className="flex-row items-center gap-3 flex-1">
                           <View className="w-8 h-8 rounded-xl bg-indigo-50 items-center justify-center">
                             <Feather name="clock" size={14} color="#4F46E5" />
                           </View>
-                          <View>
+                          <View className="flex-1">
                             <Text className="text-zinc-900 text-sm font-semibold">{getDisplayWorkoutTitle(booking.workoutTitle)}</Text>
                             <Text className="text-zinc-500 text-[11px] font-medium mt-0.5">
                               {booking.time} • Client: {booking.clientName || 'Viral'}
                             </Text>
+                            {isCancelledByUser && (
+                              <Text className="text-rose-600 text-[11px] font-semibold mt-0.5">
+                                This session is cancelled by user.
+                              </Text>
+                            )}
                           </View>
                         </View>
                         <View className={`px-2.5 py-1 rounded-full ${
@@ -2410,7 +2429,8 @@ export default function HomeScreen() {
                           </Text>
                         </View>
                       </TouchableOpacity>
-                    ))}
+                      );
+                    })}
                   </View>
                 ) : (
                   <View className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] items-center justify-center">

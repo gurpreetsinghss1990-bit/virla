@@ -844,7 +844,7 @@ export default function BookingScreen() {
 
       const trainerLat = coach.preferences?.operatingLatitude;
       const trainerLng = coach.preferences?.operatingLongitude;
-      const radiusLimit = coach.preferences?.radiusKm || 15;
+      const radiusLimit = Math.min(coach.preferences?.radiusKm || 5, 5);
       let distance = 999999;
       let insideRadius = false;
       if (trainerLat !== undefined && trainerLat !== null && trainerLng !== undefined && trainerLng !== null) {
@@ -945,7 +945,7 @@ export default function BookingScreen() {
 
       const trainerLat = coach.preferences?.operatingLatitude;
       const trainerLng = coach.preferences?.operatingLongitude;
-      const radiusLimit = coach.preferences?.radiusKm || 15;
+      const radiusLimit = Math.min(coach.preferences?.radiusKm || 5, 5);
       if (trainerLat !== undefined && trainerLat !== null && trainerLng !== undefined && trainerLng !== null) {
         const distance = calculateDistanceKm(trainerLat, trainerLng, customerLat, customerLng);
         if (distance > radiusLimit) continue;
@@ -1074,7 +1074,7 @@ export default function BookingScreen() {
       // 4. Radius eligible
       const trainerLat = coach.preferences?.operatingLatitude;
       const trainerLng = coach.preferences?.operatingLongitude;
-      const radiusLimit = coach.preferences?.radiusKm || 15;
+      const radiusLimit = Math.min(coach.preferences?.radiusKm || 5, 5);
       let distance = 999999;
       let radiusEligible = false;
       if (trainerLat !== undefined && trainerLat !== null && trainerLng !== undefined && trainerLng !== null) {
@@ -1271,7 +1271,7 @@ export default function BookingScreen() {
 
         const trainerLat = coachObj.preferences?.operatingLatitude;
         const trainerLng = coachObj.preferences?.operatingLongitude;
-        const radiusLimit = coachObj.preferences?.radiusKm || 15;
+        const radiusLimit = Math.min(coachObj.preferences?.radiusKm || 5, 5);
         let distance = 999999;
         let radiusEligible = false;
         if (trainerLat !== undefined && trainerLat !== null && trainerLng !== undefined && trainerLng !== null) {
@@ -3798,7 +3798,7 @@ export default function BookingScreen() {
 
                         const trainerLat = coach.preferences?.operatingLatitude;
                         const trainerLng = coach.preferences?.operatingLongitude;
-                        const radiusLimit = coach.preferences?.radiusKm || 15;
+                        const radiusLimit = Math.min(coach.preferences?.radiusKm || 5, 5);
 
                         let distance = 999999;
                         let insideRadius = false;

@@ -66,10 +66,34 @@ export function parseBookingAddress(addressStr: string | null | undefined): Pars
     };
   }
 
-  // 3. Fallback to raw text without coordinates
+// 3. Fallback to raw text without coordinates
   return {
     addressLine: trimmed,
     lat: null,
     lng: null,
   };
 }
+
+/**
+ * Returns a clean, human-readable display string for a booking's address.
+ * Formats JSON or coordinate-embedded strings cleanly into:
+ * "Flat/Building, AddressLine" without exposing raw JSON syntax or keys.
+ */
+export function getBookingDisplayAddress(addressStr: string | null | undefined, fallback: string = 'Selected Location'): string {
+  if (!addressStr || !addressStr.trim()) return fallback;
+  const parsed = parseBookingAddress(addressStr);
+  
+  const prefix = [parsed.flatNumber, parsed.buildingName].filter(Boolean).join(', ');
+  if (prefix && parsed.addressLine) {
+    // Avoid repeating building if addressLine already starts with it
+    if (parsed.addressLine.toLowerCase().startsWith(prefix.toLowerCase())) {
+      return parsed.addressLine;
+    }
+    return `${prefix}, ${parsed.addressLine}`;
+  }
+  
+  if (parsed.addressLine) return parsed.addressLine;
+  if (prefix) return prefix;
+  return fallback;
+}
+

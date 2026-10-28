@@ -88,6 +88,9 @@ export interface Booking {
     difficulty: string;
     energy: string;
     comments?: string;
+    cancelledAtStage?: string;
+    cancelledAt?: number;
+    cancellationReason?: string;
   };
 
   // Sprint 6 additions

@@ -101,20 +101,51 @@ export default function AdminPanelScreen() {
       }
     };
 
-    const handleViewDocument = async (storagePath: string) => {
+    const handleViewDocument = async (docUrlOrPath: string) => {
       try {
+        if (!docUrlOrPath) {
+          Alert.alert('No Document', 'Document file is missing or not provided.');
+          return;
+        }
+
+        const { Linking } = require('react-native');
+
+        // If it's already a full HTTP(S) URL (e.g. from Supabase public storage)
+        if (docUrlOrPath.startsWith('http://') || docUrlOrPath.startsWith('https://')) {
+          const supported = await Linking.canOpenURL(docUrlOrPath);
+          if (supported) {
+            await Linking.openURL(docUrlOrPath);
+          } else {
+            Alert.alert('Error', 'Unable to open file URL on device.');
+          }
+          return;
+        }
+
+        // If it's a storage path in trainer-documents or trainer-verification
+        const bucket = docUrlOrPath.includes('trainer-docs') ? 'trainer-documents' : 'trainer-verification';
+        const cleanPath = docUrlOrPath.replace(/^trainer-docs\//, '').replace(/^trainer-documents\//, '');
+
         const { data, error } = await supabase.storage
-          .from('trainer-verification')
-          .createSignedUrl(storagePath, 60);
-        if (error) throw error;
+          .from(bucket)
+          .createSignedUrl(docUrlOrPath, 120);
+
+        if (error) {
+          // Fallback to getPublicUrl
+          const { data: pubData } = supabase.storage.from(bucket).getPublicUrl(docUrlOrPath);
+          if (pubData?.publicUrl) {
+            await Linking.openURL(pubData.publicUrl);
+            return;
+          }
+          throw error;
+        }
+
         if (data?.signedUrl) {
-          const { Linking } = require('react-native');
-          Linking.openURL(data.signedUrl);
+          await Linking.openURL(data.signedUrl);
         } else {
-          Alert.alert('Error', 'Could not generate signed URL.');
+          Alert.alert('Error', 'Could not generate signed URL for document.');
         }
       } catch (err: any) {
-        Alert.alert('Failed to view document', err.message || err);
+        Alert.alert('Failed to view document', err.message || String(err));
       }
     };
 
@@ -208,7 +239,7 @@ export default function AdminPanelScreen() {
 
     const handleOpenEditLocation = (coach: Coach) => {
       setEditingCoachLocation(coach);
-      setOverrideRadius(coach.preferences?.radiusKm || 15);
+      setOverrideRadius(Math.min(coach.preferences?.radiusKm || 5, 5));
       setOverrideAddress(coach.preferences?.operatingAddress || '');
       setOverrideStatus(coach.preferences?.operatingLocationStatus || 'pending');
     };
@@ -218,12 +249,12 @@ export default function AdminPanelScreen() {
       setIsSavingLocation(true);
       try {
         const coach = Database.schema.coaches.find(c => c.id === editingCoachLocation.id) || editingCoachLocation;
-        const currentPrefs = coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] };
+        const currentPrefs = coach.preferences || { online: false, radiusKm: 5, maxDailySessions: 5, categories: [] };
         
         const updatedPrefs = {
           ...currentPrefs,
           operatingAddress: overrideAddress.trim() || currentPrefs.operatingAddress,
-          radiusKm: overrideRadius,
+          radiusKm: Math.min(overrideRadius, 5),
           operatingLocationStatus: overrideStatus,
         };
 
@@ -506,74 +537,150 @@ export default function AdminPanelScreen() {
 
                           <View className="h-[1px] bg-zinc-50" />
 
+                          {/* Personal & Fitness Details Overview */}
                           <View className="gap-1.5 pl-1">
-                            <Text className="text-zinc-800 text-xs font-semibold">Specialty: <Text className="font-medium text-zinc-600">{app.primaryWorkout}</Text></Text>
-                            <Text className="text-zinc-800 text-xs font-semibold">Experience: <Text className="font-medium text-zinc-600">{app.yearsOfExperience} years</Text></Text>
-                            <Text className="text-zinc-800 text-xs font-semibold">Languages: <Text className="font-medium text-zinc-600">{app.languages}</Text></Text>
+                            <View className="flex-row flex-wrap gap-x-4 gap-y-1">
+                              <Text className="text-zinc-800 text-xs font-semibold">
+                                DOB: <Text className="font-medium text-zinc-600">{app.dob || 'N/A'}</Text>
+                              </Text>
+                              <Text className="text-zinc-800 text-xs font-semibold">
+                                Gender: <Text className="font-medium text-zinc-600 uppercase">{app.gender || 'N/A'}</Text>
+                              </Text>
+                              <Text className="text-zinc-800 text-xs font-semibold">
+                                City: <Text className="font-medium text-zinc-600">{app.city || 'Mumbai'}</Text>
+                              </Text>
+                            </View>
+
+                            {!!app.address && (
+                              <Text className="text-zinc-800 text-xs font-semibold">
+                                Address: <Text className="font-medium text-zinc-600">{app.address}{app.pinCode ? ` (${app.pinCode})` : ''}</Text>
+                              </Text>
+                            )}
+
+                            <Text className="text-zinc-800 text-xs font-semibold">
+                              Specialty: <Text className="font-medium text-zinc-600">{app.primaryWorkout}</Text>
+                            </Text>
+
+                            {!!app.secondarySkills && (
+                              <Text className="text-zinc-800 text-xs font-semibold">
+                                Secondary Skills: <Text className="font-medium text-zinc-600">{app.secondarySkills}</Text>
+                              </Text>
+                            )}
+
+                            {!!app.fitnessQualifications && (
+                              <Text className="text-zinc-800 text-xs font-semibold">
+                                Qualifications: <Text className="font-medium text-zinc-600">{app.fitnessQualifications}</Text>
+                              </Text>
+                            )}
+
+                            <View className="flex-row flex-wrap gap-x-4 gap-y-1">
+                              <Text className="text-zinc-800 text-xs font-semibold">
+                                Experience: <Text className="font-medium text-zinc-600">{app.yearsOfExperience} years</Text>
+                              </Text>
+                              <Text className="text-zinc-800 text-xs font-semibold">
+                                Languages: <Text className="font-medium text-zinc-600">{app.languages}</Text>
+                              </Text>
+                              <Text className="text-zinc-800 text-xs font-semibold">
+                                Radius: <Text className="font-medium text-zinc-600">{app.preferredWorkingRadius} km</Text>
+                              </Text>
+                            </View>
+
+                            {!!app.aboutMe && (
+                              <Text className="text-zinc-500 text-[11px] italic mt-0.5 leading-relaxed bg-zinc-50 p-2 rounded-lg border border-zinc-100">
+                                "{app.aboutMe}"
+                              </Text>
+                            )}
                           </View>
 
                           <View className="h-[1px] bg-zinc-100" />
 
-                          <View className="gap-2">
+                          <View className="gap-2.5">
                             <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">Verification Documents</Text>
-                            <View className="flex-row gap-3">
-                              <View className="flex-1 bg-zinc-50 p-2.5 rounded-lg border border-zinc-100 items-center justify-center">
-                                <Feather name="file-text" size={14} color="#6B7280" />
-                                <Text className="text-zinc-500 text-[8px] mt-1 font-bold">PAN CARD</Text>
-                                <Text className="text-zinc-800 text-[9px] font-medium mt-0.5">{app.panNumber}</Text>
-                              </View>
-                              
-                              <View className="flex-row items-center gap-1.5 flex-1 bg-zinc-50 p-2.5 rounded-lg border border-zinc-100 justify-center">
-                                <Feather name="image" size={14} color="#6B7280" />
-                                <Text className="text-zinc-500 text-[8px] font-bold">SELFIE</Text>
-                                <Text className="text-[#101828] text-[9px] font-medium" numberOfLines={1}>Attached</Text>
-                              </View>
+                            
+                            {/* Selfie and Certificates Links */}
+                            <View className="flex-row gap-2.5">
+                              {/* Selfie View */}
+                              <TouchableOpacity
+                                activeOpacity={0.8}
+                                onPress={() => handleViewDocument(app.documentSelfie || app.avatar)}
+                                className="flex-1 bg-zinc-50 p-3 rounded-xl border border-zinc-200/80 items-center justify-center flex-row gap-2"
+                              >
+                                <Feather name="image" size={14} color="#E11D48" />
+                                <View>
+                                  <Text className="text-zinc-500 text-[8px] font-bold uppercase">Profile Selfie</Text>
+                                  <Text className="text-zinc-900 text-[10px] font-black">View Photo ↗</Text>
+                                </View>
+                              </TouchableOpacity>
+
+                              {/* Certificates View */}
+                              {(() => {
+                                let certUrl = '';
+                                try {
+                                  const parsed = JSON.parse(app.documentCertifications || '[]');
+                                  if (Array.isArray(parsed) && parsed.length > 0) {
+                                    certUrl = parsed[0];
+                                  } else if (typeof parsed === 'string') {
+                                    certUrl = parsed;
+                                  } else if (parsed?.certifications?.[0]) {
+                                    certUrl = parsed.certifications[0];
+                                  }
+                                } catch (e) {
+                                  certUrl = app.documentCertifications || '';
+                                }
+
+                                const hasCert = !!certUrl && certUrl.trim() !== '' && certUrl !== '[]' && certUrl !== '[""]';
+
+                                return (
+                                  <TouchableOpacity
+                                    activeOpacity={hasCert ? 0.8 : 1}
+                                    disabled={!hasCert}
+                                    onPress={() => hasCert && handleViewDocument(certUrl)}
+                                    className={`flex-1 p-3 rounded-xl border items-center justify-center flex-row gap-2 ${
+                                      hasCert 
+                                        ? 'bg-emerald-50/60 border-emerald-200' 
+                                        : 'bg-zinc-50 border-zinc-150 opacity-60'
+                                    }`}
+                                  >
+                                    <Feather name="award" size={14} color={hasCert ? '#059669' : '#9CA3AF'} />
+                                    <View>
+                                      <Text className="text-zinc-500 text-[8px] font-bold uppercase">Certificate</Text>
+                                      <Text className={`text-[10px] font-black ${hasCert ? 'text-emerald-700' : 'text-zinc-400'}`}>
+                                        {hasCert ? 'View File ↗' : 'Not Uploaded'}
+                                      </Text>
+                                    </View>
+                                  </TouchableOpacity>
+                                );
+                              })()}
                             </View>
 
-                            {/* Aadhaar and AI verification section */}
-                            {verificationDocs[app.id] ? (
-                              <View className="mt-3 bg-zinc-50 p-3 rounded-lg border border-zinc-150 gap-2">
-                                <View className="flex-row justify-between items-center">
-                                  <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">Aadhaar AI Verification</Text>
-                                  <View className={`px-2 py-0.5 rounded-full ${
-                                    verificationDocs[app.id].verification_status === 'VERIFIED' 
-                                      ? 'bg-green-50 border border-green-200' 
-                                      : verificationDocs[app.id].verification_status === 'NAME_MISMATCH' 
-                                      ? 'bg-rose-50 border border-rose-200' 
-                                      : 'bg-amber-50 border border-amber-200'
-                                  }`}>
-                                    <Text className={`text-[7px] font-black uppercase ${
-                                      verificationDocs[app.id].verification_status === 'VERIFIED' 
-                                        ? 'text-green-600' 
-                                        : verificationDocs[app.id].verification_status === 'NAME_MISMATCH' 
-                                        ? 'text-rose-600' 
-                                        : 'text-amber-600'
-                                    }`}>
-                                      {verificationDocs[app.id].verification_status}
-                                    </Text>
-                                  </View>
-                                </View>
-
-                                <View className="gap-1 mt-1">
-                                  <Text className="text-[10px] text-zinc-600 font-medium">Account Name: <Text className="font-bold text-zinc-800">{app.fullName}</Text></Text>
-                                  <Text className="text-[10px] text-zinc-600 font-medium">Extracted ID Name: <Text className="font-bold text-zinc-800">{verificationDocs[app.id].extracted_name || 'N/A'}</Text></Text>
-                                  <Text className="text-[10px] text-zinc-600 font-medium">AI Confidence: <Text className="font-bold text-zinc-800">{verificationDocs[app.id].confidence ? `${Math.round(parseFloat(verificationDocs[app.id].confidence) * 100)}%` : 'N/A'}</Text></Text>
-                                  <Text className="text-[10px] text-zinc-600 font-medium">Trainer Attested: <Text className="font-bold text-zinc-800">{verificationDocs[app.id].trainer_attested ? 'YES (Both names belong to me)' : 'NO'}</Text></Text>
-                                </View>
-
-                                <TouchableOpacity
-                                  onPress={() => handleViewDocument(verificationDocs[app.id].storage_path)}
-                                  className="mt-2 py-2 bg-zinc-800 rounded-lg items-center justify-center flex-row gap-1"
-                                >
-                                  <Feather name="eye" size={12} color="#FFF" />
-                                  <Text className="text-white text-[8px] font-black uppercase tracking-widest">View Document</Text>
-                                </TouchableOpacity>
-                              </View>
-                            ) : (
-                              <View className="mt-3 bg-zinc-50 p-3 rounded-lg border border-zinc-100 items-center justify-center">
-                                <Text className="text-zinc-400 text-[9px] font-medium">No Aadhaar ID submitted for AI verification</Text>
-                              </View>
-                            )}
+                            {/* Additional Uploaded Documents / Certificates List if multiple */}
+                            {(() => {
+                              try {
+                                const parsed = JSON.parse(app.documentCertifications || '[]');
+                                const list = Array.isArray(parsed) 
+                                  ? parsed.filter(Boolean) 
+                                  : (parsed?.certifications || []).filter(Boolean);
+                                
+                                if (list.length > 1) {
+                                  return (
+                                    <View className="mt-1 gap-1">
+                                      <Text className="text-zinc-400 text-[8px] font-bold uppercase">All Uploaded Certificates ({list.length}):</Text>
+                                      {list.map((cUrl: string, idx: number) => (
+                                        <TouchableOpacity
+                                          key={idx}
+                                          onPress={() => handleViewDocument(cUrl)}
+                                          className="flex-row items-center justify-between p-2 bg-zinc-50 border border-zinc-200 rounded-lg"
+                                        >
+                                          <Text className="text-zinc-700 text-[10px] font-bold">Certificate #{idx + 1}</Text>
+                                          <Text className="text-[#E11D48] text-[9.5px] font-black">Open Link ↗</Text>
+                                        </TouchableOpacity>
+                                      ))}
+                                    </View>
+                                  );
+                                }
+                              } catch (e) {}
+                              return null;
+                            })()}
                           </View>
 
                           {app.status !== 'approved' && (
@@ -2001,7 +2108,7 @@ export default function AdminPanelScreen() {
                   </Text>
                 </View>
                 <View className="flex-row gap-2 mt-1">
-                  {[10, 15].map((r) => (
+                  {[1, 2, 3, 4, 5].map((r) => (
                     <TouchableOpacity
                       key={r}
                       onPress={() => setOverrideRadius(r)}
@@ -2011,9 +2118,8 @@ export default function AdminPanelScreen() {
                           : 'bg-zinc-50 border-zinc-200'
                       }`}
                     >
-                      <Feather name="target" size={13} color={overrideRadius === r ? '#FFFFFF' : '#6B7280'} />
                       <Text className={`text-xs font-black ${overrideRadius === r ? 'text-white' : 'text-zinc-700'}`}>
-                        {r} km {r === 15 ? '(Standard)' : '(Compact)'}
+                        {r} km
                       </Text>
                     </TouchableOpacity>
                   ))}

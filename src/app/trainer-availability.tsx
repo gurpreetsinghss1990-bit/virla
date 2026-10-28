@@ -242,7 +242,7 @@ export default function TrainerAvailabilityScreen() {
     );
   }
 
-  const prefs = coach?.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] };
+  const prefs = coach?.preferences || { online: false, radiusKm: 5, maxDailySessions: 5, categories: [] };
 
   const monthsNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -264,10 +264,10 @@ export default function TrainerAvailabilityScreen() {
     if (!coach) return;
     Alert.alert(
       'Service Coverage Radius',
-      'Select your maximum travel radius for home training visits:',
+      'Select your maximum travel radius for home training visits (Max 5 km):',
       [
         { text: 'Cancel', style: 'cancel' },
-        ...[5, 10, 15, 20, 25].map(radius => ({
+        ...[1, 2, 3, 4, 5].map(radius => ({
           text: `${radius} km`,
           onPress: () => {
             Database.updateTrainerPreferences(coach.id, { radiusKm: radius });
@@ -560,7 +560,7 @@ export default function TrainerAvailabilityScreen() {
                   <Text className="text-zinc-900 text-xs font-black">Service Radius Limit</Text>
                   <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Maximum travel distance in Mumbai</Text>
                 </View>
-                <Text className="text-[#4F46E5] text-xs font-black">{prefs.radiusKm || 15} km</Text>
+                <Text className="text-[#4F46E5] text-xs font-black">{Math.min(prefs.radiusKm || 5, 5)} km</Text>
               </TouchableOpacity>
 
               {/* Max Daily Sessions */}

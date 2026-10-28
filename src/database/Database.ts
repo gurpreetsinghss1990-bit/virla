@@ -346,14 +346,14 @@ export function mapUserProfileToPostgres(profile: UserProfile): any {
 }
 
 export function mapCoach(row: any): Coach {
-  const prefs = row.preferences ? (typeof row.preferences === 'string' ? JSON.parse(row.preferences) : row.preferences) : { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] };
+  const prefs = row.preferences ? (typeof row.preferences === 'string' ? JSON.parse(row.preferences) : row.preferences) : { online: false, radiusKm: 5, maxDailySessions: 5, categories: [] };
 
   if (row.operating_address !== undefined) prefs.operatingAddress = row.operating_address || '';
   if (row.operating_latitude !== undefined && row.operating_latitude !== null) prefs.operatingLatitude = Number(row.operating_latitude);
   if (row.operating_longitude !== undefined && row.operating_longitude !== null) prefs.operatingLongitude = Number(row.operating_longitude);
   if (row.operating_place_id !== undefined) prefs.operatingPlaceId = row.operating_place_id || '';
   if (row.operating_location_status !== undefined) prefs.operatingLocationStatus = row.operating_location_status || 'pending';
-  if (row.service_radius_km !== undefined && row.service_radius_km !== null) prefs.radiusKm = Number(row.service_radius_km);
+  if (row.service_radius_km !== undefined && row.service_radius_km !== null) prefs.radiusKm = Math.min(Number(row.service_radius_km), 5);
   if (row.address_change_request !== undefined) prefs.addressChangeRequest = row.address_change_request || null;
 
   return {
@@ -393,7 +393,7 @@ export function mapCoach(row: any): Coach {
 }
 
 export function mapCoachToPostgres(coach: Coach): any {
-  const prefs = coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] };
+  const prefs = coach.preferences || { online: false, radiusKm: 5, maxDailySessions: 5, categories: [] };
   return {
     id: coach.id,
     name: coach.name,
@@ -423,7 +423,7 @@ export function mapCoachToPostgres(coach: Coach): any {
     operating_longitude: prefs.operatingLongitude !== undefined ? prefs.operatingLongitude : null,
     operating_place_id: prefs.operatingPlaceId || null,
     operating_location_status: prefs.operatingLocationStatus || 'pending',
-    service_radius_km: prefs.radiusKm || 15,
+    service_radius_km: Math.min(prefs.radiusKm || 5, 5),
     address_change_request: prefs.addressChangeRequest || null,
     gender: coach.gender ? coach.gender.toLowerCase() : null,
     preferences: prefs
@@ -2052,7 +2052,7 @@ class DatabaseClient {
     if (fields.preferences !== undefined) {
       const prefs = fields.preferences;
       updatePayload.preferences = prefs;
-      updatePayload.service_radius_km = prefs.radiusKm || 15;
+      updatePayload.service_radius_km = Math.min(prefs.radiusKm || 5, 5);
       updatePayload.address_change_request = prefs.addressChangeRequest || null;
 
       const currentUserRole = this.schema.users.find(u => u.id === this.currentUserId)?.role;
@@ -2541,6 +2541,9 @@ class DatabaseClient {
   }
 
   async cancelBooking(userId: string, bookingId: string, reason = ''): Promise<void> {
+    const existing = this.schema.bookings.find(b => b.id === bookingId);
+    const prevTimelineStatus = existing?.timelineStatus || 'booked';
+
     const { data, error } = await supabase.rpc('cancel_booking', {
       p_booking_id: bookingId
     });
@@ -2549,6 +2552,18 @@ class DatabaseClient {
       throw new Error(error.message);
     }
     await this.refreshBookings();
+    
+    // Ensure local schema copy also stores the cancelledAtStage in ratingDetails
+    const updated = this.schema.bookings.find(b => b.id === bookingId);
+    if (updated) {
+      updated.ratingDetails = {
+        ...(updated.ratingDetails || { overallRating: 5, trainerRating: 5, workoutRating: 5, difficulty: 'Moderate', energy: 'High' }),
+        cancelledAtStage: prevTimelineStatus,
+        cancellationReason: reason || undefined,
+        cancelledAt: Date.now()
+      };
+      this.save();
+    }
     await this.refreshUserData(userId);
   }
 
@@ -2697,7 +2712,7 @@ class DatabaseClient {
       if (trainerId === 'searching') {
         const trainerLat = coach.preferences?.operatingLatitude;
         const trainerLng = coach.preferences?.operatingLongitude;
-        const radiusLimit = coach.preferences?.radiusKm || 15;
+        const radiusLimit = Math.min(coach.preferences?.radiusKm || 5, 5);
         let insideRadius = false;
 
         if (trainerLat !== undefined && trainerLng !== undefined && trainerLat !== null && trainerLng !== null) {
@@ -2811,26 +2826,37 @@ class DatabaseClient {
       authorizationResult: this.currentUserId === booking.trainerId ? 'AUTHORIZED' : 'UNAUTHORIZED'
     }, null, 2));
 
-    let res: { error: any } = { error: null };
+    let res: { data?: any; error: any } = { error: null };
     const statusUpper = timelineStatus ? timelineStatus.toUpperCase() : '';
 
     if (timelineStatus === 'trainer_accepted') {
       res = await supabase.rpc('trainer_accept_booking', { p_booking_id: bookingId });
-    } else if (timelineStatus === 'trainer_travelling') {
-      res = await supabase.rpc('start_travel', { p_booking_id: bookingId });
-    } else if (timelineStatus === 'trainer_arrived') {
-      res = await supabase.rpc('mark_trainer_arrived', { p_booking_id: bookingId });
-    } else if (timelineStatus === 'workout_started') {
-      res = await supabase.rpc('start_session', { p_booking_id: bookingId });
-    } else if (timelineStatus === 'workout_completed') {
-      res = await supabase.rpc('complete_session', { p_booking_id: bookingId });
-    } else if (timelineStatus === 'session_closed') {
-      res = await supabase.rpc('close_session', { p_booking_id: bookingId });
     } else {
-      res = await supabase.rpc('update_session_timeline', {
+      // Direct all post-acceptance transitions through authoritative single-writer advance_session RPC
+      res = await supabase.rpc('advance_session', {
         p_booking_id: bookingId,
-        p_target_status: statusUpper
+        p_next_status: statusUpper
       });
+
+      // Backward compatibility fallback if advance_session is not yet migrated on backend
+      if (res.error && (res.error.message?.includes('function') || res.error.code === '42883')) {
+        if (timelineStatus === 'trainer_travelling') {
+          res = await supabase.rpc('start_travel', { p_booking_id: bookingId });
+        } else if (timelineStatus === 'trainer_arrived') {
+          res = await supabase.rpc('mark_trainer_arrived', { p_booking_id: bookingId });
+        } else if (timelineStatus === 'workout_started') {
+          res = await supabase.rpc('start_session', { p_booking_id: bookingId });
+        } else if (timelineStatus === 'workout_completed') {
+          res = await supabase.rpc('complete_session', { p_booking_id: bookingId });
+        } else if (timelineStatus === 'session_closed') {
+          res = await supabase.rpc('close_session', { p_booking_id: bookingId });
+        } else {
+          res = await supabase.rpc('update_session_timeline', {
+            p_booking_id: bookingId,
+            p_target_status: statusUpper
+          });
+        }
+      }
     }
 
     if (res.error) {
@@ -3993,9 +4019,10 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     if (coach) {
       coach.isOnline = isOnline;
       if (!coach.preferences) {
-        coach.preferences = { online: isOnline, radiusKm: 15, maxDailySessions: 5, categories: [] };
+        coach.preferences = { online: isOnline, radiusKm: 5, maxDailySessions: 5, categories: [] };
       } else {
         coach.preferences.online = isOnline;
+        coach.preferences.radiusKm = Math.min(coach.preferences.radiusKm || 5, 5);
       }
       await this.updateCoach(coachId, { preferences: coach.preferences });
     }
@@ -4004,9 +4031,11 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
   async updateTrainerPreferences(coachId: string, preferences: any): Promise<void> {
     const coach = this.schema.coaches.find(c => c.id === coachId);
     if (coach) {
+      const mergedRadius = preferences.radiusKm !== undefined ? Math.min(preferences.radiusKm, 5) : Math.min(coach.preferences?.radiusKm || 5, 5);
       coach.preferences = {
-        ...(coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] }),
-        ...preferences
+        ...(coach.preferences || { online: false, radiusKm: 5, maxDailySessions: 5, categories: [] }),
+        ...preferences,
+        radiusKm: mergedRadius
       };
       await this.updateCoach(coachId, { preferences: coach.preferences });
     }
@@ -4121,7 +4150,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
         }
 
         const updatedPrefs = {
-          ...(coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] }),
+          ...(coach.preferences || { online: false, radiusKm: 5, maxDailySessions: 5, categories: [] }),
           categories: updatedCats
         };
         await this.updateCoach(coach.id, { preferences: updatedPrefs });

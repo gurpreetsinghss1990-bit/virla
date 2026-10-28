@@ -12,6 +12,7 @@ import { syncAllDomainStores } from '../../store/syncAllStores';
 import { useCoachStore, generateMonthlySlots } from '../../store/coachStore';
 import { normalizeDate, canonicalizeTimeRange, formatToDDMMYYYY, getBookingISTDateRange } from '../../utils/date';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { Booking } from '../../types';
 import { RaiseSupportTicketModal } from '../../components/RaiseSupportTicketModal';
 import { SupportChatModal } from '../../components/SupportChatModal';
@@ -117,6 +118,7 @@ const isSlotVisibleForTrainer = (
 
 export default function BookingsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { bookings } = useBookingStore();
   const { role, user } = useUserStore();
   const [prevRole, setPrevRole] = useState(role);
@@ -129,6 +131,7 @@ export default function BookingsScreen() {
   const [currentCursor, setCurrentCursor] = useState<string | null>(null);
   const [cursorHistory, setCursorHistory] = useState<(string | null)[]>([]);
   const [loading, setLoading] = useState(() => !Database.getIsLoaded());
+  const [scrollY, setScrollY] = useState(0);
 
   const handleOpenSupport = React.useCallback(async (b: Booking) => {
     setSupportBooking(b);
@@ -627,14 +630,20 @@ export default function BookingsScreen() {
         {loading ? (
           <SkeletonLoader layout="bookings" />
         ) : (
-          <ScrollView 
-            showsVerticalScrollIndicator={false} 
-            className="flex-1 bg-[#FCF5F5]"
-            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 180 }}
-          >
-            {/* Page Header */}
-            <View className="mb-6">
-              <View className="flex-row items-start gap-5">
+          <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
+            {/* Scrim Header with separate Action Bar & Title Block */}
+            <View
+              className="px-6 pt-2 pb-4 bg-[#FCF5F5]/95 border-b border-zinc-200/60 z-10"
+              style={{
+                shadowColor: '#101828',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.03,
+                shadowRadius: 6,
+                elevation: 2,
+              }}
+            >
+              {/* Distinct Top Navigation / Action Section */}
+              <View className="flex-row items-center justify-between pb-2.5">
                 <TouchableOpacity
                   activeOpacity={0.6}
                   hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -645,29 +654,39 @@ export default function BookingsScreen() {
                       router.replace('/(tabs)');
                     }
                   }}
-                  className="w-8 h-8 items-center justify-center active:opacity-60 mt-1"
+                  className="w-9 h-9 items-center justify-center -ml-1 rounded-full bg-white/80 border border-zinc-200/70"
                   accessibilityRole="button"
                   accessibilityLabel="Back"
                 >
-                  <Ionicons name="chevron-back" size={28} color="#101828" />
+                  <Ionicons name="chevron-back" size={24} color="#101828" />
                 </TouchableOpacity>
 
-                <View className="flex-1">
-                  <Text className="text-[#101828] text-3xl font-black tracking-tight">
-                    My Schedule
-                  </Text>
-                  <Text className="text-[#6B7280] text-xs font-extrabold uppercase tracking-widest mt-1">
+                <View className="px-3 py-1 rounded-full bg-zinc-900/5 border border-zinc-900/10">
+                  <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">
                     PRO CONSOLE
-                  </Text>
-                  <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed mt-0.5">
-                    Manage your slots, availability limits, and client visits.
                   </Text>
                 </View>
               </View>
+
+              {/* Title & Subtitle Section inside Scrim Header */}
+              <View className="pt-1">
+                <Text className="text-[#101828] text-2xl font-black tracking-tight">
+                  My Schedule
+                </Text>
+                <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed mt-0.5">
+                  Manage your slots, availability limits, and client visits.
+                </Text>
+              </View>
             </View>
 
-            {/* Calendar Card Visual Grid */}
-            <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4 mb-6">
+            {/* Content flows underneath header scrim */}
+            <ScrollView 
+              showsVerticalScrollIndicator={false} 
+              className="flex-1 bg-[#FCF5F5]"
+              contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 180 }}
+            >
+              {/* Calendar Card Visual Grid */}
+              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4 mb-6">
               <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
                 <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">
                   Availability Calendar
@@ -1247,71 +1266,44 @@ export default function BookingsScreen() {
             </View>
 
           </ScrollView>
+          </View>
         )}
       </SafeAreaViewWrapper>
     );
   }
 
-  // Client view remains unchanged
+  // Client view
   return (
-    <SafeAreaViewWrapper>
+    <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
       {loading ? (
         <SkeletonLoader layout="bookings" />
       ) : (
-        <ScrollView 
-          showsVerticalScrollIndicator={false} 
-          className="flex-1 bg-[#FCF5F5]"
-          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 180 }}
-        >
-        {/* Page Header */}
-        <View className="mb-6">
-          <View className="flex-row items-start justify-between">
-            <View className="flex-row items-start gap-3.5 flex-1 pr-2">
-              <TouchableOpacity
-                activeOpacity={0.6}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                onPress={() => {
-                  if (router.canGoBack()) {
-                    router.back();
-                  } else {
-                    router.replace('/(tabs)');
-                  }
-                }}
-                className="w-9 h-9 items-center justify-center -ml-1 mt-0.5"
-                accessibilityRole="button"
-                accessibilityLabel="Back"
-              >
-                <Feather name="arrow-left" size={24} color="#101828" />
-              </TouchableOpacity>
-
-              <View className="flex-1">
-                <Text className="text-[#6B7280] text-xs font-extrabold uppercase tracking-widest">
-                  MY SCHEDULE
-                </Text>
-                <Text className="text-[#101828] text-3xl font-black tracking-tight mt-1">
-                  Booked Sessions
-                </Text>
-                <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed mt-1">
-                  Track and manage all your scheduled home wellness visits.
-                </Text>
-              </View>
+        <View style={{ flex: 1 }}>
+          {/* Scrollable Content flowing underneath floating top bar */}
+          <ScrollView 
+            showsVerticalScrollIndicator={false} 
+            className="flex-1 px-4"
+            contentContainerStyle={{ 
+              paddingTop: insets.top + 60,
+              paddingBottom: Math.max((insets.bottom || 0) + 40, 140)
+            }}
+            scrollEventThrottle={16}
+            onScroll={({ nativeEvent }) => {
+              setScrollY(nativeEvent.contentOffset.y);
+            }}
+          >
+            {/* Header Title Section inside page scroll */}
+            <View className="mb-5 pt-1 px-2">
+              <Text className="text-[#E11D48] text-2xl font-black uppercase tracking-tight">
+                MY SCHEDULE
+              </Text>
+              <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed mt-1">
+                Track and manage all your scheduled home wellness visits.
+              </Text>
             </View>
 
-            {/* Support Tickets Notepad / History Button */}
-            <TouchableOpacity
-              activeOpacity={0.6}
-              onPress={() => setShowUserTicketsModal(true)}
-              className="p-2 items-center justify-center mt-0.5"
-              accessibilityRole="button"
-              accessibilityLabel="My Support Tickets"
-            >
-              <Feather name="file-text" size={20} color="#101828" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Filter Capsule Selector Tabs */}
-        <View className="flex-row bg-[#E5E7EB]/50 p-1 rounded-full mb-4">
+            {/* Filter Capsule Selector Tabs */}
+            <View className="flex-row bg-[#E5E7EB]/50 p-1 rounded-full mb-4">
           {filterOptions.map((opt) => {
             const isActive = activeFilter === opt;
             return (
@@ -1485,6 +1477,129 @@ export default function BookingsScreen() {
           )}
         </View>
         </ScrollView>
+
+        {/* Floating Top Bar (Matching Wallet Detail Page): Left Back Button with SVG Scrim, Center Dynamic Pill, Right Notepad with SVG Scrim */}
+        <View
+          pointerEvents="box-none"
+          style={{
+            position: 'absolute',
+            top: insets.top + 8,
+            left: 16,
+            right: 16,
+            zIndex: 40,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          {/* Localized Pill-shaped Back Button Scrim */}
+          <View pointerEvents="box-none" className="relative flex-row items-center">
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                top: -6,
+                left: -8,
+                right: -32,
+                bottom: -6,
+              }}
+            >
+              <Svg width="100%" height="100%" preserveAspectRatio="none">
+                <Defs>
+                  <LinearGradient id="bookingsBackBtnScrim" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <Stop offset="0%" stopColor="#FCF5F5" stopOpacity="0.95" />
+                    <Stop offset="65%" stopColor="#FCF5F5" stopOpacity="0.85" />
+                    <Stop offset="85%" stopColor="#FCF5F5" stopOpacity="0.4" />
+                    <Stop offset="100%" stopColor="#FCF5F5" stopOpacity="0" />
+                  </LinearGradient>
+                </Defs>
+                <Rect x="0" y="0" width="100%" height="100%" rx={25} ry={25} fill="url(#bookingsBackBtnScrim)" />
+              </Svg>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.6}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(tabs)');
+                }
+              }}
+              className="w-10 h-10 rounded-full bg-white/90 border border-zinc-200/80 shadow-xs items-center justify-center"
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+            >
+              <Ionicons name="chevron-back" size={22} color="#101828" style={{ marginLeft: -1 }} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Center Pill Section: Seamless pill with transparent frosted backdrop */}
+          <View pointerEvents="none" className="absolute left-0 right-0 items-center justify-center">
+            <View 
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.65)',
+                borderColor: 'rgba(226, 232, 240, 0.75)',
+                borderWidth: 1,
+              }}
+              className="flex-row items-center px-4 py-1.5 rounded-full shadow-2xs gap-1.5"
+            >
+              {scrollY > 90 ? (
+                <>
+                  <Text className="text-[#E11D48] text-[13.5px] font-black tracking-tight">
+                    {groupedCustomerBookings.completed.length}
+                  </Text>
+                  <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">
+                    Completed
+                  </Text>
+                </>
+              ) : (
+                <Text className="text-zinc-950 text-[13px] font-black tracking-tight">
+                  My Schedule
+                </Text>
+              )}
+            </View>
+          </View>
+
+          {/* Right Action: Support Tickets Notepad with localized Scrim */}
+          <View pointerEvents="box-none" className="relative flex-row items-center">
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                top: -6,
+                right: -8,
+                left: -32,
+                bottom: -6,
+              }}
+            >
+              <Svg width="100%" height="100%" preserveAspectRatio="none">
+                <Defs>
+                  <LinearGradient id="bookingsNotepadBtnScrim" x1="100%" y1="0%" x2="0%" y2="0%">
+                    <Stop offset="0%" stopColor="#FCF5F5" stopOpacity="0.95" />
+                    <Stop offset="65%" stopColor="#FCF5F5" stopOpacity="0.85" />
+                    <Stop offset="85%" stopColor="#FCF5F5" stopOpacity="0.4" />
+                    <Stop offset="100%" stopColor="#FCF5F5" stopOpacity="0" />
+                  </LinearGradient>
+                </Defs>
+                <Rect x="0" y="0" width="100%" height="100%" rx={25} ry={25} fill="url(#bookingsNotepadBtnScrim)" />
+              </Svg>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.6}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              onPress={() => setShowUserTicketsModal(true)}
+              className="w-10 h-10 rounded-full bg-white/90 border border-zinc-200/80 shadow-xs items-center justify-center"
+              accessibilityRole="button"
+              accessibilityLabel="My Support Tickets"
+            >
+              <Feather name="file-text" size={17} color="#101828" />
+            </TouchableOpacity>
+          </View>
+        </View>
+        </View>
       )}
 
       {/* 1. Raise Support Ticket Question Flow Modal */}
@@ -1523,7 +1638,7 @@ export default function BookingsScreen() {
           setActiveChatTicket(null);
         }}
       />
-    </SafeAreaViewWrapper>
+    </View>
   );
 }
 

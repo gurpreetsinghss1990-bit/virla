@@ -3,7 +3,7 @@ import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Image, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AddPartnerModal } from '../components/AddPartnerModal';
 import { PostSessionHealthReportModal } from '../components/PostSessionHealthReportModal';
@@ -43,30 +43,38 @@ function getClientGender(booking: any): string {
   return displayGender;
 }
 
-// Map coordinates path waypoints (scaled to fit beautiful SVG canvas)
-const waypoints = [
-  { x: 35, y: 145 },
-  { x: 80, y: 110 },
-  { x: 140, y: 120 },
-  { x: 200, y: 70 },
-  { x: 265, y: 45 }
-];
+const TimelineNode = React.memo(function TimelineNode({ isCurrent, nodeClass, children }: { isCurrent: boolean; nodeClass: string; children: React.ReactNode }) {
+  const pulse = React.useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (!isCurrent) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.2, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop(); // detach se PEHLE loop rukega — race impossible
+  }, [isCurrent, pulse]);
+
+  const body = (
+    <View className={`w-7 h-7 rounded-full items-center justify-center border-2 ${nodeClass}`}>
+      {children}
+    </View>
+  );
+
+  if (!isCurrent) return body; // plain View — koi animated binding nahi
+  return <Animated.View style={{ transform: [{ scale: pulse }] }}>{body}</Animated.View>;
+});
 
 export default function SessionDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  // Navigation context can briefly disappear while this screen re-renders from store/poll
-  // updates (e.g. after session status changes). Fall back to the last known params instead of crashing.
-  const lastParamsRef = React.useRef<Record<string, any>>({});
-  let params: Record<string, any> = lastParamsRef.current;
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    params = useLocalSearchParams();
-    lastParamsRef.current = params;
-  } catch {
-    params = lastParamsRef.current;
-  }
-  const bookingId = params.id as string;
+  const params = useLocalSearchParams();
+  const bookingIdRef = React.useRef<string | undefined>(undefined);
+  if (params.id) bookingIdRef.current = params.id as string;
+  const bookingId = (params.id as string) || bookingIdRef.current || '';
 
   const handleSafeBack = () => {
     try {
@@ -104,7 +112,7 @@ export default function SessionDetailScreen() {
   const [activeChatTicket, setActiveChatTicket] = useState<SupportTicket | null>(null);
   const [showSupportChatModal, setShowSupportChatModal] = useState(false);
 
-  const booking = bookings.find((b) => b.id === bookingId) || bookings[0];
+  const booking = bookings.find((b) => b.id === bookingId);
   const { addresses } = useAddressStore();
 
   // Resolved venue address string: fallback to customer's saved address if booking.address is missing/empty
@@ -204,17 +212,18 @@ export default function SessionDetailScreen() {
   }, []);
 
   useEffect(() => {
-    if (params.openMap === 'true' && booking) {
-      if (SessionEngine.isTravelWindowOpen(booking)) {
-        setTimeout(() => setIsNavigationMapVisible(true), 0);
-      } else {
-        Alert.alert(
-          'Travel Window Locked ⚠️',
-          'You can start travel and view the navigation map 30 minutes before the scheduled session.'
-        );
-      }
+    if (params.openMap !== 'true') return;
+    const b = useBookingStore.getState().bookings.find(x => x.id === bookingId);
+    if (!b) return;
+    if (SessionEngine.isTravelWindowOpen(b)) {
+      setTimeout(() => setIsNavigationMapVisible(true), 0);
+    } else {
+      Alert.alert(
+        'Travel Window Locked ⚠️',
+        'You can start travel and view the navigation map 30 minutes before the scheduled session.'
+      );
     }
-  }, [params.openMap, booking]);
+  }, [params.openMap, bookingId]);
 
   // Tracking simulator state variables
   const [journeyProgress, setJourneyProgress] = useState(0); // 0.0 to 1.0
@@ -316,13 +325,17 @@ export default function SessionDetailScreen() {
 
   // Real-time timeline synchronization: updates screen instantly when either Trainer or User advances stage
   const syncStateRef = React.useRef({ closed: false, missed: false, cancelled: false });
-  syncStateRef.current = { closed: currentStatus === 'session_closed', missed: isMissed, cancelled: isCancelled };
+  const channelStateRef = React.useRef('DISCONNECTED');
+
+  useEffect(() => {
+    syncStateRef.current = { closed: currentStatus === 'session_closed', missed: isMissed, cancelled: isCancelled };
+  }, [currentStatus, isMissed, isCancelled]);
 
   useEffect(() => {
     if (!bookingId) return;
 
-    // 1. Dedicated Supabase Realtime channel for this booking
-    const channelName = `realtime-session-${bookingId.replace(/[^a-zA-Z0-9_-]/g, '_')}-${Date.now()}`;
+    // 1. Dedicated Supabase Realtime channel for this booking (stable channel identifier)
+    const channelName = `realtime-session-${bookingId.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
     const channel = supabase
       .channel(channelName)
       .on(
@@ -352,10 +365,13 @@ export default function SessionDetailScreen() {
           syncFromDB();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        channelStateRef.current = status;
+      });
 
-    // 2. Smart lightweight safety poll (every 6s while session is active, only re-renders if data actually changed)
+    // 2. Smart lightweight safety poll (fallback: only runs if realtime is not connected)
     const pollInterval: any = setInterval(async () => {
+      if (channelStateRef.current === 'SUBSCRIBED') return;
       const s = syncStateRef.current;
       if (s.closed || s.missed || s.cancelled) return;
       try {
@@ -411,6 +427,15 @@ export default function SessionDetailScreen() {
     }
   }, [booking?.id, booking?.trainerId, booking?.trainerName, booking?.clientId]);
 
+  const [acceptTimedOut, setAcceptTimedOut] = useState(false);
+  const timedOutRef = React.useRef(false);
+
+  useEffect(() => {
+    if (!acceptTimedOut || timedOutRef.current === false || !booking?.id) return;
+    reassignTrainer(booking.id, 'timeout');
+    handleSafeBack();
+  }, [acceptTimedOut, booking?.id]);
+
   useEffect(() => {
     if (!booking) return;
 
@@ -433,8 +458,8 @@ export default function SessionDetailScreen() {
           // Only trigger timeout reassign if the booking is fresh
           const isFresh = elapsed < 605;
           if (isFresh) {
-            reassignTrainer(booking.id, 'timeout');
-            handleSafeBack();
+            timedOutRef.current = true;
+            setAcceptTimedOut(true);
             return;
           }
         }
@@ -546,11 +571,6 @@ export default function SessionDetailScreen() {
   };
 
   const [otpInput, setOtpInput] = useState('');
-  const [showQuestionnaire, setShowQuestionnaire] = useState(false);
-  const [mobilityScore, setMobilityScore] = useState(5);
-  const [workoutSummary, setWorkoutSummary] = useState('Core Strength & Conditioning Drills');
-  const coachNotes = '';
-  const [coachSignature, setCoachSignature] = useState('');
 
   // Rating review feedback states
   const [overallRating, setOverallRating] = useState(5);
@@ -559,9 +579,6 @@ export default function SessionDetailScreen() {
   const difficulty = 'Moderate';
   const energy = 'High';
   const [comments, setComments] = useState('');
-
-  // Active workout timer
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const stagesList = [
     'booked',
@@ -631,9 +648,20 @@ export default function SessionDetailScreen() {
     }
   };
 
+  const reachedStageIndex = useMemo(() => {
+    if (!isMissed && !isCancelled) return -1;
+    const rawTimelineStatus = booking?.timelineStatus as string | undefined;
+    const cancelledStage = (booking as any)?.ratingDetails?.cancelledAtStage ||
+      (booking as any)?.cancelledAtStage ||
+      (rawTimelineStatus && rawTimelineStatus.toLowerCase() !== 'session_closed' ? rawTimelineStatus : null) ||
+      (booking?.trainerAcceptedAt ? 'trainer_accepted' : (booking?.trainerId && booking.trainerId !== 'searching' ? 'trainer_assigned' : 'booked'));
+    const idx = stagesList.indexOf(cancelledStage);
+    return idx >= 0 ? idx : 0;
+  }, [isMissed, isCancelled, booking]);
+
   const timelineStages = useMemo(() => {
-    const currentIdx = stagesList.indexOf(currentStatus);
-    const validCurrentIdx = currentIdx >= 0 ? currentIdx : 0;
+    // Determine the stage reached prior to cancellation/miss
+    const validCurrentIdx = reachedStageIndex >= 0 ? reachedStageIndex : (stagesList.indexOf(currentStatus) >= 0 ? stagesList.indexOf(currentStatus) : 0);
 
     if (isMissed) {
       const past = stagesList.slice(0, validCurrentIdx + 1);
@@ -645,44 +673,11 @@ export default function SessionDetailScreen() {
     }
     // Show full roadmap of all session milestones: completed, current active, and future pending stages
     return stagesList;
-  }, [isMissed, isCancelled, currentStatus]);
-
-  // Interpolate coordinates along the polyline path
-  const trainerCoords = useMemo(() => {
-    if (currentStatus !== 'trainer_travelling') {
-      return waypoints[0]; // Start location
-    }
-    const len = waypoints.length - 1;
-    const activeSegment = Math.min(len - 1, Math.floor(journeyProgress * len));
-    const segmentT = (journeyProgress * len) - activeSegment;
-
-    const p1 = waypoints[activeSegment];
-    const p2 = waypoints[activeSegment + 1];
-
-    return {
-      x: p1.x + (p2.x - p1.x) * segmentT,
-      y: p1.y + (p2.y - p1.y) * segmentT
-    };
-  }, [journeyProgress, currentStatus]);
-
-  // Handle active status tickers & animations
-  useEffect(() => {
-    // Active session stopwatch
-    let stopwatchTimer: any = null;
-    if (currentStatus === 'workout_started') {
-      setTimeout(() => setElapsedSeconds(0), 0);
-      stopwatchTimer = setInterval(() => {
-        setElapsedSeconds(prev => prev + 1);
-      }, 1000);
-    }
-
-    return () => {
-      if (stopwatchTimer) clearInterval(stopwatchTimer);
-    };
-  }, [currentStatus]);
+  }, [isMissed, isCancelled, currentStatus, reachedStageIndex]);
 
   // Automated travel simulation
   const startTravelSimulation = async () => {
+    if (!booking) return;
     if (simIntervalId) clearInterval(simIntervalId);
     setJourneyProgress(0);
     try {
@@ -699,6 +694,7 @@ export default function SessionDetailScreen() {
             // Automatically transition to Arrived
             setTimeout(async () => {
               try {
+                if (!booking) return;
                 markSelfUpdate();
                 setCurrentStatus('trainer_arrived');
                 await updateTimelineStatus(booking.id, 'trainer_arrived');
@@ -1008,7 +1004,7 @@ export default function SessionDetailScreen() {
                 <View className="w-7 h-7 rounded-full bg-rose-50 items-center justify-center">
                   <Feather name="info" size={13} color="#E11D48" />
                 </View>
-                <Text className="text-zinc-955 text-xs font-black uppercase tracking-wider">Session Overview</Text>
+                <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Session Overview</Text>
               </View>
 
               <View className="gap-3">
@@ -1066,9 +1062,9 @@ export default function SessionDetailScreen() {
                 <View className="w-7 h-7 rounded-full bg-rose-50 items-center justify-center">
                   <Feather name="file-text" size={13} color="#E11D48" />
                 </View>
-                <Text className="text-zinc-955 text-xs font-black uppercase tracking-wider">Client Preparation Note</Text>
+                <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Client Preparation Note</Text>
               </View>
-              <Text className="text-zinc-650 text-xs font-semibold leading-relaxed">
+              <Text className="text-zinc-600 text-xs font-semibold leading-relaxed">
                 {booking.trainerNote ? booking.trainerNote : 'No preparation notes.'}
               </Text>
             </View>
@@ -1089,7 +1085,7 @@ export default function SessionDetailScreen() {
                   <View className="w-7 h-7 rounded-full bg-indigo-50 items-center justify-center">
                     <Feather name="activity" size={13} color="#4F46E5" />
                   </View>
-                  <Text className="text-zinc-955 text-xs font-black uppercase tracking-wider">Health Alert & Assessment</Text>
+                  <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Health Alert & Assessment</Text>
                 </View>
                 {assessments.length > 0 && assessments[0].healthData?.hasInjuryOrLimitation && !assessments[0].healthData?.isLimitationResolved && (
                   <View className="bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
@@ -1663,7 +1659,9 @@ export default function SessionDetailScreen() {
                               try {
                                 const current = Boolean(assessments[0].healthData?.isLimitationResolved);
                                 await Database.submitLimitationResolution(assessments[0].bookingId, !current);
-                                Database.getClientAssessmentHistory(booking.clientId).then(setAssessments).catch(() => { });
+                                if (booking?.clientId) {
+                                  Database.getClientAssessmentHistory(booking.clientId).then(setAssessments).catch(() => { });
+                                }
                               } catch (e: any) {
                                 Alert.alert('Error', e.message || 'Could not update status');
                               }
@@ -1969,18 +1967,17 @@ export default function SessionDetailScreen() {
             )}
 
             {/* Client cancel booking (only after trainer acceptance) */}
-            {role === 'customer' && isAccepted && !isMissed && !isCancelled && booking?.status === 'upcoming' && currentStatus === 'booked' && (
+            {role === 'customer' && isAccepted && !isMissed && !isCancelled && booking?.status === 'upcoming' &&
+              ['trainer_accepted', 'trainer_preparing', 'trainer_travelling'].includes(currentStatus) && (
               <View className="mt-2 mb-4">
                 <TouchableOpacity
                   onPress={() => {
                     const mins = getMinutesToSession();
-                    if (mins < 30) {
-                      Alert.alert('Cannot Cancel', 'Bookings cannot be cancelled within 30 minutes of the session.');
-                      return;
-                    }
                     const policy = mins >= 60
-                      ? '50% of the session credits will be refunded.'
-                      : 'This is a late cancellation. The full session credits will be deducted and no refund will be given.';
+                      ? 'Free cancellation. Your credits will be fully refunded.'
+                      : mins >= 30
+                        ? 'Late cancellation: half of the session rate will be charged.'
+                        : 'Very late cancellation: the full session rate will be charged and no refund will be given.';
                     Alert.alert('Cancel Booking?', policy, [
                       { text: 'Keep Booking', style: 'cancel' },
                       {
@@ -2204,7 +2201,7 @@ export default function SessionDetailScreen() {
             )}
 
             {currentStatus === 'trainer_arrived' && !isMissed && !isCancelled && role === 'trainer' && (
-              <View className="bg-zinc-950 p-5 rounded-[28px] border border-zinc-855 gap-4 shadow-xl">
+              <View className="bg-zinc-950 p-5 rounded-[28px] border border-zinc-800 gap-4 shadow-xl">
                 <View className="flex-row justify-between items-center border-b border-zinc-900 pb-3">
                   <View className="flex-1">
                     <Text className="text-white text-xs font-black uppercase tracking-wider">Client check-in security OTP</Text>
@@ -2312,7 +2309,7 @@ export default function SessionDetailScreen() {
                         setCurrentStatus('workout_completed');
                         await SessionEngine.completeSession(booking.id);
                         syncFromDB();
-                        setShowQuestionnaire(true);
+                        setShowHealthReportModal(true);
                       } catch (err: any) {
                         Alert.alert('Completion Error', err.message || 'Could not complete workout.');
                       }
@@ -2400,7 +2397,7 @@ export default function SessionDetailScreen() {
                 <View className="items-center gap-2">
                   <Text className="text-3xl">🏆</Text>
                   <Text className="text-zinc-950 text-base font-black uppercase tracking-wider text-center">Session Completed!</Text>
-                  <Text className="text-zinc-450 text-[10px] font-bold text-center mt-0.5">Invoice pass successfully logged.</Text>
+                  <Text className="text-zinc-500 text-[10px] font-bold text-center mt-0.5">Invoice pass successfully logged.</Text>
                 </View>
 
                 {/* Workout stats metrics grid */}
@@ -2545,7 +2542,13 @@ export default function SessionDetailScreen() {
                   const isTerminalMissed = item === 'session_missed';
                   const isTerminalCancelled = item === 'session_cancelled';
                   const isTerminal = isTerminalMissed || isTerminalCancelled;
-                  const isCompleted = isTerminal ? false : (isMissed || isCancelled ? true : stagesList.indexOf(currentStatus) > idx);
+                  const isReachedStage = (isMissed || isCancelled) && idx === reachedStageIndex;
+                  // In cancelled or missed sessions, only mark stages strictly prior to the reached stage as completed
+                  const isCompleted = isTerminal
+                    ? false
+                    : (isMissed || isCancelled
+                      ? idx < reachedStageIndex
+                      : stagesList.indexOf(currentStatus) > idx);
                   const isCurrent = !isMissed && !isCancelled && currentStatus === item;
                   const isLast = idx === timelineStages.length - 1;
                   const meta = getStageMeta(item);
@@ -2554,22 +2557,23 @@ export default function SessionDetailScreen() {
                     <View key={item} className="flex-row items-start gap-3.5">
                       {/* Left icon node and vertical line */}
                       <View className="items-center">
-                        <View
-                          className={`w-7 h-7 rounded-full items-center justify-center border-2 ${isTerminalMissed
-                              ? 'bg-amber-500 border-amber-300 shadow-sm'
-                              : isTerminalCancelled
-                                ? 'bg-rose-500 border-rose-300 shadow-sm'
-                                : isCompleted
-                                  ? 'bg-emerald-500 border-emerald-500 shadow-sm'
-                                  : isCurrent
-                                    ? 'bg-[#E11D48] border-rose-300 shadow-md'
-                                    : 'border-zinc-300 bg-white'
-                            }`}
+                        <TimelineNode
+                          isCurrent={isCurrent}
+                          nodeClass={
+                            isTerminalMissed ? 'bg-amber-500 border-amber-300 shadow-sm'
+                            : isTerminalCancelled ? 'bg-rose-500 border-rose-300 shadow-sm'
+                            : isReachedStage ? (isMissed ? 'border-amber-500 bg-amber-50 shadow-sm' : 'border-rose-500 bg-rose-50 shadow-sm')
+                            : isCompleted ? 'bg-emerald-500 border-emerald-500 shadow-sm'
+                            : isCurrent ? 'bg-[#E11D48] border-rose-300 shadow-md'
+                            : 'border-zinc-300 bg-white'
+                          }
                         >
                           {isTerminalMissed ? (
                             <Feather name="alert-triangle" size={13} color="white" />
                           ) : isTerminalCancelled ? (
                             <Feather name="x" size={13} color="white" />
+                          ) : isReachedStage ? (
+                            <Feather name={meta.icon as any} size={13} color={isMissed ? '#D97706' : '#E11D48'} />
                           ) : isCompleted ? (
                             <Feather name="check" size={13} color="white" />
                           ) : isCurrent ? (
@@ -2577,12 +2581,12 @@ export default function SessionDetailScreen() {
                           ) : (
                             <Text className="text-zinc-500 text-xs font-semibold">{idx + 1}</Text>
                           )}
-                        </View>
+                        </TimelineNode>
 
                         {/* Connector line */}
                         {!isLast && (
                           <View
-                            className={`w-[2px] my-1 ${isCompleted ? 'bg-emerald-500' : isCurrent ? 'bg-rose-200' : 'bg-zinc-200'
+                            className={`w-[2px] my-1 ${isCompleted ? 'bg-emerald-500' : isReachedStage ? (isMissed ? 'bg-amber-300' : 'bg-rose-300') : isCurrent ? 'bg-rose-200' : 'bg-zinc-200'
                               }`}
                             style={{ height: 28 }}
                           />
@@ -2596,11 +2600,13 @@ export default function SessionDetailScreen() {
                               ? 'font-bold text-amber-700'
                               : isTerminalCancelled
                                 ? 'font-bold text-rose-700'
-                                : isCurrent
-                                  ? 'font-bold text-[#E11D48]'
-                                  : isCompleted
-                                    ? 'font-semibold text-zinc-900'
-                                    : 'font-medium text-zinc-600'
+                                : isReachedStage
+                                  ? (isMissed ? 'font-bold text-amber-800' : 'font-bold text-rose-800')
+                                  : isCurrent
+                                    ? 'font-bold text-[#E11D48]'
+                                    : isCompleted
+                                      ? 'font-semibold text-zinc-900'
+                                      : 'font-medium text-zinc-600'
                             }`}>
                             {meta.title}
                           </Text>
@@ -2613,6 +2619,11 @@ export default function SessionDetailScreen() {
                           {isTerminalCancelled && (
                             <View className="bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
                               <Text className="text-rose-600 text-[10px] font-semibold uppercase tracking-wider">Cancelled</Text>
+                            </View>
+                          )}
+                          {isReachedStage && (
+                            <View className={`px-2 py-0.5 rounded-full border ${isMissed ? 'bg-amber-50 border-amber-200' : 'bg-rose-50 border-rose-200'}`}>
+                              <Text className={`text-[10px] font-semibold uppercase tracking-wider ${isMissed ? 'text-amber-700' : 'text-rose-600'}`}>Reached</Text>
                             </View>
                           )}
                           {isCurrent && (
@@ -2629,11 +2640,13 @@ export default function SessionDetailScreen() {
                             ? 'text-amber-700/90 font-normal'
                             : isTerminalCancelled
                               ? 'text-rose-700/90 font-normal'
-                              : isCurrent
-                                ? 'text-rose-700/90 font-normal'
-                                : isCompleted
-                                  ? 'text-zinc-600 font-normal'
-                                  : 'text-zinc-500 font-normal'
+                              : isReachedStage
+                                ? (isMissed ? 'text-amber-700/90 font-normal' : 'text-rose-700/90 font-normal')
+                                : isCurrent
+                                  ? 'text-rose-700/90 font-normal'
+                                  : isCompleted
+                                    ? 'text-zinc-600 font-normal'
+                                    : 'text-zinc-500 font-normal'
                           }`}>
                           {meta.desc}
                         </Text>

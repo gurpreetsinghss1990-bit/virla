@@ -192,7 +192,7 @@ export const useCoachStore = create<CoachState>((set, get) => ({
 
     // Optimistically update local cache
     coach.preferences = {
-      ...(coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] }),
+      ...(coach.preferences || { online: false, radiusKm: 5, maxDailySessions: 5, categories: [] }),
       availabilityOverrides: updatedOverrides
     };
     get().syncFromDB();
@@ -259,7 +259,7 @@ export const useCoachStore = create<CoachState>((set, get) => ({
 
     // Optimistically update
     coach.preferences = {
-      ...(coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] }),
+      ...(coach.preferences || { online: false, radiusKm: 5, maxDailySessions: 5, categories: [] }),
       availabilityOverrides: updatedOverrides
     };
     get().syncFromDB();
@@ -340,7 +340,7 @@ export const useCoachStore = create<CoachState>((set, get) => ({
 
     // Optimistically update
     coach.preferences = {
-      ...(coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] }),
+      ...(coach.preferences || { online: false, radiusKm: 5, maxDailySessions: 5, categories: [] }),
       availabilityOverrides: updatedOverrides
     };
     get().syncFromDB();
@@ -397,7 +397,7 @@ export const useCoachStore = create<CoachState>((set, get) => ({
 
     // Optimistically update
     coach.preferences = {
-      ...(coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] }),
+      ...(coach.preferences || { online: false, radiusKm: 5, maxDailySessions: 5, categories: [] }),
       availabilityOverrides: updatedOverrides
     };
     get().syncFromDB();

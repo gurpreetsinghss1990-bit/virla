@@ -1,7 +1,7 @@
 -- Tiered cancellation policy for client self-cancel.
---  >= 60 min before start : client refunded 50% of session credits (floor), trainer gets 100
---  30..60 min before start: no refund (full credits forfeited), trainer gets 150
---  < 30 min before start  : cancellation not allowed
+--  >= 60 min before start : free (full refund), trainer gets 0
+--  30..59 min             : half session rate charged, trainer gets 100
+--  < 30 min               : full session rate charged, trainer gets 250
 CREATE OR REPLACE FUNCTION public.cancel_booking(
   p_booking_id text
 ) RETURNS jsonb
@@ -42,8 +42,8 @@ BEGIN
 
   v_mins := EXTRACT(epoch FROM (v_booking.scheduled_start_at - now())) / 60.0;
 
-  IF v_mins < 30 THEN
-     RAISE EXCEPTION 'Bookings cannot be cancelled within 30 minutes of the session.';
+  IF v_mins <= 0 THEN
+    RAISE EXCEPTION 'Cannot cancel a session that has already started or passed.';
   END IF;
 
   IF EXISTS (SELECT 1 FROM public.workouts WHERE title = v_booking.workout_title AND category = 'COUPLE') THEN
@@ -53,11 +53,17 @@ BEGIN
   END IF;
 
   IF v_mins >= 60 THEN
+    -- Free cancellation: full refund, trainer gets nothing
+    v_refund_amount := v_credit_cost;
+    v_trainer_amount := 0;
+  ELSIF v_mins >= 30 THEN
+    -- Half session rate charged (credits are integers: refund floor(cost/2)); trainer Rs 100
     v_refund_amount := floor(v_credit_cost / 2.0)::integer;
     v_trainer_amount := 100;
   ELSE
+    -- Full session rate charged; trainer Rs 250
     v_refund_amount := 0;
-    v_trainer_amount := 150;
+    v_trainer_amount := 250;
   END IF;
 
   IF v_refund_amount > 0 THEN
@@ -78,10 +84,18 @@ BEGIN
   END IF;
 
   UPDATE public.bookings
-  SET status = 'cancelled', timeline_status = 'SESSION_CLOSED'
+  SET status = 'cancelled', 
+      timeline_status = 'SESSION_CLOSED',
+      rating_details = jsonb_strip_nulls(
+        coalesce(rating_details, '{}'::jsonb) || 
+        jsonb_build_object(
+          'cancelledAtStage', v_booking.timeline_status,
+          'cancelledAt', extract(epoch from now()) * 1000
+        )
+      )
   WHERE id = p_booking_id;
 
-  IF v_booking.trainer_id != 'searching' THEN
+  IF v_booking.trainer_id != 'searching' AND v_trainer_amount > 0 THEN
     INSERT INTO public.trainer_earnings (id, trainer_id, booking_id, client_name, amount, date, type)
     VALUES (
       'earn-' || EXTRACT(epoch FROM now())::bigint || '-' || floor(random()*1000)::text,

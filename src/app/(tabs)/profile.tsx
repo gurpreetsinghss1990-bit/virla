@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, InteractionManager, BackHandler, Modal, LayoutAnimation, UIManager, ActivityIndicator, Pressable, TouchableWithoutFeedback, StyleSheet, Easing, Dimensions } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -112,6 +112,17 @@ export default function ProfileScreen() {
 
   const [hasApplied, setHasApplied] = useState(false);
   const [userApplication, setUserApplication] = useState<TrainerApplication | null>(null);
+
+  // Navigation Throttle to prevent duplicate screen pushes on double tap
+  const isNavigatingRef = useRef(false);
+  const navigateThrottled = useCallback((path: string) => {
+    if (isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
+    router.push(path as any);
+    setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 1000);
+  }, [router]);
 
   const checkApplicationStatus = async () => {
     const userPhone = profile.mobile;
@@ -539,7 +550,7 @@ export default function ProfileScreen() {
   // Operating Area Change Request States
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressInput, setAddressInput] = useState('');
-  const [radiusInput, setRadiusInput] = useState<10 | 15>(15);
+  const [radiusInput, setRadiusInput] = useState<number>(5);
   const [searchSuggestions, setSearchSuggestions] = useState<Array<AutocompleteSuggestion>>([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ address: string; lat: number; lng: number; placeId?: string } | null>(null);
@@ -1156,7 +1167,7 @@ export default function ProfileScreen() {
                     </Text>
                     <TouchableOpacity
                       activeOpacity={0.7}
-                      onPress={() => router.push('/wallet' as any)}
+                      onPress={() => navigateThrottled('/wallet')}
                       className="flex-row items-center gap-1 mt-1.5 py-0.5"
                     >
                       <Text className="text-[#2DD4BF] text-xs font-black">View Wallet</Text>
@@ -1373,7 +1384,7 @@ export default function ProfileScreen() {
                   <Text className="text-[#101828] text-sm font-black tracking-tight">Fitness Goals</Text>
                   <TouchableOpacity
                     activeOpacity={0.7}
-                    onPress={() => router.push('/fitness-goals' as any)}
+                    onPress={() => navigateThrottled('/fitness-goals')}
                     className="flex-row items-center gap-1.5"
                   >
                     <Feather name="edit-2" size={12} color="#475569" />
@@ -1398,7 +1409,7 @@ export default function ProfileScreen() {
                             color: idx < 2 ? 'rgba(4, 120, 87, 0.25)' : 'rgba(71, 85, 105, 0.2)',
                             borderless: false,
                           }}
-                          onPress={() => router.push('/fitness-goals' as any)}
+                          onPress={() => navigateThrottled('/fitness-goals')}
                           style={({ pressed }) => [
                             pressed && { transform: [{ scale: 0.96 }] },
                             Platform.OS === 'ios' && pressed && { opacity: 0.75 },
@@ -1424,7 +1435,7 @@ export default function ProfileScreen() {
                         color: 'rgba(79, 70, 229, 0.15)',
                         borderless: false,
                       }}
-                      onPress={() => router.push('/fitness-goals' as any)}
+                      onPress={() => navigateThrottled('/fitness-goals')}
                       style={({ pressed }) => [
                         pressed && { transform: [{ scale: 0.98 }] },
                         Platform.OS === 'ios' && pressed && { opacity: 0.75 },
@@ -1444,7 +1455,7 @@ export default function ProfileScreen() {
                       color: 'rgba(4, 120, 87, 0.2)',
                       borderless: false,
                     }}
-                    onPress={() => router.push('/fitness-goals' as any)}
+                    onPress={() => navigateThrottled('/fitness-goals')}
                     style={({ pressed }) => [
                       pressed && { transform: [{ scale: 0.98 }] },
                       Platform.OS === 'ios' && pressed && { opacity: 0.8 },
@@ -1475,7 +1486,7 @@ export default function ProfileScreen() {
                 <View className="mb-4">
                   <LuxuryCard 
                     className="p-5 bg-zinc-950 border border-zinc-800 shadow-md rounded-[24px]"
-                    onPress={() => router.push('/trainer-application')}
+                    onPress={() => navigateThrottled('/trainer-application')}
                   >
                     <View className="gap-3">
                       <View className="flex-row items-center justify-between">
@@ -1506,7 +1517,7 @@ export default function ProfileScreen() {
                       userApplication.status === 'info_requested' ? 'bg-amber-50 border-amber-200' :
                       'bg-[#F7F8FC] border-zinc-200'
                     }`}
-                    onPress={() => router.push('/trainer-application')}
+                    onPress={() => navigateThrottled('/trainer-application')}
                   >
                     <View className="flex-row items-center justify-between w-full">
                       <View className="flex-1 pr-4 gap-1">
@@ -1893,7 +1904,7 @@ export default function ProfileScreen() {
                     <View className="flex-row justify-between items-center py-2 border-b border-zinc-200/60">
                       <Text className="text-zinc-500 text-xs font-medium">Service Radius</Text>
                       <Text className="text-zinc-900 text-xs font-semibold">
-                        {coach?.preferences?.radiusKm ? `${coach.preferences.radiusKm} km` : '15 km'}
+                        {coach?.preferences?.radiusKm ? `${Math.min(coach.preferences.radiusKm, 5)} km` : '5 km'}
                       </Text>
                     </View>
 
@@ -1933,7 +1944,7 @@ export default function ProfileScreen() {
                         activeOpacity={0.8}
                         onPress={() => {
                           setAddressInput(coach?.preferences?.operatingAddress || '');
-                          setRadiusInput((coach?.preferences?.radiusKm as 10 | 15) || 15);
+                          setRadiusInput(Math.min((coach?.preferences?.radiusKm as number) || 5, 5));
                           setShowAddressForm(true);
                         }}
                         className="bg-white border border-zinc-200 p-3 rounded-xl flex-row justify-center items-center mt-1"
@@ -2008,13 +2019,13 @@ export default function ProfileScreen() {
                         )}
 
                         <View className="gap-1.5">
-                          <Text className="text-zinc-600 text-xs font-semibold">Service Radius Limit</Text>
+                          <Text className="text-zinc-600 text-xs font-semibold">Service Radius Limit (Max 5 km)</Text>
                           <View className="flex-row gap-2 mt-0.5">
-                            {[10, 15].map((r) => (
+                            {[1, 2, 3, 4, 5].map((r) => (
                               <TouchableOpacity
                                 key={r}
                                 activeOpacity={0.8}
-                                onPress={() => setRadiusInput(r as 10 | 15)}
+                                onPress={() => setRadiusInput(r)}
                                 className={`flex-1 py-2.5 border rounded-xl items-center ${
                                   radiusInput === r ? 'bg-zinc-900 border-zinc-900' : 'bg-zinc-50 border-zinc-200'
                                 }`}

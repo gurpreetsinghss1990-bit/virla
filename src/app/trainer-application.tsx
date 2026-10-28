@@ -14,6 +14,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { File } from 'expo-file-system';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const getNativePickerModules = () => {
   const g = globalThis as any;
   const expoModules = g.expo?.modules || g.ExpoModules || {};
@@ -117,6 +118,8 @@ export default function TrainerApplicationScreen() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [dob, setDob] = useState('');
+  const [showDobPicker, setShowDobPicker] = useState(false);
+  const [dobPickerTab, setDobPickerTab] = useState<'day' | 'month' | 'year'>('day');
   const [gender, setGender] = useState('Male');
   const [avatar, setAvatar] = useState('https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=300&q=80');
   const [address, setAddress] = useState('');
@@ -126,11 +129,69 @@ export default function TrainerApplicationScreen() {
   const [emergencyName, setEmergencyName] = useState('');
   const [emergencyPhone, setEmergencyPhone] = useState('');
 
+  // Step 1: Validation Errors
+  const [step1Errors, setStep1Errors] = useState<{ [key: string]: string }>({});
+  const [step1Touched, setStep1Touched] = useState(false);
+
+  // Input Sanitizer to strip SQL injection patterns, dangerous characters, and quotes
+  const sanitizeInput = (text: string): string => {
+    return text
+      .replace(/['";\\]/g, '') // strip single quotes, double quotes, semicolons, backslashes
+      .replace(/--/g, '') // strip SQL comments
+      .replace(/\/\*[\s\S]*?\*\//g, '') // strip multi-line comments
+      .replace(/\b(UNION|SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|EXEC|EXECUTE|TRUNCATE|DECLARE)\b/gi, ''); // strip dangerous SQL keywords
+  };
+
   // Step 2: Fitness & Professional Details
-  const [primaryWorkout, setPrimaryWorkout] = useState('Strength Training');
-  const [secondarySkills, setSecondarySkills] = useState('HIIT, Core, Mobility');
-  const [fitnessQualifications, setFitnessQualifications] = useState('ACE Certified Personal Trainer');
+  const [primaryWorkout, setPrimaryWorkout] = useState('');
+  const [secondarySkills, setSecondarySkills] = useState('');
+  const [fitnessQualifications, setFitnessQualifications] = useState('');
   const [aboutMe, setAboutMe] = useState('');
+
+  // Step 2: Dropdown open/close states (default closed / toggle on chevron or interaction)
+  const [showPrimaryDropdown, setShowPrimaryDropdown] = useState(false);
+  const [showSecondaryDropdown, setShowSecondaryDropdown] = useState(false);
+  const [showQualificationsDropdown, setShowQualificationsDropdown] = useState(false);
+
+  // Step 2: Validation Errors
+  const [step2Errors, setStep2Errors] = useState<{ [key: string]: string }>({});
+  const [step2Touched, setStep2Touched] = useState(false);
+
+  // Predefined options
+  const PRIMARY_WORKOUT_OPTIONS = [
+    'Strength Training (PowerForge)',
+    'Yoga (ZenFlow)',
+    'Pilates (CoreAlign)',
+    'Dance Fitness (RhythmX)',
+    'Functional Conditioning (KinetiX)',
+    'Boxing & Kickboxing (FightLab)',
+    'Aerial Yoga (ZenFlow Aerial)',
+    'Other'
+  ];
+
+  const SECONDARY_SKILLS_OPTIONS = [
+    'Core Stability & Posture',
+    'HIIT & Fat Loss Conditioning',
+    'Mobility & Flexibility',
+    'Bodyweight & Calisthenics',
+    'Endurance & Stamina',
+    'Kickboxing Combos & Pad Work',
+    'Rehabilitation & Prehab',
+    'Other'
+  ];
+
+  const QUALIFICATIONS_OPTIONS = [
+    'ACE (American Council on Exercise - CPT)',
+    'ACSM (Certified Personal Trainer)',
+    'NSCA (CSCS / CPT)',
+    'NASM (National Academy of Sports Medicine)',
+    'K11 (School of Fitness Sciences - DPT)',
+    "Gold's Gym Fitness Institute (GGFI)",
+    'Yoga Alliance (RYT-200 / RYT-500)',
+    'Mat Pilates Certified Instructor',
+    'CPR / AED & First Aid Certified',
+    'Other'
+  ];
 
   // Step 3: Experience & Working Preferences
   const [yearsOfExperience, setYearsOfExperience] = useState('5');
@@ -186,8 +247,10 @@ export default function TrainerApplicationScreen() {
           if (app) {
             setAppId(app.id);
             setAppStatus(app.status);
+            setHasAcceptedPolicies(true);
             setFullName(app.fullName || '');
-            setPhone(app.phone || '');
+            const appDigits = (app.phone || '').replace(/\D/g, '');
+            setPhone(appDigits.startsWith('91') && appDigits.length > 10 ? appDigits.slice(2) : appDigits);
             setEmail(app.email || '');
             setDob(app.dob || '');
             const normalizedGen = (app.gender || '').toLowerCase();
@@ -197,7 +260,7 @@ export default function TrainerApplicationScreen() {
             setCity(app.city || 'Mumbai');
             setState(app.state || 'Maharashtra');
             setPinCode(app.pinCode || '');
-            setPrimaryWorkout(app.primaryWorkout || 'Strength Training');
+            setPrimaryWorkout(app.primaryWorkout || '');
             setSecondarySkills(app.secondarySkills || '');
             setFitnessQualifications(app.fitnessQualifications || '');
             setAboutMe(app.aboutMe || '');
@@ -254,14 +317,149 @@ export default function TrainerApplicationScreen() {
             } catch (err) {
               console.error('[TrainerApp] Failed to load verification documents:', err);
             }
+          } else {
+            // No submitted DB application found, load from local draft storage
+            await loadLocalDraft();
           }
         } catch (err) {
           console.error('[TrainerApp] Failed to load application:', err);
+          await loadLocalDraft();
         }
+      } else {
+        await loadLocalDraft();
       }
     };
     loadApplication();
   }, [mobile]);
+
+  // Key for local persistent draft
+  const DRAFT_STORAGE_KEY = `virla_trainer_app_draft_${mobile || 'guest'}`;
+
+  const loadLocalDraft = async () => {
+    try {
+      const raw = await AsyncStorage.getItem(DRAFT_STORAGE_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (typeof draft.hasAcceptedPolicies === 'boolean') setHasAcceptedPolicies(draft.hasAcceptedPolicies);
+        if (draft.policyPage) setPolicyPage(draft.policyPage);
+        if (draft.acceptedAgreementTimestamp) setAcceptedAgreementTimestamp(draft.acceptedAgreementTimestamp);
+        if (draft.acceptedAgreementAppVersion) setAcceptedAgreementAppVersion(draft.acceptedAgreementAppVersion);
+        if (draft.checkEarningsAcceptance) setCheckEarningsAcceptance(draft.checkEarningsAcceptance);
+        if (draft.currentStep) setCurrentStep(draft.currentStep);
+        if (draft.fullName) setFullName(draft.fullName);
+        if (draft.phone) {
+          const dDigits = (draft.phone || '').replace(/\D/g, '');
+          setPhone(dDigits.startsWith('91') && dDigits.length > 10 ? dDigits.slice(2) : dDigits);
+        }
+        if (draft.email) setEmail(draft.email);
+        if (draft.dob) setDob(draft.dob);
+        if (draft.gender) setGender(draft.gender);
+        if (draft.address) setAddress(draft.address);
+        if (draft.city) setCity(draft.city);
+        if (draft.pinCode) setPinCode(draft.pinCode);
+        if (draft.emergencyName) setEmergencyName(draft.emergencyName);
+        if (draft.emergencyPhone) setEmergencyPhone(draft.emergencyPhone);
+        if (draft.primaryWorkout) setPrimaryWorkout(draft.primaryWorkout);
+        if (draft.secondarySkills) setSecondarySkills(draft.secondarySkills);
+        if (draft.fitnessQualifications) setFitnessQualifications(draft.fitnessQualifications);
+        if (draft.aboutMe) setAboutMe(draft.aboutMe);
+        if (draft.yearsOfExperience) setYearsOfExperience(draft.yearsOfExperience);
+        if (draft.languages) setLanguages(draft.languages);
+        if (draft.workingDays) setWorkingDays(draft.workingDays);
+        if (typeof draft.availabilityMorning === 'boolean') setAvailabilityMorning(draft.availabilityMorning);
+        if (typeof draft.availabilityAfternoon === 'boolean') setAvailabilityAfternoon(draft.availabilityAfternoon);
+        if (typeof draft.availabilityEvening === 'boolean') setAvailabilityEvening(draft.availabilityEvening);
+        if (draft.maxSessionsPerDay) setMaxSessionsPerDay(draft.maxSessionsPerDay);
+        if (draft.preferredWorkingRadius) setPreferredWorkingRadius(draft.preferredWorkingRadius);
+        if (draft.documentSelfie) {
+          setDocumentSelfie(draft.documentSelfie);
+          setSelfieUploadStatus('UPLOADED');
+        }
+        if (draft.documentCertifications) {
+          setDocumentCertifications(draft.documentCertifications);
+          setCertsUploadStatus('UPLOADED');
+        }
+      }
+    } catch (e) {
+      console.warn('[TrainerApp] Failed to load local draft:', e);
+    }
+  };
+
+  // Auto-save form draft whenever any field changes
+  useEffect(() => {
+    const saveDraft = async () => {
+      try {
+        const draftData = {
+          hasAcceptedPolicies,
+          policyPage,
+          acceptedAgreementTimestamp,
+          acceptedAgreementAppVersion,
+          checkEarningsAcceptance,
+          currentStep,
+          fullName,
+          phone,
+          email,
+          dob,
+          gender,
+          address,
+          city,
+          pinCode,
+          emergencyName,
+          emergencyPhone,
+          primaryWorkout,
+          secondarySkills,
+          fitnessQualifications,
+          aboutMe,
+          yearsOfExperience,
+          languages,
+          workingDays,
+          availabilityMorning,
+          availabilityAfternoon,
+          availabilityEvening,
+          maxSessionsPerDay,
+          preferredWorkingRadius,
+          documentSelfie,
+          documentCertifications
+        };
+        await AsyncStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftData));
+      } catch (e) {
+        // silent catch
+      }
+    };
+    saveDraft();
+  }, [
+    hasAcceptedPolicies,
+    policyPage,
+    acceptedAgreementTimestamp,
+    acceptedAgreementAppVersion,
+    checkEarningsAcceptance,
+    currentStep,
+    fullName,
+    phone,
+    email,
+    dob,
+    gender,
+    address,
+    city,
+    pinCode,
+    emergencyName,
+    emergencyPhone,
+    primaryWorkout,
+    secondarySkills,
+    fitnessQualifications,
+    aboutMe,
+    yearsOfExperience,
+    languages,
+    workingDays,
+    availabilityMorning,
+    availabilityAfternoon,
+    availabilityEvening,
+    maxSessionsPerDay,
+    preferredWorkingRadius,
+    documentSelfie,
+    documentCertifications,
+    DRAFT_STORAGE_KEY
+  ]);
 
   const toggleDay = (day: string) => {
     if (workingDays.includes(day)) {
@@ -492,15 +690,73 @@ export default function TrainerApplicationScreen() {
     uploadFile('aadhaar');
   };
 
+  const validateStep1 = () => {
+    const errs: { [key: string]: string } = {};
+
+    if (!fullName || !fullName.trim()) {
+      errs.fullName = 'Full name is required';
+    } else if (fullName.trim().length < 3) {
+      errs.fullName = 'Enter at least 3 characters';
+    }
+
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (!phone || !phone.trim()) {
+      errs.phone = 'Mobile number is required';
+    } else if (cleanPhone.length < 10) {
+      errs.phone = 'Enter valid 10-digit mobile number';
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !email.trim()) {
+      errs.email = 'Email address is required';
+    } else if (!emailRegex.test(email.trim())) {
+      errs.email = 'Enter a valid email address';
+    }
+
+    if (!dob || !dob.trim()) {
+      errs.dob = 'Date of birth is required';
+    }
+
+    if (!address || !address.trim()) {
+      errs.address = 'Residential address is required';
+    } else if (address.trim().length < 5) {
+      errs.address = 'Please enter complete address';
+    }
+
+    if (!pinCode || !pinCode.trim()) {
+      errs.pinCode = 'PIN code is required';
+    } else if (!/^\d{6}$/.test(pinCode.trim())) {
+      errs.pinCode = 'Enter valid 6-digit PIN code';
+    }
+
+    setStep1Errors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const validateStep2 = () => {
+    const errs: { [key: string]: string } = {};
+
+    if (!primaryWorkout || !primaryWorkout.trim()) {
+      errs.primaryWorkout = 'Primary workout specialization is required';
+    }
+
+    if (!fitnessQualifications || !fitnessQualifications.trim()) {
+      errs.fitnessQualifications = 'Fitness qualifications / certifications are required';
+    }
+
+    setStep2Errors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const handleNext = () => {
     if (currentStep === 1) {
-      if (!fullName || !phone || !email || !dob || !address || !pinCode) {
-        Alert.alert('Missing Info', 'Please fill in all personal details.');
+      setStep1Touched(true);
+      if (!validateStep1()) {
         return;
       }
     } else if (currentStep === 2) {
-      if (!primaryWorkout || !fitnessQualifications) {
-        Alert.alert('Missing Info', 'Please fill in workout specialization and qualifications.');
+      setStep2Touched(true);
+      if (!validateStep2()) {
         return;
       }
       if (!aboutMe || !aboutMe.trim()) {
@@ -520,8 +776,8 @@ export default function TrainerApplicationScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!documentAadhaar || !documentPan || !documentSelfie) {
-      Alert.alert('Required Documents', 'Please upload Aadhaar, PAN, and selfie.');
+    if (!documentSelfie) {
+      Alert.alert('Required Photo', 'Please upload your profile selfie photo.');
       return;
     }
 
@@ -532,13 +788,24 @@ export default function TrainerApplicationScreen() {
         phone: emergencyPhone || '+91 98200 11223'
       });
 
+      const finalAcceptedTimestamp = acceptedAgreementTimestamp || new Date().toISOString();
+      const finalAcceptedAppVersion = acceptedAgreementAppVersion || '1.0.0';
+
+      // Ensure normalized +91 format on mobile
+      const rawDigits = phone.replace(/\D/g, '');
+      const formattedPhone = rawDigits.startsWith('91') && rawDigits.length === 12
+        ? `+${rawDigits}`
+        : rawDigits.length === 10
+          ? `+91${rawDigits}`
+          : phone;
+
       const applicationData = {
         fullName,
-        phone,
+        phone: formattedPhone,
         email,
         dob,
         gender,
-        avatar,
+        avatar: documentSelfie || avatar,
         address,
         city,
         state,
@@ -562,29 +829,31 @@ export default function TrainerApplicationScreen() {
         bankAccountNumber: '',
         bankIfsc: '',
         bankUpiId: '',
-        panNumber: 'VERIFICATION_PENDING',
+        panNumber: '',
         gstNumber: '',
-        documentAadhaar,
-        documentPan,
+        documentAadhaar: '',
+        documentPan: '',
         documentSelfie,
         documentCertifications: JSON.stringify([documentCertifications]),
-        aadhaarStatus: 'pending_verification' as const,
-        panStatus: 'pending_verification' as const,
+        aadhaarStatus: 'verified' as const,
+        panStatus: 'verified' as const,
         aadhaarVerificationNotes: '',
         panVerificationNotes: '',
         adminNotes: '',
-        acceptedAgreementTimestamp,
-        acceptedAgreementAppVersion
+        acceptedAgreementTimestamp: finalAcceptedTimestamp,
+        acceptedAgreementAppVersion: finalAcceptedAppVersion
       };
 
       if (appId) {
         const application = await Database.updateTrainerApplication(appId, applicationData);
         setAppStatus('pending');
+        await AsyncStorage.removeItem(DRAFT_STORAGE_KEY).catch(() => {});
         Alert.alert('Application Updated', 'Your updated trainer application has been submitted for review.');
       } else {
         const application = await Database.submitTrainerApplication(applicationData);
         setAppId(application.id);
         setAppStatus('pending');
+        await AsyncStorage.removeItem(DRAFT_STORAGE_KEY).catch(() => {});
         Alert.alert('Application Submitted', 'Your onboarding credentials are under review by the operations team.');
       }
     } catch (err: any) {
@@ -638,6 +907,15 @@ export default function TrainerApplicationScreen() {
           )}
         </View>
 
+        {/* Fixed / Sticky 3-Page Progress Bar */}
+        <View className="px-5 py-2.5 bg-white border-b border-zinc-100">
+          <View className="flex-row items-center gap-1.5">
+            <View className={`h-1.5 rounded-full flex-1 ${policyPage >= 1 ? 'bg-[#E11D48]' : 'bg-zinc-200'}`} />
+            <View className={`h-1.5 rounded-full flex-1 ${policyPage >= 2 ? 'bg-[#E11D48]' : 'bg-zinc-200'}`} />
+            <View className={`h-1.5 rounded-full flex-1 ${policyPage >= 3 ? 'bg-[#E11D48]' : 'bg-zinc-200'}`} />
+          </View>
+        </View>
+
         {/* Scroll Content */}
         <ScrollView 
           ref={policyScrollViewRef}
@@ -645,18 +923,11 @@ export default function TrainerApplicationScreen() {
           scrollEventThrottle={16}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={true}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: policyPage === 3 ? Math.max(insets.bottom + 72, 96) : 24 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: Math.max(insets.bottom + 85, 100) }}
           className="flex-1 bg-white"
         >
           {policyPage === 1 ? (
             <>
-              {/* Progress Slider (3 Steps) */}
-              <View className="flex-row items-center gap-1.5 mb-5">
-                <View className="h-1.5 rounded-full flex-1 bg-[#E11D48]" />
-                <View className="h-1.5 rounded-full flex-1 bg-zinc-200" />
-                <View className="h-1.5 rounded-full flex-1 bg-zinc-200" />
-              </View>
-
               {/* Official Document Header */}
               <View className="pb-2.5 mb-2 gap-1">
                 <Text className="text-zinc-400 text-[9.5px] font-black tracking-widest uppercase">
@@ -690,19 +961,12 @@ export default function TrainerApplicationScreen() {
               {/* Document Footer Line */}
               <View className="py-3">
                 <Text className="text-zinc-400 text-[9.5px] font-medium italic text-center">
-                  {PARTNER_POLICIES_DOCUMENT_INFO.footer}
+                  VIRLA — Partner Policies &amp; Platform Rules.
                 </Text>
               </View>
             </>
           ) : policyPage === 2 ? (
             <>
-              {/* Progress Slider (3 Steps) */}
-              <View className="flex-row items-center gap-1.5 mb-5">
-                <View className="h-1.5 rounded-full flex-1 bg-zinc-200" />
-                <View className="h-1.5 rounded-full flex-1 bg-[#E11D48]" />
-                <View className="h-1.5 rounded-full flex-1 bg-zinc-200" />
-              </View>
-
               {/* Official Document Header */}
               <View className="pb-2.5 mb-2 gap-1">
                 <Text className="text-zinc-400 text-[9.5px] font-black tracking-widest uppercase">
@@ -736,19 +1000,12 @@ export default function TrainerApplicationScreen() {
               {/* Document Footer Line */}
               <View className="py-3">
                 <Text className="text-zinc-400 text-[9.5px] font-medium italic text-center">
-                  {PARTNER_TERMS_DOCUMENT_INFO.footer}
+                  VIRLA — Partner Terms and Professional Standards.
                 </Text>
               </View>
             </>
           ) : (
             <>
-              {/* Progress Slider (3 Steps) */}
-              <View className="flex-row items-center gap-1.5 mb-5">
-                <View className="h-1.5 rounded-full flex-1 bg-zinc-200" />
-                <View className="h-1.5 rounded-full flex-1 bg-zinc-200" />
-                <View className="h-1.5 rounded-full flex-1 bg-[#E11D48]" />
-              </View>
-
               {/* Official Document Header */}
               <View className="pb-2.5 mb-2 gap-1">
                 <Text className="text-zinc-400 text-[9.5px] font-black tracking-widest uppercase">
@@ -794,7 +1051,7 @@ export default function TrainerApplicationScreen() {
               {/* Document Footer Line */}
               <View className="py-3">
                 <Text className="text-zinc-400 text-[9.5px] font-medium italic text-center">
-                  {PARTNER_EARNINGS_DOCUMENT_INFO.footer}
+                  VIRLA — Earnings &amp; Payout Policy.
                 </Text>
               </View>
 
@@ -802,7 +1059,14 @@ export default function TrainerApplicationScreen() {
               <View className="my-5 gap-3">
                 <TouchableOpacity 
                   activeOpacity={0.8}
-                  onPress={() => setCheckEarningsAcceptance(!checkEarningsAcceptance)}
+                  onPress={() => {
+                    const nextVal = !checkEarningsAcceptance;
+                    setCheckEarningsAcceptance(nextVal);
+                    if (nextVal) {
+                      setAcceptedAgreementTimestamp(new Date().toISOString());
+                      setAcceptedAgreementAppVersion('1.0.0');
+                    }
+                  }}
                   className="flex-row items-start gap-3 p-3.5 bg-zinc-50 border border-zinc-300 rounded-xl"
                 >
                   <View className={`w-5 h-5 border rounded-md items-center justify-center mt-0.5 ${
@@ -825,11 +1089,11 @@ export default function TrainerApplicationScreen() {
                     setViewingPoliciesOnly(false);
                     Alert.alert('All Agreements Confirmed', 'You may now proceed to complete your personal details.');
                   }}
-                  className={`py-3.5 rounded-xl items-center justify-center shadow-sm flex-row gap-2 ${
+                  className={`py-3.5 rounded-full items-center justify-center shadow-md flex-row gap-2 ${
                     checkEarningsAcceptance ? 'bg-[#E11D48]' : 'bg-zinc-300'
                   }`}
                 >
-                  <Text className="text-white text-[11px] font-black uppercase tracking-wider text-center">
+                  <Text className="text-white text-xs font-black uppercase tracking-wider text-center">
                     Accept &amp; Continue to Application Form
                   </Text>
                   {checkEarningsAcceptance && <Feather name="check-circle" size={14} color="white" />}
@@ -839,49 +1103,58 @@ export default function TrainerApplicationScreen() {
           )}
         </ScrollView>
 
-        {/* Sticky agreement navigation — outside the ScrollView so Next/Previous taps always land */}
-        {policyPage !== 3 && (
+        {/* Floating Bottom Navigation — Transparent text with thick red underline */}
         <View
-          className="bg-white border-t border-zinc-200 px-5 pt-3"
-          style={{ paddingBottom: Math.max(insets.bottom + 8, 24) }}
+          pointerEvents="box-none"
+          style={{
+            position: 'absolute',
+            bottom: Math.max(insets.bottom + 10, 20),
+            left: 20,
+            right: 20,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
         >
-          {policyPage === 1 ? (
+          {/* Back button on Page 2 and Page 3 (Left Bottom) */}
+          {policyPage > 1 ? (
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => switchPolicyPage(2)}
-              className="py-4 bg-[#101828] rounded-xl items-center justify-center flex-row gap-2 shadow-sm"
+              onPress={() => {
+                if (policyPage === 3) switchPolicyPage(2);
+                else if (policyPage === 2) switchPolicyPage(1);
+              }}
+              className="py-1 px-1 bg-transparent items-start"
             >
-              <Text className="text-white text-xs font-black uppercase tracking-wider text-center">
-                Next: Terms &amp; Standards (Step 2/3)
+              <Text className="text-zinc-950 text-sm font-black uppercase tracking-wider">
+                Back
               </Text>
-              <Feather name="arrow-right" size={15} color="white" />
+              <View className="h-1 w-full bg-[#E11D48] rounded-full mt-0.5" />
             </TouchableOpacity>
-          ) : policyPage === 2 ? (
-            <View className="gap-2.5">
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => switchPolicyPage(3)}
-                className="py-4 bg-[#101828] rounded-xl items-center justify-center flex-row gap-2 shadow-sm"
-              >
-                <Text className="text-white text-xs font-black uppercase tracking-wider text-center">
-                  Next: Earnings &amp; Payout (Step 3/3)
-                </Text>
-                <Feather name="arrow-right" size={15} color="white" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => switchPolicyPage(1)}
-                className="py-3.5 bg-zinc-100 border border-zinc-200 rounded-xl items-center justify-center flex-row gap-2"
-              >
-                <Feather name="arrow-left" size={14} color="#3F3F46" />
-                <Text className="text-zinc-800 text-[10.5px] font-black uppercase tracking-wider text-center">
-                  Previous: Policies &amp; Rules (Step 1)
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
+          ) : (
+            <View />
+          )}
+
+          {/* Next button on Page 1 and Page 2 (Right Bottom) */}
+          {policyPage < 3 ? (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => {
+                if (policyPage === 1) switchPolicyPage(2);
+                else if (policyPage === 2) switchPolicyPage(3);
+              }}
+              className="py-1 px-1 bg-transparent items-end ml-auto"
+            >
+              <Text className="text-zinc-950 text-sm font-black uppercase tracking-wider">
+                Next
+              </Text>
+              <View className="h-1 w-full bg-[#E11D48] rounded-full mt-0.5" />
+            </TouchableOpacity>
+          ) : (
+            <View />
+          )}
         </View>
-        )}
+
         {/* Step 3 only: floating Scroll to Bottom, hidden near bottom so it never covers Accept */}
         {policyPage === 3 && !isScrolledNearBottom && (
           <TouchableOpacity
@@ -1073,36 +1346,282 @@ export default function TrainerApplicationScreen() {
                 <Text className="text-[#101828] text-xs font-black uppercase tracking-widest border-b border-zinc-100 pb-2 text-start">Step 1: Personal Details</Text>
                 
                 <View className="gap-3.5">
+                  {/* Full Name */}
                   <View>
-                    <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Full Name</Text>
+                    <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">
+                      Full Name <Text className="text-rose-500">*</Text>
+                    </Text>
                     <TextInput 
-                      value={fullName} onChangeText={setFullName} placeholder="Karan Sharma"
-                      className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold"
+                      value={fullName} 
+                      onChangeText={(val) => {
+                        const clean = sanitizeInput(val);
+                        setFullName(clean);
+                        if (step1Touched) setStep1Errors(prev => ({ ...prev, fullName: clean.trim().length >= 3 ? '' : 'Enter at least 3 characters' }));
+                      }} 
+                      placeholder="e.g. - Karan Sharma"
+                      placeholderTextColor="#A1A1AA"
+                      className={`bg-zinc-50 border p-3 rounded-xl text-zinc-900 text-xs font-semibold ${
+                        step1Errors.fullName ? 'border-rose-400 bg-rose-50/20' : 'border-zinc-150'
+                      }`}
                     />
+                    {!!step1Errors.fullName && (
+                      <Text className="text-rose-500 text-[10px] font-semibold mt-1 text-start">
+                        {step1Errors.fullName}
+                      </Text>
+                    )}
                   </View>
+
+                  {/* Mobile & Email */}
                   <View className="flex-row gap-2">
                     <View className="flex-1">
-                      <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Mobile Number</Text>
-                      <TextInput 
-                        value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="+91 99999 88888"
-                        className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold"
-                      />
+                      <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">
+                        Mobile Number <Text className="text-rose-500">*</Text>
+                      </Text>
+                      <View className={`flex-row items-center bg-zinc-50 border rounded-xl overflow-hidden ${
+                        step1Errors.phone ? 'border-rose-400 bg-rose-50/20' : 'border-zinc-150'
+                      }`}>
+                        <View className="pl-3 pr-2 py-3 border-r border-zinc-200 bg-zinc-100/70 items-center justify-center">
+                          <Text className="text-zinc-800 text-xs font-black tracking-tight">+91</Text>
+                        </View>
+                        <TextInput 
+                          value={phone} 
+                          onChangeText={(val) => {
+                            // Strip any non-digit or accidental +91 prefix typed by user
+                            let digits = val.replace(/\D/g, '');
+                            if (digits.startsWith('91') && digits.length > 10) {
+                              digits = digits.slice(2);
+                            }
+                            digits = digits.slice(0, 10);
+                            setPhone(digits);
+                            if (step1Touched) setStep1Errors(prev => ({ ...prev, phone: digits.length === 10 ? '' : 'Enter valid 10-digit number' }));
+                          }} 
+                          keyboardType="phone-pad" 
+                          maxLength={10}
+                          placeholder="98765 43210"
+                          placeholderTextColor="#A1A1AA"
+                          className="flex-1 p-3 text-zinc-900 text-xs font-semibold"
+                        />
+                      </View>
+                      {!!step1Errors.phone && (
+                        <Text className="text-rose-500 text-[10px] font-semibold mt-1 text-start">
+                          {step1Errors.phone}
+                        </Text>
+                      )}
                     </View>
                     <View className="flex-1">
-                      <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Email</Text>
+                      <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">
+                        Email <Text className="text-rose-500">*</Text>
+                      </Text>
                       <TextInput 
-                        value={email} onChangeText={setEmail} keyboardType="email-address" placeholder="karan@virla.pro"
-                        className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold"
+                        value={email} 
+                        onChangeText={(val) => {
+                          const clean = sanitizeInput(val);
+                          setEmail(clean);
+                          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                          if (step1Touched) setStep1Errors(prev => ({ ...prev, email: emailRegex.test(clean.trim()) ? '' : 'Enter valid email' }));
+                        }} 
+                        keyboardType="email-address" 
+                        autoCapitalize="none"
+                        placeholder="e.g. - karan.trainer@virla.pro"
+                        placeholderTextColor="#A1A1AA"
+                        className={`bg-zinc-50 border p-3 rounded-xl text-zinc-900 text-xs font-semibold ${
+                          step1Errors.email ? 'border-rose-400 bg-rose-50/20' : 'border-zinc-150'
+                        }`}
                       />
+                      {!!step1Errors.email && (
+                        <Text className="text-rose-500 text-[10px] font-semibold mt-1 text-start">
+                          {step1Errors.email}
+                        </Text>
+                      )}
                     </View>
                   </View>
+
+                  {/* DOB & Gender */}
                   <View className="flex-row gap-2">
                     <View className="flex-1">
-                      <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Date of Birth</Text>
-                      <TextInput 
-                        value={dob} onChangeText={setDob} placeholder="14/10/1995"
-                        className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold"
-                      />
+                      <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">
+                        Date of Birth <Text className="text-rose-500">*</Text>
+                      </Text>
+                      <TouchableOpacity
+                        activeOpacity={0.9}
+                        onPress={() => setShowDobPicker(!showDobPicker)}
+                        className={`flex-row items-center bg-zinc-50 border p-3 rounded-xl ${
+                          step1Errors.dob ? 'border-rose-400 bg-rose-50/20' : 'border-zinc-150'
+                        }`}
+                      >
+                        <Feather name="calendar" size={15} color="#E11D48" className="mr-2" />
+                        <Text className={`flex-1 text-center text-xs font-semibold ${
+                          dob ? 'text-zinc-900' : 'text-[#A1A1AA]'
+                        }`}>
+                          {dob || 'DD/MM/YYYY'}
+                        </Text>
+                        <Feather name={showDobPicker ? "chevron-up" : "chevron-down"} size={14} color="#6B7280" />
+                      </TouchableOpacity>
+                      {!!step1Errors.dob && (
+                        <Text className="text-rose-500 text-[10px] font-semibold mt-1 text-start">
+                          {step1Errors.dob}
+                        </Text>
+                      )}
+
+                      {/* Compact Date Picker dropdown strictly within DOB box width */}
+                      {showDobPicker && (
+                        <View className="mt-2 p-2.5 bg-white border border-zinc-200 rounded-xl shadow-sm">
+                          {(() => {
+                            const parts = (dob || '').split('/');
+                            const currentDay = parts[0] ? parseInt(parts[0], 10) : null;
+                            const currentMonth = parts[1] ? parseInt(parts[1], 10) : null;
+                            const currentYear = parts[2] ? parseInt(parts[2], 10) : null;
+
+                            const months = [
+                              { num: 1, name: 'Jan' }, { num: 2, name: 'Feb' }, { num: 3, name: 'Mar' },
+                              { num: 4, name: 'Apr' }, { num: 5, name: 'May' }, { num: 6, name: 'Jun' },
+                              { num: 7, name: 'Jul' }, { num: 8, name: 'Aug' }, { num: 9, name: 'Sep' },
+                              { num: 10, name: 'Oct' }, { num: 11, name: 'Nov' }, { num: 12, name: 'Dec' },
+                            ];
+
+                            // Years: 18 years ago to 65 years ago (trainers)
+                            const currentYr = new Date().getFullYear();
+                            const years: number[] = [];
+                            for (let y = currentYr - 18; y >= currentYr - 65; y--) {
+                              years.push(y);
+                            }
+
+                            // Days count in selected month
+                            const daysInMonth = (currentYear && currentMonth) 
+                              ? new Date(currentYear, currentMonth, 0).getDate() 
+                              : 31;
+                            const days: number[] = [];
+                            for (let d = 1; d <= daysInMonth; d++) {
+                              days.push(d);
+                            }
+
+                            const updateDob = (newDay: number | null, newMonth: number | null, newYear: number | null) => {
+                              const dStr = newDay ? String(newDay).padStart(2, '0') : (parts[0] || '01');
+                              const mStr = newMonth ? String(newMonth).padStart(2, '0') : (parts[1] || '01');
+                              const yStr = newYear ? String(newYear) : (parts[2] || String(currentYr - 25));
+                              const formatted = `${dStr}/${mStr}/${yStr}`;
+                              setDob(formatted);
+                              if (step1Touched) setStep1Errors(prev => ({ ...prev, dob: '' }));
+                            };
+
+                            return (
+                              <View className="gap-2">
+                                {/* Segmented tabs for Day / Month / Year */}
+                                <View className="flex-row bg-zinc-100 p-0.5 rounded-lg">
+                                  {(['day', 'month', 'year'] as const).map(tab => {
+                                    const isActive = dobPickerTab === tab;
+                                    const label = tab === 'day' 
+                                      ? (currentDay ? `D: ${currentDay}` : 'Day') 
+                                      : tab === 'month' 
+                                        ? (currentMonth ? `M: ${months[currentMonth - 1]?.name || currentMonth}` : 'Month') 
+                                        : (currentYear ? `Y: ${currentYear}` : 'Year');
+                                    return (
+                                      <TouchableOpacity
+                                        key={tab}
+                                        onPress={() => setDobPickerTab(tab)}
+                                        className={`flex-1 py-1 items-center rounded-md ${isActive ? 'bg-[#101828]' : 'bg-transparent'}`}
+                                      >
+                                        <Text className={`text-[9.5px] font-black uppercase ${isActive ? 'text-white' : 'text-zinc-600'}`}>
+                                          {label}
+                                        </Text>
+                                      </TouchableOpacity>
+                                    );
+                                  })}
+                                </View>
+
+                                {/* Content per active tab */}
+                                {dobPickerTab === 'day' && (
+                                  <View className="max-h-36">
+                                    <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                                      <View className="flex-row flex-wrap gap-1">
+                                        {days.map(d => {
+                                          const isSelected = currentDay === d;
+                                          return (
+                                            <TouchableOpacity
+                                              key={d}
+                                              onPress={() => {
+                                                updateDob(d, currentMonth, currentYear);
+                                                setDobPickerTab('month');
+                                              }}
+                                              className={`w-7 h-7 rounded-md items-center justify-center border ${
+                                                isSelected ? 'bg-[#E11D48] border-[#E11D48]' : 'bg-zinc-50 border-zinc-200'
+                                              }`}
+                                            >
+                                              <Text className={`text-[10px] font-bold ${isSelected ? 'text-white' : 'text-zinc-800'}`}>
+                                                {d}
+                                              </Text>
+                                            </TouchableOpacity>
+                                          );
+                                        })}
+                                      </View>
+                                    </ScrollView>
+                                  </View>
+                                )}
+
+                                {dobPickerTab === 'month' && (
+                                  <View className="flex-row flex-wrap gap-1">
+                                    {months.map(m => {
+                                      const isSelected = currentMonth === m.num;
+                                      return (
+                                        <TouchableOpacity
+                                          key={m.num}
+                                          onPress={() => {
+                                            updateDob(currentDay, m.num, currentYear);
+                                            setDobPickerTab('year');
+                                          }}
+                                          className={`px-2 py-1.5 rounded-md border ${
+                                            isSelected ? 'bg-[#E11D48] border-[#E11D48]' : 'bg-zinc-50 border-zinc-200'
+                                          }`}
+                                        >
+                                          <Text className={`text-[10px] font-bold ${isSelected ? 'text-white' : 'text-zinc-800'}`}>
+                                            {m.name}
+                                          </Text>
+                                        </TouchableOpacity>
+                                      );
+                                    })}
+                                  </View>
+                                )}
+
+                                {dobPickerTab === 'year' && (
+                                  <View className="max-h-36">
+                                    <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                                      <View className="flex-row flex-wrap gap-1">
+                                        {years.map(y => {
+                                          const isSelected = currentYear === y;
+                                          return (
+                                            <TouchableOpacity
+                                              key={y}
+                                              onPress={() => {
+                                                updateDob(currentDay, currentMonth, y);
+                                                setShowDobPicker(false);
+                                              }}
+                                              className={`px-2 py-1 rounded-md border ${
+                                                isSelected ? 'bg-[#E11D48] border-[#E11D48]' : 'bg-zinc-50 border-zinc-200'
+                                              }`}
+                                            >
+                                              <Text className={`text-[10px] font-bold ${isSelected ? 'text-white' : 'text-zinc-800'}`}>
+                                                {y}
+                                              </Text>
+                                            </TouchableOpacity>
+                                          );
+                                        })}
+                                      </View>
+                                    </ScrollView>
+                                  </View>
+                                )}
+
+                                {/* Close / Done button */}
+                                <TouchableOpacity
+                                  onPress={() => setShowDobPicker(false)}
+                                  className="py-1 bg-zinc-900 rounded-lg items-center justify-center mt-1"
+                                >
+                                  <Text className="text-white text-[9.5px] font-black uppercase">Done</Text>
+                                </TouchableOpacity>
+                              </View>
+                            );
+                          })()}
+                        </View>
+                      )}
                     </View>
                     <View className="flex-1">
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Gender</Text>
@@ -1125,34 +1644,93 @@ export default function TrainerApplicationScreen() {
                       </View>
                     </View>
                   </View>
+
+                  {/* Residential Address */}
                   <View>
-                    <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Residential Address</Text>
+                    <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">
+                      Residential Address <Text className="text-rose-500">*</Text>
+                    </Text>
                     <TextInput 
-                      value={address} onChangeText={setAddress} placeholder="A-404, Sea Breeze Towers, Worli"
-                      className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold"
+                      value={address} 
+                      onChangeText={(val) => {
+                        const clean = sanitizeInput(val);
+                        setAddress(clean);
+                        if (step1Touched) setStep1Errors(prev => ({ ...prev, address: clean.trim().length >= 5 ? '' : 'Please enter complete address' }));
+                      }} 
+                      placeholder="e.g. - Flat 404, Sea Breeze Towers, Worli"
+                      placeholderTextColor="#A1A1AA"
+                      className={`bg-zinc-50 border p-3 rounded-xl text-zinc-900 text-xs font-semibold ${
+                        step1Errors.address ? 'border-rose-400 bg-rose-50/20' : 'border-zinc-150'
+                      }`}
                     />
+                    {!!step1Errors.address && (
+                      <Text className="text-rose-500 text-[10px] font-semibold mt-1 text-start">
+                        {step1Errors.address}
+                      </Text>
+                    )}
                   </View>
+
+                  {/* City & PIN Code */}
                   <View className="flex-row gap-2">
                     <View className="flex-1">
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">City</Text>
-                      <TextInput value={city} onChangeText={setCity} className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold" />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">PIN Code</Text>
                       <TextInput 
-                        value={pinCode} onChangeText={setPinCode} placeholder="400018"
-                        className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold"
+                        value={city} 
+                        onChangeText={(val) => setCity(sanitizeInput(val))} 
+                        placeholder="e.g. - Mumbai"
+                        placeholderTextColor="#A1A1AA"
+                        className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold" 
                       />
                     </View>
+                    <View className="flex-1">
+                      <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">
+                        PIN Code <Text className="text-rose-500">*</Text>
+                      </Text>
+                      <TextInput 
+                        value={pinCode} 
+                        onChangeText={(val) => {
+                          const clean = sanitizeInput(val);
+                          setPinCode(clean);
+                          if (step1Touched) setStep1Errors(prev => ({ ...prev, pinCode: /^\d{6}$/.test(clean.trim()) ? '' : 'Enter valid 6-digit PIN' }));
+                        }} 
+                        placeholder="e.g. - 400018"
+                        placeholderTextColor="#A1A1AA"
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        className={`bg-zinc-50 border p-3 rounded-xl text-zinc-900 text-xs font-semibold ${
+                          step1Errors.pinCode ? 'border-rose-400 bg-rose-50/20' : 'border-zinc-150'
+                        }`}
+                      />
+                      {!!step1Errors.pinCode && (
+                        <Text className="text-rose-500 text-[10px] font-semibold mt-1 text-start">
+                          {step1Errors.pinCode}
+                        </Text>
+                      )}
+                    </View>
                   </View>
+
+                  {/* Emergency Contact */}
                   <View className="flex-row gap-2">
                     <View className="flex-1">
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Emergency Contact Name</Text>
-                      <TextInput value={emergencyName} onChangeText={setEmergencyName} placeholder="Neha Sharma" className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold" />
+                      <TextInput 
+                        value={emergencyName} 
+                        onChangeText={(val) => setEmergencyName(sanitizeInput(val))} 
+                        placeholder="e.g. - Neha Sharma" 
+                        placeholderTextColor="#A1A1AA"
+                        className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold" 
+                      />
                     </View>
                     <View className="flex-1">
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Emergency Phone</Text>
-                      <TextInput value={emergencyPhone} onChangeText={setEmergencyPhone} placeholder="+91 98200 11223" className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold" />
+                      <TextInput 
+                        value={emergencyPhone} 
+                        onChangeText={(val) => setEmergencyPhone(sanitizeInput(val))} 
+                        keyboardType="phone-pad" 
+                        placeholder="e.g. - +91 98200 11223" 
+                        placeholderTextColor="#A1A1AA"
+                        className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold" 
+                      />
                     </View>
                   </View>
                 </View>
@@ -1164,25 +1742,517 @@ export default function TrainerApplicationScreen() {
                 <Text className="text-[#101828] text-xs font-black uppercase tracking-widest border-b border-zinc-100 pb-2 text-start">Step 2: Fitness & Professional Details</Text>
                 
                 <View className="gap-3.5">
+                  {/* Primary Workout Specialization */}
                   <View>
-                    <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Primary Workout Specialization</Text>
-                    <TextInput 
-                      value={primaryWorkout} onChangeText={setPrimaryWorkout} placeholder="Strength Training"
-                      className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold"
-                    />
+                    <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">
+                      Primary Workout Specialization <Text className="text-rose-500">*</Text>
+                    </Text>
+                    <View className="relative">
+                      <TextInput 
+                        value={primaryWorkout} 
+                        onChangeText={(val) => {
+                          const clean = sanitizeInput(val);
+                          setPrimaryWorkout(clean);
+                          if (step2Touched) setStep2Errors(prev => ({ ...prev, primaryWorkout: clean.trim() ? '' : 'Primary workout is required' }));
+                        }} 
+                        placeholder="e.g. - Strength Training (PowerForge)"
+                        placeholderTextColor="#A1A1AA"
+                        className={`bg-zinc-50 border p-3 pr-10 rounded-xl text-zinc-900 text-xs font-semibold ${
+                          step2Errors.primaryWorkout ? 'border-rose-400 bg-rose-50/20' : 'border-zinc-150'
+                        }`}
+                      />
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => setShowPrimaryDropdown(!showPrimaryDropdown)}
+                        className="absolute right-3 top-3.5 w-6 h-6 items-center justify-center"
+                      >
+                        <Feather name={showPrimaryDropdown ? "chevron-up" : "chevron-down"} size={16} color="#6B7280" />
+                      </TouchableOpacity>
+                    </View>
+                    {!!step2Errors.primaryWorkout && (
+                      <Text className="text-rose-500 text-[10px] font-semibold mt-1 text-start">
+                        {step2Errors.primaryWorkout}
+                      </Text>
+                    )}
+
+                    {/* Dynamic Auto-Suggestion Pills when dropdown is closed */}
+                    {!showPrimaryDropdown && (() => {
+                      const rawSelected = primaryWorkout.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+                      const currentSegment = primaryWorkout.split(',').pop()?.trim().toLowerCase() || '';
+                      if (!currentSegment) return null;
+
+                      const suggestions = PRIMARY_WORKOUT_OPTIONS.filter(opt => {
+                        const isAlready = rawSelected.includes(opt.toLowerCase());
+                        return !isAlready && opt.toLowerCase().includes(currentSegment);
+                      });
+
+                      if (suggestions.length === 0) return null;
+
+                      return (
+                        <View className="mt-2 p-2 bg-rose-50/40 border border-rose-200/80 rounded-xl gap-1.5">
+                          <Text className="text-zinc-400 text-[8.5px] font-bold uppercase tracking-wider">
+                            Suggestions (tap to add to box):
+                          </Text>
+                          <View className="flex-row flex-wrap gap-1.5">
+                            {suggestions.map(opt => {
+                              const matchIndex = opt.toLowerCase().indexOf(currentSegment);
+                              return (
+                                <TouchableOpacity
+                                  key={opt}
+                                  activeOpacity={0.8}
+                                  onPress={() => {
+                                    const segments = primaryWorkout.split(',').map(s => s.trim()).filter(Boolean);
+                                    if (segments.length > 0 && segments[segments.length - 1].toLowerCase() === currentSegment) {
+                                      segments[segments.length - 1] = opt;
+                                      setPrimaryWorkout(segments.join(', '));
+                                    } else {
+                                      const clean = primaryWorkout.trim().replace(/,\s*$/, '');
+                                      setPrimaryWorkout(clean ? `${clean}, ${opt}` : opt);
+                                    }
+                                    if (step2Touched) setStep2Errors(prev => ({ ...prev, primaryWorkout: '' }));
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg border border-rose-300 bg-white shadow-xs"
+                                >
+                                  <Text className="text-[10.5px]">
+                                    <Text className="text-zinc-500 font-medium">{opt.slice(0, matchIndex)}</Text>
+                                    <Text className="text-[#E11D48] font-black underline">{opt.slice(matchIndex, matchIndex + currentSegment.length)}</Text>
+                                    <Text className="text-zinc-500 font-medium">{opt.slice(matchIndex + currentSegment.length)}</Text>
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        </View>
+                      );
+                    })()}
+
+                    {/* Full Dropdown Options Pills */}
+                    {showPrimaryDropdown && (
+                      <View className="mt-2 p-3 bg-zinc-50 border border-zinc-200 rounded-xl gap-2">
+                        <Text className="text-zinc-400 text-[9px] font-bold uppercase tracking-wider">
+                          Tap to select or append specializations (comma separated):
+                        </Text>
+                        <View className="flex-row flex-wrap gap-1.5">
+                          {(() => {
+                            const rawItems = primaryWorkout
+                              .split(',')
+                              .map(s => s.trim().toLowerCase())
+                              .filter(Boolean);
+                            const currentTypedSegment = primaryWorkout.split(',').pop()?.trim().toLowerCase() || '';
+
+                            return PRIMARY_WORKOUT_OPTIONS.map((opt) => {
+                              const isSelected = rawItems.includes(opt.toLowerCase());
+                              const matchIndex = currentTypedSegment ? opt.toLowerCase().indexOf(currentTypedSegment) : -1;
+                              const hasPartialMatch = !isSelected && matchIndex !== -1;
+                              const isUnmatched = !isSelected && !!currentTypedSegment && !hasPartialMatch;
+
+                              return (
+                                <TouchableOpacity
+                                  key={opt}
+                                  activeOpacity={0.75}
+                                  onPress={() => {
+                                    if (opt === 'Other') {
+                                      setPrimaryWorkout(prev => prev.trim() ? `${prev.trim()}, Other: ` : 'Other: ');
+                                    } else if (isSelected) {
+                                      // Remove if already present (multi-select toggle)
+                                      const filtered = primaryWorkout
+                                        .split(',')
+                                        .map(s => s.trim())
+                                        .filter(s => s.toLowerCase() !== opt.toLowerCase())
+                                        .join(', ');
+                                      setPrimaryWorkout(filtered);
+                                    } else {
+                                      // Replace current typed segment or append
+                                      const segments = primaryWorkout.split(',').map(s => s.trim()).filter(Boolean);
+                                      if (segments.length > 0 && currentTypedSegment && opt.toLowerCase().includes(currentTypedSegment)) {
+                                        segments[segments.length - 1] = opt;
+                                        setPrimaryWorkout(segments.join(', '));
+                                      } else {
+                                        const clean = primaryWorkout.trim().replace(/,\s*$/, '');
+                                        setPrimaryWorkout(clean ? `${clean}, ${opt}` : opt);
+                                      }
+                                    }
+                                    if (step2Touched) setStep2Errors(prev => ({ ...prev, primaryWorkout: '' }));
+                                  }}
+                                  className={`px-2.5 py-1.5 rounded-lg border ${
+                                    isSelected
+                                      ? 'bg-[#101828] border-[#101828]'
+                                      : hasPartialMatch
+                                        ? 'bg-rose-50/50 border-rose-300'
+                                        : isUnmatched
+                                          ? 'bg-zinc-100/60 border-zinc-200 opacity-35'
+                                          : 'bg-white border-zinc-200'
+                                  }`}
+                                >
+                                  {hasPartialMatch && !isSelected ? (
+                                    <Text className="text-[10.5px]">
+                                      <Text className="text-zinc-500 font-medium">
+                                        {opt.slice(0, matchIndex)}
+                                      </Text>
+                                      <Text className="text-[#E11D48] font-black underline">
+                                        {opt.slice(matchIndex, matchIndex + currentTypedSegment.length)}
+                                      </Text>
+                                      <Text className="text-zinc-500 font-medium">
+                                        {opt.slice(matchIndex + currentTypedSegment.length)}
+                                      </Text>
+                                    </Text>
+                                  ) : (
+                                    <Text className={`text-[10.5px] font-bold ${
+                                      isSelected ? 'text-white' : isUnmatched ? 'text-zinc-400' : 'text-zinc-700'
+                                    }`}>
+                                      {isSelected ? `✓ ${opt}` : opt}
+                                    </Text>
+                                  )}
+                                </TouchableOpacity>
+                              );
+                            });
+                          })()}
+                        </View>
+                      </View>
+                    )}
                   </View>
+
+                  {/* Secondary Skills */}
                   <View>
                     <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Secondary Skills</Text>
-                    <TextInput value={secondarySkills} onChangeText={setSecondarySkills} placeholder="HIIT, Core, Boxing Conditioning" className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold" />
+                    <View className="relative">
+                      <TextInput 
+                        value={secondarySkills} 
+                        onChangeText={(val) => setSecondarySkills(sanitizeInput(val))} 
+                        placeholder="e.g. - HIIT, Core Stability, Mobility" 
+                        placeholderTextColor="#A1A1AA"
+                        className="bg-zinc-50 border border-zinc-150 p-3 pr-10 rounded-xl text-zinc-900 text-xs font-semibold" 
+                      />
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => setShowSecondaryDropdown(!showSecondaryDropdown)}
+                        className="absolute right-3 top-3.5 w-6 h-6 items-center justify-center"
+                      >
+                        <Feather name={showSecondaryDropdown ? "chevron-up" : "chevron-down"} size={16} color="#6B7280" />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Dynamic Auto-Suggestion Pills when secondary dropdown is closed */}
+                    {!showSecondaryDropdown && (() => {
+                      const rawSelected = secondarySkills.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+                      const currentSegment = secondarySkills.split(',').pop()?.trim().toLowerCase() || '';
+                      if (!currentSegment) return null;
+
+                      const suggestions = SECONDARY_SKILLS_OPTIONS.filter(opt => {
+                        const isAlready = rawSelected.includes(opt.toLowerCase());
+                        return !isAlready && opt.toLowerCase().includes(currentSegment);
+                      });
+
+                      if (suggestions.length === 0) return null;
+
+                      return (
+                        <View className="mt-2 p-2 bg-rose-50/40 border border-rose-200/80 rounded-xl gap-1.5">
+                          <Text className="text-zinc-400 text-[8.5px] font-bold uppercase tracking-wider">
+                            Suggestions (tap to add to box):
+                          </Text>
+                          <View className="flex-row flex-wrap gap-1.5">
+                            {suggestions.map(opt => {
+                              const matchIndex = opt.toLowerCase().indexOf(currentSegment);
+                              return (
+                                <TouchableOpacity
+                                  key={opt}
+                                  activeOpacity={0.8}
+                                  onPress={() => {
+                                    const segments = secondarySkills.split(',').map(s => s.trim()).filter(Boolean);
+                                    if (segments.length > 0 && segments[segments.length - 1].toLowerCase() === currentSegment) {
+                                      segments[segments.length - 1] = opt;
+                                      setSecondarySkills(segments.join(', '));
+                                    } else {
+                                      const clean = secondarySkills.trim().replace(/,\s*$/, '');
+                                      setSecondarySkills(clean ? `${clean}, ${opt}` : opt);
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg border border-rose-300 bg-white shadow-xs"
+                                >
+                                  <Text className="text-[10.5px]">
+                                    <Text className="text-zinc-500 font-medium">{opt.slice(0, matchIndex)}</Text>
+                                    <Text className="text-[#E11D48] font-black underline">{opt.slice(matchIndex, matchIndex + currentSegment.length)}</Text>
+                                    <Text className="text-zinc-500 font-medium">{opt.slice(matchIndex + currentSegment.length)}</Text>
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        </View>
+                      );
+                    })()}
+
+                    {/* Secondary Skills Dropdown Pills */}
+                    {showSecondaryDropdown && (
+                      <View className="mt-2 p-3 bg-zinc-50 border border-zinc-200 rounded-xl gap-2">
+                        <Text className="text-zinc-400 text-[9px] font-bold uppercase tracking-wider">
+                          Tap to select or append skills (comma separated):
+                        </Text>
+                        <View className="flex-row flex-wrap gap-1.5">
+                          {(() => {
+                            const rawItems = secondarySkills
+                              .split(',')
+                              .map(s => s.trim().toLowerCase())
+                              .filter(Boolean);
+                            const currentTypedSegment = secondarySkills.split(',').pop()?.trim().toLowerCase() || '';
+
+                            return SECONDARY_SKILLS_OPTIONS.map((opt) => {
+                              const isSelected = rawItems.includes(opt.toLowerCase());
+                              const matchIndex = currentTypedSegment ? opt.toLowerCase().indexOf(currentTypedSegment) : -1;
+                              const hasPartialMatch = !isSelected && matchIndex !== -1;
+                              const isUnmatched = !isSelected && !!currentTypedSegment && !hasPartialMatch;
+
+                              return (
+                                <TouchableOpacity
+                                  key={opt}
+                                  activeOpacity={0.75}
+                                  onPress={() => {
+                                    if (opt === 'Other') {
+                                      setSecondarySkills(prev => prev.trim() ? `${prev.trim()}, Other: ` : 'Other: ');
+                                    } else if (isSelected) {
+                                      // Remove if already present (clean comma separated)
+                                      const filtered = secondarySkills
+                                        .split(',')
+                                        .map(s => s.trim())
+                                        .filter(s => s.toLowerCase() !== opt.toLowerCase())
+                                        .join(', ');
+                                      setSecondarySkills(filtered);
+                                    } else {
+                                      // Replace current partially typed segment or append with comma
+                                      const segments = secondarySkills.split(',').map(s => s.trim()).filter(Boolean);
+                                      if (segments.length > 0 && currentTypedSegment && opt.toLowerCase().includes(currentTypedSegment)) {
+                                        segments[segments.length - 1] = opt;
+                                        setSecondarySkills(segments.join(', '));
+                                      } else {
+                                        const clean = secondarySkills.trim().replace(/,\s*$/, '');
+                                        setSecondarySkills(clean ? `${clean}, ${opt}` : opt);
+                                      }
+                                    }
+                                  }}
+                                  className={`px-2.5 py-1.5 rounded-lg border ${
+                                    isSelected 
+                                      ? 'bg-[#101828] border-[#101828]' 
+                                      : hasPartialMatch
+                                        ? 'bg-rose-50/50 border-rose-300'
+                                        : isUnmatched
+                                          ? 'bg-zinc-100/60 border-zinc-200 opacity-35'
+                                          : 'bg-white border-zinc-200'
+                                  }`}
+                                >
+                                  {hasPartialMatch && !isSelected ? (
+                                    <Text className="text-[10.5px]">
+                                      <Text className="text-zinc-500 font-medium">
+                                        {opt.slice(0, matchIndex)}
+                                      </Text>
+                                      <Text className="text-[#E11D48] font-black underline">
+                                        {opt.slice(matchIndex, matchIndex + currentTypedSegment.length)}
+                                      </Text>
+                                      <Text className="text-zinc-500 font-medium">
+                                        {opt.slice(matchIndex + currentTypedSegment.length)}
+                                      </Text>
+                                    </Text>
+                                  ) : (
+                                    <Text className={`text-[10.5px] font-bold ${
+                                      isSelected ? 'text-white' : isUnmatched ? 'text-zinc-400' : 'text-zinc-700'
+                                    }`}>
+                                      {isSelected ? `✓ ${opt}` : opt}
+                                    </Text>
+                                  )}
+                                </TouchableOpacity>
+                              );
+                            });
+                          })()}
+                        </View>
+                      </View>
+                    )}
                   </View>
+
+                  {/* Fitness Qualifications */}
                   <View>
-                    <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Fitness Qualifications</Text>
-                    <TextInput value={fitnessQualifications} onChangeText={setFitnessQualifications} placeholder="ACE Certified Trainer, CPR/AED" className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold" />
+                    <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">
+                      Fitness Qualifications <Text className="text-rose-500">*</Text>
+                    </Text>
+                    <View className="relative">
+                      <TextInput 
+                        value={fitnessQualifications} 
+                        onChangeText={(val) => {
+                          const clean = sanitizeInput(val);
+                          setFitnessQualifications(clean);
+                          if (step2Touched) setStep2Errors(prev => ({ ...prev, fitnessQualifications: clean.trim() ? '' : 'Qualifications are required' }));
+                        }} 
+                        placeholder="e.g. - ACE (American Council on Exercise - CPT)" 
+                        placeholderTextColor="#A1A1AA"
+                        className={`bg-zinc-50 border p-3 pr-10 rounded-xl text-zinc-900 text-xs font-semibold ${
+                          step2Errors.fitnessQualifications ? 'border-rose-400 bg-rose-50/20' : 'border-zinc-150'
+                        }`}
+                      />
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => setShowQualificationsDropdown(!showQualificationsDropdown)}
+                        className="absolute right-3 top-3.5 w-6 h-6 items-center justify-center"
+                      >
+                        <Feather name={showQualificationsDropdown ? "chevron-up" : "chevron-down"} size={16} color="#6B7280" />
+                      </TouchableOpacity>
+                    </View>
+                    {!!step2Errors.fitnessQualifications && (
+                      <Text className="text-rose-500 text-[10px] font-semibold mt-1 text-start">
+                        {step2Errors.fitnessQualifications}
+                      </Text>
+                    )}
+
+                    {/* Dynamic Auto-Suggestion Pills when qualifications dropdown is closed */}
+                    {!showQualificationsDropdown && (() => {
+                      const rawSelected = fitnessQualifications.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+                      const currentSegment = fitnessQualifications.split(',').pop()?.trim().toLowerCase() || '';
+                      if (!currentSegment) return null;
+
+                      const suggestions = QUALIFICATIONS_OPTIONS.filter(opt => {
+                        const acronym = opt.split(' ')[0].toLowerCase();
+                        const isAlready = rawSelected.some(item => item === opt.toLowerCase() || item === acronym);
+                        return !isAlready && (opt.toLowerCase().includes(currentSegment) || acronym.includes(currentSegment));
+                      });
+
+                      if (suggestions.length === 0) return null;
+
+                      return (
+                        <View className="mt-2 p-2 bg-rose-50/40 border border-rose-200/80 rounded-xl gap-1.5">
+                          <Text className="text-zinc-400 text-[8.5px] font-bold uppercase tracking-wider">
+                            Suggestions (tap to add to box):
+                          </Text>
+                          <View className="flex-row flex-wrap gap-1.5">
+                            {suggestions.map(opt => {
+                              const matchIndex = opt.toLowerCase().indexOf(currentSegment);
+                              return (
+                                <TouchableOpacity
+                                  key={opt}
+                                  activeOpacity={0.8}
+                                  onPress={() => {
+                                    const segments = fitnessQualifications.split(',').map(s => s.trim()).filter(Boolean);
+                                    if (segments.length > 0 && segments[segments.length - 1].toLowerCase() === currentSegment) {
+                                      segments[segments.length - 1] = opt;
+                                      setFitnessQualifications(segments.join(', '));
+                                    } else {
+                                      const clean = fitnessQualifications.trim().replace(/,\s*$/, '');
+                                      setFitnessQualifications(clean ? `${clean}, ${opt}` : opt);
+                                    }
+                                    if (step2Touched) setStep2Errors(prev => ({ ...prev, fitnessQualifications: '' }));
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg border border-rose-300 bg-white shadow-xs"
+                                >
+                                  {matchIndex !== -1 ? (
+                                    <Text className="text-[10.5px]">
+                                      <Text className="text-zinc-500 font-medium">{opt.slice(0, matchIndex)}</Text>
+                                      <Text className="text-[#E11D48] font-black underline">{opt.slice(matchIndex, matchIndex + currentSegment.length)}</Text>
+                                      <Text className="text-zinc-500 font-medium">{opt.slice(matchIndex + currentSegment.length)}</Text>
+                                    </Text>
+                                  ) : (
+                                    <Text className="text-[10.5px] font-bold text-[#E11D48] underline">{opt}</Text>
+                                  )}
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        </View>
+                      );
+                    })()}
+
+                    {/* Qualifications Dropdown Pills */}
+                    {showQualificationsDropdown && (
+                      <View className="mt-2 p-3 bg-zinc-50 border border-zinc-200 rounded-xl gap-2">
+                        <Text className="text-zinc-400 text-[9px] font-bold uppercase tracking-wider">
+                          Tap to select or append certifications (comma separated):
+                        </Text>
+                        <View className="flex-row flex-wrap gap-1.5">
+                          {(() => {
+                            const rawItems = fitnessQualifications
+                              .split(',')
+                              .map(s => s.trim().toLowerCase())
+                              .filter(Boolean);
+                            const currentTypedSegment = fitnessQualifications.split(',').pop()?.trim().toLowerCase() || '';
+
+                            return QUALIFICATIONS_OPTIONS.map((opt) => {
+                              const acronym = opt.split(' ')[0].toLowerCase();
+                              const isSelected = rawItems.some(item => item === opt.toLowerCase() || item === acronym);
+                              const matchIndex = currentTypedSegment ? opt.toLowerCase().indexOf(currentTypedSegment) : -1;
+                              const hasPartialMatch = !isSelected && matchIndex !== -1;
+                              const isUnmatched = !isSelected && !!currentTypedSegment && !hasPartialMatch;
+
+                              return (
+                                <TouchableOpacity
+                                  key={opt}
+                                  activeOpacity={0.75}
+                                  onPress={() => {
+                                    if (opt === 'Other') {
+                                      setFitnessQualifications(prev => prev.trim() ? `${prev.trim()}, Other: ` : 'Other: ');
+                                    } else if (isSelected) {
+                                      // Remove if already present
+                                      const filtered = fitnessQualifications
+                                        .split(',')
+                                        .map(s => s.trim())
+                                        .filter(s => s.toLowerCase() !== opt.toLowerCase() && !s.toLowerCase().includes(acronym))
+                                        .join(', ');
+                                      setFitnessQualifications(filtered);
+                                    } else {
+                                      // Replace current partially typed segment or append with comma
+                                      const segments = fitnessQualifications.split(',').map(s => s.trim()).filter(Boolean);
+                                      if (segments.length > 0 && currentTypedSegment && opt.toLowerCase().includes(currentTypedSegment)) {
+                                        segments[segments.length - 1] = opt;
+                                        setFitnessQualifications(segments.join(', '));
+                                      } else {
+                                        const clean = fitnessQualifications.trim().replace(/,\s*$/, '');
+                                        setFitnessQualifications(clean ? `${clean}, ${opt}` : opt);
+                                      }
+                                    }
+                                    if (step2Touched) setStep2Errors(prev => ({ ...prev, fitnessQualifications: '' }));
+                                  }}
+                                  className={`px-2.5 py-1.5 rounded-lg border ${
+                                    isSelected 
+                                      ? 'bg-[#101828] border-[#101828]' 
+                                      : hasPartialMatch
+                                        ? 'bg-rose-50/50 border-rose-300'
+                                        : isUnmatched
+                                          ? 'bg-zinc-100/60 border-zinc-200 opacity-35'
+                                          : 'bg-white border-zinc-200'
+                                  }`}
+                                >
+                                  {hasPartialMatch && !isSelected ? (
+                                    <Text className="text-[10.5px]">
+                                      <Text className="text-zinc-500 font-medium">
+                                        {opt.slice(0, matchIndex)}
+                                      </Text>
+                                      <Text className="text-[#E11D48] font-black underline">
+                                        {opt.slice(matchIndex, matchIndex + currentTypedSegment.length)}
+                                      </Text>
+                                      <Text className="text-zinc-500 font-medium">
+                                        {opt.slice(matchIndex + currentTypedSegment.length)}
+                                      </Text>
+                                    </Text>
+                                  ) : (
+                                    <Text className={`text-[10.5px] font-bold ${
+                                      isSelected ? 'text-white' : isUnmatched ? 'text-zinc-400' : 'text-zinc-700'
+                                    }`}>
+                                      {isSelected ? `✓ ${opt}` : opt}
+                                    </Text>
+                                  )}
+                                </TouchableOpacity>
+                              );
+                            });
+                          })()}
+                        </View>
+                      </View>
+                    )}
                   </View>
+
+                  {/* About Me / Coach Bio */}
                   <View>
                     <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">About Me / Coach Bio</Text>
                     <TextInput 
-                      value={aboutMe} onChangeText={setAboutMe} multiline numberOfLines={3} placeholder="Tell clients about your coaching style and philosophy..."
+                      value={aboutMe} 
+                      onChangeText={(val) => setAboutMe(sanitizeInput(val))} 
+                      multiline 
+                      numberOfLines={3} 
+                      placeholder="e.g. - 5+ years helping clients achieve strength, fat loss, and posture transformation."
+                      placeholderTextColor="#A1A1AA"
                       className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold h-20 text-start"
                     />
                   </View>
@@ -1198,11 +2268,24 @@ export default function TrainerApplicationScreen() {
                   <View className="flex-row gap-2">
                     <View className="flex-1">
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Years of Experience</Text>
-                      <TextInput value={yearsOfExperience} onChangeText={setYearsOfExperience} keyboardType="number-pad" className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold" />
+                      <TextInput 
+                        value={yearsOfExperience} 
+                        onChangeText={(val) => setYearsOfExperience(sanitizeInput(val))} 
+                        keyboardType="number-pad" 
+                        placeholder="e.g. - 5"
+                        placeholderTextColor="#A1A1AA"
+                        className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold" 
+                      />
                     </View>
                     <View className="flex-1">
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Languages Spoken</Text>
-                      <TextInput value={languages} onChangeText={setLanguages} placeholder="English, Hindi, Punjabi" className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold" />
+                      <TextInput 
+                        value={languages} 
+                        onChangeText={(val) => setLanguages(sanitizeInput(val))} 
+                        placeholder="e.g. - English, Hindi, Marathi" 
+                        placeholderTextColor="#A1A1AA"
+                        className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold" 
+                      />
                     </View>
                   </View>
 
@@ -1244,11 +2327,25 @@ export default function TrainerApplicationScreen() {
                   <View className="flex-row gap-2">
                     <View className="flex-1">
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Max Sessions/Day</Text>
-                      <TextInput value={maxSessionsPerDay} onChangeText={setMaxSessionsPerDay} keyboardType="number-pad" className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold" />
+                      <TextInput 
+                        value={maxSessionsPerDay} 
+                        onChangeText={(val) => setMaxSessionsPerDay(sanitizeInput(val))} 
+                        keyboardType="number-pad" 
+                        placeholder="e.g. - 4"
+                        placeholderTextColor="#A1A1AA"
+                        className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold" 
+                      />
                     </View>
                     <View className="flex-1">
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Working Radius (km)</Text>
-                      <TextInput value={preferredWorkingRadius} onChangeText={setPreferredWorkingRadius} keyboardType="number-pad" className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold" />
+                      <TextInput 
+                        value={preferredWorkingRadius} 
+                        onChangeText={(val) => setPreferredWorkingRadius(sanitizeInput(val))} 
+                        keyboardType="number-pad" 
+                        placeholder="e.g. - 10"
+                        placeholderTextColor="#A1A1AA"
+                        className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold" 
+                      />
                     </View>
                   </View>
                 </View>
@@ -1257,145 +2354,9 @@ export default function TrainerApplicationScreen() {
 
             {currentStep === 4 && (
               <LuxuryCard className="p-5 gap-4" interactive={false}>
-                <Text className="text-[#101828] text-xs font-black uppercase tracking-widest border-b border-zinc-100 pb-2 text-start">Step 4: Document Verification</Text>
+                <Text className="text-[#101828] text-xs font-black uppercase tracking-widest border-b border-zinc-100 pb-2 text-start">Step 4: Profile Verification</Text>
                 
                 <View className="gap-4">
-                  {/* Aadhaar Upload */}
-                  <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
-                    <View className="flex-1 pr-3">
-                      <Text className="text-zinc-900 text-xs font-semibold text-start">Aadhaar Card (PDF/Image)</Text>
-                      {aadhaarUploadStatus === 'UPLOADED' ? (
-                        <Text className="text-emerald-600 text-[9px] font-black uppercase mt-1 text-start">✓ Aadhaar Uploaded</Text>
-                      ) : aadhaarUploadStatus === 'FAILED' ? (
-                        <Text className="text-rose-600 text-[9px] font-black uppercase mt-1 text-start">❌ Upload Failed</Text>
-                      ) : (
-                        <Text className="text-rose-600 text-[9px] font-black uppercase mt-1 text-start">⚠️ Required</Text>
-                      )}
-                      {aadhaarVerificationNotes ? (
-                        <Text className="text-amber-700 text-[9px] font-semibold mt-0.5 text-start">Notes: {aadhaarVerificationNotes}</Text>
-                      ) : null}
-                    </View>
-                    <TouchableOpacity
-                      onPress={() => uploadFile('aadhaar')}
-                      disabled={uploadingDoc === 'aadhaar'}
-                      className={`px-4 py-2.5 rounded-xl border ${aadhaarUploadStatus === 'UPLOADED' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-zinc-200'}`}
-                    >
-                      <Text className={`text-[8.5px] font-black uppercase ${aadhaarUploadStatus === 'UPLOADED' ? 'text-emerald-600' : 'text-zinc-800'}`}>
-                        {uploadingDoc === 'aadhaar' ? 'Uploading...' : aadhaarUploadStatus === 'FAILED' ? 'Retry Upload' : documentAadhaar ? 'Replace' : 'Upload'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Aadhaar AI Verification status display */}
-                  {verifyingStatus !== 'IDLE' && verifyingStatus !== 'UPLOADING' && (
-                    <View className="bg-zinc-50 p-4 rounded-xl border border-zinc-150 gap-3">
-                      <View className="flex-row justify-between items-center">
-                        <Text className="text-zinc-500 text-[8.5px] font-black uppercase tracking-wider text-start">Aadhaar AI Status</Text>
-                        <View className={`px-2 py-0.5 rounded-full ${
-                          verifyingStatus === 'VERIFIED' 
-                            ? 'bg-green-50 border border-green-200' 
-                            : verifyingStatus === 'NAME_MISMATCH' 
-                            ? 'bg-rose-50 border border-rose-200' 
-                            : verifyingStatus === 'PROCESSING'
-                            ? 'bg-blue-50 border border-blue-200'
-                            : 'bg-amber-50 border border-amber-200'
-                        }`}>
-                          <Text className={`text-[7.5px] font-black uppercase ${
-                            verifyingStatus === 'VERIFIED' 
-                              ? 'text-green-600' 
-                              : verifyingStatus === 'NAME_MISMATCH' 
-                              ? 'text-rose-600' 
-                              : verifyingStatus === 'PROCESSING'
-                              ? 'text-blue-600'
-                              : 'text-amber-600'
-                          }`}>
-                            {verifyingStatus === 'PROCESSING' ? 'Processing...' : verifyingStatus}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {verifyingStatus === 'PROCESSING' && (
-                        <View className="flex-row items-center gap-2 py-1">
-                          <ActivityIndicator size="small" color="#E11D48" />
-                          <Text className="text-zinc-600 text-xs font-medium text-start">Reading name on document and verifying...</Text>
-                        </View>
-                      )}
-
-                      {verifyingStatus === 'VERIFIED' && (
-                        <View className="gap-1">
-                          <Text className="text-[#101828] text-xs font-semibold text-start">✓ Name Matched Account Successfully</Text>
-                          <Text className="text-zinc-500 text-[10px] text-start">Your identity documents are automatically verified.</Text>
-                        </View>
-                      )}
-
-                      {verifyingStatus === 'NAME_MISMATCH' && (
-                        <View className="gap-3">
-                          <Text className="text-rose-600 text-xs font-bold text-start">⚠️ Name Mismatch Detected</Text>
-                          <View className="bg-white p-3 rounded-lg border border-rose-100 gap-1.5">
-                            <Text className="text-[11px] text-zinc-600 text-start">Virla Account Name: <Text className="font-bold text-zinc-800">{fullName}</Text></Text>
-                            <Text className="text-[11px] text-zinc-600 text-start">Name extracted from ID: <Text className="font-bold text-zinc-800">{extractedIdName || 'Unreadable'}</Text></Text>
-                            {ocrConfidence !== null && (
-                              <Text className="text-[10px] text-zinc-400 text-start">Match confidence: {Math.round(ocrConfidence * 100)}%</Text>
-                            )}
-                          </View>
-                          
-                          <View className="flex-row gap-2 mt-1">
-                            <TouchableOpacity
-                              onPress={handleUploadDifferentId}
-                              className="flex-1 py-3 bg-zinc-800 rounded-xl items-center justify-center"
-                            >
-                              <Text className="text-white text-[8px] font-black uppercase tracking-wider text-center">Upload Different ID</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                              onPress={handleAttestNames}
-                              className="flex-1 py-3 bg-[#E11D48] rounded-xl items-center justify-center"
-                            >
-                              <Text className="text-white text-[8px] font-black uppercase tracking-wider text-center">Both Names Belong to Me</Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      )}
-
-                      {verifyingStatus === 'MANUAL_REVIEW' && (
-                        <View className="gap-1">
-                          <Text className="text-amber-600 text-xs font-semibold text-start">ℹ️ Under Manual Review</Text>
-                          <Text className="text-zinc-500 text-[10px] text-start">
-                            {trainerAttested 
-                              ? 'Submitted for manual review (Attested: Both names belong to you).' 
-                              : 'Submitted for manual review (AI uncertainty / low confidence).'}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  )}
-
-                  {/* PAN Upload */}
-                  <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
-                    <View className="flex-1 pr-3">
-                      <Text className="text-zinc-900 text-xs font-semibold text-start">PAN Card (PDF/Image)</Text>
-                      {panUploadStatus === 'UPLOADED' ? (
-                        <Text className="text-emerald-600 text-[9px] font-black uppercase mt-1 text-start">✓ PAN Uploaded</Text>
-                      ) : panUploadStatus === 'FAILED' ? (
-                        <Text className="text-rose-600 text-[9px] font-black uppercase mt-1 text-start">❌ Upload Failed</Text>
-                      ) : (
-                        <Text className="text-rose-600 text-[9px] font-black uppercase mt-1 text-start">⚠️ Required</Text>
-                      )}
-                      {panVerificationNotes ? (
-                        <Text className="text-amber-700 text-[9px] font-semibold mt-0.5 text-start">Notes: {panVerificationNotes}</Text>
-                      ) : null}
-                    </View>
-                    <TouchableOpacity
-                      onPress={() => uploadFile('pan')}
-                      disabled={uploadingDoc === 'pan'}
-                      className={`px-4 py-2.5 rounded-xl border ${panUploadStatus === 'UPLOADED' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-zinc-200'}`}
-                    >
-                      <Text className={`text-[8.5px] font-black uppercase ${panUploadStatus === 'UPLOADED' ? 'text-emerald-600' : 'text-zinc-800'}`}>
-                        {uploadingDoc === 'pan' ? 'Uploading...' : panUploadStatus === 'FAILED' ? 'Retry Upload' : documentPan ? 'Replace' : 'Upload'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
                   {/* Selfie Upload */}
                   <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
                     <View className="flex-1 pr-3">
@@ -1468,7 +2429,7 @@ export default function TrainerApplicationScreen() {
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={handleSubmit}
-                  disabled={!documentAadhaar || !documentPan || !documentSelfie}
+                  disabled={!documentSelfie}
                   style={{
                     shadowColor: '#E11D48',
                     shadowOffset: { width: 0, height: 4 },
@@ -1476,7 +2437,7 @@ export default function TrainerApplicationScreen() {
                     shadowRadius: 8,
                     elevation: 4
                   }}
-                  className={`flex-1 py-4 rounded-xl items-center justify-center ${(!documentAadhaar || !documentPan || !documentSelfie) ? 'bg-zinc-300' : 'bg-[#E11D48]'}`}
+                  className={`flex-1 py-4 rounded-xl items-center justify-center ${!documentSelfie ? 'bg-zinc-300' : 'bg-[#E11D48]'}`}
                 >
                   <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Submit Application</Text>
                 </TouchableOpacity>

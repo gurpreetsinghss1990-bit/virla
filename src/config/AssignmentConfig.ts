@@ -9,7 +9,7 @@ export const AssignmentConfig = {
     acceptanceRate: 0.05,       // 5%
   },
   
-  serviceRadiusKm: 10,          // Maximum allowed distance in kilometers
+  serviceRadiusKm: 5,           // Maximum allowed distance in kilometers (Capped to 5 km)
   responseTimeoutSec: 60,       // Trainer response window in seconds
   cooldownDurationMin: 15,      // Cooldown in minutes after completing a session
   maxDailySessions: 4,          // Maximum daily sessions allowed per trainer
