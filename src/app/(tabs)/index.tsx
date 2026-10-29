@@ -33,6 +33,7 @@ import { Booking } from '../../types';
 import { normalizeDate, canonicalizeTimeRange, getBookingISTDateRange, getDisplayWorkoutTitle, formatToDDMMYYYY } from '../../utils/date';
 import { MASTER_TRAINER_AVATAR_IMAGE } from '../../constants/masterTrainerAvatar';
 import { getDefaultAvatarForGender } from './profile';
+import { CoachVideoAvatar } from '../../components/CoachVideoAvatar';
 
 
 function getClientGender(booking: Booking): string {
@@ -1472,9 +1473,11 @@ export default function HomeScreen() {
                 </ScrollView>
               </View>
 
-              {/* Your Coach Today Section */}
-              <View className="gap-4">
-                <Text className="text-[#101828] text-[20px] font-semibold tracking-tight pl-1">Your Coach Today</Text>
+              {/* Top Performing Trainers Section */}
+              <View className="gap-2.5">
+                <Text className="text-[#101828] text-[18px] font-semibold tracking-tight pl-1">
+                  Our Top Performing Trainers of the month
+                </Text>
                 
                 {activeBooking ? (() => {
                   const isActiveAccepted = activeBooking.timelineStatus !== 'booked' && activeBooking.timelineStatus !== 'trainer_assigned';
@@ -1482,8 +1485,9 @@ export default function HomeScreen() {
                     return (
                       // Booking pending trainer acceptance (Trainer details hidden)
                       <View 
-                        className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-5"
+                        className="border border-[#E5E7EB] p-6 rounded-[28px] gap-5"
                         style={{
+                          backgroundColor: '#FFFFFF',
                           shadowColor: '#101828',
                           shadowOffset: { width: 0, height: 6 },
                           shadowOpacity: 0.04,
@@ -1521,8 +1525,9 @@ export default function HomeScreen() {
                   return (
                     // Booking accepted by trainer (Trainer details fully revealed)
                     <View 
-                      className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-5"
+                      className="border border-[#E5E7EB] p-4 rounded-[28px] gap-4"
                       style={{
+                        backgroundColor: '#FFFFFF',
                         shadowColor: '#101828',
                         shadowOffset: { width: 0, height: 6 },
                         shadowOpacity: 0.04,
@@ -1531,11 +1536,15 @@ export default function HomeScreen() {
                       }}
                     >
                       <View className="flex-row gap-4 items-center">
-                        {/* Left: Avatar image with rating overlay */}
+                        {/* Left: IPL-style animated Coach Video Avatar utilizing full frame height */}
                         <View className="relative">
-                          <Image 
-                            source={{ uri: activeBooking.trainerPhoto || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }} 
-                            className="w-18 h-18 rounded-full border border-zinc-150" 
+                          <CoachVideoAvatar
+                            posterUri={activeBooking.trainerPhoto || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80'}
+                            width={110}
+                            height={110}
+                            borderRadius={18}
+                            scale={1.12}
+                            showSunburstScrim={true}
                           />
                           {/* Rating Overlay */}
                           <View 
@@ -1602,18 +1611,37 @@ export default function HomeScreen() {
                   );
                 })() : (
                   <View 
-                    className="bg-white border border-[#E5E7EB] p-8 rounded-[32px] items-center justify-center gap-3"
+                    className="border border-[#E5E7EB] pt-2 pb-2 px-3 rounded-[24px]"
                     style={{
+                      backgroundColor: '#FFFFFF',
                       shadowColor: '#101828',
-                      shadowOffset: { width: 0, height: 6 },
-                      shadowOpacity: 0.04,
-                      shadowRadius: 12,
-                      elevation: 3,
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.03,
+                      shadowRadius: 10,
+                      elevation: 2,
                     }}
                   >
-                    <Text className="text-3xl">🏋️</Text>
-                    <Text className="text-[#101828] text-base font-semibold">No Active Coach Today</Text>
-                    <Text className="text-zinc-500 text-sm text-center">Your assigned coach tracking details will activate here on the day of your session.</Text>
+                    <View className="items-start">
+                      <View className="items-center">
+                        <CoachVideoAvatar width={96} height={102} borderRadius={18} scale={1.0} showSunburstScrim={true} />
+                        <Text className="text-[#101828] text-[14px] font-medium tracking-tight mt-1 text-center">
+                          Kalpesh Khirade
+                        </Text>
+                        <Text className="text-[#4B5563] text-[11.5px] font-normal tracking-tight text-center mt-0.5">
+                          Fitness Trainer
+                        </Text>
+                        <Text className="text-[#9CA3AF] text-[10.5px] font-normal tracking-tight text-center">
+                          Strength Training
+                        </Text>
+                        <View className="flex-row items-center justify-center gap-0.5 mt-1">
+                          <Ionicons name="star" size={10} color="#F59E0B" />
+                          <Ionicons name="star" size={11.5} color="#F59E0B" />
+                          <Ionicons name="star" size={15} color="#F59E0B" />
+                          <Ionicons name="star" size={11.5} color="#F59E0B" />
+                          <Ionicons name="star" size={10} color="#F59E0B" />
+                        </View>
+                      </View>
+                    </View>
                   </View>
                 )}
               </View>
