@@ -11,10 +11,10 @@ const COACH_AVATAR_VIDEO = require('../../assets/videos/coach_avatar.mp4');
 const COACH_TRANSPARENT_WEBP = require('../../assets/images/coach_kalpesh_transparent.webp');
 
 interface CoachVideoAvatarProps {
-  /** Optional remote video URL or local asset. Falls back to the bundled coach preview video. */
-  videoUri?: string;
-  /** Fallback static photo URI while loading or if video fails */
-  posterUri?: string;
+  /** Optional remote video URL or local asset module (e.g. require(...)). Falls back to the bundled coach preview video. */
+  videoUri?: any;
+  /** Fallback static photo URI or local require source while loading or if video fails */
+  posterUri?: any;
   /** Size in px (if square/circular) */
   size?: number;
   /** Custom width in px (overrides size) */
@@ -53,13 +53,14 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
 
   React.useEffect(() => {
     let mounted = true;
-    if (videoUri) {
+    if (typeof videoUri === 'string') {
       setResolvedUri(videoUri);
       return;
     }
+    const targetModule = videoUri || COACH_AVATAR_VIDEO;
     (async () => {
       try {
-        const asset = Asset.fromModule(COACH_AVATAR_VIDEO);
+        const asset = Asset.fromModule(targetModule);
         if (!asset.localUri && !asset.uri) {
           await asset.downloadAsync();
         }
@@ -321,7 +322,13 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
             ]}
           >
             <Image
-              source={posterUri ? { uri: posterUri } : COACH_TRANSPARENT_WEBP}
+              source={
+                posterUri
+                  ? typeof posterUri === 'number'
+                    ? posterUri
+                    : { uri: posterUri }
+                  : COACH_TRANSPARENT_WEBP
+              }
               style={{
                 width: frameWidth,
                 height: frameHeight,

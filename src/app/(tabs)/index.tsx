@@ -34,6 +34,57 @@ import { normalizeDate, canonicalizeTimeRange, getBookingISTDateRange, getDispla
 import { MASTER_TRAINER_AVATAR_IMAGE } from '../../constants/masterTrainerAvatar';
 import { getDefaultAvatarForGender } from './profile';
 import { CoachVideoAvatar } from '../../components/CoachVideoAvatar';
+import { BackgroundVideoLoop } from '../../components/BackgroundVideoLoop';
+
+const WORKOUT_BG_STRENGTH = require('../../../assets/videos/strength_bg.mp4');
+
+// Bundled Top Performing Trainer Assets
+const TRAINER_VIDEO_KALPESH = require('../../../assets/videos/coach_avatar.mp4');
+const TRAINER_THUMB_KALPESH = require('../../../assets/images/coach_kalpesh_transparent.webp');
+
+const TRAINER_VIDEO_AATHARVA = require('../../../assets/videos/aatharva_tawde.mp4');
+const TRAINER_THUMB_AATHARVA = require('../../../assets/images/aatharva_tawde_transparent.webp');
+
+const TRAINER_VIDEO_PARTH = require('../../../assets/videos/parth_thakur.mp4');
+const TRAINER_THUMB_PARTH = require('../../../assets/images/parth_thakur_transparent.webp');
+
+const TRAINER_VIDEO_PANKAJ = require('../../../assets/videos/pankaj_yadav.mp4');
+const TRAINER_THUMB_PANKAJ = require('../../../assets/images/pankaj_yadav_transparent.webp');
+
+const TOP_PERFORMING_TRAINERS = [
+  {
+    id: 'top-kalpesh',
+    name: 'Kalpesh Khirade',
+    designation: 'Fitness Trainer',
+    specialty: 'Strength Training',
+    video: TRAINER_VIDEO_KALPESH,
+    thumb: TRAINER_THUMB_KALPESH,
+  },
+  {
+    id: 'top-1',
+    name: 'Aatharva Tawde',
+    designation: 'Fitness Trainer',
+    specialty: 'Mobility & Hypertrophy',
+    video: TRAINER_VIDEO_AATHARVA,
+    thumb: TRAINER_THUMB_AATHARVA,
+  },
+  {
+    id: 'top-2',
+    name: 'Parth Thakur',
+    designation: 'Fitness Trainer',
+    specialty: 'Functional & Strength',
+    video: TRAINER_VIDEO_PARTH,
+    thumb: TRAINER_THUMB_PARTH,
+  },
+  {
+    id: 'top-3',
+    name: 'Pankaj Yadav',
+    designation: 'Fitness Trainer',
+    specialty: 'Endurance & Core',
+    video: TRAINER_VIDEO_PANKAJ,
+    thumb: TRAINER_THUMB_PANKAJ,
+  },
+];
 
 
 function getClientGender(booking: Booking): string {
@@ -1415,7 +1466,7 @@ export default function HomeScreen() {
                   contentContainerStyle={{ paddingHorizontal: 24, gap: 12 }}
                 >
                   {[
-                    { id: 'strength', title: 'Strength', sub: 'Build & Tone', emoji: '🏋️', colors: ['#FF6B6B', '#E11D48'] },
+                    { id: 'strength', title: 'Strength', sub: 'Build & Tone', emoji: '🏋️', colors: ['#FF6B6B', '#E11D48'], video: WORKOUT_BG_STRENGTH },
                     { id: 'yoga', title: 'Yoga', sub: 'Mind & Body', emoji: '🧘', colors: ['#C084FC', '#7C3AED'] },
                     { id: 'rhythm', title: 'Rhythm Dance', sub: 'Cardio & Dance', emoji: '💃', colors: ['#F472B6', '#BE185D'] },
                     { id: 'boxing', title: 'Boxing', sub: 'Power & Endurance', emoji: '🥊', colors: ['#FBBF24', '#EA580C'] }
@@ -1433,13 +1484,18 @@ export default function HomeScreen() {
                       })}
                       className="w-[140px] h-[150px] p-3.5 rounded-2xl relative overflow-hidden justify-between border border-white/20 shadow-sm"
                     >
-                      {/* SVG Background Gradient */}
+                      {/* Optional Background Video for Workout (e.g. Strength) */}
+                      {item.video && (
+                        <BackgroundVideoLoop source={item.video} />
+                      )}
+
+                      {/* SVG Foreground Gradient Overlay with Opacity so Video plays behind while maintaining vibrant colors */}
                       <View style={StyleSheet.absoluteFill}>
                         <Svg width="100%" height="100%">
                           <Defs>
                             <LinearGradient id={`grad-${item.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                              <Stop offset="0%" stopColor={item.colors[0]} />
-                              <Stop offset="100%" stopColor={item.colors[1]} />
+                              <Stop offset="0%" stopColor={item.colors[0]} stopOpacity={item.video ? 0.72 : 1} />
+                              <Stop offset="100%" stopColor={item.colors[1]} stopOpacity={item.video ? 0.78 : 1} />
                             </LinearGradient>
                           </Defs>
                           <Rect width="100%" height="100%" fill={`url(#grad-${item.id})`} />
@@ -1611,7 +1667,7 @@ export default function HomeScreen() {
                   );
                 })() : (
                   <View 
-                    className="border border-[#E5E7EB] pt-2 pb-2 px-3 rounded-[24px]"
+                    className="border border-[#E5E7EB] py-3.5 px-3 rounded-[24px] relative overflow-hidden"
                     style={{
                       backgroundColor: '#FFFFFF',
                       shadowColor: '#101828',
@@ -1621,26 +1677,99 @@ export default function HomeScreen() {
                       elevation: 2,
                     }}
                   >
-                    <View className="items-start">
-                      <View className="items-center">
-                        <CoachVideoAvatar width={96} height={102} borderRadius={18} scale={1.0} showSunburstScrim={true} />
-                        <Text className="text-[#101828] text-[14px] font-medium tracking-tight mt-1 text-center">
-                          Kalpesh Khirade
-                        </Text>
-                        <Text className="text-[#4B5563] text-[11.5px] font-normal tracking-tight text-center mt-0.5">
-                          Fitness Trainer
-                        </Text>
-                        <Text className="text-[#9CA3AF] text-[10.5px] font-normal tracking-tight text-center">
-                          Strength Training
-                        </Text>
-                        <View className="flex-row items-center justify-center gap-0.5 mt-1">
-                          <Ionicons name="star" size={10} color="#F59E0B" />
-                          <Ionicons name="star" size={11.5} color="#F59E0B" />
-                          <Ionicons name="star" size={15} color="#F59E0B" />
-                          <Ionicons name="star" size={11.5} color="#F59E0B" />
-                          <Ionicons name="star" size={10} color="#F59E0B" />
+                    <ScrollView 
+                      horizontal 
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={{ paddingHorizontal: 10, gap: 16 }}
+                    >
+                      {TOP_PERFORMING_TRAINERS.map((trainer) => (
+                        <View key={trainer.id} className="items-center" style={{ width: 108 }}>
+                          <CoachVideoAvatar 
+                            videoUri={trainer.video}
+                            posterUri={trainer.thumb}
+                            width={96} 
+                            height={102} 
+                            borderRadius={18} 
+                            scale={1.0} 
+                            showSunburstScrim={true} 
+                          />
+                          <Text 
+                            numberOfLines={1}
+                            className="text-[#101828] text-[13px] font-semibold tracking-tight mt-1.5 text-center"
+                          >
+                            {trainer.name}
+                          </Text>
+                          <Text 
+                            numberOfLines={1}
+                            className="text-[#4B5563] text-[11px] font-normal tracking-tight text-center mt-0.5"
+                          >
+                            {trainer.designation}
+                          </Text>
+                          <Text 
+                            numberOfLines={1}
+                            className="text-[#9CA3AF] text-[10px] font-normal tracking-tight text-center"
+                          >
+                            {trainer.specialty}
+                          </Text>
+                          <View className="flex-row items-center justify-center gap-0.5 mt-1">
+                            <Ionicons name="star" size={9} color="#F59E0B" />
+                            <Ionicons name="star" size={10.5} color="#F59E0B" />
+                            <Ionicons name="star" size={13} color="#F59E0B" />
+                            <Ionicons name="star" size={10.5} color="#F59E0B" />
+                            <Ionicons name="star" size={9} color="#F59E0B" />
+                          </View>
                         </View>
-                      </View>
+                      ))}
+                    </ScrollView>
+
+                    {/* Left Side Soft White Gradient Fade Scrim */}
+                    <View 
+                      pointerEvents="none" 
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: 28,
+                        zIndex: 10,
+                      }}
+                    >
+                      <Svg width="100%" height="100%" preserveAspectRatio="none">
+                        <Defs>
+                          <LinearGradient id="trainersLeftScrim" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.95" />
+                            <Stop offset="40%" stopColor="#FFFFFF" stopOpacity="0.6" />
+                            <Stop offset="75%" stopColor="#FFFFFF" stopOpacity="0.2" />
+                            <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+                          </LinearGradient>
+                        </Defs>
+                        <Rect x="0" y="0" width="100%" height="100%" fill="url(#trainersLeftScrim)" />
+                      </Svg>
+                    </View>
+
+                    {/* Right Side Soft White Gradient Fade Scrim */}
+                    <View 
+                      pointerEvents="none" 
+                      style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: 28,
+                        zIndex: 10,
+                      }}
+                    >
+                      <Svg width="100%" height="100%" preserveAspectRatio="none">
+                        <Defs>
+                          <LinearGradient id="trainersRightScrim" x1="100%" y1="0%" x2="0%" y2="0%">
+                            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.95" />
+                            <Stop offset="40%" stopColor="#FFFFFF" stopOpacity="0.6" />
+                            <Stop offset="75%" stopColor="#FFFFFF" stopOpacity="0.2" />
+                            <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+                          </LinearGradient>
+                        </Defs>
+                        <Rect x="0" y="0" width="100%" height="100%" fill="url(#trainersRightScrim)" />
+                      </Svg>
                     </View>
                   </View>
                 )}

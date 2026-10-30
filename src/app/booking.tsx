@@ -2611,13 +2611,6 @@ export default function BookingScreen() {
                           activeOpacity={0.9}
                           onPress={() => {
                             setSelectedAddressId(addr.id);
-                            // Auto transition to step 4 on card tap after small delay
-                            if (autoTransitionTimerRef.current) clearTimeout(autoTransitionTimerRef.current);
-                            autoTransitionTimerRef.current = setTimeout(() => {
-                              if (isMountedRef.current) {
-                                triggerTransition(4);
-                              }
-                            }, 300);
                           }}
                           className={`p-5 rounded-[24px] border flex-row items-center justify-between  ${
                             isSelected 
