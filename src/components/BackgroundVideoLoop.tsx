@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { View, Platform, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Platform, StyleSheet, AppState } from 'react-native';
+import { useIsFocused } from 'expo-router';
 import { WebView } from 'react-native-webview';
 import { Asset } from 'expo-asset';
 
@@ -10,6 +11,28 @@ interface BackgroundVideoLoopProps {
 
 export const BackgroundVideoLoop: React.FC<BackgroundVideoLoopProps> = ({ source, style }) => {
   const [uri, setUri] = useState<string | null>(null);
+  const webViewRef = useRef<WebView>(null);
+  const isFocused = useIsFocused();
+  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => setAppActive(st === 'active'));
+    return () => sub.remove();
+  }, []);
+
+  const shouldPlay = isFocused && appActive;
+
+  // Pause when app is backgrounded or this tab is not focused; resume otherwise
+  useEffect(() => {
+    if (Platform.OS === 'web' || !webViewRef.current) return;
+    webViewRef.current.injectJavaScript(`
+      (function() {
+        var v = document.querySelector('video');
+        if (v) { ${shouldPlay ? "v.play().catch(function(){});" : "v.pause();"} }
+      })();
+      true;
+    `);
+  }, [shouldPlay, uri]);
 
   useEffect(() => {
     let isMounted = true;
@@ -95,6 +118,7 @@ export const BackgroundVideoLoop: React.FC<BackgroundVideoLoopProps> = ({ source
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, { overflow: 'hidden' }, style]}>
       <WebView
+        ref={webViewRef}
         source={{ html, baseUrl: '' }}
         originWhitelist={['*']}
         allowsInlineMediaPlayback={true}

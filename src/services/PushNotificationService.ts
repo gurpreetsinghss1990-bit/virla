@@ -1,6 +1,7 @@
-import { Platform, NativeModules } from 'react-native';
+import { Platform } from 'react-native';
 import { supabase } from '../database/supabaseClient';
 import Constants from 'expo-constants';
+import { requireOptionalNativeModule } from 'expo-modules-core';
 
 // Centralized sound mapping & notification taxonomy
 export const NOTIFICATION_SOUNDS = {
@@ -24,9 +25,10 @@ export class PushNotificationService {
   static isNotificationsSupported(): boolean {
     if (Platform.OS === 'web') return false;
     try {
-      const hasExpoModule = typeof globalThis !== 'undefined' && (globalThis as any).ExpoModules && (globalThis as any).ExpoModules.ExpoPushTokenManager;
-      const hasNativeModule = NativeModules && NativeModules.ExpoPushTokenManager;
-      return !!(hasExpoModule || hasNativeModule);
+      const pushModule = requireOptionalNativeModule('ExpoPushTokenManager');
+      if (pushModule) return true;
+      const notifModule = requireOptionalNativeModule('ExpoNotifications');
+      return !!notifModule;
     } catch (e) {
       return false;
     }
@@ -93,29 +95,17 @@ export class PushNotificationService {
 
       const platform = Platform.OS === 'ios' ? 'ios' : 'android';
 
-      // 1. Clear any duplicate user mapping for this token to handle logouts/re-logins
-      await supabase
-        .from('device_tokens')
-        .delete()
-        .eq('token', token)
-        .neq('user_id', userId);
-
-      // 2. Upsert the token for the current user session
-      const { error } = await supabase
-        .from('device_tokens')
-        .upsert({
-          user_id: userId,
-          token: token,
-          platform: platform,
-          last_seen_at: new Date().toISOString()
-        }, {
-          onConflict: 'token'
-        });
+      // Call secure RPC to bypass client-side RLS restriction
+      const { error } = await supabase.rpc('sync_device_token', {
+        p_user_id: userId,
+        p_token: token,
+        p_platform: platform,
+      });
 
       if (error) {
-        console.error('[PUSH SERVICE] Supabase upsert error:', error.message);
+        console.error('[PUSH SERVICE] Supabase sync_device_token RPC error:', error.message);
       } else {
-        console.log('[PUSH SERVICE] Device token synced successfully.');
+        console.log('[PUSH SERVICE] Device token synced successfully via RPC.');
       }
     } catch (e) {
       console.error('[PUSH SERVICE] Exception in syncTokenWithBackend:', e);
@@ -138,7 +128,8 @@ export class PushNotificationService {
         .eq('user_id', userId);
 
       if (error) {
-        console.error('[PUSH SERVICE] Supabase delete error:', error.message);
+        // Non-blocking log if delete policy rejects anon
+        console.warn('[PUSH SERVICE] Token delete notice on logout:', error.message);
       } else {
         console.log('[PUSH SERVICE] Device token removed successfully on logout.');
       }

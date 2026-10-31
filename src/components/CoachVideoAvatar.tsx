@@ -1,16 +1,29 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, TouchableOpacity, Image, Platform, StyleSheet, AppState, AppStateStatus } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { useIsFocused } from 'expo-router';
 import { Asset } from 'expo-asset';
 import { Feather } from '@expo/vector-icons';
 import Svg, { Defs, RadialGradient, Stop, Rect, Line } from 'react-native-svg';
 import { BUNNY_CDN_ASSETS } from '../services/bunnyCdnService';
+
+// Module-level manager for Single Active Playback across all CoachVideoAvatar instances
+type PlaybackListener = (activeId: string | null) => void;
+let currentPlayingId: string | null = null;
+const playbackListeners = new Set<PlaybackListener>();
+
+function setGlobalActivePlayer(id: string | null) {
+  currentPlayingId = id;
+  playbackListeners.forEach((listener) => listener(id));
+}
 
 // Default CDN URLs with ultra-fast edge delivery
 const DEFAULT_VIDEO_URL = BUNNY_CDN_ASSETS.TRAINER_VIDEO_KALPESH;
 const DEFAULT_POSTER_URL = BUNNY_CDN_ASSETS.TRAINER_IMAGE_KALPESH;
 
 interface CoachVideoAvatarProps {
+  /** Unique ID for the trainer/player to ensure only one video plays at a time */
+  id?: string;
   /** Optional remote video URL or local asset module (e.g. require(...)). Falls back to the bundled coach preview video. */
   videoUri?: any;
   /** Fallback static photo URI or local require source while loading or if video fails */
@@ -32,6 +45,7 @@ interface CoachVideoAvatarProps {
 }
 
 export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
+  id,
   videoUri,
   posterUri,
   size = 110,
@@ -46,10 +60,68 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
   const frameHeight = height ?? size;
   const frameRadius = borderRadius ?? Math.min(frameWidth, frameHeight) / 2;
 
+  // Use passed id or fallback to videoUri string or unique generated key
+  const instanceId = useRef<string>(id || (typeof videoUri === 'string' ? videoUri : `coach-${Math.random()}`)).current;
+
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [resolvedUri, setResolvedUri] = useState<string | null>(videoUri || null);
   const webViewRef = useRef<WebView>(null);
   const webVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Stop playback when the tab/screen loses focus
+  const isFocused = useIsFocused();
+  useEffect(() => {
+    if (isFocused) return;
+    setIsPlaying(false);
+    if (currentPlayingId === instanceId) setGlobalActivePlayer(null);
+    if (Platform.OS === 'web') {
+      if (webVideoRef.current) {
+        webVideoRef.current.pause();
+        webVideoRef.current.currentTime = 0;
+      }
+    } else if (webViewRef.current) {
+      webViewRef.current.injectJavaScript(`
+        (function() {
+          var v = document.getElementById('coachVid');
+          if (v) { v.pause(); v.currentTime = 0; }
+        })();
+        true;
+      `);
+    }
+  }, [isFocused, instanceId]);
+
+  // Subscribe to Global Single Active Player Manager
+  // If another coach begins playing, this instance immediately pauses and silences
+  useEffect(() => {
+    const handleActiveChange = (activeId: string | null) => {
+      if (activeId !== instanceId) {
+        setIsPlaying(false);
+        if (Platform.OS === 'web') {
+          if (webVideoRef.current) {
+            webVideoRef.current.pause();
+            webVideoRef.current.currentTime = 0;
+          }
+        } else if (webViewRef.current) {
+          const js = `
+            (function() {
+              var v = document.getElementById('coachVid');
+              if (v) {
+                v.pause();
+                v.currentTime = 0;
+              }
+            })();
+            true;
+          `;
+          webViewRef.current.injectJavaScript(js);
+        }
+      }
+    };
+
+    playbackListeners.add(handleActiveChange);
+    return () => {
+      playbackListeners.delete(handleActiveChange);
+    };
+  }, [instanceId]);
 
   React.useEffect(() => {
     let mounted = true;
@@ -83,6 +155,7 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (nextAppState.match(/inactive|background/)) {
         setIsPlaying(false);
+        setGlobalActivePlayer(null);
         if (Platform.OS === 'web') {
           if (webVideoRef.current) {
             webVideoRef.current.pause();
@@ -107,12 +180,23 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
     const subscription = AppState.addEventListener('change', handleAppStateChange);
     return () => {
       subscription.remove();
+      // Ensure audio doesn't linger on component unmount
+      setGlobalActivePlayer(null);
     };
   }, []);
 
   const togglePlaybackAndVoice = useCallback(() => {
     const nextPlaying = !isPlaying;
     setIsPlaying(nextPlaying);
+
+    if (nextPlaying) {
+      // Announce this instance as active so all other instances instantly pause
+      setGlobalActivePlayer(instanceId);
+    } else {
+      if (currentPlayingId === instanceId) {
+        setGlobalActivePlayer(null);
+      }
+    }
 
     if (Platform.OS === 'web') {
       if (webVideoRef.current) {
@@ -144,7 +228,7 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
       `;
       webViewRef.current.injectJavaScript(js);
     }
-  }, [isPlaying]);
+  }, [isPlaying, instanceId]);
 
   const htmlContent = React.useMemo(() => {
     if (!resolvedUri) return '';
@@ -193,6 +277,11 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
                 vid.pause();
                 if (window.ReactNativeWebView) {
                   window.ReactNativeWebView.postMessage('ENDED');
+                }
+              });
+              vid.addEventListener('error', function() {
+                if (window.ReactNativeWebView) {
+                  window.ReactNativeWebView.postMessage('ERROR');
                 }
               });
             }
@@ -306,9 +395,24 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
               allowFileAccess={true}
               allowFileAccessFromFileURLs={true}
               allowUniversalAccessFromFileURLs={true}
+              onError={() => {
+                setIsPlaying(false);
+                if (currentPlayingId === instanceId) {
+                  setGlobalActivePlayer(null);
+                }
+              }}
+              onHttpError={() => {
+                setIsPlaying(false);
+                if (currentPlayingId === instanceId) {
+                  setGlobalActivePlayer(null);
+                }
+              }}
               onMessage={(event) => {
-                if (event.nativeEvent.data === 'ENDED') {
+                if (event.nativeEvent.data === 'ENDED' || event.nativeEvent.data === 'ERROR') {
                   setIsPlaying(false);
+                  if (currentPlayingId === instanceId) {
+                    setGlobalActivePlayer(null);
+                  }
                 }
               }}
               style={{

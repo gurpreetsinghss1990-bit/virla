@@ -1719,6 +1719,7 @@ export default function HomeScreen() {
                       {TOP_PERFORMING_TRAINERS.map((trainer) => (
                         <View key={trainer.id} className="items-center" style={{ width: 108 }}>
                           <CoachVideoAvatar 
+                            id={trainer.id}
                             videoUri={trainer.video}
                             posterUri={trainer.thumb}
                             width={96} 
