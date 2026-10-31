@@ -4,7 +4,7 @@ import { WebView } from 'react-native-webview';
 import { Asset } from 'expo-asset';
 import { Feather } from '@expo/vector-icons';
 import Svg, { Defs, RadialGradient, Stop, Rect, Line } from 'react-native-svg';
-import { BUNNY_CDN_ASSETS, getCachedVideoUri } from '../services/bunnyCdnService';
+import { BUNNY_CDN_ASSETS } from '../services/bunnyCdnService';
 
 // Default CDN URLs with ultra-fast edge delivery
 const DEFAULT_VIDEO_URL = BUNNY_CDN_ASSETS.TRAINER_VIDEO_KALPESH;
@@ -56,16 +56,7 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
     const targetSource = videoUri || DEFAULT_VIDEO_URL;
 
     if (typeof targetSource === 'string') {
-      // If it's a remote URL (BunnyCDN), ensure it's cached locally on device
-      if (targetSource.startsWith('http://') || targetSource.startsWith('https://')) {
-        getCachedVideoUri(targetSource).then((cached) => {
-          if (mounted) setResolvedUri(cached);
-        }).catch(() => {
-          if (mounted) setResolvedUri(targetSource);
-        });
-      } else {
-        setResolvedUri(targetSource);
-      }
+      setResolvedUri(targetSource);
       return;
     }
 
@@ -197,15 +188,6 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
           <script>
             var vid = document.getElementById('coachVid');
             if (vid) {
-              vid.addEventListener('timeupdate', function() {
-                if (vid.currentTime >= 9.0) {
-                  vid.pause();
-                  vid.currentTime = 0;
-                  if (window.ReactNativeWebView) {
-                    window.ReactNativeWebView.postMessage('ENDED');
-                  }
-                }
-              });
               vid.addEventListener('ended', function() {
                 vid.currentTime = 0;
                 vid.pause();
@@ -292,13 +274,6 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
               preload="auto"
               muted={!isPlaying}
               playsInline
-              onTimeUpdate={(e) => {
-                if (e.currentTarget.currentTime >= 9.0) {
-                  e.currentTarget.pause();
-                  e.currentTarget.currentTime = 0;
-                  setIsPlaying(false);
-                }
-              }}
               onEnded={() => {
                 setIsPlaying(false);
                 if (webVideoRef.current) {
@@ -312,10 +287,10 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
                 objectPosition: 'center bottom',
                 backgroundColor: '#FFFFFF',
                 filter: 'brightness(1.03) contrast(1.02)',
-                transform: [{ scale }],
+                transform: `scale(${scale})`,
                 transformOrigin: 'center bottom',
                 opacity: isPlaying ? 1 : 0,
-              }}
+              } as any}
             />
           ) : (
             <WebView

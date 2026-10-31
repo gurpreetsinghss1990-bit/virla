@@ -43,6 +43,15 @@ const WORKOUT_BG_STRENGTH = BUNNY_CDN_ASSETS.WORKOUT_BG_STRENGTH;
 const TRAINER_VIDEO_KALPESH = BUNNY_CDN_ASSETS.TRAINER_VIDEO_KALPESH;
 const TRAINER_THUMB_KALPESH = BUNNY_CDN_ASSETS.TRAINER_IMAGE_KALPESH;
 
+const TRAINER_VIDEO_PRANAY = BUNNY_CDN_ASSETS.TRAINER_VIDEO_PRANAY;
+const TRAINER_THUMB_PRANAY = BUNNY_CDN_ASSETS.TRAINER_IMAGE_PRANAY;
+
+const TRAINER_VIDEO_SHIVANI = BUNNY_CDN_ASSETS.TRAINER_VIDEO_SHIVANI;
+const TRAINER_THUMB_SHIVANI = BUNNY_CDN_ASSETS.TRAINER_IMAGE_SHIVANI;
+
+const TRAINER_VIDEO_MAYUR = BUNNY_CDN_ASSETS.TRAINER_VIDEO_MAYUR;
+const TRAINER_THUMB_MAYUR = BUNNY_CDN_ASSETS.TRAINER_IMAGE_MAYUR;
+
 const TRAINER_VIDEO_AATHARVA = BUNNY_CDN_ASSETS.TRAINER_VIDEO_ATHARVA;
 const TRAINER_THUMB_AATHARVA = BUNNY_CDN_ASSETS.TRAINER_IMAGE_ATHARVA;
 
@@ -60,6 +69,30 @@ const TOP_PERFORMING_TRAINERS = [
     specialty: 'Strength Training',
     video: TRAINER_VIDEO_KALPESH,
     thumb: TRAINER_THUMB_KALPESH,
+  },
+  {
+    id: 'top-pranay',
+    name: 'Pranay Sardesai',
+    designation: 'Fitness Trainer',
+    specialty: 'Core & Conditioning',
+    video: TRAINER_VIDEO_PRANAY,
+    thumb: TRAINER_THUMB_PRANAY,
+  },
+  {
+    id: 'top-shivani',
+    name: 'Shivani Gupta',
+    designation: 'Fitness Trainer',
+    specialty: 'Mobility & Flexibility',
+    video: TRAINER_VIDEO_SHIVANI,
+    thumb: TRAINER_THUMB_SHIVANI,
+  },
+  {
+    id: 'top-mayur',
+    name: 'Mayur Bhosle',
+    designation: 'Fitness Trainer',
+    specialty: 'Functional & Strength',
+    video: TRAINER_VIDEO_MAYUR,
+    thumb: TRAINER_THUMB_MAYUR,
   },
   {
     id: 'top-1',
