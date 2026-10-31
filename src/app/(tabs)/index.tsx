@@ -35,21 +35,22 @@ import { MASTER_TRAINER_AVATAR_IMAGE } from '../../constants/masterTrainerAvatar
 import { getDefaultAvatarForGender } from './profile';
 import { CoachVideoAvatar } from '../../components/CoachVideoAvatar';
 import { BackgroundVideoLoop } from '../../components/BackgroundVideoLoop';
+import { BUNNY_CDN_ASSETS } from '../../services/bunnyCdnService';
 
-const WORKOUT_BG_STRENGTH = require('../../../assets/videos/strength_bg.mp4');
+const WORKOUT_BG_STRENGTH = BUNNY_CDN_ASSETS.WORKOUT_BG_STRENGTH;
 
-// Bundled Top Performing Trainer Assets
-const TRAINER_VIDEO_KALPESH = require('../../../assets/videos/coach_avatar.mp4');
-const TRAINER_THUMB_KALPESH = require('../../../assets/images/coach_kalpesh_transparent.webp');
+// Top Performing Trainer Assets (Served via ultra-fast BunnyCDN with edge caching)
+const TRAINER_VIDEO_KALPESH = BUNNY_CDN_ASSETS.TRAINER_VIDEO_KALPESH;
+const TRAINER_THUMB_KALPESH = BUNNY_CDN_ASSETS.TRAINER_IMAGE_KALPESH;
 
-const TRAINER_VIDEO_AATHARVA = require('../../../assets/videos/aatharva_tawde.mp4');
-const TRAINER_THUMB_AATHARVA = require('../../../assets/images/aatharva_tawde_transparent.webp');
+const TRAINER_VIDEO_AATHARVA = BUNNY_CDN_ASSETS.TRAINER_VIDEO_ATHARVA;
+const TRAINER_THUMB_AATHARVA = BUNNY_CDN_ASSETS.TRAINER_IMAGE_ATHARVA;
 
-const TRAINER_VIDEO_PARTH = require('../../../assets/videos/parth_thakur.mp4');
-const TRAINER_THUMB_PARTH = require('../../../assets/images/parth_thakur_transparent.webp');
+const TRAINER_VIDEO_PARTH = BUNNY_CDN_ASSETS.TRAINER_VIDEO_PARTH;
+const TRAINER_THUMB_PARTH = BUNNY_CDN_ASSETS.TRAINER_IMAGE_PARTH;
 
-const TRAINER_VIDEO_PANKAJ = require('../../../assets/videos/pankaj_yadav.mp4');
-const TRAINER_THUMB_PANKAJ = require('../../../assets/images/pankaj_yadav_transparent.webp');
+const TRAINER_VIDEO_PANKAJ = BUNNY_CDN_ASSETS.TRAINER_VIDEO_PANKAJ;
+const TRAINER_THUMB_PANKAJ = BUNNY_CDN_ASSETS.TRAINER_IMAGE_PANKAJ;
 
 const TOP_PERFORMING_TRAINERS = [
   {

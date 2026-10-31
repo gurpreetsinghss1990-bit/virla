@@ -1,14 +1,14 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { View, TouchableOpacity, Image, Platform, StyleSheet } from 'react-native';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { View, TouchableOpacity, Image, Platform, StyleSheet, AppState, AppStateStatus } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Asset } from 'expo-asset';
 import { Feather } from '@expo/vector-icons';
 import Svg, { Defs, RadialGradient, Stop, Rect, Line } from 'react-native-svg';
+import { BUNNY_CDN_ASSETS, getCachedVideoUri } from '../services/bunnyCdnService';
 
-// Bundled lightweight compressed MP4 (~1.3 MB, 272x480 with clear voice)
-const COACH_AVATAR_VIDEO = require('../../assets/videos/coach_avatar.mp4');
-// Bundled ultra-lightweight transparent WebP cutout (~33 KB)
-const COACH_TRANSPARENT_WEBP = require('../../assets/images/coach_kalpesh_transparent.webp');
+// Default CDN URLs with ultra-fast edge delivery
+const DEFAULT_VIDEO_URL = BUNNY_CDN_ASSETS.TRAINER_VIDEO_KALPESH;
+const DEFAULT_POSTER_URL = BUNNY_CDN_ASSETS.TRAINER_IMAGE_KALPESH;
 
 interface CoachVideoAvatarProps {
   /** Optional remote video URL or local asset module (e.g. require(...)). Falls back to the bundled coach preview video. */
@@ -53,14 +53,25 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
 
   React.useEffect(() => {
     let mounted = true;
-    if (typeof videoUri === 'string') {
-      setResolvedUri(videoUri);
+    const targetSource = videoUri || DEFAULT_VIDEO_URL;
+
+    if (typeof targetSource === 'string') {
+      // If it's a remote URL (BunnyCDN), ensure it's cached locally on device
+      if (targetSource.startsWith('http://') || targetSource.startsWith('https://')) {
+        getCachedVideoUri(targetSource).then((cached) => {
+          if (mounted) setResolvedUri(cached);
+        }).catch(() => {
+          if (mounted) setResolvedUri(targetSource);
+        });
+      } else {
+        setResolvedUri(targetSource);
+      }
       return;
     }
-    const targetModule = videoUri || COACH_AVATAR_VIDEO;
+
     (async () => {
       try {
-        const asset = Asset.fromModule(targetModule);
+        const asset = Asset.fromModule(targetSource);
         if (!asset.localUri && !asset.uri) {
           await asset.downloadAsync();
         }
@@ -75,6 +86,38 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
       mounted = false;
     };
   }, [videoUri]);
+
+  // Handle app background/inactive: Pause video and audio immediately
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (nextAppState.match(/inactive|background/)) {
+        setIsPlaying(false);
+        if (Platform.OS === 'web') {
+          if (webVideoRef.current) {
+            webVideoRef.current.pause();
+            webVideoRef.current.currentTime = 0;
+          }
+        } else if (webViewRef.current) {
+          const js = `
+            (function() {
+              var v = document.getElementById('coachVid');
+              if (v) {
+                v.pause();
+                v.currentTime = 0;
+              }
+            })();
+            true;
+          `;
+          webViewRef.current.injectJavaScript(js);
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   const togglePlaybackAndVoice = useCallback(() => {
     const nextPlaying = !isPlaying;
@@ -327,7 +370,7 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
                   ? typeof posterUri === 'number'
                     ? posterUri
                     : { uri: posterUri }
-                  : COACH_TRANSPARENT_WEBP
+                  : { uri: DEFAULT_POSTER_URL }
               }
               style={{
                 width: frameWidth,

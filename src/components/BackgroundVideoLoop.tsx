@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Platform, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Asset } from 'expo-asset';
+import { getCachedVideoUri } from '../services/bunnyCdnService';
 
 interface BackgroundVideoLoopProps {
   source: any;
@@ -16,7 +17,12 @@ export const BackgroundVideoLoop: React.FC<BackgroundVideoLoopProps> = ({ source
     (async () => {
       try {
         if (typeof source === 'string') {
-          if (isMounted) setUri(source);
+          if (source.startsWith('http://') || source.startsWith('https://')) {
+            const cached = await getCachedVideoUri(source);
+            if (isMounted) setUri(cached);
+          } else {
+            if (isMounted) setUri(source);
+          }
           return;
         }
         const asset = Asset.fromModule(source);
