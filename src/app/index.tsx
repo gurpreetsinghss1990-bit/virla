@@ -140,7 +140,7 @@ export default function SplashScreen() {
             <Svg width={44} height={44} viewBox="0 0 100 100">
               <Path
                 d="M50 0 C53 34 66 47 100 50 C66 53 53 66 50 100 C47 66 34 53 0 50 C34 47 47 34 50 0 Z"
-                fill="#F07178"
+                fill="#E11D48"
               />
             </Svg>
           </Animated.View>

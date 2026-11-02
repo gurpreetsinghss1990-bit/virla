@@ -531,7 +531,32 @@ export default function BookingScreen() {
   const [etaText, setEtaText] = useState('~12 mins travel');
   const [distanceText, setDistanceText] = useState('3.2 km');
   const [isLocationOutsideCoverage, setIsLocationOutsideCoverage] = useState(false);
+
+  // Trainer-First service area check (Step 3):
+  // Area is available if ANY active trainer is within 5 km approx walking distance
+  // (Haversine straight-line distance x 1.5). Trainer identity is never exposed in UI.
+  const isAreaCoveredByTrainer = useCallback((userLat: number, userLng: number): boolean => {
+    // Database se fresh coaches uthao, na ki stale store se
+    const freshCoaches = Database.getCoaches() || coaches;
+
+    return freshCoaches.some(coach => {
+      if (coach.preferences?.online === false) return false;
+      const tLat = coach.preferences?.operatingLatitude;
+      const tLng = coach.preferences?.operatingLongitude;
+      if (tLat === undefined || tLat === null || tLng === undefined || tLng === null) return false;
+
+      // Haversine distance check
+      return calculateDistanceKm(userLat, userLng, tLat, tLng) * 1.5 <= 5;
+    });
+  }, [coaches]);
   const [successBookingId, setSuccessBookingId] = useState(initialBookingId);
+
+  useEffect(() => {
+    if (step === 3) {
+      // Har baar Step 3 pe aane par coaches sync karo
+      useCoachStore.getState().syncFromDB();
+    }
+  }, [step]);
 
   // Fallback to latest booking if step 7 (success) is mounted/refreshed without a specific bookingId
   useEffect(() => {
@@ -613,6 +638,9 @@ export default function BookingScreen() {
       console.warn('[Booking] Location permission check error:', err);
       return;
     }
+
+    // Coaches ko sync karo taaki fresh data mile
+    useCoachStore.getState().syncFromDB();
 
     geocodeRequestCounterRef.current++;
     if (reverseGeocodeTimerRef.current) {
@@ -1437,11 +1465,7 @@ export default function BookingScreen() {
       setIsMapConfirmed(false);
       setGpsAccuracy(null);
       
-      const centerMumbai = { lat: 19.0176, lng: 72.8164 };
-      const dist = calculateDistanceKm(details.latitude, details.longitude, centerMumbai.lat, centerMumbai.lng);
-      setDistanceText(`${dist.toFixed(1)} km`);
-      setEtaText(`~${Math.round(dist * 2.5 + 5)} mins`);
-      setIsLocationOutsideCoverage(dist > 30);
+      setIsLocationOutsideCoverage(!isAreaCoveredByTrainer(details.latitude, details.longitude));
 
       // Animate map to coordinates
       mapRef.current?.animateToRegion({
@@ -1490,11 +1514,7 @@ export default function BookingScreen() {
       setResolvedPlaceName(resolved.buildingName);
       setIsMapConfirmed(false);
       
-      const centerMumbai = { lat: 19.0176, lng: 72.8164 };
-      const dist = calculateDistanceKm(latitude, longitude, centerMumbai.lat, centerMumbai.lng);
-      setDistanceText(`${dist.toFixed(1)} km`);
-      setEtaText(`~${Math.round(dist * 2.5 + 5)} mins`);
-      setIsLocationOutsideCoverage(dist > 30);
+      setIsLocationOutsideCoverage(!isAreaCoveredByTrainer(latitude, longitude));
 
       // Animate map to current location coordinates
       mapRef.current?.animateToRegion({
@@ -1658,42 +1678,14 @@ export default function BookingScreen() {
       if (addr) {
         if (addr.lat !== undefined && addr.lng !== undefined && addr.lat !== 0 && addr.lng !== 0) {
           setActiveCoords({ lat: addr.lat, lng: addr.lng });
-          const centerMumbai = { lat: 19.0176, lng: 72.8164 };
-          const dist = calculateDistanceKm(addr.lat, addr.lng, centerMumbai.lat, centerMumbai.lng);
-          setDistanceText(`${dist.toFixed(1)} km`);
-          setEtaText(`~${Math.round(dist * 2.5 + 5)} mins`);
-          setIsLocationOutsideCoverage(dist > 30);
+          setIsLocationOutsideCoverage(!isAreaCoveredByTrainer(addr.lat, addr.lng));
         } else {
-          const lower = addr.addressLine.toLowerCase();
-          if (lower.includes('pune') || lower.includes('delhi') || lower.includes('bangalore') || lower.includes('kolkata')) {
-            setIsLocationOutsideCoverage(true);
-            setEtaText('N/A (Out of bounds)');
-            setDistanceText('> 100 km');
-          } else if (lower.includes('juhu')) {
-            setIsLocationOutsideCoverage(false);
-            setEtaText('~18 mins travel');
-            setDistanceText('6.5 km');
-            setActiveCoords({ lat: 19.1076, lng: 72.8264 });
-          } else if (lower.includes('bandra')) {
-            setIsLocationOutsideCoverage(false);
-            setEtaText('~12 mins travel');
-            setDistanceText('3.2 km');
-            setActiveCoords({ lat: 19.0596, lng: 72.8295 });
-          } else if (lower.includes('worli')) {
-            setIsLocationOutsideCoverage(false);
-            setEtaText('~15 mins travel');
-            setDistanceText('4.1 km');
-            setActiveCoords({ lat: 18.9986, lng: 72.8174 });
-          } else {
-            setIsLocationOutsideCoverage(false);
-            setEtaText('~15 mins travel');
-            setDistanceText('4.2 km');
-            setActiveCoords({ lat: 19.0176, lng: 72.8164 });
-          }
+          // No coordinates saved for this address: trainer coverage cannot be verified
+          setIsLocationOutsideCoverage(true);
         }
       }
     }
-  }, [selectedAddressId, step, addresses]);
+  }, [selectedAddressId, step, addresses, isAreaCoveredByTrainer]);
 
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
   const availabilityLoadedRef = useRef(false);
@@ -2163,7 +2155,7 @@ export default function BookingScreen() {
     return allAvailable;
   };
 
-  const isContinueVisible = step <= 4 && (step !== 1 || !!selectedExperience) && (step !== 4 || !!selectedTime);
+  const isContinueVisible = step <= 4 && (step !== 1 || !!selectedExperience) && (step !== 4 || !!selectedTime) && (step !== 3 || (!!selectedAddressId && !isLocationOutsideCoverage));
 
   useEffect(() => {
     if (isContinueVisible) {
@@ -2611,6 +2603,12 @@ export default function BookingScreen() {
                           activeOpacity={0.9}
                           onPress={() => {
                             setSelectedAddressId(addr.id);
+                            // Yahan turant check karo
+                            if (addr.lat && addr.lng) {
+                              setIsLocationOutsideCoverage(!isAreaCoveredByTrainer(addr.lat, addr.lng));
+                            } else {
+                              setIsLocationOutsideCoverage(true);
+                            }
                           }}
                           className={`p-5 rounded-[24px] border flex-row items-center justify-between  ${
                             isSelected 
@@ -2718,19 +2716,8 @@ export default function BookingScreen() {
                           <Feather name="check-circle" size={20} color="#059669" />
                         </View>
                         <View className="flex-1 gap-0.5">
-                          <Text className="text-emerald-800 text-xs font-black uppercase tracking-wider">🟢 Service Available</Text>
-                          <Text className="text-emerald-700 text-xs font-semibold">Your location is within the VIRLA service area.</Text>
+                          <Text className="text-emerald-700 text-xs font-semibold">✅ Virla is available in your area. Proceed to select Date &amp; Time.</Text>
                           
-                          <View className="flex-row gap-6 mt-2">
-                            <View>
-                              <Text className="text-zinc-500 text-[8px] font-bold uppercase">Estimated Trainer Arrival</Text>
-                              <Text className="text-zinc-900 text-xs font-extrabold">{etaText}</Text>
-                            </View>
-                            <View>
-                              <Text className="text-zinc-500 text-[8px] font-bold uppercase">Coverage Status</Text>
-                              <Text className="text-zinc-900 text-xs font-extrabold">Available</Text>
-                            </View>
-                          </View>
                         </View>
                       </View>
                     ) : (
@@ -2740,8 +2727,7 @@ export default function BookingScreen() {
                             <Feather name="alert-triangle" size={20} color="#DC2626" />
                           </View>
                           <View className="flex-1">
-                            <Text className="text-red-800 text-xs font-black uppercase tracking-wider">⚠️ Outside Service Area</Text>
-                            <Text className="text-red-700 text-xs font-semibold">Sorry, VIRLA is not yet available in this area.</Text>
+                            <Text className="text-red-700 text-xs font-semibold">❌ Sorry, Virla is not yet available in your area. We are expanding soon!</Text>
                           </View>
                         </View>
                         <Text className="text-zinc-500 text-xs leading-relaxed pl-1">
@@ -2844,11 +2830,7 @@ export default function BookingScreen() {
                                         const resolved = await resolveExactLocation(region.latitude, region.longitude, res.address, res.results);
                                         setResolvedPlaceName(resolved.buildingName);
                                         
-                                        const centerMumbai = { lat: 19.0176, lng: 72.8164 };
-                                        const dist = calculateDistanceKm(region.latitude, region.longitude, centerMumbai.lat, centerMumbai.lng);
-                                        setDistanceText(`${dist.toFixed(1)} km`);
-                                        setEtaText(`~${Math.round(dist * 2.5 + 5)} mins`);
-                                        setIsLocationOutsideCoverage(dist > 30);
+                                        setIsLocationOutsideCoverage(!isAreaCoveredByTrainer(region.latitude, region.longitude));
                                       } catch (e) {
                                         console.warn('Map settle geocode failure:', e);
                                       } finally {
@@ -3056,7 +3038,7 @@ export default function BookingScreen() {
 
                               {isLocationOutsideCoverage && (
                                 <View className="bg-rose-50 border border-rose-100 p-2.5 rounded-xl mb-3">
-                                  <Text className="text-[#E11D48] text-[9px] font-bold uppercase text-center">Outside Service Area (Mumbai Only)</Text>
+                                  <Text className="text-[#E11D48] text-[9px] font-bold uppercase text-center">Not yet available in this area</Text>
                                 </View>
                               )}
 

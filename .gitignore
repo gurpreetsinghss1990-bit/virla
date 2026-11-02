@@ -47,5 +47,9 @@ example
 # caches
 .npm_cache/
 
+# Agent skills & lockfile
+.agents/
+skills-lock.json
+
 
 deploy_out.log

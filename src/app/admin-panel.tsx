@@ -30,13 +30,13 @@ export default function AdminPanelScreen() {
   const [isLoadingDisputesAndKits, setIsLoadingDisputesAndKits] = useState<boolean>(false);
 
   // Filters for trainer locations
-  const [radiusFilter, setRadiusFilter] = useState<'all' | '10' | '15'>('all');
+  const [radiusFilter, setRadiusFilter] = useState<'all' | '1' | '2' | '3' | '4' | '5'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'verified' | 'pending' | 'rejected'>('all');
   const [selectedAuditSession, setSelectedAuditSession] = useState<Booking | null>(null);
 
   // Direct Admin Location & Radius Override Modal state
   const [editingCoachLocation, setEditingCoachLocation] = useState<Coach | null>(null);
-  const [overrideRadius, setOverrideRadius] = useState<number>(15);
+  const [overrideRadius, setOverrideRadius] = useState<number>(5);
   const [overrideAddress, setOverrideAddress] = useState<string>('');
   const [overrideStatus, setOverrideStatus] = useState<'verified' | 'pending' | 'rejected'>('verified');
   const [isSavingLocation, setIsSavingLocation] = useState<boolean>(false);
@@ -204,7 +204,7 @@ export default function AdminPanelScreen() {
         operatingLatitude: request.requestedLatitude,
         operatingLongitude: request.requestedLongitude,
         operatingPlaceId: request.requestedPlaceId,
-        radiusKm: request.requestedRadius,
+        radiusKm: Math.min(request.requestedRadius || 5, 5),
         operatingLocationStatus: 'verified' as const,
         addressChangeRequest: null
       };
@@ -273,9 +273,10 @@ export default function AdminPanelScreen() {
       const coach = Database.schema.coaches.find(c => c.id === coachId);
       if (!coach) return;
       try {
-        const currentPrefs = coach.preferences || { online: false, radiusKm: 15, maxDailySessions: 5, categories: [] };
+        const currentPrefs = coach.preferences || { online: false, radiusKm: 5, maxDailySessions: 5, categories: [] };
         await Database.updateTrainerPreferences(coachId, {
           ...currentPrefs,
+          radiusKm: Math.min(currentPrefs.radiusKm || 5, 5),
           operatingLocationStatus: 'verified' as const
         });
         Alert.alert('Status Updated', `Coach ${coach.name}'s location has been marked as VERIFIED.`);
@@ -749,7 +750,7 @@ export default function AdminPanelScreen() {
                   <View className="flex-row items-start gap-2">
                     <Feather name="target" size={13} color="#4F46E5" style={{ marginTop: 2 }} />
                     <Text className="text-zinc-700 text-xs font-medium leading-relaxed flex-1">
-                      <Text className="font-bold text-zinc-900">Service Area Radius (10km / 15km):</Text> Maximum spherical/geofence distance from their base. Clients whose workout address is beyond this radius will not be matched with this trainer.
+                      <Text className="font-bold text-zinc-900">Service Area Radius (Max 5km):</Text> Maximum spherical/geofence distance from their base. Clients whose workout address is beyond this radius will not be matched with this trainer.
                     </Text>
                   </View>
                   <View className="flex-row items-start gap-2">
@@ -768,7 +769,7 @@ export default function AdminPanelScreen() {
                   <Text className="text-zinc-400 text-[10px] font-bold">
                     Showing {coaches.filter((c) => {
                       const status = c.preferences?.operatingLocationStatus || 'pending';
-                      const radius = String(c.preferences?.radiusKm || 15);
+                      const radius = String(Math.min(c.preferences?.radiusKm || 5, 5));
                       if (statusFilter !== 'all' && status !== statusFilter) return false;
                       if (radiusFilter !== 'all' && radius !== radiusFilter) return false;
                       return true;
@@ -796,10 +797,10 @@ export default function AdminPanelScreen() {
                   </View>
 
                   {/* Radius Filter */}
-                  <View className="w-36 gap-1.5">
+                  <View className="w-44 gap-1.5">
                     <Text className="text-zinc-500 text-[9px] font-black uppercase tracking-wider">Radius Limit</Text>
                     <View className="flex-row bg-[#F1F3F5] p-1 rounded-xl">
-                      {['all', '10', '15'].map((rd) => (
+                      {(['all', '3', '5'] as const).map((rd) => (
                         <TouchableOpacity
                           key={rd}
                           onPress={() => setRadiusFilter(rd as any)}
@@ -820,7 +821,7 @@ export default function AdminPanelScreen() {
                 {coaches
                   .filter((c) => {
                     const status = c.preferences?.operatingLocationStatus || 'pending';
-                    const radius = String(c.preferences?.radiusKm || 15);
+                    const radius = String(Math.min(c.preferences?.radiusKm || 5, 5));
                     if (statusFilter !== 'all' && status !== statusFilter) return false;
                     if (radiusFilter !== 'all' && radius !== radiusFilter) return false;
                     return true;
@@ -828,7 +829,7 @@ export default function AdminPanelScreen() {
                   .map((coach) => {
                     const hasRequest = !!coach.preferences?.addressChangeRequest;
                     const status = coach.preferences?.operatingLocationStatus || 'pending';
-                    const radius = coach.preferences?.radiusKm || 15;
+                    const radius = Math.min(coach.preferences?.radiusKm || 5, 5);
                     const address = coach.preferences?.operatingAddress;
                     const hasCoords = coach.preferences?.operatingLatitude !== undefined && coach.preferences?.operatingLongitude !== undefined;
 
