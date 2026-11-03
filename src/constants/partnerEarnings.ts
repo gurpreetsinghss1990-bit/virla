@@ -36,10 +36,10 @@ export const PARTNER_EARNINGS_SECTIONS: EarningsSection[] = [
   {
     "id": 3,
     "title": "BASE SESSION EARNINGS",
-    "body": "The current standard base earning for an eligible and successfully completed VIRLA session is:\n\n\u20b9850 PER COMPLETED ELIGIBLE SESSION\n\nAdditional incentives may be available from time to time.\n\nIncentives may be based on factors including, but not limited to:\n\nNumber of completed sessions.\nTrainer performance.\nClient satisfaction.\nAttendance and reliability.\nCustomer ratings and feedback.\nSession quality.\nSpecial VIRLA campaigns.\nPromotional programs.\nOther performance criteria determined by VIRLA.\nDetailed incentive structures, eligibility requirements and applicable amounts may be communicated separately by VIRLA.\n\nA booking does not automatically constitute an earning.\n\nA session must satisfy VIRLA's eligibility requirements before it becomes payable.",
+    "body": "The current standard base earning for an eligible and successfully completed VIRLA session is:\n\nUPTO \u20b9650 PER COMPLETED ELIGIBLE SESSION\n\nAdditional incentives may be available from time to time.\n\nIncentives may be based on factors including, but not limited to:\n\nNumber of completed sessions.\nTrainer performance.\nClient satisfaction.\nAttendance and reliability.\nCustomer ratings and feedback.\nSession quality.\nSpecial VIRLA campaigns.\nPromotional programs.\nOther performance criteria determined by VIRLA.\nDetailed incentive structures, eligibility requirements and applicable amounts may be communicated separately by VIRLA.\n\nA booking does not automatically constitute an earning.\n\nA session must satisfy VIRLA's eligibility requirements before it becomes payable.",
     "paragraphs": [
       "The current standard base earning for an eligible and successfully completed VIRLA session is:",
-      "\u20b9850 PER COMPLETED ELIGIBLE SESSION",
+      "UPTO \u20b9650 PER COMPLETED ELIGIBLE SESSION",
       "Additional incentives may be available from time to time.",
       "Incentives may be based on factors including, but not limited to:",
       "Number of completed sessions.\nTrainer performance.\nClient satisfaction.\nAttendance and reliability.\nCustomer ratings and feedback.\nSession quality.\nSpecial VIRLA campaigns.\nPromotional programs.\nOther performance criteria determined by VIRLA.\nDetailed incentive structures, eligibility requirements and applicable amounts may be communicated separately by VIRLA.",

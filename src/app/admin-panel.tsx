@@ -1,3 +1,4 @@
+import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, Image, Modal, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,6 +39,14 @@ export default function AdminPanelScreen() {
   const [editingCoachLocation, setEditingCoachLocation] = useState<Coach | null>(null);
   const [overrideRadius, setOverrideRadius] = useState<number>(5);
   const [overrideAddress, setOverrideAddress] = useState<string>('');
+
+  // Physical Interview Verification Form Modal state
+  const [interviewFormApp, setInterviewFormApp] = useState<TrainerApplication | null>(null);
+  const [interviewIdType, setInterviewIdType] = useState<'aadhaar' | 'pan'>('aadhaar');
+  const [interviewIdDocUri, setInterviewIdDocUri] = useState<string>('');
+  const [interviewProfilePicUri, setInterviewProfilePicUri] = useState<string>('');
+  const [isSavingInterviewForm, setIsSavingInterviewForm] = useState<boolean>(false);
+  const [interviewCompletedMap, setInterviewCompletedMap] = useState<{[appId: string]: boolean}>({});
   const [overrideStatus, setOverrideStatus] = useState<'verified' | 'pending' | 'rejected'>('verified');
   const [isSavingLocation, setIsSavingLocation] = useState<boolean>(false);
   
@@ -295,6 +304,138 @@ export default function AdminPanelScreen() {
       });
     }
   }, [isAdminAuthorized, activeTab]);
+
+  const handleCaptureInterviewPhoto = async (target: 'id' | 'profile') => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Camera permission is required to capture photos.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        if (target === 'id') {
+          setInterviewIdDocUri(result.assets[0].uri);
+        } else {
+          setInterviewProfilePicUri(result.assets[0].uri);
+        }
+      }
+    } catch (err: any) {
+      Alert.alert('Camera Error', err.message || 'Could not open camera.');
+    }
+  };
+
+  const handlePickInterviewGallery = async (target: 'id' | 'profile') => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Gallery permission is required to select photos.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        if (target === 'id') {
+          setInterviewIdDocUri(result.assets[0].uri);
+        } else {
+          setInterviewProfilePicUri(result.assets[0].uri);
+        }
+      }
+    } catch (err: any) {
+      Alert.alert('Gallery Error', err.message || 'Could not pick image.');
+    }
+  };
+
+  const handleSaveInterviewForm = async () => {
+    if (!interviewFormApp) return;
+    if (!interviewIdDocUri && !interviewProfilePicUri) {
+      Alert.alert('Form Incomplete', 'Please upload or capture at least the ID Document (Aadhaar / PAN) or Trainer Profile Photo.');
+      return;
+    }
+
+    setIsSavingInterviewForm(true);
+    try {
+      let uploadedIdUrl = '';
+      let uploadedAvatarUrl = '';
+
+      // Upload ID Document to Supabase if captured
+      if (interviewIdDocUri) {
+        try {
+          const resp = await fetch(interviewIdDocUri);
+          const arrayBuffer = await resp.arrayBuffer();
+          const ext = interviewIdDocUri.split('.').pop() || 'jpg';
+          const cleanFileName = `interview-${interviewIdType}-${interviewFormApp.id}-${Date.now()}.${ext}`;
+          const filePath = `trainer-docs/${cleanFileName}`;
+          
+          await supabase.storage
+            .from('trainer-documents')
+            .upload(filePath, arrayBuffer, { upsert: true, contentType: `image/${ext}` });
+          
+          const { data: pubData } = supabase.storage.from('trainer-documents').getPublicUrl(filePath);
+          uploadedIdUrl = pubData?.publicUrl || filePath;
+        } catch (e: any) {
+          console.warn('[Admin] Direct upload fallback for ID:', e);
+          uploadedIdUrl = interviewIdDocUri;
+        }
+      }
+
+      // Upload Profile Photo to Supabase if captured
+      if (interviewProfilePicUri) {
+        try {
+          const resp = await fetch(interviewProfilePicUri);
+          const arrayBuffer = await resp.arrayBuffer();
+          const ext = interviewProfilePicUri.split('.').pop() || 'jpg';
+          const cleanFileName = `interview-avatar-${interviewFormApp.id}-${Date.now()}.${ext}`;
+          const filePath = `trainer-docs/${cleanFileName}`;
+          
+          await supabase.storage
+            .from('trainer-documents')
+            .upload(filePath, arrayBuffer, { upsert: true, contentType: `image/${ext}` });
+          
+          const { data: pubData } = supabase.storage.from('trainer-documents').getPublicUrl(filePath);
+          uploadedAvatarUrl = pubData?.publicUrl || filePath;
+        } catch (e: any) {
+          console.warn('[Admin] Direct upload fallback for Avatar:', e);
+          uploadedAvatarUrl = interviewProfilePicUri;
+        }
+      }
+
+      await Database.completeInterviewFormAndVerify(interviewFormApp.id, {
+        idDocUrl: uploadedIdUrl || undefined,
+        idType: interviewIdType,
+        avatarUrl: uploadedAvatarUrl || undefined,
+      });
+
+      setInterviewCompletedMap(prev => ({ ...prev, [interviewFormApp.id]: true }));
+      Alert.alert(
+        'Interview Form Saved ✓',
+        'Physical verification details have been recorded. You can now proceed to Approve this trainer.'
+      );
+      setInterviewFormApp(null);
+      setInterviewIdDocUri('');
+      setInterviewProfilePicUri('');
+      await loadApplications();
+    } catch (err: any) {
+      Alert.alert('Save Error', err.message || 'Failed to save interview form details.');
+    } finally {
+      setIsSavingInterviewForm(false);
+    }
+  };
+
+  const handlePhysicalInterviewApp = async (appId: string) => {
+    try {
+      await Database.schedulePhysicalInterviewTrainerApplication(appId);
+      Alert.alert('Interview Scheduled', 'User is called for physical interview. The trainer application has been updated.');
+      await loadApplications();
+    } catch (err: any) {
+      Alert.alert('Action Error', err.message);
+    }
+  };
 
   const handleApproveApp = async (appId: string) => {
     try {
@@ -654,26 +795,74 @@ export default function AdminPanelScreen() {
                               })()}
                             </View>
 
-                            {/* Additional Uploaded Documents / Certificates List if multiple */}
+                            {/* Full List of Uploaded Qualification Certificates */}
                             {(() => {
                               try {
-                                const parsed = JSON.parse(app.documentCertifications || '[]');
-                                const list = Array.isArray(parsed) 
-                                  ? parsed.filter(Boolean) 
-                                  : (parsed?.certifications || []).filter(Boolean);
-                                
-                                if (list.length > 1) {
+                                const raw = app.documentCertifications || '[]';
+                                const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+
+                                // Check if we have certMap { [qualName]: url }
+                                const certMap: { [key: string]: string } = parsed?.certMap || (
+                                  typeof parsed === 'object' && !Array.isArray(parsed) && !parsed?.certifications ? parsed : {}
+                                );
+
+                                const mapEntries = Object.entries(certMap).filter(([_, url]) => !!url);
+
+                                if (mapEntries.length > 0) {
                                   return (
-                                    <View className="mt-1 gap-1">
-                                      <Text className="text-zinc-400 text-[8px] font-bold uppercase">All Uploaded Certificates ({list.length}):</Text>
+                                    <View className="mt-1 gap-1.5 bg-zinc-50/70 p-2.5 rounded-xl border border-zinc-200/80">
+                                      <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">
+                                        Uploaded Qualification Certificates ({mapEntries.length}):
+                                      </Text>
+                                      {mapEntries.map(([qualName, cUrl], idx) => (
+                                        <TouchableOpacity
+                                          key={idx}
+                                          activeOpacity={0.7}
+                                          onPress={() => handleViewDocument(cUrl)}
+                                          className="flex-row items-center justify-between p-2.5 bg-white border border-zinc-200 rounded-lg shadow-2xs"
+                                        >
+                                          <View className="flex-row items-center gap-2 flex-1 pr-2">
+                                            <Feather name="file-text" size={13} color="#059669" />
+                                            <Text className="text-zinc-900 text-[10.5px] font-bold flex-1" numberOfLines={1}>
+                                              {qualName}
+                                            </Text>
+                                          </View>
+                                          <View className="flex-row items-center gap-1 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
+                                            <Text className="text-emerald-700 text-[9px] font-black uppercase">View Doc ↗</Text>
+                                          </View>
+                                        </TouchableOpacity>
+                                      ))}
+                                    </View>
+                                  );
+                                }
+
+                                // Fallback for list-based certs
+                                const list: string[] = Array.isArray(parsed)
+                                  ? parsed.filter(Boolean)
+                                  : (parsed?.certifications || []).filter(Boolean);
+
+                                if (list.length > 0) {
+                                  return (
+                                    <View className="mt-1 gap-1.5 bg-zinc-50/70 p-2.5 rounded-xl border border-zinc-200/80">
+                                      <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">
+                                        Uploaded Certificates ({list.length}):
+                                      </Text>
                                       {list.map((cUrl: string, idx: number) => (
                                         <TouchableOpacity
                                           key={idx}
+                                          activeOpacity={0.7}
                                           onPress={() => handleViewDocument(cUrl)}
-                                          className="flex-row items-center justify-between p-2 bg-zinc-50 border border-zinc-200 rounded-lg"
+                                          className="flex-row items-center justify-between p-2.5 bg-white border border-zinc-200 rounded-lg shadow-2xs"
                                         >
-                                          <Text className="text-zinc-700 text-[10px] font-bold">Certificate #{idx + 1}</Text>
-                                          <Text className="text-[#E11D48] text-[9.5px] font-black">Open Link ↗</Text>
+                                          <View className="flex-row items-center gap-2 flex-1 pr-2">
+                                            <Feather name="file-text" size={13} color="#059669" />
+                                            <Text className="text-zinc-900 text-[10.5px] font-bold">
+                                              Certificate #{idx + 1}
+                                            </Text>
+                                          </View>
+                                          <View className="flex-row items-center gap-1 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
+                                            <Text className="text-emerald-700 text-[9px] font-black uppercase">View Doc ↗</Text>
+                                          </View>
                                         </TouchableOpacity>
                                       ))}
                                     </View>
@@ -687,27 +876,110 @@ export default function AdminPanelScreen() {
                           {app.status !== 'approved' && (
                             <>
                               <View className="h-[1px] bg-zinc-100" />
-                              <View className="flex-row gap-2 mt-1">
-                                <TouchableOpacity
-                                  onPress={() => handleApproveApp(app.id)}
-                                  className="flex-1 py-3 bg-emerald-600 rounded-lg items-center justify-center"
-                                >
-                                  <Text className="text-white text-[9px] font-black uppercase tracking-widest">Approve</Text>
-                                </TouchableOpacity>
-                                
-                                <TouchableOpacity
-                                  onPress={() => handleRequestInfoApp(app.id)}
-                                  className="flex-1 py-3 bg-blue-600 rounded-lg items-center justify-center"
-                                >
-                                  <Text className="text-white text-[9px] font-black uppercase tracking-widest">Req Info</Text>
-                                </TouchableOpacity>
+                              
+                              {/* Status banner when physical interview is scheduled */}
+                              {app.status === 'interview_scheduled' && (
+                                <View className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex-row items-center gap-2 mt-1">
+                                  <Feather name="calendar" size={13} color="#D97706" />
+                                  <Text className="text-amber-900 text-[10px] font-black uppercase tracking-wide">
+                                    User is called for physical interview
+                                  </Text>
+                                </View>
+                              )}
 
-                                <TouchableOpacity
-                                  onPress={() => handleRejectApp(app.id)}
-                                  className="flex-1 py-3 bg-rose-600 rounded-lg items-center justify-center"
-                                >
-                                  <Text className="text-white text-[9px] font-black uppercase tracking-widest">Reject</Text>
-                                </TouchableOpacity>
+                              {/* Action Buttons Row */}
+                              <View className="gap-2 mt-1">
+                                <View className="flex-row gap-2">
+                                  {/* 1. Physical Interview Button: Disables once clicked */}
+                                  <TouchableOpacity
+                                    disabled={app.status === 'interview_scheduled'}
+                                    activeOpacity={0.8}
+                                    onPress={() => handlePhysicalInterviewApp(app.id)}
+                                    className={`flex-1 py-3 rounded-lg items-center justify-center ${
+                                      app.status === 'interview_scheduled'
+                                        ? 'bg-zinc-200 opacity-60'
+                                        : 'bg-amber-600'
+                                    }`}
+                                  >
+                                    <Text className={`text-[9px] font-black uppercase tracking-widest ${
+                                      app.status === 'interview_scheduled' ? 'text-zinc-500' : 'text-white'
+                                    }`}>
+                                      {app.status === 'interview_scheduled' ? 'Interview Called ✓' : 'Physical Interview'}
+                                    </Text>
+                                  </TouchableOpacity>
+
+                                  {/* 2. Fill Interview Form Button (Appears once Physical Interview is clicked) */}
+                                  {app.status === 'interview_scheduled' && (
+                                    <TouchableOpacity
+                                      activeOpacity={0.8}
+                                      onPress={() => {
+                                        setInterviewFormApp(app);
+                                        setInterviewIdDocUri(app.documentAadhaar || app.documentPan || '');
+                                        setInterviewProfilePicUri(app.avatar || app.documentSelfie || '');
+                                      }}
+                                      className={`flex-1 py-3 rounded-lg items-center justify-center flex-row gap-1 ${
+                                        (interviewCompletedMap[app.id] || (app.documentAadhaar || app.documentPan))
+                                          ? 'bg-emerald-50 border border-emerald-300'
+                                          : 'bg-indigo-600'
+                                      }`}
+                                    >
+                                      <Feather 
+                                        name="edit-3" 
+                                        size={12} 
+                                        color={(interviewCompletedMap[app.id] || (app.documentAadhaar || app.documentPan)) ? '#059669' : '#FFFFFF'} 
+                                      />
+                                      <Text className={`text-[9px] font-black uppercase tracking-widest ${
+                                        (interviewCompletedMap[app.id] || (app.documentAadhaar || app.documentPan))
+                                          ? 'text-emerald-800'
+                                          : 'text-white'
+                                      }`}>
+                                        {(interviewCompletedMap[app.id] || (app.documentAadhaar || app.documentPan)) ? 'Edit Form' : 'Fill Interview Form'}
+                                      </Text>
+                                    </TouchableOpacity>
+                                  )}
+                                </View>
+
+                                <View className="flex-row gap-2">
+                                  {/* 3. Approve Button: Locked until interview form is completed / saved */}
+                                  {(() => {
+                                    const isFormCompleted = interviewCompletedMap[app.id] || (
+                                      app.status === 'interview_scheduled' && (!!app.documentAadhaar || !!app.documentPan)
+                                    );
+
+                                    return (
+                                      <TouchableOpacity
+                                        disabled={!isFormCompleted}
+                                        activeOpacity={0.8}
+                                        onPress={() => handleApproveApp(app.id)}
+                                        className={`flex-1 py-3 rounded-lg items-center justify-center ${
+                                          isFormCompleted ? 'bg-emerald-600' : 'bg-zinc-200 opacity-60'
+                                        }`}
+                                      >
+                                        <Text className={`text-[9px] font-black uppercase tracking-widest ${
+                                          isFormCompleted ? 'text-white' : 'text-zinc-500'
+                                        }`}>
+                                          Approve
+                                        </Text>
+                                      </TouchableOpacity>
+                                    );
+                                  })()}
+                                  
+                                  <TouchableOpacity
+                                    activeOpacity={0.8}
+                                    onPress={() => handleRequestInfoApp(app.id)}
+                                    className="flex-1 py-3 bg-blue-600 rounded-lg items-center justify-center"
+                                  >
+                                    <Text className="text-white text-[9px] font-black uppercase tracking-widest">Req Info</Text>
+                                  </TouchableOpacity>
+
+                                  <TouchableOpacity
+                                    activeOpacity={0.8}
+                                    onPress={() => handleRejectApp(app.id)}
+                                    className="flex-1 py-3 bg-rose-600 rounded-lg items-center justify-center"
+                                  >
+                                    <Text className="text-white text-[9px] font-black uppercase tracking-widest">Reject</Text>
+                                  </TouchableOpacity>
+                                </View>
                               </View>
                             </>
                           )}
@@ -2041,6 +2313,161 @@ export default function AdminPanelScreen() {
                 </ScrollView>
               );
             })()}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Physical Interview Verification Form Modal */}
+      <Modal
+        visible={!!interviewFormApp}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setInterviewFormApp(null)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+          <View className="bg-white rounded-[26px] p-6 w-full max-w-lg gap-4 shadow-2xl">
+            {/* Header */}
+            <View className="flex-row items-center justify-between border-b border-zinc-100 pb-3">
+              <View className="gap-0.5">
+                <Text className="text-zinc-400 text-[9px] font-black uppercase tracking-wider">Physical Verification</Text>
+                <Text className="text-zinc-950 text-base font-black tracking-tight">
+                  Interview Form: {interviewFormApp?.fullName}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setInterviewFormApp(null)}
+                className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center"
+              >
+                <Feather name="x" size={16} color="#71717A" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} className="max-h-[460px]">
+              <View className="gap-4">
+                {/* 1. ID Document Selection (Aadhaar / PAN) */}
+                <View className="gap-2">
+                  <Text className="text-zinc-700 text-xs font-bold uppercase tracking-wide">
+                    1. ID Document Upload (Aadhaar or PAN)
+                  </Text>
+                  
+                  {/* Selector tabs */}
+                  <View className="flex-row bg-zinc-100 p-1 rounded-xl">
+                    {(['aadhaar', 'pan'] as const).map(t => (
+                      <TouchableOpacity
+                        key={t}
+                        onPress={() => setInterviewIdType(t)}
+                        className={`flex-1 py-2 items-center rounded-lg ${
+                          interviewIdType === t ? 'bg-[#101828]' : 'bg-transparent'
+                        }`}
+                      >
+                        <Text className={`text-[10px] font-black uppercase ${
+                          interviewIdType === t ? 'text-white' : 'text-zinc-600'
+                        }`}>
+                          {t === 'aadhaar' ? 'Aadhaar Card' : 'PAN Card'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* ID Preview / Capture Box */}
+                  <View className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-xl gap-2.5">
+                    {interviewIdDocUri ? (
+                      <View className="items-center gap-2">
+                        <Image
+                          source={{ uri: interviewIdDocUri }}
+                          style={{ width: '100%', height: 140, borderRadius: 12, backgroundColor: '#E4E4E7' }}
+                          resizeMode="cover"
+                        />
+                        <Text className="text-emerald-700 text-[10px] font-black uppercase">✓ Document Captured</Text>
+                      </View>
+                    ) : (
+                      <View className="py-6 items-center justify-center gap-1 border-2 border-dashed border-zinc-200 rounded-xl">
+                        <Feather name="file-text" size={24} color="#A1A1AA" />
+                        <Text className="text-zinc-400 text-xs font-semibold">No ID document selected</Text>
+                      </View>
+                    )}
+
+                    <View className="flex-row gap-2">
+                      <TouchableOpacity
+                        onPress={() => handleCaptureInterviewPhoto('id')}
+                        className="flex-1 py-2.5 bg-zinc-950 rounded-xl items-center justify-center flex-row gap-1.5"
+                      >
+                        <Feather name="camera" size={13} color="#FFFFFF" />
+                        <Text className="text-white text-[10px] font-black uppercase">Take Photo</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => handlePickInterviewGallery('id')}
+                        className="flex-1 py-2.5 bg-white border border-zinc-200 rounded-xl items-center justify-center flex-row gap-1.5"
+                      >
+                        <Feather name="image" size={13} color="#18181B" />
+                        <Text className="text-zinc-800 text-[10px] font-black uppercase">Pick Gallery</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+
+                {/* 2. Trainer Profile Picture Capture */}
+                <View className="gap-2">
+                  <Text className="text-zinc-700 text-xs font-bold uppercase tracking-wide">
+                    2. Trainer Profile Photo (Live Admin Capture)
+                  </Text>
+
+                  <View className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-xl gap-2.5">
+                    {interviewProfilePicUri ? (
+                      <View className="items-center gap-2">
+                        <Image
+                          source={{ uri: interviewProfilePicUri }}
+                          style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: '#E4E4E7' }}
+                          resizeMode="cover"
+                        />
+                        <Text className="text-emerald-700 text-[10px] font-black uppercase">✓ Photo Captured</Text>
+                      </View>
+                    ) : (
+                      <View className="py-6 items-center justify-center gap-1 border-2 border-dashed border-zinc-200 rounded-xl">
+                        <Feather name="user" size={24} color="#A1A1AA" />
+                        <Text className="text-zinc-400 text-xs font-semibold">Take Trainer's Live Photo</Text>
+                      </View>
+                    )}
+
+                    <View className="flex-row gap-2">
+                      <TouchableOpacity
+                        onPress={() => handleCaptureInterviewPhoto('profile')}
+                        className="flex-1 py-2.5 bg-zinc-950 rounded-xl items-center justify-center flex-row gap-1.5"
+                      >
+                        <Feather name="camera" size={13} color="#FFFFFF" />
+                        <Text className="text-white text-[10px] font-black uppercase">Take Photo</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => handlePickInterviewGallery('profile')}
+                        className="flex-1 py-2.5 bg-white border border-zinc-200 rounded-xl items-center justify-center flex-row gap-1.5"
+                      >
+                        <Feather name="image" size={13} color="#18181B" />
+                        <Text className="text-zinc-800 text-[10px] font-black uppercase">Pick Gallery</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Save Button */}
+            <TouchableOpacity
+              disabled={isSavingInterviewForm}
+              onPress={handleSaveInterviewForm}
+              className={`w-full py-4 rounded-xl items-center justify-center ${
+                isSavingInterviewForm ? 'bg-zinc-300' : 'bg-emerald-600'
+              }`}
+            >
+              {isSavingInterviewForm ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text className="text-white text-xs font-black uppercase tracking-wider">
+                  Save Interview Details & Enable Approval
+                </Text>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

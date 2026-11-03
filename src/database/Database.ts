@@ -147,7 +147,7 @@ export interface TrainerApplication {
   id: string;
   createdAt: string;
   updatedAt: string;
-  status: 'pending' | 'approved' | 'rejected' | 'info_requested';
+  status: 'pending' | 'interview_scheduled' | 'approved' | 'rejected' | 'info_requested';
 
   // Step 1: Personal Info
   fullName: string;
@@ -3969,6 +3969,65 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       throw new Error(`Failed to reject trainer application: ${error.message}`);
     }
     await this.reload();
+  }
+
+  async completeInterviewFormAndVerify(appId: string, data: { idDocUrl?: string; idType?: 'aadhaar' | 'pan'; avatarUrl?: string }): Promise<void> {
+    const app = this.schema.trainer_applications.find(a => a.id === appId);
+    if (!app) throw new Error('Trainer application not found');
+
+    if (data.avatarUrl) {
+      app.avatar = data.avatarUrl;
+    }
+    if (data.idDocUrl) {
+      if (data.idType === 'pan') {
+        app.documentPan = data.idDocUrl;
+        app.panStatus = 'verified';
+      } else {
+        app.documentAadhaar = data.idDocUrl;
+        app.aadhaarStatus = 'verified';
+      }
+    }
+    app.updatedAt = new Date().toISOString();
+
+    const pgApp = mapTrainerApplicationToPostgres(app);
+    const { error } = await supabase.from('trainer_applications').update({
+      avatar: app.avatar,
+      document_aadhaar: app.documentAadhaar,
+      document_pan: app.documentPan,
+      updated_at: app.updatedAt,
+      document_certifications: pgApp.document_certifications
+    }).eq('id', appId);
+
+    if (error) {
+      console.warn('[Database] Remote update failed, saving local schema:', error.message);
+    }
+    await this.save();
+    this.log('CompleteInterviewForm', `Interview verification form completed for ${app.fullName}.`);
+  }
+
+  async schedulePhysicalInterviewTrainerApplication(appId: string): Promise<void> {
+    const app = this.schema.trainer_applications.find(a => a.id === appId);
+    if (app) {
+      if (app.status === 'approved') {
+        throw new Error('Trainer application is already approved');
+      }
+      app.status = 'interview_scheduled';
+      app.updatedAt = new Date().toISOString();
+
+      const pgApp = mapTrainerApplicationToPostgres(app);
+      const { error } = await supabase.from('trainer_applications').update({
+        status: 'interview_scheduled',
+        updated_at: app.updatedAt,
+        document_certifications: pgApp.document_certifications
+      }).eq('id', appId);
+
+      if (error) {
+        console.warn('[Database] Remote update failed, saving local schema:', error.message);
+      }
+
+      await this.save();
+      this.log('SchedulePhysicalInterview', `User ${app.fullName} is called for physical interview.`);
+    }
   }
 
   async requestMoreInfoTrainerApplication(appId: string): Promise<void> {

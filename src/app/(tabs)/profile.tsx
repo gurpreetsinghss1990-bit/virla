@@ -1513,6 +1513,7 @@ export default function ProfileScreen() {
                   <LuxuryCard 
                     className={`p-4 border rounded-[24px] ${
                       userApplication.status === 'approved' ? 'bg-emerald-50 border-emerald-200' :
+                      userApplication.status === 'interview_scheduled' ? 'bg-amber-50/70 border-amber-300' :
                       userApplication.status === 'rejected' ? 'bg-rose-50 border-rose-200' :
                       userApplication.status === 'info_requested' ? 'bg-amber-50 border-amber-200' :
                       'bg-[#F7F8FC] border-zinc-200'
@@ -1523,6 +1524,12 @@ export default function ProfileScreen() {
                       <View className="flex-1 pr-4 gap-1">
                         <Text className="text-zinc-500 text-[9px] font-black uppercase tracking-widest">Trainer Application</Text>
                         <View className="flex-row items-center gap-1.5 mt-0.5">
+                          {userApplication.status === 'interview_scheduled' && (
+                            <View className="px-2.5 py-1 bg-amber-100 border border-amber-300 rounded-full flex-row items-center gap-1">
+                              <View className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+                              <Text className="text-amber-900 text-[8px] font-black uppercase tracking-wider">You are called for physical interview</Text>
+                            </View>
+                          )}
                           {userApplication.status === 'pending' && (
                             <View className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full flex-row items-center gap-1">
                               <View className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -1542,9 +1549,14 @@ export default function ProfileScreen() {
                             </View>
                           )}
                           {userApplication.status === 'approved' && (
-                            <View className="px-2.5 py-1 bg-emerald-100 border border-emerald-300 rounded-full flex-row items-center gap-1">
-                              <View className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                              <Text className="text-emerald-900 text-[8px] font-black uppercase tracking-wider">Approved</Text>
+                            <View className="gap-1 mt-0.5">
+                              <View className="px-2.5 py-1 bg-emerald-100 border border-emerald-300 rounded-full flex-row items-center gap-1 self-start">
+                                <View className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                                <Text className="text-emerald-900 text-[8px] font-black uppercase tracking-wider">Application Approved ✓</Text>
+                              </View>
+                              <Text className="text-emerald-800 text-[9.5px] font-black leading-tight mt-1">
+                                Please sign out for new experience. You are a trainer now.
+                              </Text>
                             </View>
                           )}
                         </View>

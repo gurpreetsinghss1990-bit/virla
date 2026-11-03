@@ -61,7 +61,7 @@ export default function TrainerApplicationScreen() {
   
   const [currentStep, setCurrentStep] = useState(1);
   const [appId, setAppId] = useState<string | null>(null);
-  const [appStatus, setAppStatus] = useState<'draft' | 'pending' | 'approved' | 'rejected' | 'info_requested'>('draft');
+  const [appStatus, setAppStatus] = useState<'draft' | 'pending' | 'interview_scheduled' | 'approved' | 'rejected' | 'info_requested'>('draft');
 
   // Policies Pre-Application Flow
   const [hasAcceptedPolicies, setHasAcceptedPolicies] = useState(false);
@@ -214,6 +214,10 @@ export default function TrainerApplicationScreen() {
   const [panUploadStatus, setPanUploadStatus] = useState<'NOT_UPLOADED' | 'UPLOADING' | 'UPLOADED' | 'FAILED'>('NOT_UPLOADED');
   const [selfieUploadStatus, setSelfieUploadStatus] = useState<'NOT_UPLOADED' | 'UPLOADING' | 'UPLOADED' | 'FAILED'>('NOT_UPLOADED');
   const [certsUploadStatus, setCertsUploadStatus] = useState<'NOT_UPLOADED' | 'UPLOADING' | 'UPLOADED' | 'FAILED'>('NOT_UPLOADED');
+  // Dynamic qualifications certificate mapping: { [qualName]: fileUrl }
+  const [qualCertMap, setQualCertMap] = useState<{ [qualName: string]: string }>({});
+  const [qualUploadStatusMap, setQualUploadStatusMap] = useState<{ [qualName: string]: 'NOT_UPLOADED' | 'UPLOADING' | 'UPLOADED' | 'FAILED' }>({});
+  const [currentUploadingQual, setCurrentUploadingQual] = useState<string | null>(null);
 
   const [aadhaarStatus, setAadhaarStatus] = useState<'pending_verification' | 'verified' | 'rejected'>('pending_verification');
   const [panStatus, setPanStatus] = useState<'pending_verification' | 'verified' | 'rejected'>('pending_verification');
@@ -290,9 +294,19 @@ export default function TrainerApplicationScreen() {
             setAcceptedAgreementAppVersion(app.acceptedAgreementAppVersion || '');
 
             try {
-              const parsedCerts = JSON.parse(app.documentCertifications || '[]');
-              setDocumentCertifications(parsedCerts[0] || '');
-              setCertsUploadStatus(parsedCerts[0] ? 'UPLOADED' : 'NOT_UPLOADED');
+              const parsedCerts = JSON.parse(app.documentCertifications || '{}');
+              if (parsedCerts && typeof parsedCerts === 'object' && !Array.isArray(parsedCerts)) {
+                setQualCertMap(parsedCerts);
+                const firstUrl = Object.values(parsedCerts)[0] as string || '';
+                setDocumentCertifications(JSON.stringify(parsedCerts));
+                setCertsUploadStatus(firstUrl ? 'UPLOADED' : 'NOT_UPLOADED');
+              } else if (Array.isArray(parsedCerts)) {
+                setDocumentCertifications(parsedCerts[0] || '');
+                setCertsUploadStatus(parsedCerts[0] ? 'UPLOADED' : 'NOT_UPLOADED');
+              } else {
+                setDocumentCertifications(app.documentCertifications || '');
+                setCertsUploadStatus(app.documentCertifications ? 'UPLOADED' : 'NOT_UPLOADED');
+              }
             } catch (e) {
               setDocumentCertifications(app.documentCertifications || '');
               setCertsUploadStatus(app.documentCertifications ? 'UPLOADED' : 'NOT_UPLOADED');
@@ -377,6 +391,12 @@ export default function TrainerApplicationScreen() {
         }
         if (draft.documentCertifications) {
           setDocumentCertifications(draft.documentCertifications);
+          try {
+            const parsed = JSON.parse(draft.documentCertifications);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+              setQualCertMap(parsed);
+            }
+          } catch (e) {}
           setCertsUploadStatus('UPLOADED');
         }
       }
@@ -471,8 +491,29 @@ export default function TrainerApplicationScreen() {
 
 
 
-  const uploadFile = async (docType: 'aadhaar' | 'pan' | 'selfie' | 'certs') => {
+
+  // Helper: Extract unique selected qualifications from comma-separated string
+  const getSelectedQualificationsList = (): string[] => {
+    const raw = fitnessQualifications.split(',').map(s => s.trim()).filter(Boolean);
+    const seen = new Set<string>();
+    const unique: string[] = [];
+    for (const item of raw) {
+      const lower = item.toLowerCase();
+      if (!seen.has(lower)) {
+        seen.add(lower);
+        unique.push(item);
+      }
+    }
+    return unique;
+  };
+
+  const uploadFile = async (docType: 'aadhaar' | 'pan' | 'selfie' | 'certs', qualName?: string) => {
     setActiveUploadType(docType);
+    if (docType === 'certs' && qualName) {
+      setCurrentUploadingQual(qualName);
+    } else {
+      setCurrentUploadingQual(null);
+    }
     setShowPickerModal(true);
   };
 
@@ -540,7 +581,12 @@ export default function TrainerApplicationScreen() {
         setVerifyingStatus('UPLOADING');
       } else if (docType === 'pan') setPanUploadStatus('UPLOADING');
       else if (docType === 'selfie') setSelfieUploadStatus('UPLOADING');
-      else if (docType === 'certs') setCertsUploadStatus('UPLOADING');
+      else if (docType === 'certs') {
+        setCertsUploadStatus('UPLOADING');
+        if (currentUploadingQual) {
+          setQualUploadStatusMap(prev => ({ ...prev, [currentUploadingQual]: 'UPLOADING' }));
+        }
+      }
 
       let arrayBuffer: ArrayBuffer;
       if (Platform.OS === 'web') {
@@ -633,7 +679,16 @@ export default function TrainerApplicationScreen() {
         setAvatar(fileUrl);
         setSelfieUploadStatus('UPLOADED');
       } else if (docType === 'certs') {
-        setDocumentCertifications(fileUrl);
+        if (currentUploadingQual) {
+          setQualCertMap(prev => {
+            const next = { ...prev, [currentUploadingQual]: fileUrl };
+            setDocumentCertifications(JSON.stringify(next));
+            return next;
+          });
+          setQualUploadStatusMap(prev => ({ ...prev, [currentUploadingQual]: 'UPLOADED' }));
+        } else {
+          setDocumentCertifications(fileUrl);
+        }
         setCertsUploadStatus('UPLOADED');
       }
 
@@ -647,7 +702,12 @@ export default function TrainerApplicationScreen() {
         setVerifyingStatus('IDLE');
       } else if (docType === 'pan') setPanUploadStatus('FAILED');
       else if (docType === 'selfie') setSelfieUploadStatus('FAILED');
-      else if (docType === 'certs') setCertsUploadStatus('FAILED');
+      else if (docType === 'certs') {
+        setCertsUploadStatus('FAILED');
+        if (currentUploadingQual) {
+          setQualUploadStatusMap(prev => ({ ...prev, [currentUploadingQual]: 'FAILED' }));
+        }
+      }
 
       Alert.alert(
         'Upload failed',
@@ -781,6 +841,18 @@ export default function TrainerApplicationScreen() {
       return;
     }
 
+    const selectedQuals = getSelectedQualificationsList();
+    const missingQuals = selectedQuals.filter((q: string) => !qualCertMap[q] || !qualCertMap[q].trim());
+    if (missingQuals.length > 0) {
+      Alert.alert(
+        'Missing Qualification Certificates 📄',
+        `Please upload certificates for all selected qualifications before submitting:
+
+• ${missingQuals.join('\n• ')}`
+      );
+      return;
+    }
+
     try {
       const emergencyContactJSON = JSON.stringify({
         name: emergencyName || 'Neha Sharma',
@@ -834,7 +906,17 @@ export default function TrainerApplicationScreen() {
         documentAadhaar: '',
         documentPan: '',
         documentSelfie,
-        documentCertifications: JSON.stringify([documentCertifications]),
+        documentCertifications: (() => {
+          const list = Object.values(qualCertMap).filter(Boolean);
+          if (Object.keys(qualCertMap).length > 0) {
+            // Save structured object with both qualification names and urls
+            return JSON.stringify({
+              certMap: qualCertMap,
+              certifications: list,
+            });
+          }
+          return JSON.stringify(list.length > 0 ? list : [documentCertifications].filter(Boolean));
+        })(),
         aadhaarStatus: 'verified' as const,
         panStatus: 'verified' as const,
         aadhaarVerificationNotes: '',
@@ -1241,6 +1323,48 @@ export default function TrainerApplicationScreen() {
           )}
         </View>
 
+        {appStatus === 'interview_scheduled' && (
+          <LuxuryCard className="p-6 gap-5 items-center justify-center bg-white border border-amber-300" interactive={false}>
+            {/* Top prominent banner */}
+            <View className="w-full bg-amber-500 py-3 px-4 rounded-xl items-center">
+              <Text className="text-white text-xs font-black uppercase tracking-wider text-center">
+                📢 You are called for a Physical Interview
+              </Text>
+            </View>
+
+            <Text className="text-4xl text-center">🤝</Text>
+            <Text className="text-[#101828] text-lg font-extrabold text-center uppercase tracking-wider">Interview Scheduled</Text>
+            
+            <View className="w-full bg-amber-50 border border-amber-200 p-4 rounded-xl items-center my-1">
+              <Text className="text-amber-900 text-xs font-black uppercase tracking-wider text-center">
+                📅 Physical Interview Phase
+              </Text>
+              <Text className="text-amber-800 text-[11px] font-semibold text-center mt-1 leading-relaxed">
+                Our operations team has shortlisted your application. Our recruitment team will reach out to you via WhatsApp with your interview location, date & time slot.
+              </Text>
+            </View>
+
+            <Text className="text-zinc-600 text-xs leading-relaxed text-center px-2">
+              Please carry your original identity documents and physical copies of your fitness certifications for in-person verification.
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => setViewingPoliciesOnly(true)}
+              className="w-full py-3.5 bg-zinc-100 border border-zinc-200 rounded-xl items-center justify-center mt-2 flex-row gap-2"
+            >
+              <Feather name="file-text" size={13} color="#E11D48" />
+              <Text className="text-zinc-900 text-xs font-bold">View Partner Policies (61 Rules)</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.replace('/(tabs)')}
+              className="w-full py-4 bg-[#101828] rounded-xl items-center justify-center mt-2"
+            >
+              <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Return to Home</Text>
+            </TouchableOpacity>
+          </LuxuryCard>
+        )}
+
         {appStatus === 'pending' && (
           <LuxuryCard className="p-6 gap-5 items-center justify-center bg-white border border-zinc-200" interactive={false}>
             <Text className="text-4xl text-center">✅</Text>
@@ -1263,7 +1387,14 @@ export default function TrainerApplicationScreen() {
               <Text className="text-zinc-900 text-sm font-black mt-0.5 text-center">24–48 hours</Text>
             </View>
 
-            <Text className="text-zinc-400 text-[10px] text-center font-medium leading-relaxed mt-2">
+            {/* Advance WhatsApp Interview Notice */}
+            <View className="w-full bg-emerald-50/80 border border-emerald-200 p-3 rounded-xl items-center">
+              <Text className="text-emerald-800 text-xs font-bold text-center leading-relaxed">
+                You will be contacted via Whatsapp for physical interview once you are approved. Stay Tuned.
+              </Text>
+            </View>
+
+            <Text className="text-zinc-400 text-[10px] text-center font-medium leading-relaxed mt-1">
               We&apos;ll notify you through the VIRLA app once your application has been reviewed.
             </Text>
 
@@ -1285,17 +1416,28 @@ export default function TrainerApplicationScreen() {
         )}
 
         {appStatus === 'approved' && (
-          <LuxuryCard className="p-6 gap-5 items-center justify-center bg-emerald-50/20 border-emerald-100/50" interactive={false}>
+          <LuxuryCard className="p-6 gap-5 items-center justify-center bg-emerald-50/30 border-emerald-200" interactive={false}>
             <Text className="text-4xl text-center">🎉</Text>
             <Text className="text-[#101828] text-lg font-extrabold text-center uppercase tracking-wider">Application Approved</Text>
-            <Text className="text-zinc-500 text-xs text-center leading-relaxed">
-              Congratulations! Your trainer profile is now active on the platform.
+            
+            <View className="w-full bg-emerald-500 p-4 rounded-2xl items-center">
+              <Text className="text-white text-xs font-black uppercase tracking-wider text-center">
+                ✨ You are a Trainer now!
+              </Text>
+              <Text className="text-emerald-50 text-[11px] font-bold text-center mt-1 leading-relaxed">
+                Please sign out for new experience. You are a trainer now.
+              </Text>
+            </View>
+
+            <Text className="text-zinc-600 text-xs text-center leading-relaxed px-1">
+              Your onboarding review and physical interview verification have been completed successfully. Please sign out and log back in to access the Trainer Partner Dashboard.
             </Text>
+            
             <TouchableOpacity
-              onPress={() => router.replace('/(tabs)')}
+              onPress={() => router.replace('/(tabs)/profile' as any)}
               className="w-full py-4 bg-[#101828] rounded-xl items-center justify-center mt-2"
             >
-              <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Go to Dashboard</Text>
+              <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Go to Profile</Text>
             </TouchableOpacity>
           </LuxuryCard>
         )}
@@ -1757,7 +1899,10 @@ export default function TrainerApplicationScreen() {
                         }} 
                         placeholder="e.g. - Strength Training (PowerForge)"
                         placeholderTextColor="#A1A1AA"
-                        className={`bg-zinc-50 border p-3 pr-10 rounded-xl text-zinc-900 text-xs font-semibold ${
+                        multiline
+                        textAlignVertical="top"
+                        scrollEnabled={false}
+                        className={`bg-zinc-50 border p-3 pr-10 rounded-xl text-zinc-900 text-xs font-semibold min-h-[46px] leading-5 ${
                           step2Errors.primaryWorkout ? 'border-rose-400 bg-rose-50/20' : 'border-zinc-150'
                         }`}
                       />
@@ -1921,7 +2066,10 @@ export default function TrainerApplicationScreen() {
                         onChangeText={(val) => setSecondarySkills(sanitizeInput(val))} 
                         placeholder="e.g. - HIIT, Core Stability, Mobility" 
                         placeholderTextColor="#A1A1AA"
-                        className="bg-zinc-50 border border-zinc-150 p-3 pr-10 rounded-xl text-zinc-900 text-xs font-semibold" 
+                        multiline
+                        textAlignVertical="top"
+                        scrollEnabled={false}
+                        className="bg-zinc-50 border border-zinc-150 p-3 pr-10 rounded-xl text-zinc-900 text-xs font-semibold min-h-[46px] leading-5" 
                       />
                       <TouchableOpacity
                         activeOpacity={0.7}
@@ -2082,7 +2230,10 @@ export default function TrainerApplicationScreen() {
                         }} 
                         placeholder="e.g. - ACE (American Council on Exercise - CPT)" 
                         placeholderTextColor="#A1A1AA"
-                        className={`bg-zinc-50 border p-3 pr-10 rounded-xl text-zinc-900 text-xs font-semibold ${
+                        multiline
+                        textAlignVertical="top"
+                        scrollEnabled={false}
+                        className={`bg-zinc-50 border p-3 pr-10 rounded-xl text-zinc-900 text-xs font-semibold min-h-[46px] leading-5 ${
                           step2Errors.fitnessQualifications ? 'border-rose-400 bg-rose-50/20' : 'border-zinc-150'
                         }`}
                       />
@@ -2250,10 +2401,10 @@ export default function TrainerApplicationScreen() {
                       value={aboutMe} 
                       onChangeText={(val) => setAboutMe(sanitizeInput(val))} 
                       multiline 
-                      numberOfLines={3} 
+                      textAlignVertical="top"
                       placeholder="e.g. - 5+ years helping clients achieve strength, fat loss, and posture transformation."
                       placeholderTextColor="#A1A1AA"
-                      className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold h-20 text-start"
+                      className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold min-h-[80px] leading-5 text-start"
                     />
                   </View>
                 </View>
@@ -2380,27 +2531,96 @@ export default function TrainerApplicationScreen() {
                     </TouchableOpacity>
                   </View>
 
-                  {/* Certifications (Optional) */}
-                  <View className="flex-row justify-between items-center pb-2">
-                    <View className="flex-1 pr-3">
-                      <Text className="text-zinc-900 text-xs font-semibold text-start">Fitness Certificates</Text>
-                      {certsUploadStatus === 'UPLOADED' ? (
-                        <Text className="text-emerald-600 text-[9px] font-black uppercase mt-1 text-start">✓ Certificates Uploaded</Text>
-                      ) : certsUploadStatus === 'FAILED' ? (
-                        <Text className="text-rose-600 text-[9px] font-black uppercase mt-1 text-start">❌ Upload Failed</Text>
-                      ) : (
-                        <Text className="text-zinc-400 text-[9px] font-bold uppercase mt-1 text-start">Optional</Text>
-                      )}
+                  {/* Required Fitness Certificates based on selected qualifications */}
+                  <View className="pt-1 gap-2.5">
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-row items-center gap-1.5">
+                        <Text className="text-zinc-900 text-xs font-bold text-start">Fitness Certificates</Text>
+                        <Text className="text-rose-500 font-black text-xs">*</Text>
+                      </View>
+                      <Text className="text-rose-500 text-[9.5px] font-black uppercase tracking-wider">Mandatory</Text>
                     </View>
-                    <TouchableOpacity
-                      onPress={() => uploadFile('certs')}
-                      disabled={uploadingDoc === 'certs'}
-                      className={`px-4 py-2.5 rounded-xl border ${certsUploadStatus === 'UPLOADED' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-zinc-200'}`}
-                    >
-                      <Text className={`text-[8.5px] font-black uppercase ${certsUploadStatus === 'UPLOADED' ? 'text-emerald-600' : 'text-zinc-800'}`}>
-                        {uploadingDoc === 'certs' ? 'Uploading...' : certsUploadStatus === 'FAILED' ? 'Retry Upload' : documentCertifications ? 'Replace' : 'Upload'}
-                      </Text>
-                    </TouchableOpacity>
+
+                    <Text className="text-zinc-500 text-[10.5px] leading-relaxed">
+                      Upload proof or certificates for each qualification selected in Step 2:
+                    </Text>
+
+                    {(() => {
+                      const selectedQuals = getSelectedQualificationsList();
+                      if (selectedQuals.length === 0) {
+                        return (
+                          <View className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                            <Text className="text-amber-800 text-[10.5px] font-semibold">
+                              ⚠️ No qualifications specified in Step 2. Please return to Step 2 to add your fitness certifications.
+                            </Text>
+                          </View>
+                        );
+                      }
+
+                      return (
+                        <View className="gap-2.5 mt-1">
+                          {selectedQuals.map((qual: string, idx: number) => {
+                            const isUploaded = !!qualCertMap[qual];
+                            const status = qualUploadStatusMap[qual] || (isUploaded ? 'UPLOADED' : 'NOT_UPLOADED');
+                            const isCurrentUploading = uploadingDoc === 'certs' && currentUploadingQual === qual;
+
+                            return (
+                              <View
+                                key={idx}
+                                className={`p-3.5 rounded-xl border flex-row justify-between items-center ${
+                                  isUploaded 
+                                    ? 'bg-emerald-50/40 border-emerald-200' 
+                                    : 'bg-zinc-50 border-zinc-200'
+                                }`}
+                              >
+                                <View className="flex-1 pr-3 gap-0.5">
+                                  <Text className="text-zinc-900 text-xs font-bold text-start">
+                                    {qual}
+                                  </Text>
+                                  {isUploaded ? (
+                                    <Text className="text-emerald-700 text-[9.5px] font-black uppercase tracking-tight">
+                                      ✓ Certificate Uploaded
+                                    </Text>
+                                  ) : status === 'FAILED' ? (
+                                    <Text className="text-rose-600 text-[9.5px] font-black uppercase tracking-tight">
+                                      ❌ Upload Failed
+                                    </Text>
+                                  ) : (
+                                    <Text className="text-rose-500 text-[9.5px] font-black uppercase tracking-tight">
+                                      * Certificate Required
+                                    </Text>
+                                  )}
+                                </View>
+
+                                <TouchableOpacity
+                                  onPress={() => uploadFile('certs', qual)}
+                                  disabled={isCurrentUploading}
+                                  className={`px-3.5 py-2 rounded-xl border ${
+                                    isUploaded
+                                      ? 'bg-emerald-100/60 border-emerald-300'
+                                      : 'bg-zinc-950 border-zinc-950'
+                                  }`}
+                                >
+                                  <Text
+                                    className={`text-[9px] font-black uppercase tracking-wider ${
+                                      isUploaded ? 'text-emerald-900' : 'text-white'
+                                    }`}
+                                  >
+                                    {isCurrentUploading
+                                      ? 'Uploading...'
+                                      : status === 'FAILED'
+                                        ? 'Retry'
+                                        : isUploaded
+                                          ? 'Replace'
+                                          : 'Upload'}
+                                  </Text>
+                                </TouchableOpacity>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      );
+                    })()}
                   </View>
                 </View>
               </LuxuryCard>
@@ -2429,7 +2649,11 @@ export default function TrainerApplicationScreen() {
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={handleSubmit}
-                  disabled={!documentSelfie}
+                  disabled={!documentSelfie || (() => {
+                    const selected = getSelectedQualificationsList();
+                    if (selected.length === 0) return true;
+                    return selected.some((q: string) => !qualCertMap[q] || !qualCertMap[q].trim());
+                  })()}
                   style={{
                     shadowColor: '#E11D48',
                     shadowOffset: { width: 0, height: 4 },
@@ -2437,7 +2661,13 @@ export default function TrainerApplicationScreen() {
                     shadowRadius: 8,
                     elevation: 4
                   }}
-                  className={`flex-1 py-4 rounded-xl items-center justify-center ${!documentSelfie ? 'bg-zinc-300' : 'bg-[#E11D48]'}`}
+                  className={`flex-1 py-4 rounded-xl items-center justify-center ${
+                    (!documentSelfie || (() => {
+                      const selected = getSelectedQualificationsList();
+                      if (selected.length === 0) return true;
+                      return selected.some((q: string) => !qualCertMap[q] || !qualCertMap[q].trim());
+                    })()) ? 'bg-zinc-300' : 'bg-[#E11D48]'
+                  }`}
                 >
                   <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Submit Application</Text>
                 </TouchableOpacity>

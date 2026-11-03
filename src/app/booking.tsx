@@ -533,23 +533,42 @@ export default function BookingScreen() {
   const [isLocationOutsideCoverage, setIsLocationOutsideCoverage] = useState(false);
 
   // Trainer-First service area check (Step 3):
-  // Area is available if ANY active trainer is within 5 km approx walking distance
-  // (Haversine straight-line distance x 1.5). Trainer identity is never exposed in UI.
+  // Area is available if ANY registered trainer operating base is within 5 km approx walking distance
+  // (Haversine straight-line distance x 1.5).
+  // Online/offline status is NOT checked here because this strictly evaluates geographical serviceability.
+  // Stops early immediately on the first matching trainer (no extra loops). Trainer identity is never exposed.
   const isAreaCoveredByTrainer = useCallback((userLat: number, userLng: number): boolean => {
+    if (!userLat || !userLng) return false;
+
     // Database se fresh coaches uthao, na ki stale store se
     const freshCoaches = Database.getCoaches() || coaches;
 
-    return freshCoaches.some(coach => {
-      if (coach.preferences?.online === false) return false;
+    for (let i = 0; i < freshCoaches.length; i++) {
+      const coach = freshCoaches[i];
       const tLat = coach.preferences?.operatingLatitude;
       const tLng = coach.preferences?.operatingLongitude;
-      if (tLat === undefined || tLat === null || tLng === undefined || tLng === null) return false;
+      if (tLat === undefined || tLat === null || tLng === undefined || tLng === null) {
+        continue;
+      }
 
-      // Haversine distance check
-      return calculateDistanceKm(userLat, userLng, tLat, tLng) * 1.5 <= 5;
-    });
+      // Haversine distance x 1.5 (approximate walking distance)
+      const distKm = calculateDistanceKm(userLat, userLng, tLat, tLng);
+      if (distKm * 1.5 <= 5) {
+        return true; // Early exit immediately on first matching trainer, no extra loops
+      }
+    }
+
+    return false;
   }, [coaches]);
   const [successBookingId, setSuccessBookingId] = useState(initialBookingId);
+
+  useEffect(() => {
+    if (step === 3) {
+      // Har baar Step 3 pe aane par coaches aur addresses sync karo
+      useCoachStore.getState().syncFromDB();
+      useAddressStore.getState().syncFromDB();
+    }
+  }, [step]);
 
   useEffect(() => {
     if (step === 3) {
@@ -2588,14 +2607,10 @@ export default function BookingScreen() {
                   </View>
 
                   {/* Saved Locations List */}
-                  <View className="gap-3.5">
+                  <View className="gap-2.5">
                     {addresses.map((addr) => {
                       const isSelected = selectedAddressId === addr.id;
-                      // Display dynamic mock ETA/distance for address cards context
-                      let cardEta = '12–15 mins';
-                      if (((addr.building || '') || '').toLowerCase().includes('worli')) cardEta = '18–22 mins';
-                      if (((addr.building || '') || '').toLowerCase().includes('juhu')) cardEta = '15–18 mins';
-                      if (((addr.building || '') || '').toLowerCase().includes('bandra')) cardEta = '10–12 mins';
+                      const isCovered = (addr.lat && addr.lng) ? isAreaCoveredByTrainer(addr.lat, addr.lng) : false;
 
                       return (
                         <TouchableOpacity
@@ -2610,56 +2625,53 @@ export default function BookingScreen() {
                               setIsLocationOutsideCoverage(true);
                             }
                           }}
-                          className={`p-5 rounded-[24px] border flex-row items-center justify-between  ${
+                          className={`p-4 rounded-[22px] flex-row items-center justify-between ${
                             isSelected 
-                              ? 'bg-white border-[#E11D48]' 
-                              : 'bg-white border-[#E5E7EB]'
+                              ? 'bg-rose-50/40' 
+                              : 'bg-white'
                           }`}
                           style={{
-                            shadowColor: isSelected ? '#E11D48' : '#101828',
-                            shadowOffset: { width: 0, height: isSelected ? 6 : 2 },
-                            shadowOpacity: isSelected ? 0.08 : 0.03,
-                            shadowRadius: isSelected ? 12 : 6,
-                            elevation: isSelected ? 4 : 2,
+                            shadowColor: '#101828',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: isSelected ? 0.05 : 0.03,
+                            shadowRadius: 8,
+                            elevation: isSelected ? 2 : 1,
                           }}
                         >
-                          <View className="flex-row items-center gap-4 flex-1">
-                            <View className={`w-11 h-11 rounded-2xl items-center justify-center ${isSelected ? 'bg-rose-50' : 'bg-zinc-50'}`}>
-                              <Text className="text-xl">
-                                {addr.label === 'Home' ? '🏠' : addr.label === 'Office' ? '🏢' : addr.label === 'Gym' ? '🏋️' : '📍'}
-                              </Text>
-                            </View>
-                            <View className="flex-1 gap-1">
+                          <View className="flex-row items-center gap-3.5 flex-1">
+                            <Text className="text-xl">
+                              {addr.label === 'Home' ? '🏠' : addr.label === 'Office' ? '🏢' : addr.label === 'Gym' ? '🏋️' : '📍'}
+                            </Text>
+
+                            <View className="flex-1 gap-0.5">
                               <View className="flex-row items-center gap-2">
                                 <Text className="text-[#101828] text-sm font-black">{addr.label}</Text>
                                 {addr.isDefault && (
-                                  <View className="bg-zinc-100 border border-zinc-200 px-2 py-0.5 rounded-full">
-                                    <Text className="text-[#6B7280] text-[8px] font-black uppercase tracking-wider">Default</Text>
-                                  </View>
-                                )}
-                                {isSelected && (
-                                  <View className="bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full">
-                                    <Text className="text-[#E11D48] text-[8px] font-black uppercase tracking-wider">Selected</Text>
-                                  </View>
+                                  <Text className="text-zinc-400 text-[9px] font-bold uppercase tracking-wider">
+                                    • Default
+                                  </Text>
                                 )}
                               </View>
-                              <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed">
+                              <Text className="text-zinc-500 text-xs font-medium leading-relaxed" numberOfLines={2}>
                                 {addr.addressLine}
                               </Text>
-                              <View className="flex-row items-center gap-4 mt-1">
-                                <Text className="text-green-600 text-[10px] font-bold">✓ Covered</Text>
-                                <Text className="text-zinc-400 text-[10px] font-medium">• Est. arrival: {cardEta}</Text>
+                              <View className="flex-row items-center gap-2 mt-0.5">
+                                {isCovered ? (
+                                  <Text className="text-emerald-600 text-[10px] font-bold">✓ Covered</Text>
+                                ) : (
+                                  <Text className="text-rose-500 text-[10px] font-bold">✕ Not Available</Text>
+                                )}
                               </View>
                             </View>
                           </View>
 
                           <View className="ml-2">
                             {isSelected ? (
-                              <View className="w-6 h-6 rounded-full bg-[#E11D48] items-center justify-center">
-                                <Feather name="check" size={14} color="white" />
+                              <View className="w-5 h-5 rounded-full bg-[#E11D48] items-center justify-center">
+                                <Feather name="check" size={12} color="white" />
                               </View>
                             ) : (
-                              <View className="w-6 h-6 rounded-full border border-zinc-200 bg-zinc-50" />
+                              <View className="w-5 h-5 rounded-full bg-zinc-100" />
                             )}
                           </View>
                         </TouchableOpacity>
@@ -2667,79 +2679,77 @@ export default function BookingScreen() {
                     })}
 
                     {addresses.length === 0 && (
-                      <View className="p-8 rounded-[24px] border border-dashed border-[#CBD5E1] bg-white items-center justify-center gap-2">
+                      <View className="p-8 rounded-[24px] bg-white items-center justify-center gap-2">
                         <Text className="text-3xl">📍</Text>
                         <Text className="text-[#101828] text-sm font-bold">No Saved Addresses</Text>
                         <Text className="text-zinc-500 text-xs text-center">Add a training location to begin booking.</Text>
                       </View>
                     )}
 
-                    {/* Add New Location Trigger with In-line Prominent Disclosure */}
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => openAddressModal()}
-                      className="p-4 rounded-[24px] border border-dashed border-zinc-300 bg-white flex-row items-center justify-between"
+                    {/* Divider OR above Add New Location */}
+                    {addresses.length > 0 && (
+                      <View className="flex-row items-center my-1 px-2">
+                        <View className="flex-1 h-[1px] bg-zinc-200/60" />
+                        <Text className="text-zinc-400 text-[9px] font-bold uppercase tracking-widest px-3">
+                          OR
+                        </Text>
+                        <View className="flex-1 h-[1px] bg-zinc-200/60" />
+                      </View>
+                    )}
+
+                    {/* Add New Location Row: Clean borderless card */}
+                    <View
+                      className="p-4 rounded-[22px] bg-white flex-row items-center justify-between"
                       style={{
                         shadowColor: '#101828',
                         shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.02,
-                        shadowRadius: 6,
+                        shadowOpacity: 0.03,
+                        shadowRadius: 8,
                         elevation: 1,
                       }}
                     >
-                      <View className="flex-row items-center gap-3 flex-1 pr-2">
-                        <View className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center">
-                          <Feather name="plus" size={15} color="#18181B" />
-                        </View>
-                        <View className="flex-1">
-                          <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">
-                            Add New Location
-                          </Text>
-                          <Text className="text-zinc-500 text-[10.5px] font-medium mt-0.5 leading-tight">
-                            Virla uses location to pinpoint your doorstep workout address
-                          </Text>
-                        </View>
+                      <View className="flex-1 pr-3">
+                        <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">
+                          Add New Location
+                        </Text>
+                        <Text className="text-zinc-500 text-[10.5px] font-medium mt-0.5 leading-tight">
+                          Virla uses location to pinpoint your doorstep workout address
+                        </Text>
                       </View>
-                      <View className="bg-zinc-900 px-3 py-1.5 rounded-full">
-                        <Text className="text-white text-[10px] font-bold uppercase tracking-wider">
+
+                      {/* Touch strictly on Enable button */}
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => openAddressModal()}
+                        className="bg-zinc-900 px-4 py-2 rounded-full"
+                      >
+                        <Text className="text-white text-[10.5px] font-bold uppercase tracking-wider">
                           Enable
                         </Text>
-                      </View>
-                    </TouchableOpacity>
+                      </TouchableOpacity>
+                    </View>
                   </View>
 
-                  {/* Compact Service Availability card */}
+                  {/* Clean Service Availability text: No background boxes, no borders, clean inline text */}
                   {selectedAddressId ? (
                     !isLocationOutsideCoverage ? (
-                      <View className="bg-emerald-50 border border-emerald-100 p-5 rounded-[24px] flex-row items-center gap-4">
-                        <View className="w-10 h-10 rounded-full bg-emerald-100 items-center justify-center">
-                          <Feather name="check-circle" size={20} color="#059669" />
-                        </View>
-                        <View className="flex-1 gap-0.5">
-                          <Text className="text-emerald-700 text-xs font-semibold">✅ Virla is available in your area. Proceed to select Date &amp; Time.</Text>
-                          
-                        </View>
+                      <View className="px-2 py-2 flex-row items-center gap-2">
+                        <Feather name="check-circle" size={15} color="#059669" />
+                        <Text className="text-emerald-700 text-xs font-semibold flex-1">
+                          Virla is available in your area. Proceed to select Date &amp; Time.
+                        </Text>
                       </View>
                     ) : (
-                      <View className="bg-red-50 border border-red-200 p-5 rounded-[24px] gap-3">
-                        <View className="flex-row items-center gap-3">
-                          <View className="w-10 h-10 rounded-full bg-red-100 items-center justify-center">
-                            <Feather name="alert-triangle" size={20} color="#DC2626" />
-                          </View>
-                          <View className="flex-1">
-                            <Text className="text-red-700 text-xs font-semibold">❌ Sorry, Virla is not yet available in your area. We are expanding soon!</Text>
-                          </View>
+                      <View className="px-2 py-2 gap-1">
+                        <View className="flex-row items-center gap-2">
+                          <Feather name="alert-triangle" size={15} color="#DC2626" />
+                          <Text className="text-red-700 text-xs font-semibold flex-1">
+                            Sorry, Virla is not yet available in your area. We are expanding soon!
+                          </Text>
                         </View>
-                        <Text className="text-zinc-500 text-xs leading-relaxed pl-1">
-                          Join our waitlist and we&apos;ll notify you when we launch here.
+                        <Text className="text-zinc-500 text-xs leading-relaxed pl-6">
+                          We will notify you once we are available in your area.
                         </Text>
-                        <TouchableOpacity
-                          activeOpacity={0.8}
-                          onPress={() => Alert.alert('Waitlist Joined', 'Thank you! We will notify you as soon as VIRLA launches in your area.')}
-                          className="bg-red-600 h-11 rounded-xl items-center justify-center self-start px-6"
-                        >
-                          <Text className="text-white text-xs font-black uppercase tracking-wider">Notify Me</Text>
-                        </TouchableOpacity>
                       </View>
                     )
                   ) : null}
@@ -2803,8 +2813,19 @@ export default function BookingScreen() {
                                   latitudeDelta: 0.005,
                                   longitudeDelta: 0.005,
                                 }}
+                                onRegionChange={() => {
+                                  // Jab user map drag/pan kar raha ho, tab reverse geocode request cancel karo
+                                  // taaki map provider API par bilkul koi continuous pressure/load na pade
+                                  if (reverseGeocodeTimerRef.current) {
+                                    clearTimeout(reverseGeocodeTimerRef.current);
+                                    reverseGeocodeTimerRef.current = null;
+                                  }
+                                }}
                                 onRegionChangeComplete={(region) => {
-                                  // Prevent geocoding cycle if region hasn't moved meaningfully
+                                  // 1. Instantly check coverage locally using Haversine with zero network request
+                                  setIsLocationOutsideCoverage(!isAreaCoveredByTrainer(region.latitude, region.longitude));
+
+                                  // 2. Sirf jab user drag rok de (map stop ho jaye) tabhi reverse geocode call karo
                                   const latDiff = Math.abs(region.latitude - activeCoords.lat);
                                   const lngDiff = Math.abs(region.longitude - activeCoords.lng);
                                   if (latDiff > 0.00005 || lngDiff > 0.00005) {
@@ -2814,6 +2835,7 @@ export default function BookingScreen() {
                                     setIsReverseGeocoding(true);
                                     const requestId = ++geocodeRequestCounterRef.current;
                                     
+                                    // Settle debounce: Map completely stop hone ke baad hi API hit hogi
                                     reverseGeocodeTimerRef.current = setTimeout(async () => {
                                       try {
                                         const res = await reverseGeocodeCoords(region.latitude, region.longitude);
@@ -2838,87 +2860,163 @@ export default function BookingScreen() {
                                           setIsReverseGeocoding(false);
                                         }
                                       }
-                                    }, 800);
+                                    }, 900);
                                   }
                                 }}
                               />
                             </SafeMapWrapper>
 
-                            {/* Static Central pin overlay */}
+                            {/* Subtle 3D sphere marker with sleek needle */}
                             <View 
                               pointerEvents="none" 
                               style={{
                                 position: 'absolute',
                                 top: '50%',
                                 left: '50%',
-                                marginLeft: -24,
-                                marginTop: -48,
-                                width: 48,
-                                height: 48,
+                                marginLeft: -11,
+                                marginTop: -40,
+                                width: 22,
+                                height: 40,
                                 alignItems: 'center',
-                                justifyContent: 'center',
+                                justifyContent: 'flex-start',
                                 zIndex: 10,
                               }}
                             >
+                              {/* 3D Sphere Circle: Compact with white highlight texture */}
                               <View 
-                                className={`w-12 h-12 rounded-full ${
-                                  isLocationOutsideCoverage ? 'bg-red-500' : 'bg-[#E11D48]'
-                                } border-4 border-white items-center justify-center shadow-lg`}
+                                style={{
+                                  width: 18,
+                                  height: 18,
+                                  borderRadius: 9,
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  backgroundColor: isLocationOutsideCoverage ? '#DC2626' : '#059669',
+                                  // 3D bottom shading
+                                  borderBottomWidth: 2,
+                                  borderBottomColor: isLocationOutsideCoverage ? '#7F1D1D' : '#064E3B',
+                                  shadowColor: isLocationOutsideCoverage ? '#DC2626' : '#059669',
+                                  shadowOffset: { width: 0, height: 2 },
+                                  shadowOpacity: 0.35,
+                                  shadowRadius: 3,
+                                  elevation: 5,
+                                }}
                               >
-                                <Feather name={isLocationOutsideCoverage ? 'alert-triangle' : 'map-pin'} size={20} color="white" />
+                                {/* Curved white specular highlight texture on top */}
+                                <View 
+                                  style={{
+                                    position: 'absolute',
+                                    top: 1.5,
+                                    left: 2.5,
+                                    width: 7,
+                                    height: 3.5,
+                                    borderRadius: 3,
+                                    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+                                    transform: [{ rotate: '-25deg' }],
+                                  }} 
+                                />
+
+                                {/* Subtle secondary white rim glow texture */}
+                                <View 
+                                  style={{
+                                    position: 'absolute',
+                                    top: 1,
+                                    right: 2.5,
+                                    width: 2,
+                                    height: 2,
+                                    borderRadius: 1,
+                                    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+                                  }} 
+                                />
                               </View>
+
+                              {/* Refined Slim White Needle Stem */}
+                              <View 
+                                style={{
+                                  width: 3,
+                                  height: 14,
+                                  backgroundColor: '#FFFFFF',
+                                  borderRadius: 1.5,
+                                  marginTop: -0.5,
+                                  shadowColor: '#000000',
+                                  shadowOffset: { width: 0, height: 1.5 },
+                                  shadowOpacity: 0.25,
+                                  shadowRadius: 2,
+                                  elevation: 3,
+                                }} 
+                              />
+
+                              {/* Sleek Sharp White Needle Tip */}
+                              <View 
+                                style={{
+                                  width: 0,
+                                  height: 0,
+                                  borderLeftWidth: 2.5,
+                                  borderRightWidth: 2.5,
+                                  borderTopWidth: 6,
+                                  borderLeftColor: 'transparent',
+                                  borderRightColor: 'transparent',
+                                  borderTopColor: '#FFFFFF',
+                                  marginTop: -0.5,
+                                }} 
+                              />
+
+                              {/* Ground shadow dot */}
+                              <View 
+                                style={{
+                                  width: 5,
+                                  height: 2,
+                                  borderRadius: 2,
+                                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                                  marginTop: 1,
+                                }} 
+                              />
                             </View>
 
-                            {/* Floating Header Card at Top */}
+                            {/* Floating Lightweight Header: Glass translucent & soft shadow */}
                             <View 
                               style={{
                                 position: 'absolute',
                                 top: Math.max(insets.top, 16) + 8,
                                 left: 16,
                                 right: 16,
-                                backgroundColor: 'white',
+                                backgroundColor: 'rgba(255, 255, 255, 0.94)',
                                 borderRadius: 24,
-                                padding: 16,
+                                padding: 14,
                                 zIndex: 50,
-                                borderWidth: 1,
-                                borderColor: '#E5E7EB',
-                                shadowColor: '#101828',
-                                shadowOffset: { width: 0, height: 4 },
-                                shadowOpacity: 0.08,
-                                shadowRadius: 12,
-                                elevation: 4,
+                                shadowColor: '#000000',
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.05,
+                                shadowRadius: 10,
+                                elevation: 3,
                               }}
                             >
-                              {/* Back button and title */}
-                              <View className="flex-row items-center justify-between mb-3">
+                              {/* Back button and clean title */}
+                              <View className="flex-row items-center justify-between mb-2.5">
                                 <TouchableOpacity 
                                   onPress={() => setIsAddAddressModalVisible(false)} 
                                   activeOpacity={0.7}
                                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                  className="w-9 h-9 items-center justify-center rounded-full"
+                                  className="w-8 h-8 items-center justify-center rounded-full"
                                 >
-                                  <Ionicons name="arrow-back" size={20} color="#09090B" />
+                                  <Ionicons name="arrow-back" size={19} color="#18181B" />
                                 </TouchableOpacity>
                                 <View className="items-center flex-1 mx-2">
-                                  <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">
-                                    Select Training Location
-                                  </Text>
-                                  <Text className="text-zinc-400 text-[9px] font-semibold mt-0.5">
-                                    Drag map to set your location pin
+                                  <Text className="text-zinc-900 text-xs font-bold tracking-tight">
+                                    Set Training Location
                                   </Text>
                                 </View>
-                                <View className="w-9" />
+                                <View className="w-8" />
                               </View>
 
-                              {/* Search Input field */}
-                              <View className="flex-row items-center bg-zinc-50 border border-zinc-200/80 px-3.5 h-11 rounded-xl">
-                                <Feather name="search" size={15} color="#71717A" />
+                              {/* Search Input field: Lightweight without heavy border */}
+                              <View className="flex-row items-center bg-zinc-100/70 px-3 h-10 rounded-xl">
+                                <Feather name="search" size={14} color="#71717A" />
                                 <TextInput
-                                  placeholder="Search society, street, building or area..."
+                                  placeholder="Search location, street, area..."
                                   placeholderTextColor="#A1A1AA"
                                   value={searchQuery}
                                   onChangeText={(t) => handleSearchTextChange(t)}
-                                  className="flex-1 text-xs font-semibold text-zinc-900 ml-2.5 py-0"
+                                  className="flex-1 text-xs font-medium text-zinc-900 ml-2 py-0"
                                 />
                                 {searchQuery.trim().length > 0 && (
                                   <TouchableOpacity 
@@ -2988,64 +3086,61 @@ export default function BookingScreen() {
                               <Feather name="navigation" size={18} color="#4F46E5" />
                             </TouchableOpacity>
 
-                            {/* Bottom Sheet Address Panel */}
+                            {/* Bottom Sheet Address Panel: Soft translucent & lightweight */}
                             <View 
                               style={{
                                 position: 'absolute',
                                 bottom: Math.max(insets.bottom + 8, Platform.OS === 'android' ? 20 : 16),
                                 left: 16,
                                 right: 16,
-                                backgroundColor: 'white',
-                                borderRadius: 24,
-                                padding: 16,
-                                borderWidth: 1,
-                                borderColor: '#E5E7EB',
-                                shadowColor: '#101828',
-                                shadowOffset: { width: 0, height: 6 },
-                                shadowOpacity: 0.1,
-                                shadowRadius: 16,
-                                elevation: 6,
+                                backgroundColor: 'rgba(255, 255, 255, 0.94)',
+                                borderRadius: 26,
+                                paddingHorizontal: 18,
+                                paddingVertical: 15,
+                                shadowColor: '#000000',
+                                shadowOffset: { width: 0, height: 4 },
+                                shadowOpacity: 0.06,
+                                shadowRadius: 12,
+                                elevation: 4,
                                 zIndex: 30,
                               }}
                             >
-                              <Text className="text-zinc-400 text-[9.5px] font-black uppercase tracking-[1.5px] text-center mb-2.5">
-                                Target Location
-                              </Text>
-
-                              <View className="bg-zinc-50 border border-zinc-200/80 p-3.5 rounded-2xl mb-3 flex-row items-start gap-3">
-                                <View className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 items-center justify-center mt-0.5">
-                                  <Feather name="map-pin" size={14} color="#E11D48" />
-                                </View>
+                              {/* Clean Address Row: Full address display with minimal black pin */}
+                              <View className="flex-row items-start gap-2.5 mb-3">
+                                <Feather name="map-pin" size={16} color="#18181B" style={{ marginTop: 2 }} />
                                 <View className="flex-1">
-                                  <Text className="text-zinc-900 text-xs font-black mb-0.5 uppercase tracking-tight">
+                                  <Text className="text-zinc-950 text-sm font-black uppercase tracking-tight">
                                     {isReverseGeocoding
                                       ? 'Locating target entrance...'
                                       : ((!hasConfirmedSearchSelection && !isPinSelectionAuthoritative) ? 'Selected location' : resolvedPlaceName)}
                                   </Text>
-                                  <Text className="text-zinc-500 text-[10px] font-semibold leading-relaxed" numberOfLines={2}>
+                                  <Text className="text-zinc-600 text-xs font-medium leading-relaxed mt-1">
                                     {isReverseGeocoding
                                       ? 'Fetching address details...'
-                                      : ((!hasConfirmedSearchSelection && !isPinSelectionAuthoritative) ? 'Select a location from search or move the pin on the map' : searchQuery || 'Select your location on map')}
+                                      : ((!hasConfirmedSearchSelection && !isPinSelectionAuthoritative) ? 'Select location or move pin on map' : searchQuery || 'Select location on map')}
                                   </Text>
-
-                                  {gpsAccuracy !== null && !isReverseGeocoding && (
-                                    <Text className="text-indigo-600 text-[9px] font-bold mt-1">
-                                      🛰️ Accuracy: {gpsAccuracy <= 15 ? `High (~${gpsAccuracy.toFixed(0)}m)` : `Medium (~${gpsAccuracy.toFixed(0)}m)`}
-                                    </Text>
-                                  )}
                                 </View>
                               </View>
 
+                              {/* Pure Red Text Notice: Zero background box or borders */}
                               {isLocationOutsideCoverage && (
-                                <View className="bg-rose-50 border border-rose-100 p-2.5 rounded-xl mb-3">
-                                  <Text className="text-[#E11D48] text-[9px] font-bold uppercase text-center">Not yet available in this area</Text>
+                                <View className="mb-3 flex-row items-center justify-center gap-1.5">
+                                  <Feather name="alert-circle" size={13} color="#E11D48" />
+                                  <Text className="text-[#E11D48] text-xs font-black uppercase tracking-wide">
+                                    Not yet available in this area
+                                  </Text>
                                 </View>
                               )}
 
+                              {/* Slim, elegant confirm button */}
                               <TouchableOpacity
                                 activeOpacity={0.8}
-                                disabled={isReverseGeocoding || (!hasConfirmedSearchSelection && !isPinSelectionAuthoritative)}
+                                disabled={isReverseGeocoding || isLocationOutsideCoverage || (!hasConfirmedSearchSelection && !isPinSelectionAuthoritative)}
                                 onPress={() => {
+                                  if (isLocationOutsideCoverage) {
+                                    Alert.alert('Outside Service Area', 'Sorry, Virla is not yet available in this area.');
+                                    return;
+                                  }
                                   setIsMapConfirmed(true);
                                   if (resolvedPlaceName && 
                                       resolvedPlaceName !== 'Selected Location' && 
@@ -3057,14 +3152,24 @@ export default function BookingScreen() {
                                   }
                                   setAddAddressStep(2);
                                 }}
-                                className={`w-full h-12 rounded-xl items-center justify-center flex-row gap-2 ${
-                                  (isReverseGeocoding || (!hasConfirmedSearchSelection && !isPinSelectionAuthoritative)) ? 'bg-zinc-200' : 'bg-zinc-950'
+                                style={{
+                                  height: 44,
+                                  borderRadius: 22,
+                                }}
+                                className={`w-full items-center justify-center flex-row gap-2 ${
+                                  (isReverseGeocoding || isLocationOutsideCoverage || (!hasConfirmedSearchSelection && !isPinSelectionAuthoritative)) 
+                                    ? 'bg-zinc-200' 
+                                    : 'bg-zinc-950'
                                 }`}
                               >
                                 {isReverseGeocoding ? (
                                   <ActivityIndicator size="small" color="#6B7280" />
                                 ) : (
-                                  <Text className="text-white text-xs font-black uppercase tracking-wider">Confirm Location</Text>
+                                  <Text className={`text-xs font-black uppercase tracking-wider ${
+                                    isLocationOutsideCoverage ? 'text-zinc-400' : 'text-white'
+                                  }`}>
+                                    Confirm Location
+                                  </Text>
                                 )}
                               </TouchableOpacity>
                             </View>
