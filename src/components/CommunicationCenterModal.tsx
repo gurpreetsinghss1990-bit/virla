@@ -29,27 +29,45 @@ export const CommunicationCenterModal: React.FC<CommunicationCenterModalProps> =
 }) => {
   const insets = useSafeAreaInsets();
   // Ensure ample clearance above Android 3-button navigation bar (~48-56dp) or iOS indicator bar (~34dp)
-  const safeBottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 56 : 24) + 20;
+  const safeBottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 68 : 28) + 24;
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(260)).current;
 
   useEffect(() => {
     if (visible) {
       fadeAnim.setValue(0);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }).start();
+      slideAnim.setValue(260);
+
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 280,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          tension: 65,
+          friction: 11,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
   }, [visible]);
 
   const handleDismiss = () => {
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 120,
-      useNativeDriver: true,
-    }).start(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 260,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
       onClose();
     });
   };
@@ -71,7 +89,7 @@ export const CommunicationCenterModal: React.FC<CommunicationCenterModalProps> =
           style={[
             StyleSheet.absoluteFill,
             {
-              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              backgroundColor: 'rgba(0, 0, 0, 0.4)',
               opacity: fadeAnim,
             },
           ]}
@@ -83,113 +101,85 @@ export const CommunicationCenterModal: React.FC<CommunicationCenterModalProps> =
           />
         </Animated.View>
 
-        {/* Modal Bottom Sheet Content */}
+        {/* Modal Bottom Sheet Content with Smooth Slide-Up */}
         <View style={{ flex: 1, justifyContent: 'flex-end' }} pointerEvents="box-none">
-          <View
-            style={{ paddingBottom: safeBottomPadding }}
-            className="bg-white rounded-t-[32px] px-6 pt-3.5 gap-4 shadow-2xl"
+          <Animated.View
+            style={{
+              transform: [{ translateY: slideAnim }],
+            }}
           >
-            {/* Subtle Pull Indicator Bar */}
-            <View className="w-10 h-1.5 rounded-full bg-zinc-200 self-center mb-1" />
+            <View
+              style={{ paddingBottom: safeBottomPadding }}
+              className="bg-white rounded-t-[28px] px-5 pt-3 gap-3 shadow-xl"
+            >
+            {/* Minimal Pull Indicator Bar */}
+            <View className="w-8 h-1 rounded-full bg-zinc-200 self-center mb-1" />
 
             {/* Modal Header */}
-            <View className="flex-row items-center pb-3 border-b border-zinc-100">
-              <View className="w-8" />
-              <Text className="flex-1 text-zinc-900 text-lg font-bold tracking-tight text-center">
-                Notifications & Messages
+            <View className="flex-row items-center justify-between pb-1 px-1">
+              <Text className="text-zinc-900 text-base font-bold tracking-tight">
+                Activity
               </Text>
               <TouchableOpacity
                 onPress={handleDismiss}
-                activeOpacity={0.7}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center"
+                activeOpacity={0.6}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                className="w-9 h-9 items-center justify-center"
               >
-                <Feather name="x" size={16} color="#64748B" />
+                <Feather name="x" size={20} color="#18181B" />
               </TouchableOpacity>
             </View>
 
-          {/* Options Destination List */}
-          <View className="gap-1">
-            {/* Notifications Center Option */}
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={onSelectNotifications}
-              className="flex-row items-center py-3.5 px-3 rounded-2xl active:bg-zinc-100/70"
-            >
-              <View className="w-10 h-10 items-center justify-center">
-                <Feather name="bell" size={22} color="#E11D48" />
-              </View>
-
-              <View className="flex-1 ml-3 mr-2">
-                <View className="flex-row items-center gap-2 flex-wrap">
-                  <Text className="text-zinc-900 text-sm font-semibold">
-                    Notifications Center
-                  </Text>
-                  {unreadCount > 0 ? (
-                    <View className="bg-[#E11D48] px-2 py-0.5 rounded-full">
-                      <Text numberOfLines={1} className="text-white text-[9px] font-bold uppercase tracking-wide">
-                        {unreadCount > 99 ? '99+' : unreadCount} New
-                      </Text>
-                    </View>
-                  ) : (
-                    <View className="bg-zinc-200 px-2 py-0.5 rounded-full">
-                      <Text className="text-zinc-600 text-[9px] font-bold uppercase tracking-wide">
-                        All Caught Up
-                      </Text>
-                    </View>
-                  )}
+            {/* Options Destination List - Clean, borderless & seamless */}
+            <View className="gap-1">
+              {/* Notifications Center Option */}
+              <TouchableOpacity
+                activeOpacity={0.6}
+                onPress={onSelectNotifications}
+                className="flex-row items-center py-3 px-2 rounded-xl active:bg-zinc-50"
+              >
+                <View className="w-8 h-8 items-center justify-center">
+                  <Feather name="bell" size={18} color="#18181B" />
                 </View>
-                <Text className="text-zinc-500 text-xs font-normal mt-1 leading-4">
-                  Session updates, schedule alerts & announcements
-                </Text>
-              </View>
 
-              <Feather name="chevron-right" size={20} color="#CBD5E1" />
-            </TouchableOpacity>
-
-            <View className="h-[1px] bg-zinc-100 mx-2 my-0.5" />
-
-            {/* Messages (Chats) Option */}
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={onSelectMessages}
-              className="flex-row items-center py-3.5 px-3 rounded-2xl active:bg-zinc-100/70"
-            >
-              <View className="w-10 h-10 items-center justify-center">
-                <Feather name="message-square" size={21} color="#0284C7" />
-              </View>
-
-              <View className="flex-1 ml-3 mr-2">
-                <View className="flex-row items-center gap-2 flex-wrap">
-                  <Text className="text-zinc-900 text-sm font-semibold">
-                    Messages (Chats)
+                <View className="flex-1 ml-2.5">
+                  <Text className="text-zinc-900 text-[14px] font-semibold">
+                    Notifications
                   </Text>
-                  <View className="bg-sky-100 px-2 py-0.5 rounded-full">
-                    <Text className="text-sky-800 text-[9px] font-bold uppercase tracking-wide">
-                      Direct Chat
+                </View>
+
+                {unreadCount > 0 && (
+                  <View className="bg-[#E11D48] px-2 py-0.5 rounded-full mr-2">
+                    <Text numberOfLines={1} className="text-white text-[10px] font-bold">
+                      {unreadCount > 99 ? '99+' : unreadCount}
                     </Text>
                   </View>
+                )}
+
+                <Feather name="chevron-right" size={16} color="#94A3B8" />
+              </TouchableOpacity>
+
+              {/* Messages (Chats) Option */}
+              <TouchableOpacity
+                activeOpacity={0.6}
+                onPress={onSelectMessages}
+                className="flex-row items-center py-3 px-2 rounded-xl active:bg-zinc-50"
+              >
+                <View className="w-8 h-8 items-center justify-center">
+                  <Feather name="message-square" size={18} color="#18181B" />
                 </View>
-                <Text className="text-zinc-500 text-xs font-normal mt-1 leading-4">
-                  Direct line with your coaches & VIRLA concierge
-                </Text>
-              </View>
 
-              <Feather name="chevron-right" size={20} color="#CBD5E1" />
-            </TouchableOpacity>
+                <View className="flex-1 ml-2.5">
+                  <Text className="text-zinc-900 text-[14px] font-semibold">
+                    Messages
+                  </Text>
+                </View>
+
+                <Feather name="chevron-right" size={16} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
           </View>
-
-          {/* Dismiss Button */}
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={handleDismiss}
-            className="w-full py-4 px-4 bg-zinc-100 rounded-2xl items-center justify-center mt-3 mb-1 active:bg-zinc-200"
-          >
-            <Text className="text-zinc-800 text-sm font-semibold text-center">
-              Cancel
-            </Text>
-          </TouchableOpacity>
-        </View>
+        </Animated.View>
       </View>
     </KeyboardAvoidingView>
   </Modal>

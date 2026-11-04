@@ -49,6 +49,11 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: '#FCF5F5' },
+        tabBarStyle: {
+          borderTopWidth: 0,
+          elevation: 0,
+          backgroundColor: 'transparent',
+        },
       }}
     >
       <Tabs.Screen name="index" />

@@ -2,7 +2,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, RadialGradient, Stop, Rect, Line } from 'react-native-svg';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Database } from '../database/Database';
@@ -67,8 +67,8 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
     return (
       <Ionicons
         name={iconName}
-        size={22}
-        color={isFocused ? '#E11D48' : '#1E293B'}
+        size={21}
+        color={isFocused ? '#E11D48' : '#64748B'}
       />
     );
   };
@@ -93,52 +93,27 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
   // Visible routes indices
   const currentRouteName = state.routes[state.index]?.name;
 
+  // Height of the edge-to-edge white scrim: covers the floating bar + system nav area + fade-up zone
+  const scrimHeight = bottomOffset + 56 + 40;
+
   return (
-    <View
-      style={[
-        styles.shadowWrapper,
-        {
-          bottom: bottomOffset,
-        }
-      ]}
-    >
-      {/* Soft Ambient White Rays / Halo Glow */}
-      <View style={styles.outerRaysGlow} />
-      <View style={styles.innerRaysGlow} />
-
-      {/* Side-to-Side Soft White Scrim Vignette Effect */}
-      <View pointerEvents="none" style={styles.sideScrimWrapper}>
-        {/* Left Side Scrim */}
-        <View style={styles.leftScrim}>
-          <Svg width="100%" height="100%" preserveAspectRatio="none">
-            <Defs>
-              <LinearGradient id="tabBarLeftScrim" x1="0%" y1="0%" x2="100%" y2="0%">
-                <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.85" />
-                <Stop offset="45%" stopColor="#FFFFFF" stopOpacity="0.5" />
-                <Stop offset="75%" stopColor="#FFFFFF" stopOpacity="0.18" />
-                <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
-              </LinearGradient>
-            </Defs>
-            <Rect x="0" y="0" width="100%" height="100%" rx={30} ry={30} fill="url(#tabBarLeftScrim)" />
-          </Svg>
-        </View>
-
-        {/* Right Side Scrim */}
-        <View style={styles.rightScrim}>
-          <Svg width="100%" height="100%" preserveAspectRatio="none">
-            <Defs>
-              <LinearGradient id="tabBarRightScrim" x1="100%" y1="0%" x2="0%" y2="0%">
-                <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.85" />
-                <Stop offset="45%" stopColor="#FFFFFF" stopOpacity="0.5" />
-                <Stop offset="75%" stopColor="#FFFFFF" stopOpacity="0.18" />
-                <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
-              </LinearGradient>
-            </Defs>
-            <Rect x="0" y="0" width="100%" height="100%" rx={30} ry={30} fill="url(#tabBarRightScrim)" />
-          </Svg>
-        </View>
+    <View pointerEvents="box-none" style={styles.screenBottomLayer}>
+      {/* Twitter-style edge-to-edge white scrim: transparent at top -> solid white at the very bottom */}
+      <View pointerEvents="none" style={[styles.bottomScrim, { height: scrimHeight }]}>
+        <Svg width="100%" height="100%" preserveAspectRatio="none">
+          <Defs>
+            <LinearGradient id="bottomWhiteScrim" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#FFFFFF" stopOpacity="0" />
+              <Stop offset="0.35" stopColor="#FFFFFF" stopOpacity="0.55" />
+              <Stop offset="0.7" stopColor="#FFFFFF" stopOpacity="0.88" />
+              <Stop offset="1" stopColor="#FFFFFF" stopOpacity="0.98" />
+            </LinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width="100%" height="100%" fill="url(#bottomWhiteScrim)" />
+        </Svg>
       </View>
 
+      <View style={[styles.shadowWrapper, { bottom: bottomOffset }]}>
       <View style={styles.navContainer}>
         {visibleRoutes.map((route: any, index: number) => {
           const isFocused = currentRouteName === route.name;
@@ -167,7 +142,7 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
               activeOpacity={0.75}
               onPress={onPress}
               className="items-center justify-center flex-1 py-1 z-10 relative"
-              style={{ minHeight: 44, zIndex: 10 }}
+              style={{ minHeight: 42, zIndex: 10 }}
             >
               <View className="items-center justify-center">
                 {/* Icon Wrapper */}
@@ -183,7 +158,7 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
                   adjustsFontSizeToFit
                   minimumFontScale={0.8}
                   className={`text-[8.5px] uppercase tracking-tight text-center ${
-                    isFocused ? 'text-[#E11D48] font-black' : 'text-[#334155] font-black'
+                    isFocused ? 'text-[#E11D48] font-black' : 'text-[#64748B] font-bold'
                   }`}
                 >
                   {getLabel(route.name)}
@@ -196,7 +171,7 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
             // Render central '+' slot only for non-trainer roles
             return (
               <React.Fragment key="group-center">
-                <View className="items-center justify-center px-1 py-0.5 z-20 relative" style={{ minHeight: 46 }}>
+                <View className="items-center justify-center px-1 py-0.5 z-20 relative" style={{ minHeight: 42 }}>
                   <TouchableOpacity
                     activeOpacity={0.9}
                     onPress={handlePlusPress}
@@ -222,85 +197,45 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
           return tabElement;
         })}
       </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screenBottomLayer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    top: 0,
+    zIndex: 50,
+  },
+  bottomScrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   shadowWrapper: {
     position: 'absolute',
     left: 16,
     right: 16,
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 10,
-    zIndex: 50,
-  },
-  outerRaysGlow: {
-    position: 'absolute',
-    top: -6,
-    bottom: -6,
-    left: -6,
-    right: -6,
-    borderRadius: 36,
-    backgroundColor: 'rgba(255, 255, 255, 0.22)',
-    shadowColor: '#FFFFFF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.85,
-    shadowRadius: 18,
-    elevation: 6,
-  },
-  innerRaysGlow: {
-    position: 'absolute',
-    top: -2.5,
-    bottom: -2.5,
-    left: -2.5,
-    right: -2.5,
-    borderRadius: 32,
-    backgroundColor: 'rgba(255, 255, 255, 0.45)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.75)',
-    shadowColor: '#FFFFFF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.95,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
     shadowRadius: 10,
     elevation: 4,
-  },
-  sideScrimWrapper: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderRadius: 30,
-    overflow: 'hidden',
-    zIndex: 1,
-  },
-  leftScrim: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    width: 65,
-  },
-  rightScrim: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    right: 0,
-    width: 65,
+    zIndex: 51,
   },
   navContainer: {
-    borderRadius: 30,
-    borderWidth: 1.2,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
-    backgroundColor: 'rgba(253, 253, 254, 0.96)',
+    borderRadius: 26,
+    backgroundColor: 'rgba(255, 255, 255, 0.82)',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 5,
+    paddingVertical: 4,
     paddingHorizontal: 6,
+    borderWidth: 0,
     position: 'relative',
   },
   redDot: {

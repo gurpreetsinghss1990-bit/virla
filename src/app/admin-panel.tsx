@@ -2,7 +2,7 @@ import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, Image, Modal, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { Database, TrainerApplication, getCurrentServerTime, getISTDateInfo, SupportTicket } from '../database/Database';
 import { getBookingISTDateRange, getDisplayWorkoutTitle, normalizeDate, formatToDDMMYYYY } from '../utils/date';
@@ -14,6 +14,7 @@ import { SupportChatModal } from '../components/SupportChatModal';
 
 export default function AdminPanelScreen() {
   const router = useRouter();
+  const searchParams = useLocalSearchParams<{ tab?: string }>();
   const [applications, setApplications] = useState<TrainerApplication[]>([]);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -78,6 +79,12 @@ export default function AdminPanelScreen() {
       useBookingStore.getState().refreshBookings();
     });
   }, []);
+
+  useEffect(() => {
+    if (searchParams?.tab === 'live') {
+      setActiveTab('live');
+    }
+  }, [searchParams?.tab]);
 
     const loadApplications = async () => {
       if (isAdminAuthorized !== true) return;
@@ -1243,6 +1250,97 @@ export default function AdminPanelScreen() {
                 <Text className="text-[#6B7280] text-xs font-semibold mt-1 leading-relaxed">
                   Monitor real-time concierge sessions and manage delayed trainers.
                 </Text>
+              </View>
+
+              {/* LIVE BOOKINGS STREAM: User, Session Name & Latest Real-time Update */}
+              <View className="gap-3">
+                <View className="flex-row items-center justify-between px-1">
+                  <View className="flex-row items-center gap-2">
+                    <View className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                    <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">
+                      Live Booking Updates ({bookings.length})
+                    </Text>
+                  </View>
+                  <Text className="text-zinc-400 text-[9px] font-bold uppercase tracking-wider">Real-time Feed</Text>
+                </View>
+
+                {bookings.length === 0 ? (
+                  <View className="bg-white border border-zinc-200 p-6 rounded-2xl items-center justify-center">
+                    <Feather name="inbox" size={20} color="#9CA3AF" />
+                    <Text className="text-zinc-400 text-[10px] font-bold uppercase mt-2">No bookings recorded yet</Text>
+                  </View>
+                ) : (
+                  bookings
+                    .slice()
+                    .reverse()
+                    .slice(0, 15)
+                    .map((b) => {
+                      // Determine clean latest update text based on timeline status and trainer assignment
+                      const ts = (b.timelineStatus || '').toLowerCase();
+                      let latestUpdateText = 'Booking Created';
+                      let statusBadgeColor = 'bg-zinc-100 text-zinc-700 border-zinc-200';
+
+                      if (ts === 'trainer_assigned' || ts === 'booked') {
+                        latestUpdateText = b.trainerName ? `Trainer Assigned: ${b.trainerName}` : 'Looking for Trainer';
+                        statusBadgeColor = 'bg-blue-50 text-blue-700 border-blue-200';
+                      } else if (ts === 'trainer_accepted') {
+                        latestUpdateText = `Accepted by ${b.trainerName || 'Trainer'}`;
+                        statusBadgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                      } else if (ts === 'travelling') {
+                        latestUpdateText = `${b.trainerName || 'Trainer'} is En Route`;
+                        statusBadgeColor = 'bg-amber-50 text-amber-700 border-amber-200';
+                      } else if (ts === 'arrived') {
+                        latestUpdateText = `${b.trainerName || 'Trainer'} Arrived at Location`;
+                        statusBadgeColor = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+                      } else if (ts === 'workout_started') {
+                        latestUpdateText = 'Workout In Progress';
+                        statusBadgeColor = 'bg-purple-50 text-purple-700 border-purple-200';
+                      } else if (ts === 'workout_completed' || ts === 'session_closed' || b.status === 'completed') {
+                        latestUpdateText = 'Session Completed';
+                        statusBadgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                      } else if (b.status === 'cancelled') {
+                        latestUpdateText = 'Booking Cancelled';
+                        statusBadgeColor = 'bg-rose-50 text-rose-700 border-rose-200';
+                      } else if (b.status === 'client_no_show' || b.status === 'trainer_no_show') {
+                        latestUpdateText = b.status === 'client_no_show' ? 'Client No-Show' : 'Trainer No-Show';
+                        statusBadgeColor = 'bg-rose-50 text-rose-700 border-rose-200';
+                      }
+
+                      return (
+                        <View key={`live-stream-${b.id}`} className="bg-white border border-zinc-200 p-4 rounded-2xl gap-2.5">
+                          <View className="flex-row items-center justify-between">
+                            <View className="flex-1 pr-2">
+                              <Text className="text-zinc-950 text-sm font-black tracking-tight" numberOfLines={1}>
+                                {b.clientName || 'Client'}
+                              </Text>
+                              <Text className="text-[#E11D48] text-xs font-bold mt-0.5" numberOfLines={1}>
+                                {b.workoutTitle || 'Session'}
+                              </Text>
+                            </View>
+                            <View className={`px-2.5 py-1 rounded-full border ${statusBadgeColor.split(' ')[0]} ${statusBadgeColor.split(' ')[2]}`}>
+                              <Text className={`text-[8.5px] font-black uppercase tracking-wider ${statusBadgeColor.split(' ')[1]}`}>
+                                {b.time || 'Scheduled'}
+                              </Text>
+                            </View>
+                          </View>
+
+                          <View className="h-[1px] bg-zinc-100" />
+
+                          <View className="flex-row items-center justify-between">
+                            <View className="flex-1 flex-row items-center gap-1.5 pr-2">
+                              <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">Latest Update:</Text>
+                              <Text className="text-zinc-900 text-xs font-extrabold flex-1" numberOfLines={1}>
+                                {latestUpdateText}
+                              </Text>
+                            </View>
+                            <Text className="text-zinc-400 text-[9px] font-medium">
+                              {b.date ? formatToDDMMYYYY(b.date) : ''}
+                            </Text>
+                          </View>
+                        </View>
+                      );
+                    })
+                )}
               </View>
 
               {/* Sessions Analytics counters */}

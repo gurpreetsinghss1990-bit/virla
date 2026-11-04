@@ -1088,7 +1088,7 @@ export default function ProfileScreen() {
                         <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
                           <Polygon
                             points="12 2 2 7 12 12 22 7 12 2"
-                            stroke={isLayersAnimating ? '#2DD4BF' : '#CBD5E1'}
+                            stroke={isLayersAnimating ? '#EF4444' : '#CBD5E1'}
                             strokeWidth="1.8"
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -1110,7 +1110,7 @@ export default function ProfileScreen() {
                         <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
                           <Polyline
                             points="2 12 12 17 22 12"
-                            stroke={isLayersAnimating ? '#2DD4BF' : '#CBD5E1'}
+                            stroke={isLayersAnimating ? '#EF4444' : '#CBD5E1'}
                             strokeWidth="1.8"
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -1132,7 +1132,7 @@ export default function ProfileScreen() {
                         <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
                           <Polyline
                             points="2 17 12 22 22 17"
-                            stroke={isLayersAnimating ? '#2DD4BF' : '#CBD5E1'}
+                            stroke={isLayersAnimating ? '#EF4444' : '#CBD5E1'}
                             strokeWidth="1.8"
                             strokeLinecap="round"
                             strokeLinejoin="round"

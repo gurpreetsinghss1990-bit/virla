@@ -1234,8 +1234,8 @@ export default function HomeScreen() {
         </View>
         <View className="flex-row items-center gap-4">
           <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={handleCommunicationCenter}
+            activeOpacity={0.6}
+            onPressIn={handleCommunicationCenter}
             className="w-11 h-11 items-center justify-center relative"
             style={{ minWidth: 44, minHeight: 44 }}
           >
@@ -1459,9 +1459,10 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     activeOpacity={0.95}
                     onPress={() => navigateSafely('/booking')}
-                    className="w-full h-14 bg-[#E11D48] rounded-[22px] justify-between items-center px-5 flex-row"
+                    className="w-full h-14 bg-[#E11D48] rounded-[28px] justify-between items-center px-5 flex-row"
                     style={{
                       minHeight: 56,
+                      borderRadius: 28,
                       shadowColor: '#E11D48',
                       shadowOffset: { width: 0, height: 8 },
                       shadowOpacity: 0.2,

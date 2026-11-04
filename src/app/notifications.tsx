@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, TextInput, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, TextInput, Platform, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useNotificationStore } from '../store/notificationStore';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import Svg, { Line } from 'react-native-svg';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { EmptyState } from '../components/EmptyState';
 import { NotificationItem } from '../types';
@@ -157,86 +158,115 @@ export default function NotificationsScreen() {
         return {
           icon: 'calendar',
           color: '#E11D48',
-          bg: 'bg-rose-50',
-          border: 'border-rose-200/80',
+          bg: 'bg-rose-50/80',
+          border: 'border-transparent',
           badgeText: 'text-rose-700',
-          badgeBg: 'bg-rose-50/80 border-rose-200/60',
+          badgeBg: 'bg-rose-50/80 border-transparent',
         };
       case 'Membership':
         return {
           icon: 'award',
           color: '#8B5CF6',
-          bg: 'bg-purple-50',
-          border: 'border-purple-200/80',
+          bg: 'bg-purple-50/80',
+          border: 'border-transparent',
           badgeText: 'text-purple-700',
-          badgeBg: 'bg-purple-50/80 border-purple-200/60',
+          badgeBg: 'bg-purple-50/80 border-transparent',
         };
       case 'Credits':
         return {
           icon: 'credit-card',
           color: '#D97706',
-          bg: 'bg-amber-50',
-          border: 'border-amber-200/80',
+          bg: 'bg-amber-50/80',
+          border: 'border-transparent',
           badgeText: 'text-amber-700',
-          badgeBg: 'bg-amber-50/80 border-amber-200/60',
+          badgeBg: 'bg-amber-50/80 border-transparent',
         };
       case 'Payments':
         return {
           icon: 'check-circle',
           color: '#059669',
-          bg: 'bg-emerald-50',
-          border: 'border-emerald-200/80',
+          bg: 'bg-emerald-50/80',
+          border: 'border-transparent',
           badgeText: 'text-emerald-700',
-          badgeBg: 'bg-emerald-50/80 border-emerald-200/60',
+          badgeBg: 'bg-emerald-50/80 border-transparent',
         };
       case 'Promotions':
         return {
           icon: 'zap',
           color: '#EA580C',
-          bg: 'bg-orange-50',
-          border: 'border-orange-200/80',
+          bg: 'bg-orange-50/80',
+          border: 'border-transparent',
           badgeText: 'text-orange-700',
-          badgeBg: 'bg-orange-50/80 border-orange-200/60',
+          badgeBg: 'bg-orange-50/80 border-transparent',
         };
       case 'Trainer Updates':
         return {
           icon: 'user-check',
           color: '#2563EB',
-          bg: 'bg-blue-50',
-          border: 'border-blue-200/80',
+          bg: 'bg-blue-50/80',
+          border: 'border-transparent',
           badgeText: 'text-blue-700',
-          badgeBg: 'bg-blue-50/80 border-blue-200/60',
+          badgeBg: 'bg-blue-50/80 border-transparent',
         };
       case 'Safety':
         return {
           icon: 'shield',
           color: '#DC2626',
-          bg: 'bg-red-50',
-          border: 'border-red-200/80',
+          bg: 'bg-red-50/80',
+          border: 'border-transparent',
           badgeText: 'text-red-700',
-          badgeBg: 'bg-red-50/80 border-red-200/60',
+          badgeBg: 'bg-red-50/80 border-transparent',
         };
       case 'System':
       default:
         return {
           icon: 'bell',
           color: '#475569',
-          bg: 'bg-slate-100',
-          border: 'border-slate-200/80',
+          bg: 'bg-slate-100/80',
+          border: 'border-transparent',
           badgeText: 'text-slate-700',
-          badgeBg: 'bg-slate-100 border-slate-200/60',
+          badgeBg: 'bg-slate-100/80 border-transparent',
         };
     }
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
+    <View style={{ flex: 1, backgroundColor: '#FAF1F1', position: 'relative' }}>
+      {/* Subtle Scratchy / Raw Noise Texture Overlay */}
+      <View 
+        pointerEvents="none" 
+        style={[StyleSheet.absoluteFill, { opacity: 0.12 }]}
+      >
+        <Svg width="100%" height="100%">
+          {/* Subtle micro scratch lines */}
+          {Array.from({ length: 40 }).map((_, i) => {
+            const x1 = (i * 37) % 360;
+            const y1 = (i * 53) % 800;
+            const length = 18 + ((i * 13) % 25);
+            const angle = ((i * 47) % 180) * (Math.PI / 180);
+            return (
+              <Line
+                key={`scratch-${i}`}
+                x1={x1}
+                y1={y1}
+                x2={x1 + Math.cos(angle) * length}
+                y2={y1 + Math.sin(angle) * length}
+                stroke="#E11D48"
+                strokeWidth={0.8}
+                strokeDasharray="2,3"
+                opacity={0.4}
+              />
+            );
+          })}
+        </Svg>
+      </View>
+
       {/* Unified Screen Header - Virla Concierge category removed, borderless */}
       <ScreenHeader 
         title={isSelectionMode ? `${selectedIds.size} Selected` : 'Notifications'} 
         category=""
         showBorder={false}
-        backgroundColor="#FCF5F5"
+        backgroundColor="transparent"
         titleClassName="text-zinc-950 text-2xl font-black tracking-tight mt-0.5"
         subtitle={!isSelectionMode && unreadCount > 0 ? `${unreadCount} unread` : undefined}
         onBack={isSelectionMode ? () => {
@@ -285,8 +315,8 @@ export default function NotificationsScreen() {
 
       {/* Search Input Bar (shown only when notifications exist and not selecting) */}
       {!isSelectionMode && notifications.length > 0 && (
-        <View className="px-5 pt-2 pb-2 bg-[#FCF5F5]">
-          <View className="flex-row items-center bg-white border border-zinc-200/70 px-3.5 py-2.5 rounded-2xl shadow-xs">
+        <View className="px-5 pt-2 pb-2 bg-transparent">
+          <View className="flex-row items-center bg-white/90 border border-transparent px-3.5 py-2.5 rounded-2xl shadow-xs">
             <Feather name="search" size={15} color="#9CA3AF" />
             <TextInput
               placeholder="Search notifications..."
@@ -329,8 +359,8 @@ export default function NotificationsScreen() {
                     <Text className="text-zinc-900 text-sm font-black uppercase tracking-wider">
                       {group.title}
                     </Text>
-                    <View className="bg-zinc-100 px-2.5 py-0.5 rounded-full">
-                      <Text className="text-zinc-600 text-xs font-bold">
+                    <View className="bg-rose-100/60 px-2.5 py-0.5 rounded-full">
+                      <Text className="text-rose-900 text-xs font-bold">
                         {group.items.length} {group.items.length === 1 ? 'alert' : 'alerts'}
                       </Text>
                     </View>
@@ -356,7 +386,7 @@ export default function NotificationsScreen() {
                             }
                           }}
                           className={`py-3.5 px-3 rounded-2xl flex-row items-start gap-3.5 ${
-                            isSelected ? 'bg-zinc-100/90' : 'bg-transparent'
+                            isSelected ? 'bg-rose-100/40' : 'bg-transparent'
                           }`}
                         >
                           {/* Selection Checkbox */}
@@ -372,9 +402,9 @@ export default function NotificationsScreen() {
                             </View>
                           )}
 
-                          {/* Category Icon Badge */}
-                          <View className={`w-12 h-12 rounded-2xl items-center justify-center border ${theme.bg} ${theme.border}`}>
-                            <Feather name={(item.icon as any) || theme.icon} size={20} color={theme.color} />
+                          {/* Category Icon Badge - Zero border */}
+                          <View className={`w-11 h-11 rounded-2xl items-center justify-center ${theme.bg}`}>
+                            <Feather name={(item.icon as any) || theme.icon} size={19} color={theme.color} />
                           </View>
                           
                           {/* Main Content */}
@@ -383,28 +413,28 @@ export default function NotificationsScreen() {
                             <View className="flex-row items-center justify-between mb-1.5">
                               <View className="flex-row items-center gap-2">
                                 {Boolean(category) && (
-                                  <View className={`px-2.5 py-0.5 rounded-md border ${theme.badgeBg}`}>
-                                    <Text className={`text-xs font-extrabold uppercase tracking-wider ${theme.badgeText}`}>
+                                  <View className={`px-2 py-0.5 rounded-md ${theme.badgeBg}`}>
+                                    <Text className={`text-[11px] font-extrabold uppercase tracking-wider ${theme.badgeText}`}>
                                       {category}
                                     </Text>
                                   </View>
                                 )}
                                 {item.priority === 'high' && (
-                                  <View className="bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-md flex-row items-center gap-1">
-                                    <View className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                                    <Text className="text-rose-600 text-[10.5px] font-black uppercase">Urgent</Text>
+                                  <View className="bg-rose-100/70 px-1.5 py-0.5 rounded-md flex-row items-center gap-1">
+                                    <View className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                                    <Text className="text-rose-700 text-[10px] font-black uppercase">Urgent</Text>
                                   </View>
                                 )}
                               </View>
                               
                               <View className="flex-row items-center gap-2">
                                 {isUnread && (
-                                  <View className="flex-row items-center gap-1 bg-indigo-50 border border-indigo-150 px-2 py-0.5 rounded-full">
-                                    <View className="w-1.5 h-1.5 rounded-full bg-[#4F46E5]" />
-                                    <Text className="text-[#4F46E5] text-[10px] font-black uppercase tracking-wide">New</Text>
+                                  <View className="flex-row items-center gap-1 bg-rose-100/80 px-2 py-0.5 rounded-full">
+                                    <View className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
+                                    <Text className="text-[#E11D48] text-[9.5px] font-black uppercase tracking-wide">New</Text>
                                   </View>
                                 )}
-                                <Text className="text-zinc-400 text-xs font-semibold">{item.timestamp}</Text>
+                                <Text className="text-zinc-500 text-xs font-semibold">{item.timestamp}</Text>
                               </View>
                             </View>
                             

@@ -1,7 +1,9 @@
 import { create } from 'zustand';
+import { AppState, Platform } from 'react-native';
 import { NotificationItem } from '../types';
 import { Database } from '../database/Database';
 import { useToastStore } from './toastStore';
+import { PushNotificationService, NOTIFICATION_CHANNELS } from '../services/PushNotificationService';
 
 interface NotificationState {
   notifications: NotificationItem[];
@@ -49,11 +51,35 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         useToastStore.getState().showToast({
           title: n.title,
           message: n.body,
-          deepLink: n.deepLink,
+          deepLink: n.deepLink || '/notifications',
           type: (n.type?.toLowerCase().includes('booking') ? 'booking' : 'info') as any,
         });
       } catch (err) {
         console.warn('[NOTIFICATION STORE] Failed to trigger toast:', err);
+      }
+
+      // If user is not actively inside the app (background/inactive/locked), send OS Push Notification
+      try {
+        const isAppBackgrounded = AppState.currentState.match(/inactive|background/);
+        if (isAppBackgrounded && PushNotificationService.isNotificationsSupported()) {
+          const Notifications = require('expo-notifications');
+          Notifications.scheduleNotificationAsync({
+            content: {
+              title: 'VIRLA Notification',
+              body: 'You have a 1 new notification in app',
+              data: {
+                deepLink: '/notifications',
+                type: n.type || 'info',
+              },
+              sound: 'default',
+            },
+            trigger: null, // deliver immediately
+          }).catch((pushErr: any) => {
+            console.warn('[NOTIFICATION STORE] Background push notification trigger error:', pushErr);
+          });
+        }
+      } catch (pushErr) {
+        console.warn('[NOTIFICATION STORE] Push notification exception:', pushErr);
       }
     }
   },
