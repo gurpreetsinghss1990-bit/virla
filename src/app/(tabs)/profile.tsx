@@ -441,6 +441,7 @@ export default function ProfileScreen() {
         city: editCity,
         avatar: editAvatar
       });
+      useUserStore.getState().syncFromDB();
       closeEditProfileModal();
       Alert.alert('Profile Saved', 'Your personal details have been updated.');
     } catch (err: any) {
