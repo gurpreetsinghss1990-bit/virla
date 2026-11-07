@@ -1,10 +1,13 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, TouchableOpacity, Image, Platform, StyleSheet, AppState, AppStateStatus } from 'react-native';
-import { WebView, type WebViewRef } from './TypedWebView';
-import { useIsFocused } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
+import { AppState, TouchableOpacity, StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
+import { useFocusEffect, useIsFocused } from 'expo-router';
 import { Asset } from 'expo-asset';
 import { Feather } from '@expo/vector-icons';
 import Svg, { Defs, RadialGradient, Stop, Rect, Line } from 'react-native-svg';
+import { CachedVideo } from './CachedVideo';
+import { useIsAppActive } from '../hooks/useIsAppActive';
+import { getCachedMediaUri } from '../services/mediaCache';
 import { BUNNY_CDN_ASSETS } from '../services/bunnyCdnService';
 
 // Module-level manager for Single Active Playback across all CoachVideoAvatar instances
@@ -61,235 +64,96 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
   const frameRadius = borderRadius ?? Math.min(frameWidth, frameHeight) / 2;
 
   // Use passed id or fallback to videoUri string or unique generated key
-  const instanceId = useRef<string>(id || (typeof videoUri === 'string' ? videoUri : `coach-${Math.random()}`)).current;
+  const [instanceId] = useState<string>(
+    () => id || (typeof videoUri === 'string' ? videoUri : `coach-${Math.random()}`)
+  );
 
   const [isPlaying, setIsPlaying] = useState(autoPlay);
-  const [resolvedUri, setResolvedUri] = useState<string | null>(videoUri || null);
-  const webViewRef = useRef<WebViewRef>(null);
-  const webVideoRef = useRef<HTMLVideoElement | null>(null);
-
-  // Stop playback when the tab/screen loses focus
+  const [videoSource, setVideoSource] = useState<string | null>(null);
   const isFocused = useIsFocused();
+  const isAppActive = useIsAppActive();
+
+  // Playback only happens while the screen is focused and the app is in the foreground
+  const shouldPlay = isPlaying && isFocused && isAppActive;
+
+  // Stop playback when the tab/screen loses focus (cleanup runs on blur)
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setIsPlaying(false);
+        if (currentPlayingId === instanceId) setGlobalActivePlayer(null);
+      };
+    }, [instanceId])
+  );
+
+  // Pause the moment the app leaves the foreground, before the next render
   useEffect(() => {
-    if (isFocused) return;
-    setIsPlaying(false);
-    if (currentPlayingId === instanceId) setGlobalActivePlayer(null);
-    if (Platform.OS === 'web') {
-      if (webVideoRef.current) {
-        webVideoRef.current.pause();
-        webVideoRef.current.currentTime = 0;
-      }
-    } else if (webViewRef.current) {
-      webViewRef.current.injectJavaScript(`
-        (function() {
-          var v = document.getElementById('coachVid');
-          if (v) { v.pause(); v.currentTime = 0; }
-        })();
-        true;
-      `);
-    }
-  }, [isFocused, instanceId]);
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') return;
+      setIsPlaying(false);
+      if (currentPlayingId === instanceId) setGlobalActivePlayer(null);
+    });
+    return () => subscription.remove();
+  }, [instanceId]);
 
   // Subscribe to Global Single Active Player Manager
-  // If another coach begins playing, this instance immediately pauses and silences
+  // If another coach begins playing, this instance immediately pauses
   useEffect(() => {
     const handleActiveChange = (activeId: string | null) => {
       if (activeId !== instanceId) {
         setIsPlaying(false);
-        if (Platform.OS === 'web') {
-          if (webVideoRef.current) {
-            webVideoRef.current.pause();
-            webVideoRef.current.currentTime = 0;
-          }
-        } else if (webViewRef.current) {
-          const js = `
-            (function() {
-              var v = document.getElementById('coachVid');
-              if (v) {
-                v.pause();
-                v.currentTime = 0;
-              }
-            })();
-            true;
-          `;
-          webViewRef.current.injectJavaScript(js);
-        }
       }
     };
 
     playbackListeners.add(handleActiveChange);
     return () => {
       playbackListeners.delete(handleActiveChange);
+      if (currentPlayingId === instanceId) setGlobalActivePlayer(null);
     };
   }, [instanceId]);
 
-  React.useEffect(() => {
-    let mounted = true;
-    const targetSource = videoUri || DEFAULT_VIDEO_URL;
+  // Nothing is fetched until the user taps: the poster WebP is the only media in the default state.
+  useEffect(() => {
+    if (!isPlaying) return;
 
-    if (typeof targetSource === 'string') {
-      setResolvedUri(targetSource);
-      return;
-    }
-
+    let cancelled = false;
     (async () => {
+      const target = videoUri || DEFAULT_VIDEO_URL;
+      let remote: string | null = null;
       try {
-        const asset = Asset.fromModule(targetSource);
-        if (!asset.localUri && !asset.uri) {
-          await asset.downloadAsync();
-        }
-        if (mounted) {
-          setResolvedUri(asset.localUri || asset.uri);
+        if (typeof target === 'string') {
+          remote = target;
+        } else {
+          const asset = Asset.fromModule(target);
+          if (!asset.localUri && !asset.uri) {
+            await asset.downloadAsync();
+          }
+          remote = asset.localUri || asset.uri || null;
         }
       } catch {
-        // Fallback handled by transparent WebP image
+        remote = DEFAULT_VIDEO_URL;
       }
+      if (!remote) return;
+      const cached = await getCachedMediaUri(remote);
+      if (!cancelled) setVideoSource(cached);
     })();
-    return () => {
-      mounted = false;
-    };
-  }, [videoUri]);
 
-  // Handle app background/inactive: Pause video and audio immediately
-  useEffect(() => {
-    const handleAppStateChange = (nextAppState: AppStateStatus) => {
-      if (nextAppState.match(/inactive|background/)) {
-        setIsPlaying(false);
-        setGlobalActivePlayer(null);
-        if (Platform.OS === 'web') {
-          if (webVideoRef.current) {
-            webVideoRef.current.pause();
-            webVideoRef.current.currentTime = 0;
-          }
-        } else if (webViewRef.current) {
-          const js = `
-            (function() {
-              var v = document.getElementById('coachVid');
-              if (v) {
-                v.pause();
-                v.currentTime = 0;
-              }
-            })();
-            true;
-          `;
-          webViewRef.current.injectJavaScript(js);
-        }
-      }
-    };
-
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
     return () => {
-      subscription.remove();
-      // Ensure audio doesn't linger on component unmount
-      setGlobalActivePlayer(null);
+      cancelled = true;
     };
-  }, []);
+  }, [isPlaying, videoUri, autoPlay]);
 
   const togglePlaybackAndVoice = useCallback(() => {
     const nextPlaying = !isPlaying;
     setIsPlaying(nextPlaying);
-
-    if (nextPlaying) {
-      // Announce this instance as active so all other instances instantly pause
-      setGlobalActivePlayer(instanceId);
-    } else {
-      if (currentPlayingId === instanceId) {
-        setGlobalActivePlayer(null);
-      }
-    }
-
-    if (Platform.OS === 'web') {
-      if (webVideoRef.current) {
-        if (nextPlaying) {
-          webVideoRef.current.currentTime = 0;
-          webVideoRef.current.muted = false;
-          webVideoRef.current.play().catch(() => {});
-        } else {
-          webVideoRef.current.pause();
-          webVideoRef.current.currentTime = 0;
-        }
-      }
-    } else if (webViewRef.current) {
-      const js = `
-        (function() {
-          var v = document.getElementById('coachVid');
-          if (v) {
-            if (${nextPlaying}) {
-              v.currentTime = 0;
-              v.muted = false;
-              v.play().catch(function(){});
-            } else {
-              v.pause();
-              v.currentTime = 0;
-            }
-          }
-        })();
-        true;
-      `;
-      webViewRef.current.injectJavaScript(js);
-    }
+    setGlobalActivePlayer(nextPlaying ? instanceId : null);
   }, [isPlaying, instanceId]);
 
-  const htmlContent = React.useMemo(() => {
-    if (!resolvedUri) return '';
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            html, body {
-              width: 100%;
-              height: 100%;
-              background-color: #FFFFFF;
-              overflow: hidden;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            }
-            video {
-              width: 100%;
-              height: 100%;
-              object-fit: contain;
-              object-position: center bottom;
-              background-color: #FFFFFF;
-              filter: brightness(1.03) contrast(1.02);
-              transform: scale(${scale});
-              transform-origin: center bottom;
-            }
-          </style>
-        </head>
-        <body>
-          <video
-            id="coachVid"
-            src="${resolvedUri}"
-            preload="auto"
-            muted
-            playsinline
-            webkit-playsinline
-          ></video>
-          <script>
-            var vid = document.getElementById('coachVid');
-            if (vid) {
-              vid.addEventListener('ended', function() {
-                vid.currentTime = 0;
-                vid.pause();
-                if (window.ReactNativeWebView) {
-                  window.ReactNativeWebView.postMessage('ENDED');
-                }
-              });
-              vid.addEventListener('error', function() {
-                if (window.ReactNativeWebView) {
-                  window.ReactNativeWebView.postMessage('ERROR');
-                }
-              });
-            }
-          </script>
-        </body>
-      </html>
-    `;
-  }, [resolvedUri, scale]);
+  const posterSource = posterUri
+    ? typeof posterUri === 'number'
+      ? posterUri
+      : { uri: posterUri }
+    : { uri: DEFAULT_POSTER_URL };
 
   return (
     <TouchableOpacity
@@ -352,113 +216,48 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
           </View>
         )}
 
-        {/* Underlying Video Player (preloaded and ready to play immediately on tap) */}
-        {resolvedUri ? (
-          Platform.OS === 'web' ? (
-            <video
-              ref={(el) => {
-                webVideoRef.current = el;
-              }}
-              src={resolvedUri}
-              preload="auto"
-              muted={!isPlaying}
-              playsInline
-              onEnded={() => {
-                setIsPlaying(false);
-                if (webVideoRef.current) {
-                  webVideoRef.current.currentTime = 0;
-                }
-              }}
+        {/* Video layer: mounted only after a tap, played from the on-disk cache */}
+        {videoSource ? (
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              width: frameWidth,
+              height: frameHeight,
+              backgroundColor: '#FFFFFF',
+              opacity: shouldPlay ? 1 : 0,
+            }}
+          >
+            <CachedVideo
+              uri={videoSource}
+              playing={shouldPlay}
+              loop={false}
+              muted={false}
+              contentFit="contain"
+              onEnded={() => setIsPlaying(false)}
               style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-                objectPosition: 'center bottom',
-                backgroundColor: '#FFFFFF',
-                filter: 'brightness(1.03) contrast(1.02)',
-                transform: `scale(${scale})`,
+                transform: [{ scale }],
                 transformOrigin: 'center bottom',
-                opacity: isPlaying ? 1 : 0,
-              } as any}
-            />
-          ) : (
-            <WebView
-              ref={webViewRef}
-              source={{ html: htmlContent, baseUrl: '' }}
-              originWhitelist={['*']}
-              allowsInlineMediaPlayback={true}
-              mediaPlaybackRequiresUserAction={false}
-              scrollEnabled={false}
-              bounces={false}
-              showsHorizontalScrollIndicator={false}
-              showsVerticalScrollIndicator={false}
-              allowFileAccess={true}
-              allowFileAccessFromFileURLs={true}
-              allowUniversalAccessFromFileURLs={true}
-              onError={() => {
-                setIsPlaying(false);
-                if (currentPlayingId === instanceId) {
-                  setGlobalActivePlayer(null);
-                }
-              }}
-              onHttpError={() => {
-                setIsPlaying(false);
-                if (currentPlayingId === instanceId) {
-                  setGlobalActivePlayer(null);
-                }
-              }}
-              onMessage={(event) => {
-                if (event.nativeEvent.data === 'ENDED' || event.nativeEvent.data === 'ERROR') {
-                  setIsPlaying(false);
-                  if (currentPlayingId === instanceId) {
-                    setGlobalActivePlayer(null);
-                  }
-                }
-              }}
-              style={{
-                width: frameWidth,
-                height: frameHeight,
-                backgroundColor: '#FFFFFF',
-                opacity: isPlaying ? 1 : 0,
-              }}
-              containerStyle={{
-                width: frameWidth,
-                height: frameHeight,
-                backgroundColor: '#FFFFFF',
               }}
             />
-          )
+          </View>
         ) : null}
 
         {/* Initial Transparent WebP Cutout in the exact same frame (visible when video is not playing) */}
-        {!isPlaying && (
-          <View
-            pointerEvents="none"
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                backgroundColor: '#FFFFFF',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-              },
-            ]}
-          >
-            <Image
-              source={
-                posterUri
-                  ? typeof posterUri === 'number'
-                    ? posterUri
-                    : { uri: posterUri }
-                  : { uri: DEFAULT_POSTER_URL }
-              }
-              style={{
-                width: frameWidth,
-                height: frameHeight,
-                transform: [{ translateY: 6 }],
-              }}
-              resizeMode="contain"
-            />
-          </View>
+        {!shouldPlay && (
+          <Image
+            source={posterSource}
+            style={{
+              position: 'absolute',
+              width: frameWidth,
+              height: frameHeight,
+              backgroundColor: '#FFFFFF',
+              transform: [{ translateY: 6 }],
+            }}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            transition={120}
+          />
         )}
 
         {/* Soft Radial Edge Vignette to seamlessly blend the edges into the pure #FFFFFF card */}
@@ -485,7 +284,7 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
           width: 24,
           height: 24,
           borderRadius: 12,
-          backgroundColor: isPlaying ? '#101828' : '#FFFFFF',
+          backgroundColor: shouldPlay ? '#101828' : '#FFFFFF',
           borderWidth: 1.5,
           borderColor: '#E5E7EB',
           alignItems: 'center',
@@ -498,9 +297,9 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
         }}
       >
         <Feather
-          name={isPlaying ? 'volume-2' : 'volume-x'}
+          name={shouldPlay ? 'volume-2' : 'volume-x'}
           size={11}
-          color={isPlaying ? '#FFFFFF' : '#6B7280'}
+          color={shouldPlay ? '#FFFFFF' : '#6B7280'}
         />
       </View>
     </TouchableOpacity>

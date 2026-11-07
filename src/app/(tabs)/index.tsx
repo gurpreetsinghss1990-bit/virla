@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { Feather, Ionicons } from '@expo/vector-icons';
+import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Alert, Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet, AppState, AppStateStatus, Vibration, Linking } from 'react-native';
@@ -2055,9 +2056,12 @@ export default function HomeScreen() {
                               <Feather name="clock" size={20} color="#4F46E5" />
                             </View>
                           ) : (
-                            <Image 
-                              source={{ uri: (bookingData.trainerPhoto && bookingData.trainerPhoto.trim().length > 0) ? bookingData.trainerPhoto : 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }} 
-                              className="w-14 h-14 rounded-full border border-zinc-150" 
+                            <ExpoImage
+                              source={{ uri: (bookingData.trainerPhoto && bookingData.trainerPhoto.trim().length > 0) ? bookingData.trainerPhoto : 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }}
+                              cachePolicy="memory-disk"
+                              contentFit="cover"
+                              transition={150}
+                              className="w-14 h-14 rounded-full border border-zinc-150"
                             />
                           )}
                           <View>
