@@ -36,7 +36,7 @@ export function SupportChatModal({
   const [inputText, setInputText] = useState<string>('');
   const [isSending, setIsSending] = useState<boolean>(false);
   const [userCredits, setUserCredits] = useState<number | null>(null);
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
 
   const chatId = ticket ? `support_ticket_${ticket.ticket_id || ticket.id}` : '';
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -61,8 +61,7 @@ export function SupportChatModal({
         if (data && typeof data.credits_balance === 'number') {
           setUserCredits(data.credits_balance);
         }
-      })
-      .catch((err) => {
+      }, (err: unknown) => {
         console.warn('[SupportChatModal] Fetch user credits error:', err);
       });
   }, [visible, ticket?.user_id]);

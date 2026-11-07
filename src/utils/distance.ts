@@ -263,7 +263,7 @@ export async function fetchGooglePlaceDetails(placeId: string): Promise<{
 export async function reverseGeocodeCoords(
   latitude: number,
   longitude: number
-): Promise<{ address: string; placeId?: string; results?: any[] }> {
+): Promise<{ address: string; name?: string; placeId?: string; results?: any[] }> {
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
   
   if (apiKey) {
@@ -306,7 +306,7 @@ export async function reverseGeocodeCoords(
         ].filter(p => !!p);
         const resolved = parts.join(', ');
         if (resolved) {
-          return { address: resolved };
+          return { address: resolved, name: addr.name || undefined };
         }
       }
     }

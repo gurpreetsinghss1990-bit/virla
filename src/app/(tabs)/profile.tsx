@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, InteractionManager, BackHandler, Modal, LayoutAnimation, UIManager, ActivityIndicator, Pressable, TouchableWithoutFeedback, StyleSheet, Easing, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, BackHandler, Modal, LayoutAnimation, UIManager, ActivityIndicator, Pressable, TouchableWithoutFeedback, StyleSheet, Easing, Dimensions } from 'react-native';
+import { InteractionManager } from '../../utils/interactionManager';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
@@ -1033,7 +1034,7 @@ export default function ProfileScreen() {
                       </Text>
                     </View>
                     {(() => {
-                      const bal = creditBalance ?? profile.creditsBalance ?? membership.availableCredits ?? 0;
+                      const bal = creditBalance ?? (profile as { creditsBalance?: number }).creditsBalance ?? membership.availableCredits ?? 0;
                       let passTier = 'STANDARD';
                       let passColor = '#FFFFFF';
 
@@ -1050,7 +1051,7 @@ export default function ProfileScreen() {
                         passTier = 'STARTER PASS';
                         passColor = '#A78BFA'; // Purple
                       } else {
-                        const status = (profile.membershipStatus || membership.tier || '').trim().toUpperCase();
+                        const status = ((profile as { membershipStatus?: string }).membershipStatus || membership.tier || '').trim().toUpperCase();
                         passTier = (status && status !== 'STANDARD' && status !== 'NONE') ? status : 'PREMIUM';
                         passColor = '#34D399'; // Emerald
                       }
@@ -1142,7 +1143,7 @@ export default function ProfileScreen() {
                     </View>
 
                     <Text className="text-white text-sm font-black ml-2">
-                      {creditBalance ?? profile.creditsBalance ?? membership.availableCredits ?? 0} Credits
+                      {creditBalance ?? (profile as { creditsBalance?: number }).creditsBalance ?? membership.availableCredits ?? 0} Credits
                     </Text>
                   </TouchableOpacity>
 
@@ -1154,7 +1155,7 @@ export default function ProfileScreen() {
                     </Text>
                     <Text className="text-white text-xs font-bold mt-0.5">
                       {(() => {
-                        const bal = creditBalance ?? profile.creditsBalance ?? membership.availableCredits ?? 0;
+                        const bal = creditBalance ?? (profile as { creditsBalance?: number }).creditsBalance ?? membership.availableCredits ?? 0;
                         if (bal <= 0) return 'Not Active';
                         const activeLot = creditLots?.find((l: any) => l.remaining_credits > 0 && l.official_expiry_date);
                         if (activeLot?.official_expiry_date) {

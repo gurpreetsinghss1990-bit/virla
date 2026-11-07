@@ -3734,8 +3734,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
         } else {
           console.log('[Database] chat_message successfully synced to Supabase:', msg.id);
         }
-      })
-      .catch((err) => {
+      }, (err: unknown) => {
         console.warn('[Database] chat_messages network exception:', err);
       });
 

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, TouchableOpacity, Platform, InteractionManager, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, TouchableOpacity, Platform, StyleSheet } from 'react-native';
+import { InteractionManager } from '../utils/interactionManager';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore } from '../store/userProfileStore';

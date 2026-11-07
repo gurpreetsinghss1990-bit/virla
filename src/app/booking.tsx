@@ -388,7 +388,7 @@ async function resolveExactLocation(
 export default function BookingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const noteInputRef = React.useRef<TextInput>(null);
+  const noteInputRef = React.useRef<React.ComponentRef<typeof TextInput>>(null);
   const params = useLocalSearchParams();
   const initialWorkoutId = params.workoutId as string;
   const initialWorkoutType = params.workoutType as string;

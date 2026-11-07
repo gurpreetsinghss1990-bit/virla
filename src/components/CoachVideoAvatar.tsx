@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, TouchableOpacity, Image, Platform, StyleSheet, AppState, AppStateStatus } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { WebView, type WebViewRef } from './TypedWebView';
 import { useIsFocused } from 'expo-router';
 import { Asset } from 'expo-asset';
 import { Feather } from '@expo/vector-icons';
@@ -65,7 +65,7 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
 
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [resolvedUri, setResolvedUri] = useState<string | null>(videoUri || null);
-  const webViewRef = useRef<WebView>(null);
+  const webViewRef = useRef<WebViewRef>(null);
   const webVideoRef = useRef<HTMLVideoElement | null>(null);
 
   // Stop playback when the tab/screen loses focus

@@ -229,8 +229,7 @@ export const useAddressStore = create<AddressState>((set, get) => ({
                 selectedAddressId: get().selectedAddressId || refreshed.find(a => a.isDefault)?.id || refreshed[0]?.id || ''
               });
             }
-          })
-          .catch(() => {});
+          }, () => {});
       }
     } else {
       set({

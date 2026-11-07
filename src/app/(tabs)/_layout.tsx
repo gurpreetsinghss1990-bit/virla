@@ -11,17 +11,18 @@ export default function TabsLayout() {
 
   // Track active tab changes
   useEffect(() => {
-    const atTabRoot = segments[0] === '(tabs)' && segments.length === 2;
+    const segs = segments as unknown as string[];
+    const atTabRoot = segs[0] === '(tabs)' && segs.length === 2;
     if (atTabRoot) {
-      const current = segments[1] as string;
-      pushTab(current);
+      pushTab(segs[1]);
     }
   }, [segments, pushTab]);
 
   // Android hardware back: navigate to previous tab in history before exiting app
   useEffect(() => {
     const onBackPress = () => {
-      const atTabRoot = segments[0] === '(tabs)' && segments.length === 2;
+      const segs = segments as unknown as string[];
+      const atTabRoot = segs[0] === '(tabs)' && segs.length === 2;
       if (!atTabRoot) return false;
 
       const previousTab = popTab();

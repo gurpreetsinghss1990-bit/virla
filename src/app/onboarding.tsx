@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Animated, PanResponder, Easing, Platform, StatusBar as RNStatusBar, Dimensions, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Animated, PanResponder, Easing, Platform, Dimensions, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -35,11 +35,6 @@ export default function OnboardingScreen() {
 
   useEffect(() => {
     // 0. Modern Android Edge-to-Edge System Bar
-    if (Platform.OS === 'android') {
-      RNStatusBar.setTranslucent(true);
-      RNStatusBar.setBackgroundColor('transparent');
-    }
-
     // Subtle swipe hint pulse animation
     Animated.loop(
       Animated.sequence([

@@ -60,7 +60,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
       // If user is not actively inside the app (background/inactive/locked), send OS Push Notification
       try {
-        const isAppBackgrounded = AppState.currentState.match(/inactive|background/);
+        const isAppBackgrounded = (AppState.currentState ?? '').match(/inactive|background/);
         if (isAppBackgrounded && PushNotificationService.isNotificationsSupported()) {
           const Notifications = require('expo-notifications');
           Notifications.scheduleNotificationAsync({

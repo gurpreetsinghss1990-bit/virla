@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Platform, StyleSheet, AppState } from 'react-native';
 import { useIsFocused } from 'expo-router';
-import { WebView } from 'react-native-webview';
+import { WebView, type WebViewRef } from './TypedWebView';
 import { Asset } from 'expo-asset';
 
 interface BackgroundVideoLoopProps {
@@ -11,7 +11,7 @@ interface BackgroundVideoLoopProps {
 
 export const BackgroundVideoLoop: React.FC<BackgroundVideoLoopProps> = ({ source, style }) => {
   const [uri, setUri] = useState<string | null>(null);
-  const webViewRef = useRef<WebView>(null);
+  const webViewRef = useRef<WebViewRef>(null);
   const isFocused = useIsFocused();
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
 

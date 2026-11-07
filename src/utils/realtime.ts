@@ -8,7 +8,7 @@ import { useUserStore } from '../store/userStore';
 let realtimeChannel: any = null;
 let smartPollTimer: any = null;
 let appStateSubscription: any = null;
-let currentAppState: AppStateStatus = AppState.currentState;
+let currentAppState: AppStateStatus = (AppState.currentState ?? 'active') as AppStateStatus;
 
 /**
  * Broadcasts a lightweight socket ping over Supabase Realtime so all connected clients

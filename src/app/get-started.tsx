@@ -71,7 +71,7 @@ export default function GetStartedScreen() {
   const [authenticatedUserName, setAuthenticatedUserName] = useState('');
   const spinAnim = useRef(new Animated.Value(0)).current;
   const bgAuraAnim = useRef(new Animated.Value(0)).current;
-  const otpInputRef = useRef<TextInput>(null);
+  const otpInputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
 
   // New user onboarding setup states
   const [newUserIdToRegister, setNewUserIdToRegister] = useState<string | null>(null);

@@ -68,7 +68,7 @@ export default function TrainerApplicationScreen() {
   const [policyPage, setPolicyPage] = useState<1 | 2 | 3>(1);
   const [viewingPoliciesOnly, setViewingPoliciesOnly] = useState(false);
   const [checkEarningsAcceptance, setCheckEarningsAcceptance] = useState(false);
-  const policyScrollViewRef = useRef<ScrollView>(null);
+  const policyScrollViewRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const [isScrolledNearBottom, setIsScrolledNearBottom] = useState(false);
 
   const scrollToBottom = () => {

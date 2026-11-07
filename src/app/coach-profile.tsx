@@ -14,6 +14,24 @@ export default function CoachProfileScreen() {
   const { coaches, setSelectedCoachId } = useCoachStore();
   const coach = coaches.find((c) => c.id === coachId) || coaches[0];
 
+  if (!coach) {
+    return (
+      <View style={{ flex: 1, backgroundColor: 'white', paddingTop: insets.top }}>
+        <View className="h-14 flex-row items-center px-6 border-b border-zinc-100">
+          <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
+            <Ionicons name="arrow-back" size={20} color="#111111" />
+          </TouchableOpacity>
+          <Text className="flex-1 text-center text-primary text-base font-black tracking-tight mr-8">
+            Coach Profile
+          </Text>
+        </View>
+        <View className="flex-1 items-center justify-center p-6">
+          <Text className="text-zinc-500 text-sm font-semibold">This coach is not available right now.</Text>
+        </View>
+      </View>
+    );
+  }
+
   const handleBookCoach = () => {
     setSelectedCoachId(coach.id);
     Alert.alert(
