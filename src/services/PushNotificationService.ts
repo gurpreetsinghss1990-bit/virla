@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { supabase } from '../database/supabaseClient';
 import Constants from 'expo-constants';
-import { requireOptionalNativeModule } from 'expo-modules-core';
+import { requireOptionalNativeModule } from 'expo';
 
 // Centralized sound mapping & notification taxonomy
 export const NOTIFICATION_SOUNDS = {

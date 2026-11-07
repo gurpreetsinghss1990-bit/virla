@@ -19,7 +19,7 @@ export interface LiveTrainerCoordinates {
 let TaskManager: any = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { requireOptionalNativeModule } = require('expo-modules-core');
+  const { requireOptionalNativeModule } = require('expo');
   const hasNativeTaskManager = !!requireOptionalNativeModule('ExpoTaskManager');
   if (hasNativeTaskManager) {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
