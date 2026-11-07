@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useUserStore } from '../store/userStore';
 import { useNotificationStore } from '../store/notificationStore';
@@ -7,6 +7,7 @@ import { NotificationBadge } from './NotificationBadge';
 import { Ionicons } from '@expo/vector-icons';
 import { CommunicationCenterModal } from './CommunicationCenterModal';
 import { MASTER_TRAINER_AVATAR_IMAGE } from '../constants/masterTrainerAvatar';
+import { Image as ExpoImage } from 'expo-image';
 
 interface AppHeaderProps {
   onNotificationPress?: () => void;
@@ -32,19 +33,22 @@ export function AppHeader({ onNotificationPress, onAvatarPress }: AppHeaderProps
       {/* Profile Greeting Section */}
       <View className="flex-row items-center gap-3">
         <TouchableOpacity activeOpacity={0.8} onPress={onAvatarPress}>
-          <Image
+          <ExpoImage
             source={(() => {
               const isMale = (user.gender || '').toLowerCase() === 'male' || role === 'trainer';
               const rawAvatar = user.avatar;
               if (isMale && (!rawAvatar || rawAvatar.includes('photo-1534528741775') || rawAvatar.includes('photo-1544005313') || rawAvatar.includes('selfie.jpg'))) {
                 return MASTER_TRAINER_AVATAR_IMAGE;
               }
-              if (rawAvatar && typeof rawAvatar === 'string' && (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:')) && !rawAvatar.includes('selfie.jpg')) {
+              if (rawAvatar && typeof rawAvatar === 'string' && (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:') || rawAvatar.startsWith('file://')) && !rawAvatar.includes('selfie.jpg')) {
                 return { uri: rawAvatar };
               }
               return isMale ? MASTER_TRAINER_AVATAR_IMAGE : { uri: rawAvatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80' };
             })()}
-            className="w-12 h-12 rounded-full border-2 border-zinc-50"
+            style={{ width: 48, height: 48, borderRadius: 24 }}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
           />
         </TouchableOpacity>
         <View>

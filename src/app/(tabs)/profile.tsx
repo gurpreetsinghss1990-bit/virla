@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, BackHandler, Modal, LayoutAnimation, UIManager, ActivityIndicator, Pressable, TouchableWithoutFeedback, StyleSheet, Easing, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, BackHandler, Modal, LayoutAnimation, UIManager, ActivityIndicator, Pressable, TouchableWithoutFeedback, StyleSheet, Easing, Dimensions } from 'react-native';
 import { InteractionManager } from '../../utils/interactionManager';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,7 +19,9 @@ import { SignOutConfirmationModal } from '../../components/SignOutConfirmationMo
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { formatToDDMMYYYY } from '../../utils/date';
+import { Image as ExpoImage } from 'expo-image';
 import { MASTER_TRAINER_AVATAR_URI, MASTER_TRAINER_AVATAR_IMAGE } from '../../constants/masterTrainerAvatar';
+import { uploadAvatarToStorage } from '../../utils/uploadAvatar';
 
 const DEFAULT_AVATARS = [
   { id: 'avatar_male', label: 'Men (Master Trainer)', gender: 'male', uri: MASTER_TRAINER_AVATAR_URI },
@@ -325,6 +327,7 @@ export default function ProfileScreen() {
   const [editCity, setEditCity] = useState(profile.city || '');
   const [editAvatar, setEditAvatar] = useState(profile.avatar || user?.avatar || DEFAULT_AVATARS[0].uri);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -358,7 +361,26 @@ export default function ProfileScreen() {
     user?.avatar
   ]);
 
+  const handleAvatarPicked = async (localUri: string) => {
+    const previous = editAvatar;
+    setEditAvatar(localUri);
+    setIsUploadingAvatar(true);
+    try {
+      const ownerId = user?.id || Database.getCurrentUserId();
+      if (!ownerId) throw new Error('User not found');
+      const publicUrl = await uploadAvatarToStorage(localUri, ownerId, 'users');
+      setEditAvatar(publicUrl);
+    } catch (e: any) {
+      console.warn('[AvatarPicker] Upload failed:', e);
+      setEditAvatar(previous);
+      Alert.alert('Upload Failed', e?.message || 'Photo upload nahi ho payi. Network check karke dobara try karein.');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
   const pickAvatarImage = async (source: 'camera' | 'library') => {
+    if (isUploadingAvatar) return;
     try {
       if (source === 'camera') {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -373,7 +395,7 @@ export default function ProfileScreen() {
           quality: 0.8,
         });
         if (!result.canceled && result.assets?.[0]?.uri) {
-          setEditAvatar(result.assets[0].uri);
+          await handleAvatarPicked(result.assets[0].uri);
         }
       } else {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -388,7 +410,7 @@ export default function ProfileScreen() {
           quality: 0.8,
         });
         if (!result.canceled && result.assets?.[0]?.uri) {
-          setEditAvatar(result.assets[0].uri);
+          await handleAvatarPicked(result.assets[0].uri);
         }
       }
     } catch (e: any) {
@@ -398,7 +420,11 @@ export default function ProfileScreen() {
   };
 
   const handleSaveProfile = async () => {
-    if (isSavingProfile) return;
+    if (isSavingProfile || isUploadingAvatar) return;
+    if (typeof editAvatar === 'string' && editAvatar.startsWith('file://')) {
+      Alert.alert('Upload Pending', 'Profile picture abhi upload ho rahi hai. Thodi der baad save karein.');
+      return;
+    }
     try {
       setIsSavingProfile(true);
       await profile.updateCoreProfile({
@@ -484,9 +510,10 @@ export default function ProfileScreen() {
     if (!coach?.id) return;
     try {
       setIsUploadingTrainerPhoto(true);
-      await Database.updateCoach(coach.id, { photo: photoUri });
+      const publicUrl = await uploadAvatarToStorage(photoUri, coach.id, 'trainers');
+      await Database.updateCoach(coach.id, { photo: publicUrl });
       if (user?.id) {
-        await profile.updateCoreProfile({ avatar: photoUri });
+        await profile.updateCoreProfile({ avatar: publicUrl });
       }
       useCoachStore.getState().syncFromDB();
       Alert.alert('Success', 'Trainer profile photo updated successfully.');
@@ -940,19 +967,22 @@ export default function ProfileScreen() {
                   className="relative"
                 >
                   <View className="w-[78px] h-[78px] rounded-full p-[2.5px] border-2 border-[#F59E0B] bg-white shadow-sm">
-                    <Image
+                    <ExpoImage
                       source={(() => {
                         const isMale = (profile.gender || '').toLowerCase() === 'male';
                         const rawAvatar = profile.avatar || user?.avatar;
                         if (isMale && (!rawAvatar || rawAvatar.includes('photo-1534528741775') || rawAvatar.includes('photo-1544005313') || rawAvatar.includes('selfie.jpg'))) {
                           return MASTER_TRAINER_AVATAR_IMAGE;
                         }
-                        if (rawAvatar && typeof rawAvatar === 'string' && (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:')) && !rawAvatar.includes('selfie.jpg')) {
+                        if (rawAvatar && typeof rawAvatar === 'string' && (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:') || rawAvatar.startsWith('file://')) && !rawAvatar.includes('selfie.jpg')) {
                           return { uri: rawAvatar };
                         }
                         return isMale ? MASTER_TRAINER_AVATAR_IMAGE : { uri: getDefaultAvatarForGender(profile.gender) };
                       })()}
-                      className="w-full h-full rounded-full"
+                      style={{ width: '100%', height: '100%', borderRadius: 999 }}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                      transition={200}
                     />
                   </View>
                   <View className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-rose-500 border-2 border-white items-center justify-center shadow-xs">
@@ -1578,17 +1608,21 @@ export default function ProfileScreen() {
               {/* Trainer Profile Header Summary Card */}
               <View className="items-center mb-6">
                 <View className="relative">
-                  <Image
-                    source={(() => {
-                      const raw = coach?.photo || coach?.avatar || user?.avatar;
-                      if (raw && typeof raw === 'string' && (raw.startsWith('http') || raw.startsWith('data:') || raw.startsWith('file://')) && !raw.includes('photo-1534528741775') && !raw.includes('photo-1544005313') && !raw.includes('photo-1568602471122') && !raw.includes('selfie.jpg')) {
-                        return { uri: raw };
-                      }
-                      return MASTER_TRAINER_AVATAR_IMAGE;
-                    })()}
-                    className="w-24 h-24 rounded-full border-[3px] border-[#E11D48] mb-3 shadow-xl bg-zinc-900"
-                    resizeMode="cover"
-                  />
+                  <View className="w-24 h-24 rounded-full border-[3px] border-[#E11D48] mb-3 shadow-xl bg-zinc-900 overflow-hidden">
+                    <ExpoImage
+                      source={(() => {
+                        const raw = coach?.photo || coach?.avatar || user?.avatar;
+                        if (raw && typeof raw === 'string' && (raw.startsWith('http') || raw.startsWith('data:') || raw.startsWith('file://')) && !raw.includes('photo-1534528741775') && !raw.includes('photo-1544005313') && !raw.includes('photo-1568602471122') && !raw.includes('selfie.jpg')) {
+                          return { uri: raw };
+                        }
+                        return MASTER_TRAINER_AVATAR_IMAGE;
+                      })()}
+                      style={{ width: '100%', height: '100%' }}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                      transition={200}
+                    />
+                  </View>
                   {/* Bottom Right Edit Pencil Icon */}
                   <TouchableOpacity
                     activeOpacity={0.8}
@@ -2773,7 +2807,7 @@ export default function ProfileScreen() {
                   <View className="flex-row items-center gap-4">
                     {/* Current Selected Avatar */}
                     <View className="w-16 h-16 rounded-full border-2 border-rose-500 p-0.5 bg-white shadow-sm">
-                      <Image
+                      <ExpoImage
                         source={(() => {
                           const activeGender = (editGender || profile.gender || '').toLowerCase();
                           const isMale = activeGender === 'male';
@@ -2781,13 +2815,21 @@ export default function ProfileScreen() {
                           if (isMale && (!rawAvatar || rawAvatar.includes('photo-1534528741775') || rawAvatar.includes('photo-1544005313') || rawAvatar.includes('photo-1506794778') || rawAvatar.includes('selfie.jpg'))) {
                             return MASTER_TRAINER_AVATAR_IMAGE;
                           }
-                          if (rawAvatar && typeof rawAvatar === 'string' && (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:')) && !rawAvatar.includes('selfie.jpg')) {
+                          if (rawAvatar && typeof rawAvatar === 'string' && (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:') || rawAvatar.startsWith('file://')) && !rawAvatar.includes('selfie.jpg')) {
                             return { uri: rawAvatar };
                           }
                           return isMale ? MASTER_TRAINER_AVATAR_IMAGE : { uri: getDefaultAvatarForGender(activeGender) };
                         })()}
-                        className="w-full h-full rounded-full"
+                        style={{ width: '100%', height: '100%', borderRadius: 999 }}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                        transition={200}
                       />
+                      {isUploadingAvatar && (
+                        <View className="absolute inset-0 rounded-full bg-black/45 items-center justify-center">
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        </View>
+                      )}
                     </View>
 
                     {/* Camera / Gallery Upload Options */}

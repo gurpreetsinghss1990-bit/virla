@@ -1254,7 +1254,7 @@ export default function HomeScreen() {
             className="w-11 h-11 rounded-full border border-zinc-200 overflow-hidden relative bg-zinc-100 items-center justify-center"
             style={{ minWidth: 44, minHeight: 44 }}
           >
-            <Image 
+            <ExpoImage 
               source={(() => {
                 const userGender = ((user as any)?.gender || profile?.gender || '').toLowerCase();
                 const isMale = userGender === 'male' || role === 'trainer';
@@ -1262,12 +1262,15 @@ export default function HomeScreen() {
                 if (isMale && (!rawAvatar || rawAvatar.includes('photo-1534528741775') || rawAvatar.includes('photo-1544005313') || rawAvatar.includes('selfie.jpg'))) {
                   return MASTER_TRAINER_AVATAR_IMAGE;
                 }
-                if (rawAvatar && typeof rawAvatar === 'string' && (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:')) && !rawAvatar.includes('selfie.jpg')) {
+                if (rawAvatar && typeof rawAvatar === 'string' && (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:') || rawAvatar.startsWith('file://')) && !rawAvatar.includes('selfie.jpg')) {
                   return { uri: rawAvatar };
                 }
                 return isMale ? MASTER_TRAINER_AVATAR_IMAGE : { uri: getDefaultAvatarForGender(userGender) };
               })()} 
-              className="w-full h-full" 
+              style={{ width: '100%', height: '100%', borderRadius: 999 }}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={200}
             />
             {/* Small gold crown badge overlay */}
             <View className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-amber-500 border border-white items-center justify-center">

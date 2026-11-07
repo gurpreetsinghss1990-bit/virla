@@ -30,6 +30,8 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useUserStore } from '../store/userStore';
 import { Database } from '../database/Database';
 import { supabase } from '../database/supabaseClient';
+import { MASTER_TRAINER_AVATAR_URI } from '../constants/masterTrainerAvatar';
+const FEMALE_DEFAULT_AVATAR_URI = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=350&q=80';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -252,8 +254,8 @@ export default function UserMetricsLandingScreen() {
       if (userId) {
         // 1. Update user row in remote Supabase
         const defaultAvatar = (gender || '').toLowerCase() === 'female'
-          ? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=350&q=80'
-          : 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=350&q=80';
+          ? FEMALE_DEFAULT_AVATAR_URI
+          : MASTER_TRAINER_AVATAR_URI;
 
         await supabase
           .from('users')
