@@ -9,6 +9,7 @@ import { getBookingISTDateRange, getDisplayWorkoutTitle, normalizeDate, formatTo
 import { Booking, Coach } from '../types';
 import { LuxuryCard } from '../components/LuxuryCard';
 import { supabase } from '../database/supabaseClient';
+import { assertUploadableFile } from '../utils/fileType';
 import { useBookingStore } from '../store/bookingStore';
 import { SupportChatModal } from '../components/SupportChatModal';
 
@@ -375,7 +376,7 @@ export default function AdminPanelScreen() {
         try {
           const resp = await fetch(interviewIdDocUri);
           const arrayBuffer = await resp.arrayBuffer();
-          const ext = interviewIdDocUri.split('.').pop() || 'jpg';
+          const { ext, contentType } = assertUploadableFile(arrayBuffer, ['jpg', 'png', 'webp', 'heic', 'pdf']);
           const cleanFileName = `interview-${interviewIdType}-${interviewFormApp.id}-${Date.now()}.${ext}`;
           const filePath = `trainer-docs/${cleanFileName}`;
           
@@ -396,7 +397,7 @@ export default function AdminPanelScreen() {
         try {
           const resp = await fetch(interviewProfilePicUri);
           const arrayBuffer = await resp.arrayBuffer();
-          const ext = interviewProfilePicUri.split('.').pop() || 'jpg';
+          const { ext, contentType } = assertUploadableFile(arrayBuffer, ['jpg', 'png', 'webp', 'heic']);
           const cleanFileName = `interview-avatar-${interviewFormApp.id}-${Date.now()}.${ext}`;
           const filePath = `trainer-docs/${cleanFileName}`;
           

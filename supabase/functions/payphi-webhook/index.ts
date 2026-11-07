@@ -1,4 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import {
+  DECIMAL_PATTERN,
+  ID_PATTERN,
+  HEX_PATTERN,
+  parseJsonObjectText,
+  validationErrorResponse,
+} from '../_shared/validate.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,7 +42,7 @@ Deno.serve(async (req) => {
     const contentType = (req.headers.get('content-type') || '').toLowerCase();
 
     if (contentType.includes('application/json')) {
-      payload = await req.json().catch(() => ({}));
+      payload = parseJsonObjectText(await req.text().catch(() => ''));
     } else if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
       const formData = await req.formData().catch(() => null);
       if (formData) {
@@ -46,7 +53,7 @@ Deno.serve(async (req) => {
     } else {
       const rawText = await req.text().catch(() => '');
       try {
-        payload = JSON.parse(rawText);
+        payload = parseJsonObjectText(rawText);
       } catch {
         const searchParams = new URLSearchParams(rawText);
         searchParams.forEach((val, key) => {
@@ -74,6 +81,30 @@ Deno.serve(async (req) => {
     const amount = extract(['amount', 'Amount']);
     const currencyCode = extract(['currencyCode', 'CurrencyCode'], '356');
     const merchantId = extract(['merchantId', 'MerchantId'], Deno.env.get('PAYPHI_MERCHANT_ID') || '100000000527739');
+
+    if (!merchantTxnNo || !ID_PATTERN.test(merchantTxnNo) || merchantTxnNo.length > 100) {
+      console.warn('[payphi-webhook] Rejecting: invalid merchantTxnNo');
+      return new Response(JSON.stringify({ error: 'Invalid merchantTxnNo' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (amount && !DECIMAL_PATTERN.test(amount)) {
+      console.warn('[payphi-webhook] Rejecting: invalid amount format');
+      return new Response(JSON.stringify({ error: 'Invalid amount' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (receivedChecksum && !HEX_PATTERN.test(receivedChecksum)) {
+      console.warn('[payphi-webhook] Rejecting: checksum is not hexadecimal');
+      return new Response(JSON.stringify({ error: 'Invalid checksum format' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     if (!merchantTxnNo) {
       console.warn('[payphi-webhook] Rejecting: Missing merchantTxnNo');
@@ -104,7 +135,14 @@ Deno.serve(async (req) => {
       }
 
       if (!matchesAny) {
-        console.warn(`[payphi-webhook] Non-fatal Checksum Notice. Received: ${receivedChecksum}. Verification did not match known candidates.`);
+        const strictMode = (Deno.env.get('PAYPHI_WEBHOOK_STRICT') || '').toLowerCase() === 'true';
+        console.warn(`[payphi-webhook] Checksum mismatch. Received: ${receivedChecksum}. strict=${strictMode}`);
+        if (strictMode) {
+          return new Response(JSON.stringify({ error: 'Checksum verification failed' }), {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
       }
     }
 
@@ -163,8 +201,12 @@ Deno.serve(async (req) => {
       }
     );
   } catch (err: any) {
+    if (err?.name === 'RequestValidationError') {
+      console.warn('[payphi-webhook] Rejected payload:', err.message);
+      return validationErrorResponse(err, corsHeaders);
+    }
     console.error('[payphi-webhook] Unhandled error:', err);
-    return new Response(JSON.stringify({ error: err.message || 'Internal Server Error' }), {
+    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

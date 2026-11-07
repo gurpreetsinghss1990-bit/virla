@@ -1,4 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  EMAIL_PATTERN,
+  ID_PATTERN,
+  optionalString,
+  readJsonObject,
+  rejectUnknownKeys,
+  requireString,
+  validationErrorResponse,
+} from '../_shared/validate.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -137,8 +146,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const reqBody = await req.json().catch(() => ({}));
-    const { planId, customerEmail, userId: bodyUserId } = reqBody;
+    const reqBody = await readJsonObject(req);
+    rejectUnknownKeys(reqBody, ['planId', 'customerEmail', 'userId']);
+    const planId = requireString(reqBody.planId, 'planId', { max: 64, pattern: ID_PATTERN });
+    const customerEmail = optionalString(reqBody.customerEmail, 'customerEmail', {
+      max: 254,
+      pattern: EMAIL_PATTERN,
+    });
+    const bodyUserId = optionalString(reqBody.userId, 'userId', { max: 64, pattern: ID_PATTERN });
 
     const userId = getRequestUserId(req) || bodyUserId || null;
     console.log(`[create-payment-order] Incoming request for plan: ${planId}, caller: ${userId}`);
@@ -238,8 +253,12 @@ Deno.serve(async (req) => {
       }
     );
   } catch (err: any) {
+    if (err?.name === 'RequestValidationError') {
+      console.warn('[create-payment-order] Rejected payload:', err.message);
+      return validationErrorResponse(err, corsHeaders);
+    }
     console.error('[create-payment-order] Error:', err);
-    return new Response(JSON.stringify({ error: err.message || 'Internal Server Error' }), {
+    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

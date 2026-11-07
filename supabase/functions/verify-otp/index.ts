@@ -1,4 +1,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import {
+  optionalBoolean,
+  optionalString,
+  readJsonObject,
+  rejectUnknownKeys,
+  requireString,
+  validationErrorResponse,
+} from '../_shared/validate.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -67,12 +75,13 @@ function mapPostgresToDBUser(row: any) {
 /**
  * Standardized error response helper to return structured JSON errors
  */
-function errorResponse(code: string, message: string, status = 400) {
+function errorResponse(code: string, message: string, status = 400, extra?: Record<string, unknown>) {
   console.error(`[Edge Function] Error: ${code} - ${message}`);
   return new Response(JSON.stringify({
     success: false,
     code,
-    message
+    message,
+    ...(extra ? { details: extra } : {})
   }), {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -89,7 +98,7 @@ function safeLogStructure(obj: any, prefix = '') {
     return;
   }
   if (typeof obj !== 'object') {
-    let displayVal = typeof obj;
+    let displayVal: string = typeof obj;
     if (typeof obj === 'string') {
       displayVal = `string (length: ${obj.length})`;
     }
@@ -104,7 +113,7 @@ function safeLogStructure(obj: any, prefix = '') {
     if (val && typeof val === 'object') {
       safeLogStructure(val, `${prefix}.${key}`);
     } else {
-      let typeStr = typeof val;
+      let typeStr: string = typeof val;
       if (typeof val === 'string') {
         typeStr = `string (length: ${val.length})`;
       }
@@ -159,20 +168,26 @@ Deno.serve(async (req) => {
     let register: boolean;
 
     try {
-      const body = await req.json();
-      accessToken = body.accessToken;
-      name = body.name;
-      register = !!body.register;
-    } catch (e) {
+      const body = await readJsonObject(req);
+      rejectUnknownKeys(body, ['accessToken', 'name', 'register']);
+      accessToken = requireString(body.accessToken, 'accessToken', {
+        min: 8,
+        max: 4096,
+        trim: false,
+      });
+      name = optionalString(body.name, 'name', { max: 120 }) ?? '';
+      register = optionalBoolean(body.register, 'register') ?? false;
+    } catch (e: any) {
+      if (e?.name === 'RequestValidationError') {
+        console.warn('[Edge Function] Rejected payload:', e.message);
+        return validationErrorResponse(e, corsHeaders);
+      }
       return errorResponse('STAGE_A_PARSE', 'Malformed request payload', 400);
-    }
-
-    if (!accessToken) {
-      return errorResponse('STAGE_B', 'Access token is required', 400);
     }
     console.log('[Edge Function] Stage B: accessToken exists (length: ' + accessToken.length + ')');
 
-    if (accessToken.startsWith('mock-access-token-')) {
+    const mockAuthEnabled = (Deno.env.get('ALLOW_MOCK_AUTH') || '').toLowerCase() === 'true';
+    if (mockAuthEnabled && accessToken.startsWith('mock-access-token-')) {
       const mockUserId = accessToken.replace('mock-access-token-', '');
       if (mockUserId === 'u-testclient' || mockUserId === 'u-testadmin' || mockUserId === 'demo.trainer' || mockUserId === 'u-lo7leg48d' || mockUserId === 'u-ej8bes2xq') {
         console.log('[Edge Function] Mock authentication bypass triggered for:', mockUserId);

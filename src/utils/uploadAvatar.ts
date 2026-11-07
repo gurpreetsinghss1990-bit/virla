@@ -1,23 +1,10 @@
 import { Platform } from 'react-native';
 import { File } from 'expo-file-system';
 import { supabase } from '../database/supabaseClient';
+import { assertUploadableFile, safeStorageSegment } from './fileType';
 
 const AVATAR_BUCKET = 'avatars';
 const FALLBACK_BUCKET = 'trainer-documents';
-
-const MIME_BY_EXT: Record<string, string> = {
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  png: 'image/png',
-  webp: 'image/webp',
-  heic: 'image/heic',
-};
-
-function extensionOf(uri: string): string {
-  const clean = uri.split('?')[0];
-  const ext = (clean.split('.').pop() || '').toLowerCase();
-  return MIME_BY_EXT[ext] ? ext : 'jpg';
-}
 
 async function readFileBytes(uri: string): Promise<ArrayBuffer> {
   if (Platform.OS === 'web') {
@@ -46,12 +33,13 @@ export async function uploadAvatarToStorage(
   if (!ownerId) throw new Error('Missing owner id');
   if (/^https?:\/\//i.test(localFileUri)) return localFileUri;
 
-  const ext = extensionOf(localFileUri);
+  const safeOwnerId = safeStorageSegment(ownerId);
   const bytes = await readFileBytes(localFileUri);
-  const contentType = MIME_BY_EXT[ext];
+  const sniffed = assertUploadableFile(bytes, ['jpg', 'png', 'webp', 'heic']);
+  const { ext, contentType } = sniffed;
 
   let bucket = AVATAR_BUCKET;
-  let filePath = `${folder}/${ownerId}/avatar.${ext}`;
+  let filePath = `${folder}/${safeOwnerId}/avatar.${ext}`;
 
   let { error } = await supabase.storage
     .from(bucket)
@@ -61,7 +49,7 @@ export async function uploadAvatarToStorage(
   // public document bucket so uploads keep working in the meantime.
   if (error && /bucket/i.test(`${error.message ?? ''} ${error.name ?? ''}`)) {
     bucket = FALLBACK_BUCKET;
-    filePath = `avatars/${folder}/${ownerId}/avatar.${ext}`;
+    filePath = `avatars/${folder}/${safeOwnerId}/avatar.${ext}`;
     ({ error } = await supabase.storage
       .from(bucket)
       .upload(filePath, bytes, { contentType, upsert: true }));

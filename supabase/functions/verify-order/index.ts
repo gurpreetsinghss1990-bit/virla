@@ -1,4 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import {
+  ID_PATTERN,
+  HEX_PATTERN,
+  optionalString,
+  readJsonObject,
+  rejectUnknownKeys,
+  requireString,
+  validationErrorResponse,
+} from '../_shared/validate.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -72,8 +81,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const reqBody = await req.json().catch(() => ({}));
-    const { merchantTxnNo } = reqBody;
+    const reqBody = await readJsonObject(req);
+    rejectUnknownKeys(reqBody, ['merchantTxnNo', 'paymentId', 'txnId', 'responseCode', 'secureHash']);
+    const merchantTxnNo = requireString(reqBody.merchantTxnNo, 'merchantTxnNo', {
+      max: 100,
+      pattern: ID_PATTERN,
+    });
+    optionalString(reqBody.paymentId, 'paymentId', { max: 100, pattern: ID_PATTERN });
+    optionalString(reqBody.txnId, 'txnId', { max: 100, pattern: ID_PATTERN });
+    optionalString(reqBody.responseCode, 'responseCode', { max: 16, pattern: ID_PATTERN });
+    optionalString(reqBody.secureHash, 'secureHash', { max: 256, pattern: HEX_PATTERN });
 
     const userId = getRequestUserId(req);
     console.log(`[verify-order] Verification request for ${merchantTxnNo}, authenticated caller: ${userId}`);
@@ -385,8 +402,12 @@ Deno.serve(async (req) => {
       }
     );
   } catch (err: any) {
+    if (err?.name === 'RequestValidationError') {
+      console.warn('[verify-order] Rejected payload:', err.message);
+      return validationErrorResponse(err, corsHeaders);
+    }
     console.error('[verify-order] Unexpected error:', err);
-    return new Response(JSON.stringify({ error: err.message || 'Internal Server Error' }), {
+    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

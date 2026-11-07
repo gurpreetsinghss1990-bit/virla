@@ -15,6 +15,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { File } from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { assertUploadableFile } from '../utils/fileType';
 const getNativePickerModules = () => {
   const g = globalThis as any;
   const expoModules = g.expo?.modules || g.ExpoModules || {};
@@ -570,9 +571,6 @@ export default function TrainerApplicationScreen() {
     
     const docType = activeUploadType;
     const uri = previewUri;
-    const name = previewName || `${docType}_document`;
-    const isPdf = previewType === 'pdf';
-    const ext = name.split('.').pop() || (isPdf ? 'pdf' : 'jpg');
 
     try {
       setUploadingDoc(docType);
@@ -603,6 +601,12 @@ export default function TrainerApplicationScreen() {
         }
       }
 
+      const sniffed = assertUploadableFile(
+        arrayBuffer,
+        docType === 'selfie' ? ['jpg', 'png', 'webp', 'heic'] : ['jpg', 'png', 'webp', 'heic', 'pdf'],
+      );
+      const ext = sniffed.ext;
+
       const trainerId = Database.getCurrentUserId();
       if (!trainerId) throw new Error('Trainer ID not found');
       
@@ -611,7 +615,7 @@ export default function TrainerApplicationScreen() {
       
       const bucketName = docType === 'aadhaar' ? 'trainer-verification' : 'trainer-documents';
       const filePath = docType === 'aadhaar' ? `${trainerId}/${cleanFileName}` : `trainer-docs/${cleanFileName}`;
-      const contentType = isPdf ? 'application/pdf' : `image/${ext}`;
+      const contentType = sniffed.contentType;
 
       const { data, error } = await supabase.storage
         .from(bucketName)

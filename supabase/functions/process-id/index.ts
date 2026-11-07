@@ -1,4 +1,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import {
+  ID_PATTERN,
+  optionalString,
+  readJsonObject,
+  rejectUnknownKeys,
+  requireString,
+  validationErrorResponse,
+} from '../_shared/validate.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -69,13 +77,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { document_id } = await req.json();
-    if (!document_id) {
-      return new Response(JSON.stringify({ error: 'Missing document_id' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
+    const reqBody = await readJsonObject(req);
+    rejectUnknownKeys(reqBody, ['document_id', 'documentId']);
+    const document_id = requireString(
+      reqBody.document_id ?? reqBody.documentId,
+      'document_id',
+      { max: 100, pattern: ID_PATTERN },
+    );
+    optionalString(reqBody.documentId, 'documentId', { max: 100, pattern: ID_PATTERN });
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -217,8 +226,12 @@ Deno.serve(async (req) => {
     });
 
   } catch (err: any) {
+    if (err?.name === 'RequestValidationError') {
+      console.warn('Process ID rejected payload:', err.message);
+      return validationErrorResponse(err, corsHeaders);
+    }
     console.error('Process ID error:', err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
