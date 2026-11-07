@@ -2,7 +2,7 @@ import { AppLogo, Heading, PrimaryButton, Subtitle } from '@/presentation/compon
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, AppState, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { Database } from '../database/Database';
@@ -69,6 +69,7 @@ export default function GetStartedScreen() {
   const [otpStatusMessage, setOtpStatusMessage] = useState<string>('');
   const [isOtpSuccessAnimating, setIsOtpSuccessAnimating] = useState(false);
   const [authenticatedUserName, setAuthenticatedUserName] = useState('');
+  const [isAppActive, setIsAppActive] = useState(AppState.currentState === 'active');
   const spinAnim = useRef(new Animated.Value(0)).current;
   const bgAuraAnim = useRef(new Animated.Value(0)).current;
   const otpInputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
@@ -174,6 +175,20 @@ export default function GetStartedScreen() {
       bgLoop.stop();
       bgAuraAnim.stopAnimation();
     };
+  }, []);
+
+  // Keep the keyboard-avoiding layout still while the app is not in the foreground.
+  // iOS fires keyboardWillHide as the app backgrounds, and KeyboardAvoidingView would
+  // otherwise animate its padding during the app-switcher transition.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      setIsAppActive(nextState === 'active');
+      if (nextState === 'background') {
+        Keyboard.dismiss();
+      }
+    });
+
+    return () => subscription.remove();
   }, []);
 
   // Track retry countdown
@@ -624,6 +639,7 @@ export default function GetStartedScreen() {
       <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 16) }}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          enabled={isAppActive}
           className="flex-1"
         >
           {/* Background Luxury Glowing Aura (Full Screen Ambient Pulse) */}
