@@ -4,6 +4,41 @@ import { AssignmentLog, Booking, Coach, Invoice, NotificationItem, ScheduleSlot,
 import { canonicalizeTimeRange, getBookingISTDateRange, normalizeDate } from '../utils/date';
 import { setClientUserId, supabase } from './supabaseClient';
 
+// Columns a normal client may write on its own row. Anything else (role
+// escalation, status, password_hash, credits) is server owned.
+const USER_WRITABLE_COLUMNS = new Set([
+  'name', 'email', 'phone', 'avatar', 'device_info', 'last_login',
+  'notification_prefs', 'registration_status', 'role',
+]);
+
+const USER_PROFILE_WRITABLE_COLUMNS = new Set([
+  'age', 'gender', 'height', 'weight', 'fitness_goal', 'preferred_workout',
+  'emergency_contact', 'medical_notes', 'membership_status', 'trainer_preference',
+  'dob', 'fitness_level', 'preferred_language', 'city', 'member_since',
+  'selected_goals', 'home_address', 'home_latitude', 'home_longitude',
+  'home_place_id',
+]);
+
+// Trainer columns only admins/server functions may change.
+const TRAINER_ADMIN_ONLY_COLUMNS = new Set([
+  'rating', 'rating_count', 'completed_sessions', 'verified_badge', 'level',
+  'attendance_rate', 'punctuality_rate', 'availability_compliance',
+  'retainer_status', 'weekly_slots_submitted', 'remaining_slot_changes',
+]);
+
+const TRAINER_WRITABLE_COLUMNS = new Set([
+  'id', 'name', 'photo', 'experience', 'specialty', 'years_experience',
+  'specialization', 'languages', 'short_bio', 'about_text', 'availability',
+  'working_radius', 'bank_details', 'emergency_contact', 'price',
+  'certifications', 'achievements', 'gender', 'preferences', 'is_favourite',
+  'operating_address', 'operating_latitude', 'operating_longitude',
+  'operating_place_id', 'operating_location_status', 'service_radius_km',
+  'address_change_request', 'rating', 'rating_count', 'completed_sessions',
+  'verified_badge', 'level', 'attendance_rate', 'punctuality_rate',
+  'availability_compliance', 'retainer_status', 'weekly_slots_submitted',
+  'remaining_slot_changes',
+]);
+
 // Simple UUID generator
 export function generateUUID(prefix = 'id'): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
@@ -1934,7 +1969,15 @@ class DatabaseClient {
       const updateFields: any = {};
       for (const k of Object.keys(fields)) {
         const snakeKey = k.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+        if (!USER_WRITABLE_COLUMNS.has(snakeKey)) {
+          console.warn(`[MassAssignmentGuard] Ignoring non-writable user column: ${snakeKey}`);
+          continue;
+        }
         updateFields[snakeKey] = pgUser[snakeKey];
+      }
+      if (Object.keys(updateFields).length === 0) {
+        this.save();
+        return;
       }
 
       const { data, error } = await supabase.from('users').update(updateFields).eq('id', userId).select();
@@ -1961,7 +2004,15 @@ class DatabaseClient {
       const updateFields: any = {};
       for (const k of Object.keys(fields)) {
         const snakeKey = k.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+        if (!USER_PROFILE_WRITABLE_COLUMNS.has(snakeKey)) {
+          console.warn(`[MassAssignmentGuard] Ignoring non-writable profile column: ${snakeKey}`);
+          continue;
+        }
         updateFields[snakeKey] = pgProfile[snakeKey];
+      }
+      if (Object.keys(updateFields).length === 0) {
+        this.save();
+        return;
       }
 
       const { data, error } = await supabase.from('user_profiles').update(updateFields).eq('user_id', userId).select();
@@ -2022,6 +2073,9 @@ class DatabaseClient {
 
     Object.assign(coach, fields);
 
+    const actorRole = this.schema.users.find(u => u.id === this.currentUserId)?.role;
+    const isAdminActor = actorRole === 'admin';
+
     // Map TypeScript fields to database columns dynamically to only send modified properties
     const updatePayload: any = {};
 
@@ -2067,13 +2121,26 @@ class DatabaseClient {
       }
     }
 
+    if (!isAdminActor) {
+      for (const col of Object.keys(updatePayload)) {
+        if (TRAINER_ADMIN_ONLY_COLUMNS.has(col)) {
+          console.warn(`[MassAssignmentGuard] Ignoring admin-only trainer column: ${col}`);
+          delete updatePayload[col];
+        }
+      }
+    }
+
     let dbError;
     if (Object.keys(updatePayload).length > 0) {
       const { error } = await supabase.from('trainers').update(updatePayload).eq('id', coachId);
       dbError = error;
-    } else {
+    } else if (isAdminActor) {
       const pgCoach = mapCoachToPostgres(coach);
-      const { error } = await supabase.from('trainers').upsert(pgCoach);
+      const safeCoach: any = {};
+      for (const [k, v] of Object.entries(pgCoach)) {
+        if (TRAINER_WRITABLE_COLUMNS.has(k)) safeCoach[k] = v;
+      }
+      const { error } = await supabase.from('trainers').upsert(safeCoach);
       dbError = error;
     }
 
@@ -3036,31 +3103,17 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
 
     // Check if booking was booked as favourite trainer to award bonus
     const isFavBooking = booking.isFavouriteTrainer || (booking.ratingDetails as any)?.isFavouriteTrainer;
+    // Favourite-trainer bonus is applied server-side so the client never writes money columns
     if (isFavBooking) {
       try {
-        const { data: latestEarning } = await supabase
-          .from('trainer_earnings')
-          .select('*')
-          .eq('booking_id', bookingId)
-          .eq('type', 'session')
-          .order('id', { ascending: false })
-          .limit(1)
-          .single();
-
-        if (latestEarning) {
-          const clientNameWithTag = latestEarning.client_name.includes('(Favourite Trainer)')
-            ? latestEarning.client_name
-            : `${latestEarning.client_name} (Favourite Trainer)`;
-          await supabase
-            .from('trainer_earnings')
-            .update({
-              amount: (latestEarning.amount || 600) + 50,
-              client_name: clientNameWithTag
-            })
-            .eq('id', latestEarning.id);
+        const { error: bonusError } = await supabase.rpc('apply_favourite_trainer_bonus', {
+          p_booking_id: bookingId,
+        });
+        if (bonusError) {
+          console.warn('[DB WARN] Favourite trainer bonus RPC failed:', bonusError.message);
         }
       } catch (earnErr) {
-        console.warn('[DB WARN] Failed to update favourite trainer earning bonus:', earnErr);
+        console.warn('[DB WARN] Failed to apply favourite trainer bonus:', earnErr);
       }
     }
 

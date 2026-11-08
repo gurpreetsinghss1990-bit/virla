@@ -389,7 +389,8 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
       if (user) {
         const currentPrefs = user.notificationPrefs ? JSON.parse(user.notificationPrefs) : {};
         user.notificationPrefs = JSON.stringify({ ...currentPrefs, ...fields });
-        Database.updateProfile(userId, { notifications: { ...get().notifications, ...fields } } as any);
+        // Notification prefs live on users, not user_profiles
+        void Database.updateUser(userId, { notificationPrefs: user.notificationPrefs } as any);
         get().syncFromDB();
       }
     }
