@@ -149,11 +149,17 @@ Deno.serve(async (req) => {
     const reqBody = await readJsonObject(req);
     rejectUnknownKeys(reqBody, ['planId', 'customerEmail', 'userId']);
     const planId = requireString(reqBody.planId, 'planId', { max: 64, pattern: ID_PATTERN });
-    const customerEmail = optionalString(reqBody.customerEmail, 'customerEmail', {
-      max: 254,
-      pattern: EMAIL_PATTERN,
-    });
-    const bodyUserId = optionalString(reqBody.userId, 'userId', { max: 64, pattern: ID_PATTERN });
+    // Soft fields: a malformed email/userId must never block a payment.
+    let customerEmail = optionalString(reqBody.customerEmail, 'customerEmail', { max: 254 });
+    if (customerEmail && !EMAIL_PATTERN.test(customerEmail)) {
+      console.warn('[create-payment-order] Ignoring malformed customerEmail');
+      customerEmail = undefined;
+    }
+    let bodyUserId = optionalString(reqBody.userId, 'userId', { max: 64 });
+    if (bodyUserId && !ID_PATTERN.test(bodyUserId)) {
+      console.warn('[create-payment-order] Ignoring malformed userId');
+      bodyUserId = undefined;
+    }
 
     const userId = getRequestUserId(req) || bodyUserId || null;
     console.log(`[create-payment-order] Incoming request for plan: ${planId}, caller: ${userId}`);

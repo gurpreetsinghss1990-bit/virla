@@ -171,7 +171,6 @@ Deno.serve(async (req) => {
       const body = await readJsonObject(req);
       rejectUnknownKeys(body, ['accessToken', 'name', 'register']);
       accessToken = requireString(body.accessToken, 'accessToken', {
-        min: 8,
         max: 4096,
         trim: false,
       });

@@ -1,7 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
-  ID_PATTERN,
-  HEX_PATTERN,
   optionalString,
   readJsonObject,
   rejectUnknownKeys,
@@ -85,12 +83,13 @@ Deno.serve(async (req) => {
     rejectUnknownKeys(reqBody, ['merchantTxnNo', 'paymentId', 'txnId', 'responseCode', 'secureHash']);
     const merchantTxnNo = requireString(reqBody.merchantTxnNo, 'merchantTxnNo', {
       max: 100,
-      pattern: ID_PATTERN,
+      pattern: /^\S+$/,
     });
-    optionalString(reqBody.paymentId, 'paymentId', { max: 100, pattern: ID_PATTERN });
-    optionalString(reqBody.txnId, 'txnId', { max: 100, pattern: ID_PATTERN });
-    optionalString(reqBody.responseCode, 'responseCode', { max: 16, pattern: ID_PATTERN });
-    optionalString(reqBody.secureHash, 'secureHash', { max: 256, pattern: HEX_PATTERN });
+    // Gateway receipt fields are informational only; never reject a verification on their format.
+    optionalString(reqBody.paymentId, 'paymentId', { max: 120 });
+    optionalString(reqBody.txnId, 'txnId', { max: 120 });
+    optionalString(reqBody.responseCode, 'responseCode', { max: 24 });
+    optionalString(reqBody.secureHash, 'secureHash', { max: 256 });
 
     const userId = getRequestUserId(req);
     console.log(`[verify-order] Verification request for ${merchantTxnNo}, authenticated caller: ${userId}`);
