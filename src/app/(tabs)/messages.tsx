@@ -256,37 +256,33 @@ export default function MessagesScreen() {
   }, [chatsList, searchQuery]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FCF5F5', paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: '#FFFFFF', paddingTop: insets.top }}>
       {/* Top Header */}
-      <View className="px-6 pt-3 pb-3 flex-row items-center justify-between">
-        <View className="flex-1">
-          <Text className="text-zinc-400 text-xs font-black uppercase tracking-wider">
-            Direct Line
-          </Text>
-          <Text className="text-zinc-950 text-2xl font-black tracking-tight mt-0.5">
-            Messages & Logs
+      <View className="px-5 pt-3 pb-2 flex-row items-center justify-between bg-white">
+        <View>
+          <Text className="text-zinc-950 text-2xl font-black tracking-tight">
+            Chats
           </Text>
         </View>
 
-        {/* Live Support Indicator — only when a session is actually live */}
         {chatsList.some((c) => c.isOnline) && (
-          <View className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-150">
+          <View className="flex-row items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200">
             <View className="w-2 h-2 rounded-full bg-emerald-500" />
-            <Text className="text-emerald-700 text-xs font-extrabold uppercase">Live Line</Text>
+            <Text className="text-emerald-700 text-xs font-bold">Online</Text>
           </View>
         )}
       </View>
 
-      {/* Search Input Bar */}
-      <View className="px-6 pt-1 pb-3">
-        <View className="flex-row items-center bg-zinc-100/90 border border-zinc-200/70 px-4 py-2.5 rounded-2xl">
-          <Feather name="search" size={16} color="#9CA3AF" />
+      {/* Lively Search Input Bar */}
+      <View className="px-5 pt-1 pb-2.5">
+        <View className="flex-row items-center bg-white border border-zinc-200/80 px-3.5 py-2.5 rounded-full shadow-sm">
+          <Feather name="search" size={17} color="#71717A" />
           <TextInput
-            placeholder="Search coaches, chats, workouts..."
+            placeholder="Search chats or messages..."
             placeholderTextColor="#9CA3AF"
             value={searchQuery}
             onChangeText={setSearchQuery}
-            className="flex-1 text-sm font-semibold text-zinc-900 ml-2.5 py-0"
+            className="flex-1 text-[15px] font-medium text-zinc-900 ml-2.5 py-0"
             clearButtonMode="while-editing"
           />
           {searchQuery.length > 0 && (
@@ -299,24 +295,24 @@ export default function MessagesScreen() {
         </View>
       </View>
 
-      {/* Chats List - Clean borderless stream */}
+      {/* Chats List - WhatsApp-style clean listing */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 120, flexGrow: 1 }}
+        contentContainerStyle={{ paddingBottom: 110, flexGrow: 1 }}
       >
         {filteredChats.length > 0 ? (
-          <View className="gap-2">
-            {filteredChats.map((chat) => {
+          <View className="bg-white">
+            {filteredChats.map((chat, idx) => {
               const isConcierge = chat.type === 'concierge';
+              const isLast = idx === filteredChats.length - 1;
 
               return (
                 <TouchableOpacity
                   key={chat.id}
-                  activeOpacity={0.7}
+                  activeOpacity={0.65}
                   onPress={() => {
                     if (isConcierge) {
-                      // Navigate directly to Sessions/Bookings screen with completed section active
                       router.push({
                         pathname: '/(tabs)/bookings' as any,
                         params: { filter: 'completed' }
@@ -330,31 +326,22 @@ export default function MessagesScreen() {
                       params: { id: targetId, name: chat.name }
                     });
                   }}
-                  className={`py-3.5 px-3.5 rounded-2xl flex-row items-center gap-3.5 ${
-                    isConcierge
-                      ? 'bg-rose-50/70 border border-rose-100 active:bg-rose-100/60'
-                      : 'bg-white/80 border border-zinc-150/60 active:bg-zinc-50'
+                  className={`flex-row items-center px-4 py-3 ${
+                    isConcierge ? 'bg-rose-50/40' : 'bg-white'
                   }`}
-                  style={isConcierge ? {
-                    backgroundColor: '#FFF1F2', // soft rose-50
-                    borderColor: '#FFE4E6',
-                  } : undefined}
                 >
-                  {/* Avatar or Concierge Badge */}
-                  <View className="relative">
+                  {/* Avatar */}
+                  <View className="relative mr-3.5">
                     {isConcierge ? (
-                      <View 
-                        className="w-[52px] h-[52px] rounded-2xl items-center justify-center border border-rose-200"
-                        style={{ backgroundColor: '#FFE4E6' }}
-                      >
-                        <Ionicons name="sparkles" size={24} color="#E11D48" />
+                      <View className="w-13 h-13 rounded-full bg-rose-100 border border-rose-200 items-center justify-center" style={{ width: 50, height: 50 }}>
+                        <Ionicons name="sparkles" size={22} color="#E11D48" />
                       </View>
                     ) : (
                       <>
                         <Image
                           source={{ uri: chat.avatar }}
-                          className="w-[52px] h-[52px] rounded-2xl bg-zinc-100 border border-zinc-200"
-                          style={{ width: 52, height: 52, borderRadius: 18 }}
+                          className="rounded-full bg-zinc-100"
+                          style={{ width: 50, height: 50 }}
                         />
                         {chat.isOnline && (
                           <View className="absolute right-0 bottom-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white" />
@@ -363,45 +350,37 @@ export default function MessagesScreen() {
                     )}
                   </View>
 
-                  {/* Chat Details */}
-                  <View className="flex-1">
-                    <View className="flex-row items-center justify-between mb-0.5">
-                      <View className="flex-row items-center gap-2 flex-1 pr-2">
-                        <Text 
-                          numberOfLines={1} 
-                          className={`text-base tracking-tight ${
-                            isConcierge 
-                              ? 'font-black text-zinc-950' 
-                              : chat.unread ? 'font-black text-zinc-950' : 'font-bold text-zinc-900'
-                          }`}
-                        >
-                          {chat.name}
+                  {/* Chat Content & WhatsApp-style bottom border */}
+                  <View className={`flex-1 justify-center py-0.5 ${!isLast ? 'border-b border-zinc-100' : ''}`}>
+                    <View className="flex-row items-center justify-between mb-1">
+                      <Text 
+                        numberOfLines={1} 
+                        className={`text-[16px] flex-1 pr-2 ${
+                          chat.unread ? 'font-bold text-zinc-950' : 'font-semibold text-zinc-900'
+                        }`}
+                      >
+                        {chat.name}
+                      </Text>
+                      {chat.time ? (
+                        <Text className={`text-xs ${chat.unread ? 'font-bold text-[#E11D48]' : 'text-zinc-400'}`}>
+                          {chat.time}
                         </Text>
-                      </View>
-                      <Text className="text-xs font-semibold text-zinc-400">
-                        {chat.time}
-                      </Text>
+                      ) : null}
                     </View>
-
-                    {chat.subtitle && (
-                      <Text numberOfLines={1} className="text-xs font-semibold mb-1 text-zinc-400">
-                        {chat.subtitle}
-                      </Text>
-                    )}
 
                     <View className="flex-row items-center justify-between">
                       <Text
                         numberOfLines={1}
-                        className={`text-sm flex-1 pr-2 ${
-                          isConcierge 
-                            ? 'text-zinc-600 font-medium' 
-                            : chat.unread ? 'font-bold text-zinc-900' : 'text-zinc-500 font-normal'
+                        className={`text-[14px] flex-1 pr-2 ${
+                          chat.unread ? 'font-semibold text-zinc-800' : 'text-zinc-500'
                         }`}
                       >
                         {chat.lastMessage}
                       </Text>
                       {chat.unread && (
-                        <View className="w-2.5 h-2.5 rounded-full bg-[#E11D48]" />
+                        <View className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#E11D48] items-center justify-center ml-2">
+                          <Text className="text-[10px] font-bold text-white">1</Text>
+                        </View>
                       )}
                     </View>
                   </View>
