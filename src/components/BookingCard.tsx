@@ -5,6 +5,7 @@ import { BookingStatusBadge } from './BookingStatusBadge';
 import { useBookingStore } from '../store/bookingStore';
 import { useRouter } from 'expo-router';
 import { LuxuryCard } from './LuxuryCard';
+import { resolveAvatarSource } from './AvatarImage';
 import { Feather } from '@expo/vector-icons';
 import { useUserStore } from '../store/userStore';
 import { SessionEngine } from '../services/SessionEngine';
@@ -407,9 +408,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
           >
             <View className="flex-row items-center gap-3 flex-1 pr-2">
               <Image
-                source={{
-                  uri: booking.trainerPhoto || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80',
-                }}
+                source={resolveAvatarSource(booking.trainerPhoto)}
                 className="w-10 h-10 rounded-full border border-zinc-200"
               />
               <View className="flex-1">
@@ -709,7 +708,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
             </View>
           ) : (
             <Image
-              source={{ uri: booking.trainerPhoto || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }}
+              source={resolveAvatarSource(booking.trainerPhoto)}
               className="w-12 h-12 rounded-full border border-zinc-150"
             />
           )}

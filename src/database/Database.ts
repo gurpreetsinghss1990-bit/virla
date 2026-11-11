@@ -2150,6 +2150,26 @@ class DatabaseClient {
 
     this.save();
     this.log('UpdateCoach', `Updated trainer record for ID ${coachId}`);
+
+    // Keep the photo snapshot on existing bookings in step with the trainer record,
+    // so old sessions stop showing a stale picture.
+    if (fields.photo !== undefined) {
+      let touched = false;
+      this.schema.bookings.forEach(b => {
+        if ((b.trainerId === coachId || b.coachId === coachId) && b.trainerPhoto !== fields.photo) {
+          b.trainerPhoto = fields.photo as string;
+          touched = true;
+        }
+      });
+      if (touched) this.save();
+      supabase
+        .from('bookings')
+        .update({ trainer_photo: fields.photo })
+        .eq('trainer_id', coachId)
+        .then(({ error }) => {
+          if (error) console.warn('[DB] booking trainer_photo sync failed:', error.message);
+        });
+    }
   }
 
   toggleFavouriteCoach(coachId: string): void {

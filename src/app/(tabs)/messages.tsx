@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBookingStore } from '../../store/bookingStore';
+import { resolveAvatarUri } from '../../components/AvatarImage';
 import { useUserStore } from '../../store/userStore';
 import { useChatStore } from '../../store/chatStore';
 import { Database } from '../../database/Database';
@@ -197,9 +198,7 @@ export default function MessagesScreen() {
         bookingId: targetBookingId,
         name: personName,
         subtitle: `${primaryBooking.workoutTitle || 'Fitness Training'} • ${primaryBooking.sessionType === 'COUPLE' ? 'Couple' : 'Solo'}`,
-        avatar: isTrainer 
-          ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'
-          : (primaryBooking.trainerPhoto || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=200&q=80'),
+        avatar: resolveAvatarUri(primaryBooking.trainerPhoto),
         lastMessage: lastMsg,
         time: lastTime,
         unread: hasUnread,

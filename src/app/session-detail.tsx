@@ -23,6 +23,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { useUserProfileStore } from '../store/userProfileStore';
 import { useUserStore } from '../store/userStore';
 import { formatToDDMMYYYY, getBookingISTDateRange, getDisplayWorkoutTitle } from '../utils/date';
+import { resolveAvatarSource } from '../components/AvatarImage';
 import { parseBookingAddress } from '../utils/LocationParser';
 
 function formatToIndianDate(dateStr: string): string {
@@ -1837,7 +1838,7 @@ export default function SessionDetailScreen() {
                 }}
               >
                 <View className="flex-row gap-4 items-start">
-                  <Image source={{ uri: (booking.trainerPhoto && booking.trainerPhoto.trim().length > 0) ? booking.trainerPhoto : 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80' }} className="w-14 h-14 rounded-full border border-zinc-200" />
+                  <Image source={resolveAvatarSource(booking.trainerPhoto)} className="w-14 h-14 rounded-full border border-zinc-200" />
                   <View className="flex-1">
                     <View className="flex-row items-center gap-1.5 flex-wrap">
                       <Text className="text-zinc-950 text-base font-extrabold">Coach {booking.trainerName}</Text>

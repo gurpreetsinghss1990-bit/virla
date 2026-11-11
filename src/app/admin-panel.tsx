@@ -12,6 +12,7 @@ import { supabase } from '../database/supabaseClient';
 import { assertUploadableFile } from '../utils/fileType';
 import { useBookingStore } from '../store/bookingStore';
 import { SupportChatModal } from '../components/SupportChatModal';
+import { resolveAvatarSource } from '../components/AvatarImage';
 
 const DEFAULT_FALLBACK_AVATAR = 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=300&q=80';
 const getSafeAvatarUri = (uri?: string | null) => {
@@ -1164,7 +1165,7 @@ export default function AdminPanelScreen() {
                         <View className="flex-row justify-between items-start">
                           <View className="flex-row items-center gap-3 flex-1 pr-3">
                             <Image 
-                              source={{ uri: coach.photo || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=300&q=80' }} 
+                              source={resolveAvatarSource(coach.photo, coach.gender)} 
                               className="w-11 h-11 rounded-full border border-zinc-200" 
                             />
                             <View className="flex-1">

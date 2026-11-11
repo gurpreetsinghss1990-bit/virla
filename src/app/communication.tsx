@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Alert, Anim
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
+import { resolveAvatarUri } from '../components/AvatarImage';
 import { useNotificationStore } from '../store/notificationStore';
 import { useWalletStore } from '../store/walletStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -400,7 +401,7 @@ export default function CommunicationScreen() {
     if (!name || name.toLowerCase().includes('no trainer') || name.toLowerCase().includes('admin')) {
       return 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
     }
-    return booking?.trainerPhoto || 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=200&q=80';
+    return resolveAvatarUri(booking?.trainerPhoto);
   }, [role, booking]);
 
   // ponytail: "Live" only when session is actually live (upcoming + inside 60-min window). No fake presence.

@@ -21,6 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { formatToDDMMYYYY } from '../../utils/date';
 import { Image as ExpoImage } from 'expo-image';
 import { MASTER_TRAINER_AVATAR_URI, MASTER_TRAINER_AVATAR_IMAGE } from '../../constants/masterTrainerAvatar';
+import { resolveAvatarSource } from '../../components/AvatarImage';
 import { uploadAvatarToStorage } from '../../utils/uploadAvatar';
 import { AvatarImage } from '../../components/AvatarImage';
 
@@ -1603,13 +1604,7 @@ export default function ProfileScreen() {
                 <View className="relative">
                   <View className="w-24 h-24 rounded-full border-[3px] border-[#E11D48] mb-3 shadow-xl bg-zinc-900 overflow-hidden">
                     <ExpoImage
-                      source={(() => {
-                        const raw = coach?.photo || coach?.avatar || user?.avatar;
-                        if (raw && typeof raw === 'string' && (raw.startsWith('http') || raw.startsWith('data:') || raw.startsWith('file://')) && !raw.includes('photo-1534528741775') && !raw.includes('photo-1544005313') && !raw.includes('photo-1568602471122') && !raw.includes('selfie.jpg')) {
-                          return { uri: raw };
-                        }
-                        return MASTER_TRAINER_AVATAR_IMAGE;
-                      })()}
+                      source={resolveAvatarSource(coach?.photo || coach?.avatar || user?.avatar, coach?.gender)}
                       style={{ width: '100%', height: '100%' }}
                       contentFit="cover"
                       cachePolicy="memory-disk"

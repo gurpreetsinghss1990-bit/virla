@@ -21,6 +21,7 @@ import { AssignmentEngine } from '../services/AssignmentEngine';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
 import { WORKOUT_CATEGORY_MAPPING, getCategoryFromTitle } from '../config/WorkoutMapping';
 import { MASTER_TRAINER_AVATAR_IMAGE } from '../constants/masterTrainerAvatar';
+import { resolveAvatarSource } from '../components/AvatarImage';
 
 // Error boundary to prevent MapView crash if native Google Maps API Key is uninitialized on older client builds
 class SafeMapWrapper extends React.Component<{ children: React.ReactNode; fallback?: React.ReactNode }, { hasError: boolean }> {
@@ -2525,13 +2526,7 @@ export default function BookingScreen() {
                             {favoriteCoaches.map((coach) => {
                               const isSelected = selectedTrainerId === coach.id;
                               // Image source matching trainer's own profile page (handles master trainer profile image correctly)
-                              const imageSource = (() => {
-                                const raw = coach.photo;
-                                if (raw && typeof raw === 'string' && (raw.startsWith('http') || raw.startsWith('data:')) && !raw.includes('photo-1534528741775') && !raw.includes('photo-1544005313') && !raw.includes('photo-1568602471122') && !raw.includes('selfie.jpg')) {
-                                  return { uri: raw };
-                                }
-                                return MASTER_TRAINER_AVATAR_IMAGE;
-                              })();
+                              const imageSource = resolveAvatarSource(coach.photo, coach.gender);
 
                               return (
                                 <TouchableOpacity

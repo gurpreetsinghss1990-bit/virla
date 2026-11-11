@@ -1,6 +1,6 @@
 import { Image, type ImageProps } from 'expo-image';
 import { useState } from 'react';
-import { MASTER_TRAINER_AVATAR_IMAGE } from '../constants/masterTrainerAvatar';
+import { MASTER_TRAINER_AVATAR_IMAGE, MASTER_TRAINER_AVATAR_URI } from '../constants/masterTrainerAvatar';
 
 export const FEMALE_DEFAULT_AVATAR_URI =
   'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=350&q=80';
@@ -32,6 +32,12 @@ export function resolveAvatarSource(rawAvatar?: string | null, gender?: string) 
     return { uri: raw };
   }
   return defaultAvatarSource(g);
+}
+
+/** Same rules as resolveAvatarSource, but always returns a string URI (for posters/video). */
+export function resolveAvatarUri(rawAvatar?: string | null, gender?: string) {
+  const source = resolveAvatarSource(rawAvatar, gender);
+  return typeof source === 'number' ? MASTER_TRAINER_AVATAR_URI : source.uri;
 }
 
 type AvatarImageProps = Omit<ImageProps, 'source'> & {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { Coach } from '../types';
+import { resolveAvatarSource } from './AvatarImage';
 
 interface CoachCardProps {
   coach: Coach;
@@ -16,7 +17,7 @@ export function CoachCard({ coach, onPress }: CoachCardProps) {
     >
       {/* Coach Image */}
       <Image
-        source={{ uri: coach.photo }}
+        source={resolveAvatarSource(coach.photo, coach.gender)}
         className="w-16 h-16 rounded-2xl border border-zinc-50 mr-4"
       />
 

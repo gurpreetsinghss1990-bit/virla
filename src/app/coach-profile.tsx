@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCoachStore } from '../store/coachStore';
 import { Ionicons } from '@expo/vector-icons';
+import { resolveAvatarSource } from '../components/AvatarImage';
 
 export default function CoachProfileScreen() {
   const router = useRouter();
@@ -65,7 +66,7 @@ export default function CoachProfileScreen() {
         {/* Large Profile Image */}
         <View className="w-full aspect-[16/12] relative bg-zinc-100">
           <Image
-            source={{ uri: coach.photo }}
+            source={resolveAvatarSource(coach.photo, coach.gender)}
             className="w-full h-full"
             resizeMode="cover"
           />
