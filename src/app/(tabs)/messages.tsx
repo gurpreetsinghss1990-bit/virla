@@ -332,24 +332,20 @@ export default function MessagesScreen() {
                   }}
                   className={`py-3.5 px-3.5 rounded-2xl flex-row items-center gap-3.5 ${
                     isConcierge
-                      ? 'bg-zinc-950 border border-zinc-800'
+                      ? 'bg-rose-50/70 border border-rose-100 active:bg-rose-100/60'
                       : 'bg-white/80 border border-zinc-150/60 active:bg-zinc-50'
                   }`}
                   style={isConcierge ? {
-                    backgroundColor: '#09090b',
-                    shadowColor: '#000000',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.12,
-                    shadowRadius: 8,
-                    elevation: 3,
+                    backgroundColor: '#FFF1F2', // soft rose-50
+                    borderColor: '#FFE4E6',
                   } : undefined}
                 >
                   {/* Avatar or Concierge Badge */}
                   <View className="relative">
                     {isConcierge ? (
                       <View 
-                        className="w-[52px] h-[52px] rounded-2xl bg-zinc-900 border border-zinc-700 items-center justify-center"
-                        style={{ backgroundColor: '#18181B' }}
+                        className="w-[52px] h-[52px] rounded-2xl items-center justify-center border border-rose-200"
+                        style={{ backgroundColor: '#FFE4E6' }}
                       >
                         <Ionicons name="sparkles" size={24} color="#E11D48" />
                       </View>
@@ -375,25 +371,20 @@ export default function MessagesScreen() {
                           numberOfLines={1} 
                           className={`text-base tracking-tight ${
                             isConcierge 
-                              ? 'font-black text-white' 
+                              ? 'font-black text-zinc-950' 
                               : chat.unread ? 'font-black text-zinc-950' : 'font-bold text-zinc-900'
                           }`}
                         >
                           {chat.name}
                         </Text>
-                        {isConcierge && (
-                          <View className="bg-rose-500/20 px-2 py-0.5 rounded-full border border-rose-500/30">
-                            <Text className="text-[#FB7185] text-[9px] font-black uppercase tracking-wider">Priority</Text>
-                          </View>
-                        )}
                       </View>
-                      <Text className={`text-xs font-semibold ${isConcierge ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                      <Text className="text-xs font-semibold text-zinc-400">
                         {chat.time}
                       </Text>
                     </View>
 
                     {chat.subtitle && (
-                      <Text numberOfLines={1} className={`text-xs font-semibold mb-1 ${isConcierge ? 'text-zinc-400' : 'text-zinc-400'}`}>
+                      <Text numberOfLines={1} className="text-xs font-semibold mb-1 text-zinc-400">
                         {chat.subtitle}
                       </Text>
                     )}
@@ -403,7 +394,7 @@ export default function MessagesScreen() {
                         numberOfLines={1}
                         className={`text-sm flex-1 pr-2 ${
                           isConcierge 
-                            ? 'text-zinc-400 font-medium' 
+                            ? 'text-zinc-600 font-medium' 
                             : chat.unread ? 'font-bold text-zinc-900' : 'text-zinc-500 font-normal'
                         }`}
                       >
@@ -411,9 +402,6 @@ export default function MessagesScreen() {
                       </Text>
                       {chat.unread && (
                         <View className="w-2.5 h-2.5 rounded-full bg-[#E11D48]" />
-                      )}
-                      {isConcierge && (
-                        <Feather name="chevron-right" size={16} color="#71717A" />
                       )}
                     </View>
                   </View>
