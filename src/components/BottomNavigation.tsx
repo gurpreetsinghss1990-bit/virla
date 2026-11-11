@@ -183,6 +183,7 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
                     onPress={handlePlusPress}
                     className="w-10 h-10 rounded-full bg-[#E11D48] items-center justify-center"
                     style={{
+                      backgroundColor: '#E11D48',
                       minHeight: 40,
                       minWidth: 40,
                       shadowColor: '#E11D48',
@@ -228,6 +229,13 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     zIndex: 51,
+    borderRadius: 26,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 4,
   },
   navContainer: {
     borderRadius: 26,
@@ -238,11 +246,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     borderWidth: 0,
     position: 'relative',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 4,
   },
   redDot: {
     position: 'absolute',
@@ -254,11 +257,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#E11D48',
     borderWidth: 1,
     borderColor: '#FFFFFF',
-    shadowColor: '#E11D48',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.35,
-    shadowRadius: 2,
-    elevation: 2,
   },
 });
 

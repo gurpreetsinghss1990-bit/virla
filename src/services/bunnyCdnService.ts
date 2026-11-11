@@ -30,6 +30,9 @@ export const BUNNY_CDN_ASSETS = {
   TRAINER_IMAGE_PARTH: `${BUNNY_CDN_BASE_URL}/Trainer%20Videos/parth_thakur_transparent.webp`,
 
   WORKOUT_BG_STRENGTH: `${BUNNY_CDN_BASE_URL}/Trainer%20Videos/strength_bg.mp4`,
+  WORKOUT_BG_YOGA: `${BUNNY_CDN_BASE_URL}/Trainer%20Videos/yoga_bg.mp4`,
+  WORKOUT_BG_RHYTHM: `${BUNNY_CDN_BASE_URL}/Trainer%20Videos/rhythm_bg.mp4`,
+  WORKOUT_BG_BOXING: `${BUNNY_CDN_BASE_URL}/Trainer%20Videos/boxing_bg.mp4`,
 };
 
 /**

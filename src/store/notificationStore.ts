@@ -99,6 +99,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       Database.deleteNotifications(userId, ids);
     }
   },
+  deleteNotifications: (ids) => {
+    const userId = Database.getCurrentUserId();
+    if (userId && ids.length > 0) {
+      Database.deleteNotifications(userId, ids);
+      get().syncFromDB();
+    }
+  },
   syncFromDB: () => {
     const userId = Database.getCurrentUserId();
     if (userId) {

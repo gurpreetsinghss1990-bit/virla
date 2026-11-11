@@ -129,7 +129,7 @@ export function CustomAlertTopNotification() {
         >
           <View
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.94)',
+              backgroundColor: '#FFFFFF',
               borderRadius: 22,
               paddingVertical: 18,
               paddingHorizontal: 20,

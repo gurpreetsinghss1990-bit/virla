@@ -38,6 +38,9 @@ import { BackgroundVideoLoop } from '../../components/BackgroundVideoLoop';
 import { BUNNY_CDN_ASSETS } from '../../services/bunnyCdnService';
 
 const WORKOUT_BG_STRENGTH = BUNNY_CDN_ASSETS.WORKOUT_BG_STRENGTH;
+const WORKOUT_BG_YOGA = BUNNY_CDN_ASSETS.WORKOUT_BG_YOGA;
+const WORKOUT_BG_RHYTHM = BUNNY_CDN_ASSETS.WORKOUT_BG_RHYTHM;
+const WORKOUT_BG_BOXING = BUNNY_CDN_ASSETS.WORKOUT_BG_BOXING;
 
 // Top Performing Trainer Assets (Served via ultra-fast BunnyCDN with edge caching)
 const TRAINER_VIDEO_KALPESH = BUNNY_CDN_ASSETS.TRAINER_VIDEO_KALPESH;
@@ -1278,6 +1281,7 @@ export default function HomeScreen() {
               onPress={() => navigateSafely({ pathname: '/session-detail', params: { id: activeBooking.id } })}
               className="mx-6 mt-3 mb-2 bg-zinc-950 border border-zinc-800 rounded-[22px] flex-row items-center justify-between p-4 shadow-lg"
               style={{
+                backgroundColor: '#09090b',
                 shadowColor: '#000000',
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.18,
@@ -1291,6 +1295,7 @@ export default function HomeScreen() {
                   <View 
                     className="w-3 h-3 rounded-full bg-[#E11D48]"
                     style={{
+                      backgroundColor: '#E11D48',
                       shadowColor: '#E11D48',
                       shadowOffset: { width: 0, height: 0 },
                       shadowOpacity: 0.9,
@@ -1368,8 +1373,9 @@ export default function HomeScreen() {
 
               {/* Recovery Hero Card */}
               <View 
-                className="w-full bg-[#FFF1F1] rounded-[32px] p-6 shadow-md relative overflow-hidden border border-[#FFE4E6] min-h-[250px]"
                 style={{
+                  backgroundColor: '#FFF1F1',
+                  borderRadius: 32,
                   shadowColor: '#E11D48',
                   shadowOffset: { width: 0, height: 10 },
                   shadowOpacity: 0.04,
@@ -1377,6 +1383,7 @@ export default function HomeScreen() {
                   elevation: 4,
                 }}
               >
+                <View className="w-full bg-[#FFF1F1] rounded-[32px] p-6 relative overflow-hidden border border-[#FFE4E6] min-h-[250px]">
                 {/* Athlete Image on the right */}
                 <View className="absolute right-0 top-0 bottom-0 w-[52%] z-0">
                   <Image 
@@ -1454,6 +1461,7 @@ export default function HomeScreen() {
                     onPress={() => navigateSafely('/booking')}
                     className="w-full h-14 bg-[#E11D48] rounded-[28px] justify-between items-center px-5 flex-row"
                     style={{
+                      backgroundColor: '#E11D48',
                       minHeight: 56,
                       borderRadius: 28,
                       shadowColor: '#E11D48',
@@ -1473,6 +1481,7 @@ export default function HomeScreen() {
                       <Feather name="chevron-right" size={14} color="#E11D48" />
                     </View>
                   </TouchableOpacity>
+                </View>
                 </View>
               </View>
 
@@ -1495,9 +1504,9 @@ export default function HomeScreen() {
                 >
                   {[
                     { id: 'strength', title: 'Strength', sub: 'Build & Tone', emoji: '🏋️', colors: ['#FF6B6B', '#E11D48'], video: WORKOUT_BG_STRENGTH },
-                    { id: 'yoga', title: 'Yoga', sub: 'Mind & Body', emoji: '🧘', colors: ['#C084FC', '#7C3AED'] },
-                    { id: 'rhythm', title: 'Rhythm Dance', sub: 'Cardio & Dance', emoji: '💃', colors: ['#F472B6', '#BE185D'] },
-                    { id: 'boxing', title: 'Boxing', sub: 'Power & Endurance', emoji: '🥊', colors: ['#FBBF24', '#EA580C'] }
+                    { id: 'yoga', title: 'Yoga', sub: 'Mind & Body', emoji: '🧘', colors: ['#C084FC', '#7C3AED'], video: WORKOUT_BG_YOGA },
+                    { id: 'rhythm', title: 'Rhythm Dance', sub: 'Cardio & Dance', emoji: '💃', colors: ['#F472B6', '#BE185D'], video: WORKOUT_BG_RHYTHM },
+                    { id: 'boxing', title: 'Boxing', sub: 'Power & Endurance', emoji: '🥊', colors: ['#FBBF24', '#EA580C'], video: WORKOUT_BG_BOXING }
                   ].map((item) => (
                     <TouchableOpacity
                       key={item.id}
@@ -1510,8 +1519,16 @@ export default function HomeScreen() {
                           workoutName: item.title,
                         },
                       })}
-                      className="w-[140px] h-[150px] p-3.5 rounded-2xl relative overflow-hidden justify-between border border-white/20 shadow-sm"
+                      style={{
+                        borderRadius: 16,
+                        shadowColor: '#101828',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.04,
+                        shadowRadius: 6,
+                        elevation: 2,
+                      }}
                     >
+                      <View className="w-[140px] h-[150px] p-3.5 rounded-2xl relative overflow-hidden justify-between border border-white/20">
                       {/* Optional Background Video for Workout (e.g. Strength) */}
                       {item.video && (
                         <BackgroundVideoLoop source={item.video} />
@@ -1551,6 +1568,7 @@ export default function HomeScreen() {
                             <Feather name="chevron-right" size={10} color="white" />
                           </View>
                         </View>
+                      </View>
                       </View>
                     </TouchableOpacity>
                   ))}
@@ -1634,6 +1652,7 @@ export default function HomeScreen() {
                           <View 
                             className="absolute -top-1.5 -left-1.5 bg-white border border-zinc-100 px-1.5 py-0.5 rounded-lg items-center justify-center flex-row"
                             style={{
+                              backgroundColor: '#FFFFFF',
                               shadowColor: '#101828',
                               shadowOffset: { width: 0, height: 2 },
                               shadowOpacity: 0.03,
@@ -1904,8 +1923,9 @@ export default function HomeScreen() {
               <View className="gap-4">
                 <Text className="text-[#101828] text-[20px] font-semibold tracking-tight pl-1">AI Wellness Coach</Text>
                 <View 
-                  className="w-full bg-[#1F1135] rounded-[32px] p-6 shadow-md relative overflow-hidden border border-zinc-800"
                   style={{
+                    backgroundColor: '#1F1135',
+                    borderRadius: 32,
                     shadowColor: '#8B5CF6',
                     shadowOffset: { width: 0, height: 8 },
                     shadowOpacity: 0.15,
@@ -1913,6 +1933,7 @@ export default function HomeScreen() {
                     elevation: 4,
                   }}
                 >
+                  <View className="w-full bg-[#1F1135] rounded-[32px] p-6 relative overflow-hidden border border-zinc-800">
                   {/* Glowing Abstract Radar Wave on the right */}
                   <View className="absolute right-[-20px] top-[-10px] bottom-[-10px] w-[50%] z-0 items-center justify-center">
                     <Svg width="140" height="140" viewBox="0 0 100 100">
@@ -2002,6 +2023,7 @@ export default function HomeScreen() {
                       onPress={() => navigateSafely('/virla-ai')}
                       className="bg-[#E11D48] rounded-2xl py-3 px-4 flex-row items-center self-start gap-2.5 mt-1"
                       style={{
+                        backgroundColor: '#E11D48',
                         shadowColor: '#E11D48',
                         shadowOffset: { width: 0, height: 4 },
                         shadowOpacity: 0.2,
@@ -2018,6 +2040,7 @@ export default function HomeScreen() {
                     </TouchableOpacity>
                   </View>
                 </View>
+                </View>
               </View>
 
               {/* Upcoming Session Section */}
@@ -2033,6 +2056,7 @@ export default function HomeScreen() {
                     <View 
                       className="bg-white border border-[#E5E7EB] p-6 rounded-[32px] gap-4"
                       style={{
+                        backgroundColor: '#FFFFFF',
                         shadowColor: '#101828',
                         shadowOffset: { width: 0, height: 6 },
                         shadowOpacity: 0.04,
@@ -2120,6 +2144,7 @@ export default function HomeScreen() {
                             onPress={() => navigateSafely({ pathname: '/session-detail', params: { id: bookingData.id } })}
                             className="w-11 h-11 rounded-full bg-[#16C784] items-center justify-center"
                             style={{
+                              backgroundColor: '#16C784',
                               minWidth: 44,
                               minHeight: 44,
                               shadowColor: '#16C784',
@@ -2168,6 +2193,7 @@ export default function HomeScreen() {
                   <View 
                     className="bg-white border border-[#E5E7EB] p-8 rounded-[32px] items-center justify-center gap-3"
                     style={{
+                      backgroundColor: '#FFFFFF',
                       shadowColor: '#101828',
                       shadowOffset: { width: 0, height: 6 },
                       shadowOpacity: 0.04,
@@ -2288,6 +2314,7 @@ export default function HomeScreen() {
                   <View
                     className="bg-white border-2 border-rose-500/30 p-5 rounded-[28px] gap-4"
                     style={{
+                      backgroundColor: '#FFFFFF',
                       shadowColor: '#F43F5E',
                       shadowOffset: { width: 0, height: 6 },
                       shadowOpacity: 0.05,
@@ -2341,6 +2368,7 @@ export default function HomeScreen() {
                       onPress={() => navigateSafely({ pathname: '/session-detail', params: { id: activeSession.id } })}
                       className="w-full bg-rose-500 py-3.5 rounded-2xl items-center justify-center flex-row gap-2"
                       style={{
+                        backgroundColor: '#F43F5E',
                         shadowColor: '#E11D48',
                         shadowOffset: { width: 0, height: 4 },
                         shadowOpacity: 0.15,
@@ -2368,6 +2396,7 @@ export default function HomeScreen() {
                     <View
                       className="bg-zinc-950 p-5 rounded-[28px] border border-zinc-800 gap-4"
                       style={{
+                        backgroundColor: '#09090b',
                         shadowColor: '#000000',
                         shadowOffset: { width: 0, height: 12 },
                         shadowOpacity: 0.3,
@@ -2532,6 +2561,7 @@ export default function HomeScreen() {
                   <View 
                     className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-2 items-center justify-center text-center"
                     style={{
+                      backgroundColor: '#FFFFFF',
                       shadowColor: '#101828',
                       shadowOffset: { width: 0, height: 4 },
                       shadowOpacity: 0.02,
@@ -2573,6 +2603,7 @@ export default function HomeScreen() {
                         onPress={isCancelledByUser ? undefined : () => navigateSafely({ pathname: '/session-detail', params: { id: booking.id } })}
                         className={`bg-white border border-[#E5E7EB] p-4 rounded-2xl flex-row justify-between items-center ${isCancelledByUser ? 'opacity-70' : ''}`}
                         style={{
+                          backgroundColor: '#FFFFFF',
                           shadowColor: '#101828',
                           shadowOffset: { width: 0, height: 3 },
                           shadowOpacity: 0.02,
@@ -2664,6 +2695,7 @@ export default function HomeScreen() {
                   <View 
                     className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-3.5"
                     style={{
+                      backgroundColor: '#FFFFFF',
                       shadowColor: '#101828',
                       shadowOffset: { width: 0, height: 4 },
                       shadowOpacity: 0.02,

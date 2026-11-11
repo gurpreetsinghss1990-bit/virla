@@ -183,8 +183,9 @@ export function TopToastNotification() {
       <TouchableOpacity
         activeOpacity={0.92}
         onPress={handlePress}
-        className="overflow-hidden rounded-[24px] bg-[#111319] border border-white/10"
         style={{
+          borderRadius: 24,
+          backgroundColor: '#111319',
           shadowColor: '#000000',
           shadowOffset: { width: 0, height: 10 },
           shadowOpacity: 0.45,
@@ -192,6 +193,7 @@ export function TopToastNotification() {
           elevation: 12,
         }}
       >
+        <View className="overflow-hidden rounded-[24px] bg-[#111319] border border-white/10">
         <View className="p-4 flex-row items-center gap-3.5">
           {/* Accent icon badge */}
           <View
@@ -258,6 +260,7 @@ export function TopToastNotification() {
               backgroundColor: theme.iconColor,
             }}
           />
+        </View>
         </View>
       </TouchableOpacity>
     </Animated.View>

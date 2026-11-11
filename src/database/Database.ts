@@ -3715,6 +3715,14 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     }
   }
 
+  deleteNotifications(userId: string, ids: string[]): void {
+    if (!ids || ids.length === 0) return;
+    const idSet = new Set(ids);
+    this.schema.notifications = this.schema.notifications.filter(n => !idSet.has(n.id));
+    supabase.from('notifications').delete().in('id', ids).then();
+    this.save();
+  }
+
   // Chats & Chat Messages
   getChats(userId: string): any[] {
     return [

@@ -18,7 +18,7 @@ interface TimelineGroup {
 export default function NotificationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { notifications, markAsRead, deleteNotifications, unreadCount, syncFromDB } = useNotificationStore();
+  const { notifications, markAsRead, deleteNotification, deleteNotifications, unreadCount, syncFromDB } = useNotificationStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [pageSize, setPageSize] = useState(INITIAL_PAGE_SIZE);

@@ -52,7 +52,7 @@ export async function bootstrapApp(): Promise<void> {
     setTimeout(() => {
       console.warn('App bootstrap timed out, continuing startup anyway.');
       resolve();
-    }, 3000)
+    }, 8000)
   );
 
   try {
@@ -63,7 +63,6 @@ export async function bootstrapApp(): Promise<void> {
 }
 
 async function initializeFirebase(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
   console.log('Firebase initialized successfully.');
 }
 
@@ -103,11 +102,9 @@ async function restoreAuthentication(): Promise<void> {
 }
 
 async function preloadOnboardingAssets(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 400));
   console.log('Onboarding assets preloaded successfully.');
 }
 
 async function fetchRemoteConfig(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 200));
   console.log('Remote config fetched successfully.');
 }
