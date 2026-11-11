@@ -3237,7 +3237,7 @@ INSERT INTO public.trainer_workout_assignments VALUES ('twa-demo-boxing', 'demo.
 -- Data for Name: trainers; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.trainers VALUES ('demo.trainer', 'Demo Trainer', 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80', '10 years', 4.00, 'Elite Master Trainer', 10, 'Strength, Cardio, Mind & Body, Conditioning, Boxing', '{English,Hindi}', 'Local development demo trainer account certified in all 5 workout specialties.', 0, 10, NULL, NULL, NULL, NULL, NULL, 'Elite', 0, 3, 'not_eligible', 100.00, 100.00, 100.00, 1200, true, '{"ACE Certified Personal Trainer"}', '{"Elite Coach of the Year"}', '[]', '{}', false, '{"online": true, "radiusKm": 30, "categories": ["Strength", "Cardio", "Mind & Body", "Conditioning", "Boxing"], "maxDailySessions": 5, "operatingLocationStatus": "verified"}', 'Juhu Beach, Mumbai, Maharashtra, India', 19.1013, 72.8258, NULL, 'verified', 15, NULL, 'male');
+INSERT INTO public.trainers VALUES ('demo.trainer', 'Demo Trainer', '''', '10 years', 4.00, 'Elite Master Trainer', 10, 'Strength, Cardio, Mind & Body, Conditioning, Boxing', '{English,Hindi}', 'Local development demo trainer account certified in all 5 workout specialties.', 0, 10, NULL, NULL, NULL, NULL, NULL, 'Elite', 0, 3, 'not_eligible', 100.00, 100.00, 100.00, 1200, true, '{"ACE Certified Personal Trainer"}', '{"Elite Coach of the Year"}', '[]', '{}', false, '{"online": true, "radiusKm": 30, "categories": ["Strength", "Cardio", "Mind & Body", "Conditioning", "Boxing"], "maxDailySessions": 5, "operatingLocationStatus": "verified"}', 'Juhu Beach, Mumbai, Maharashtra, India', 19.1013, 72.8258, NULL, 'verified', 15, NULL, 'male');
 
 
 --
@@ -3254,7 +3254,7 @@ INSERT INTO public.user_profiles VALUES ('prof-testclient', 'u-testclient', 26, 
 
 INSERT INTO public.users VALUES ('u-testadmin', 'Test Admin', '911234567892', 'admin1234567892@virla.in', 'secure-hash-1450575459-6', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80', 'admin', 'active', '23/08/2026', '', 'Simulated Seed', '{"offers": true, "bookingUpdates": true, "trainerMessages": true, "membershipAlerts": true}', 'complete');
 INSERT INTO public.users VALUES ('u-testclient', 'Virral P', '', 'client1234567891@virla.in', 'secure-hash-1450575459-6', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80', 'customer', 'active', '23/08/2026', '', 'Simulated Seed', '{"offers": true, "bookingUpdates": true, "trainerMessages": true, "membershipAlerts": true}', 'complete');
-INSERT INTO public.users VALUES ('demo.trainer', 'Demo Trainer', '919999999999', 'demo.trainer@virla.local', '$2a$06$WQiElWxAf2qiiTtVniiZJeWHijPaCeMWIF8RZ/JXFq/RLC89bc0tW', 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80', 'trainer', 'active', '23/08/2026', '', 'Simulated Local Seed', '{"offers": false, "bookingUpdates": true, "trainerMessages": true, "membershipAlerts": true}', 'complete');
+INSERT INTO public.users VALUES ('demo.trainer', 'Demo Trainer', '919999999999', 'demo.trainer@virla.local', '$2a$06$WQiElWxAf2qiiTtVniiZJeWHijPaCeMWIF8RZ/JXFq/RLC89bc0tW', '''', 'trainer', 'active', '23/08/2026', '', 'Simulated Local Seed', '{"offers": false, "bookingUpdates": true, "trainerMessages": true, "membershipAlerts": true}', 'complete');
 
 
 --

@@ -24,7 +24,7 @@ BEGIN
     '919999999999',
     'demo.trainer@virla.local',
     crypt('VirlaTrainer@123', gen_salt('bf')),
-    'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80',
+    '''',
     'trainer',
     'active',
     to_char(now(), 'DD/MM/YYYY'),
@@ -46,7 +46,7 @@ BEGIN
   ) VALUES (
     'demo.trainer',
     'Demo Trainer',
-    'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80',
+    '''',
     '10 years',
     4.0,
     'Elite Master Trainer',
