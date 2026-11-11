@@ -241,9 +241,11 @@ export function SupportChatModal({
           <Text className="text-zinc-900 text-xs font-black">
             Reason: {ticket.reason}
           </Text>
-          <Text className="text-zinc-600 text-[10px] font-semibold">
-            Target Resolution: <Text className="font-bold text-zinc-900">{ticket.preferred_resolution}</Text>
-          </Text>
+          {ticket.preferred_resolution ? (
+            <Text className="text-zinc-600 text-[10px] font-semibold">
+              Target Resolution: <Text className="font-bold text-zinc-900">{ticket.preferred_resolution}</Text>
+            </Text>
+          ) : null}
         </View>
 
         <KeyboardAvoidingView

@@ -2363,10 +2363,12 @@ export default function AdminPanelScreen() {
                           <Text className="text-zinc-450 text-[9px] font-bold uppercase">Reason</Text>
                           <Text className="text-zinc-900 text-[10px] font-black">{t.reason}</Text>
                         </View>
-                        <View className="flex-row justify-between">
-                          <Text className="text-zinc-450 text-[9px] font-bold uppercase">Target Resolution</Text>
-                          <Text className="text-rose-600 text-[10px] font-black">{t.preferred_resolution}</Text>
-                        </View>
+                        {t.preferred_resolution ? (
+                          <View className="flex-row justify-between">
+                            <Text className="text-zinc-450 text-[9px] font-bold uppercase">Target Resolution</Text>
+                            <Text className="text-rose-600 text-[10px] font-black">{t.preferred_resolution}</Text>
+                          </View>
+                        ) : null}
                         {t.booking_id ? (
                           <View className="flex-row justify-between">
                             <Text className="text-zinc-450 text-[9px] font-bold uppercase">Linked Booking ID</Text>

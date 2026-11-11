@@ -23,7 +23,6 @@ export function RaiseSupportTicketModal({
 }: RaiseSupportTicketModalProps) {
   const insets = useSafeAreaInsets();
   const [selectedReason, setSelectedReason] = useState<string>('');
-  const [selectedResolution, setSelectedResolution] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -48,23 +47,12 @@ export function RaiseSupportTicketModal({
     'Other feedback'
   ];
 
-  const resolutionOptions = [
-    'Refund 1 Credit to Wallet',
-    'Connect Live with Senior Concierge',
-    'Reassign to New Certified Coach',
-    'Report Coach Disciplinary Review'
-  ];
-
   const reasonsList = isCompleted ? completedReasons : cancellationReasons;
   const categoryTitle = isCompleted ? 'Completed Session Feedback' : 'Cancelled Session Dispute';
 
   const handleSubmit = async () => {
     if (!selectedReason) {
       Alert.alert('Selection Required', 'Please select the primary reason for your request.');
-      return;
-    }
-    if (!selectedResolution) {
-      Alert.alert('Selection Required', 'Please select your preferred resolution.');
       return;
     }
 
@@ -75,15 +63,13 @@ export function RaiseSupportTicketModal({
         bookingId: booking?.id,
         category: categoryTitle,
         reason: selectedReason,
-        description: description.trim() || `Client selected ${selectedReason} with preferred resolution: ${selectedResolution}.`,
-        preferredResolution: selectedResolution
+        description: description.trim() || `Client reported: ${selectedReason}.`
       });
 
       setIsSubmitting(false);
       onClose();
       // Reset form
       setSelectedReason('');
-      setSelectedResolution('');
       setDescription('');
       onTicketCreated(ticket);
     } catch (err: any) {
@@ -176,46 +162,10 @@ export function RaiseSupportTicketModal({
             </View>
           </View>
 
-          {/* Question 2: Preferred Resolution */}
-          <View className="mb-6">
-            <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider mb-1.5">
-              2. How would you like us to resolve this? <Text className="text-rose-500">*</Text>
-            </Text>
-            <Text className="text-zinc-500 text-[11px] font-semibold mb-3">
-              Choose your ideal outcome so concierge team can act immediately.
-            </Text>
-            <View className="gap-2">
-              {resolutionOptions.map((res) => {
-                const isSelected = selectedResolution === res;
-                return (
-                  <TouchableOpacity
-                    key={res}
-                    activeOpacity={0.8}
-                    onPress={() => setSelectedResolution(res)}
-                    className={`p-3.5 rounded-xl border flex-row items-center justify-between ${
-                      isSelected 
-                        ? 'bg-rose-500 border-rose-500' 
-                        : 'bg-zinc-50 border-zinc-200/70'
-                    }`}
-                  >
-                    <Text className={`text-xs font-bold flex-1 ${isSelected ? 'text-white' : 'text-zinc-800'}`}>
-                      {res}
-                    </Text>
-                    <View className={`w-4 h-4 rounded-full border items-center justify-center ${
-                      isSelected ? 'border-white bg-white' : 'border-zinc-300'
-                    }`}>
-                      {isSelected && <View className="w-2 h-2 rounded-full bg-rose-500" />}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
           {/* Question 3: Additional Notes */}
           <View className="mb-6">
             <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider mb-1.5">
-              3. Additional Notes (Optional)
+              2. Additional Notes (Optional)
             </Text>
             <Text className="text-zinc-500 text-[11px] font-semibold mb-2">
               Provide any extra details or specific requests for the admin.

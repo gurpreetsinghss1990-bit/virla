@@ -3402,7 +3402,6 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     category: string;
     reason: string;
     description: string;
-    preferredResolution?: string;
   }): Promise<SupportTicket> {
     const { data: userRow } = await supabase
       .from('users')
@@ -3418,7 +3417,6 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       category: ticket.category,
       reason: ticket.reason,
       description: ticket.description,
-      preferred_resolution: ticket.preferredResolution || 'Resolution via Support Chat',
       status: 'OPEN'
     };
 
