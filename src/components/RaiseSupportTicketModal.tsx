@@ -86,118 +86,103 @@ export function RaiseSupportTicketModal({
       onRequestClose={onClose}
     >
       <View style={{ flex: 1, backgroundColor: '#FFFFFF', paddingTop: insets.top }}>
-        {/* Header */}
-        <View className="px-6 py-4 border-b border-zinc-100 flex-row items-center justify-between">
+        <View className="px-5 py-3.5 border-b border-zinc-100 flex-row items-center justify-between">
           <View>
-            <View className="flex-row items-center gap-1.5 mb-0.5">
-              <View className="w-2 h-2 rounded-full bg-rose-500" />
-              <Text className="text-rose-600 text-[10px] font-black uppercase tracking-wider">
-                Virla Concierge Support
-              </Text>
-            </View>
-            <Text className="text-zinc-900 text-lg font-black tracking-tight">
-              Report Issue / Support
+            <Text className="text-zinc-400 text-[10px] font-medium mb-0.5">
+              Virla Concierge
+            </Text>
+            <Text className="text-zinc-900 text-base font-semibold">
+              Report an issue
             </Text>
           </View>
           <TouchableOpacity
             onPress={onClose}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center"
           >
             <Ionicons name="close" size={18} color="#18181B" />
           </TouchableOpacity>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6" contentContainerStyle={{ paddingBottom: 60 }}>
-          {/* Booking Context Pill */}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          className="flex-1 px-5"
+          contentContainerStyle={{ paddingTop: 16, paddingBottom: 48 }}
+          keyboardShouldPersistTaps="handled"
+        >
           {booking && (
-            <View className="bg-zinc-50 border border-zinc-200/80 p-3.5 rounded-2xl mb-6">
-              <View className="flex-row justify-between items-center mb-1">
-                <Text className="text-zinc-400 text-[9px] font-black uppercase tracking-wider">Linked Session</Text>
-                <View className="bg-zinc-200/60 px-2 py-0.5 rounded-md">
-                  <Text className="text-zinc-700 text-[8px] font-black uppercase">{booking.status}</Text>
-                </View>
-              </View>
-              <Text className="text-zinc-900 text-xs font-black">
-                {booking.workoutTitle} with Coach {booking.trainerName || 'Assigned Trainer'}
+            <View className="bg-zinc-50 border border-zinc-200/70 rounded-xl px-3 py-2.5 mb-5">
+              <Text className="text-zinc-800 text-[13px] font-medium" numberOfLines={1}>
+                {booking.workoutTitle} · Coach {booking.trainerName || 'Assigned Trainer'}
               </Text>
-              <Text className="text-zinc-500 text-[10px] font-semibold mt-0.5">
-                📅 {formatToDDMMYYYY(booking.date)} · ⏱️ {booking.time} · ID: {booking.id}
+              <Text className="text-zinc-500 text-[11px] mt-0.5">
+                {formatToDDMMYYYY(booking.date)} · {booking.time} · {booking.status}
               </Text>
             </View>
           )}
 
-          {/* Question 1: Reason Selection */}
-          <View className="mb-6">
-            <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider mb-1.5">
-              1. What went wrong? <Text className="text-rose-500">*</Text>
-            </Text>
-            <Text className="text-zinc-500 text-[11px] font-semibold mb-3">
-              Select the primary reason for this support inquiry.
-            </Text>
-            <View className="gap-2">
-              {reasonsList.map((r) => {
-                const isSelected = selectedReason === r;
-                return (
-                  <TouchableOpacity
-                    key={r}
-                    activeOpacity={0.8}
-                    onPress={() => setSelectedReason(r)}
-                    className={`p-3.5 rounded-xl border flex-row items-center justify-between ${
-                      isSelected 
-                        ? 'bg-zinc-950 border-zinc-950' 
-                        : 'bg-zinc-50 border-zinc-200/70'
-                    }`}
-                  >
-                    <Text className={`text-xs font-bold flex-1 ${isSelected ? 'text-white' : 'text-zinc-800'}`}>
-                      {r}
-                    </Text>
-                    <View className={`w-4 h-4 rounded-full border items-center justify-center ${
-                      isSelected ? 'border-white bg-white' : 'border-zinc-300'
-                    }`}>
-                      {isSelected && <View className="w-2 h-2 rounded-full bg-zinc-950" />}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+          <Text className="text-zinc-900 text-[13px] font-semibold mb-1">
+            1. What went wrong? <Text className="text-rose-500">*</Text>
+          </Text>
+          <Text className="text-zinc-500 text-[11px] mb-2.5">
+            Select the primary reason.
+          </Text>
+          <View className="gap-1.5 mb-5">
+            {reasonsList.map((r) => {
+              const isSelected = selectedReason === r;
+              return (
+                <TouchableOpacity
+                  key={r}
+                  activeOpacity={0.7}
+                  onPress={() => setSelectedReason(r)}
+                  className={`px-3 py-2.5 rounded-lg border flex-row items-center justify-between ${
+                    isSelected ? 'bg-zinc-100 border-zinc-900' : 'bg-white border-zinc-200'
+                  }`}
+                >
+                  <Text className={`text-[13px] flex-1 pr-3 ${isSelected ? 'text-zinc-900 font-medium' : 'text-zinc-700'}`}>
+                    {r}
+                  </Text>
+                  <View className={`w-4 h-4 rounded-full border items-center justify-center ${
+                    isSelected ? 'border-zinc-900' : 'border-zinc-300'
+                  }`}>
+                    {isSelected && <View className="w-2 h-2 rounded-full bg-zinc-900" />}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
-          {/* Question 3: Additional Notes */}
-          <View className="mb-6">
-            <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider mb-1.5">
-              2. Additional Notes (Optional)
-            </Text>
-            <Text className="text-zinc-500 text-[11px] font-semibold mb-2">
-              Provide any extra details or specific requests for the admin.
-            </Text>
-            <TextInput
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Explain what happened or any specific notes..."
-              placeholderTextColor="#9CA3AF"
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-              className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4 text-xs font-semibold text-zinc-900 min-h-[90px]"
-            />
-          </View>
+          <Text className="text-zinc-900 text-[13px] font-semibold mb-1">
+            2. Additional notes
+          </Text>
+          <Text className="text-zinc-500 text-[11px] mb-2">
+            Optional — anything else the team should know.
+          </Text>
+          <TextInput
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Explain what happened..."
+            placeholderTextColor="#A1A1AA"
+            multiline
+            textAlignVertical="top"
+            className="bg-white border border-zinc-200 rounded-xl p-3 text-[13px] text-zinc-900 min-h-[84px] mb-5"
+          />
 
-          {/* Submit Button */}
           <TouchableOpacity
             disabled={isSubmitting || !selectedReason}
             activeOpacity={0.8}
             onPress={handleSubmit}
-            className={`w-full py-4 rounded-2xl items-center justify-center flex-row gap-2 shadow-sm ${
-              isSubmitting || !selectedReason ? 'bg-[#101828]/40' : 'bg-[#101828]'
+            className={`w-full py-3 rounded-xl items-center justify-center flex-row gap-2 ${
+              isSubmitting || !selectedReason ? 'bg-zinc-300' : 'bg-[#101828]'
             }`}
           >
             {isSubmitting ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-                <Feather name="send" size={16} color="white" />
-                <Text className="text-white text-xs font-black uppercase tracking-wider">
-                  Create Support Ticket & Open Chat
+                <Feather name="send" size={15} color={selectedReason ? 'white' : '#71717A'} />
+                <Text className={`text-[13px] font-medium ${selectedReason ? 'text-white' : 'text-zinc-600'}`}>
+                  Create ticket & open chat
                 </Text>
               </>
             )}
