@@ -103,6 +103,10 @@ export default function CommunicationScreen() {
 
   const unifiedChatId = symmetricChatId;
   const isCompletedSession = booking?.status === 'completed' || booking?.timelineStatus === 'session_closed';
+  // Opened for a booking id we no longer hold (e.g. an old notification): never
+  // let the user post into a thread that is not theirs to continue.
+  const isStaleSession = !!bookingId && bookings.length > 0 && !bookings.some(b => b.id === bookingId);
+  const isChatLocked = isCompletedSession || isStaleSession;
 
   // Strictly scoped to THIS booking's unique session IDs only (never pulls messages from older sessions with the same trainer)
   const relatedChatIds = useMemo(() => {
@@ -258,7 +262,7 @@ export default function CommunicationScreen() {
 
   const handleSendMessage = () => {
     const textToSend = messageText.trim();
-    if (!textToSend || !booking) return;
+    if (!textToSend || !booking || isChatLocked) return;
 
     const sender = role === 'trainer' ? 'trainer' : 'customer';
     setMessageText('');
@@ -628,15 +632,22 @@ export default function CommunicationScreen() {
             <TouchableOpacity
               key={idx}
               activeOpacity={0.7}
+              disabled={isChatLocked || !booking}
               onPress={() => {
-                if (!booking) return;
+                if (!booking || isChatLocked) return;
                 const sender = role === 'trainer' ? 'trainer' : 'customer';
                 const sentMsg = Database.sendChatMessage(unifiedChatId, msgText, sender);
                 setMessages((prev) => [...prev, mapDbMessage(sentMsg)]);
               }}
-              className="bg-[#F3EFE7] border border-[#E5E0D5] px-3.5 py-1.5 rounded-full active:bg-[#EAE4D7]"
+              className={`border px-3.5 py-1.5 rounded-full ${
+                isChatLocked
+                  ? 'bg-[#F7F5F1] border-[#EDE9E1] opacity-50'
+                  : 'bg-[#F3EFE7] border-[#E5E0D5] active:bg-[#EAE4D7]'
+              }`}
             >
-              <Text className="text-[#3D3A35] text-xs font-semibold">{msgText}</Text>
+              <Text className={`text-xs font-semibold ${isChatLocked ? 'text-[#A8A29E]' : 'text-[#3D3A35]'}`}>
+                {msgText}
+              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -646,7 +657,7 @@ export default function CommunicationScreen() {
       {/* ponytail: keyboard offset lives on outer KAV (whole screen lifts).
           Inner keeps only safe-area — padding inner alone just shrinks ScrollView
           and leaves bottom edge behind keyboard on edge-to-edge Android. */}
-      {isCompletedSession ? (
+      {isChatLocked ? (
         <View 
           style={{ 
             paddingBottom: Math.max(insets.bottom, 16),
