@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, Image, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBookingStore } from '../../store/bookingStore';
 import { useUserStore } from '../../store/userStore';
@@ -307,70 +307,119 @@ export default function MessagesScreen() {
       >
         {filteredChats.length > 0 ? (
           <View className="gap-2">
-            {filteredChats.map((chat) => (
-              <TouchableOpacity
-                key={chat.id}
-                activeOpacity={0.7}
-                onPress={() => {
-                  const targetId = chat.bookingId || chat.id;
-                  useChatStore.getState().markAsRead([targetId, chat.id]);
-                  router.push({
-                    pathname: '/communication' as any,
-                    params: { id: targetId, name: chat.name }
-                  });
-                }}
-                className="py-3.5 px-3 rounded-2xl flex-row items-center gap-3.5 active:bg-zinc-50"
-              >
-                {/* Avatar with Online indicator */}
-                <View className="relative">
-                  <Image
-                    source={{ uri: chat.avatar }}
-                    className="w-13 h-13 rounded-2xl bg-zinc-100 border border-zinc-200"
-                    style={{ width: 52, height: 52, borderRadius: 18 }}
-                  />
-                  {chat.isOnline && (
-                    <View className="absolute right-0 bottom-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white" />
-                  )}
-                </View>
+            {filteredChats.map((chat) => {
+              const isConcierge = chat.type === 'concierge';
 
-                {/* Chat Details */}
-                <View className="flex-1">
-                  <View className="flex-row items-center justify-between mb-0.5">
-                    <Text 
-                      numberOfLines={1} 
-                      className={`text-base tracking-tight flex-1 pr-2 ${
-                        chat.unread ? 'font-black text-zinc-950' : 'font-bold text-zinc-900'
-                      }`}
-                    >
-                      {chat.name}
-                    </Text>
-                    <Text className="text-xs font-semibold text-zinc-400">
-                      {chat.time}
-                    </Text>
-                  </View>
-
-                  {chat.subtitle && (
-                    <Text numberOfLines={1} className="text-xs font-semibold text-zinc-400 mb-1">
-                      {chat.subtitle}
-                    </Text>
-                  )}
-
-                  <View className="flex-row items-center justify-between">
-                    <Text
-                      numberOfLines={1}
-                      className={`text-sm flex-1 pr-2 ${
-                        chat.unread ? 'font-bold text-zinc-900' : 'text-zinc-500 font-normal'
-                      }`}
-                    >
-                      {chat.lastMessage}
-                    </Text>
-                    {chat.unread && (
-                      <View className="w-2.5 h-2.5 rounded-full bg-[#E11D48]" />
+              return (
+                <TouchableOpacity
+                  key={chat.id}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    if (isConcierge) {
+                      // Navigate directly to Sessions/Bookings screen with completed section active
+                      router.push({
+                        pathname: '/(tabs)/bookings' as any,
+                        params: { filter: 'completed' }
+                      });
+                      return;
+                    }
+                    const targetId = chat.bookingId || chat.id;
+                    useChatStore.getState().markAsRead([targetId, chat.id]);
+                    router.push({
+                      pathname: '/communication' as any,
+                      params: { id: targetId, name: chat.name }
+                    });
+                  }}
+                  className={`py-3.5 px-3.5 rounded-2xl flex-row items-center gap-3.5 ${
+                    isConcierge
+                      ? 'bg-zinc-950 border border-zinc-800'
+                      : 'bg-white/80 border border-zinc-150/60 active:bg-zinc-50'
+                  }`}
+                  style={isConcierge ? {
+                    backgroundColor: '#09090b',
+                    shadowColor: '#000000',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.12,
+                    shadowRadius: 8,
+                    elevation: 3,
+                  } : undefined}
+                >
+                  {/* Avatar or Concierge Badge */}
+                  <View className="relative">
+                    {isConcierge ? (
+                      <View 
+                        className="w-[52px] h-[52px] rounded-2xl bg-zinc-900 border border-zinc-700 items-center justify-center"
+                        style={{ backgroundColor: '#18181B' }}
+                      >
+                        <Ionicons name="sparkles" size={24} color="#E11D48" />
+                      </View>
+                    ) : (
+                      <>
+                        <Image
+                          source={{ uri: chat.avatar }}
+                          className="w-[52px] h-[52px] rounded-2xl bg-zinc-100 border border-zinc-200"
+                          style={{ width: 52, height: 52, borderRadius: 18 }}
+                        />
+                        {chat.isOnline && (
+                          <View className="absolute right-0 bottom-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white" />
+                        )}
+                      </>
                     )}
                   </View>
-                </View>
-              </TouchableOpacity>
-            ))}
+
+                  {/* Chat Details */}
+                  <View className="flex-1">
+                    <View className="flex-row items-center justify-between mb-0.5">
+                      <View className="flex-row items-center gap-2 flex-1 pr-2">
+                        <Text 
+                          numberOfLines={1} 
+                          className={`text-base tracking-tight ${
+                            isConcierge 
+                              ? 'font-black text-white' 
+                              : chat.unread ? 'font-black text-zinc-950' : 'font-bold text-zinc-900'
+                          }`}
+                        >
+                          {chat.name}
+                        </Text>
+                        {isConcierge && (
+                          <View className="bg-rose-500/20 px-2 py-0.5 rounded-full border border-rose-500/30">
+                            <Text className="text-[#FB7185] text-[9px] font-black uppercase tracking-wider">Priority</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text className={`text-xs font-semibold ${isConcierge ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                        {chat.time}
+                      </Text>
+                    </View>
+
+                    {chat.subtitle && (
+                      <Text numberOfLines={1} className={`text-xs font-semibold mb-1 ${isConcierge ? 'text-zinc-400' : 'text-zinc-400'}`}>
+                        {chat.subtitle}
+                      </Text>
+                    )}
+
+                    <View className="flex-row items-center justify-between">
+                      <Text
+                        numberOfLines={1}
+                        className={`text-sm flex-1 pr-2 ${
+                          isConcierge 
+                            ? 'text-zinc-400 font-medium' 
+                            : chat.unread ? 'font-bold text-zinc-900' : 'text-zinc-500 font-normal'
+                        }`}
+                      >
+                        {chat.lastMessage}
+                      </Text>
+                      {chat.unread && (
+                        <View className="w-2.5 h-2.5 rounded-full bg-[#E11D48]" />
+                      )}
+                      {isConcierge && (
+                        <Feather name="chevron-right" size={16} color="#71717A" />
+                      )}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         ) : (
           <View className="flex-1 justify-center items-center py-16">

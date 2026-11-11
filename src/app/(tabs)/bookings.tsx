@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useTransition } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { View, Text, ScrollView, TouchableOpacity, Platform, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBookingStore } from '../../store/bookingStore';
@@ -118,12 +118,14 @@ const isSlotVisibleForTrainer = (
 
 export default function BookingsScreen() {
   const router = useRouter();
+  const searchParams = useLocalSearchParams<{ filter?: string }>();
   const insets = useSafeAreaInsets();
   const { bookings } = useBookingStore();
   const { role, user } = useUserStore();
   const [prevRole, setPrevRole] = useState(role);
-  const [activeFilter, setActiveFilter] = useState<FilterType>(role === 'trainer' ? 'today' : 'upcoming');
-  const [renderedFilter, setRenderedFilter] = useState<FilterType>(role === 'trainer' ? 'today' : 'upcoming');
+  const initialFilter: FilterType = (searchParams.filter as FilterType) || (role === 'trainer' ? 'today' : 'upcoming');
+  const [activeFilter, setActiveFilter] = useState<FilterType>(initialFilter);
+  const [renderedFilter, setRenderedFilter] = useState<FilterType>(initialFilter);
   const [clientDateFilter, setClientDateFilter] = useState<'all' | 'today' | 'this_week' | 'this_month'>('all');
   // Cursor-based pagination state for Completed & Cancelled sections
   // Cursor format: "<startMs>|<bookingId>" (null = first page)
@@ -241,6 +243,16 @@ export default function BookingsScreen() {
     };
     initData();
   }, []);
+
+  useEffect(() => {
+    if (searchParams.filter && ['upcoming', 'completed', 'cancelled', 'today', 'past'].includes(searchParams.filter)) {
+      const target = searchParams.filter as FilterType;
+      setActiveFilter(target);
+      setRenderedFilter(target);
+      setCurrentCursor(null);
+      setCursorHistory([]);
+    }
+  }, [searchParams.filter]);
 
   if (role !== prevRole) {
     setPrevRole(role);

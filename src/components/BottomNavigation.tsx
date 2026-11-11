@@ -104,9 +104,9 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
           <Defs>
             <LinearGradient id="bottomWhiteScrim" x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0" stopColor="#FFFFFF" stopOpacity="0" />
-              <Stop offset="0.35" stopColor="#FFFFFF" stopOpacity="0.55" />
-              <Stop offset="0.7" stopColor="#FFFFFF" stopOpacity="0.88" />
-              <Stop offset="1" stopColor="#FFFFFF" stopOpacity="0.98" />
+              <Stop offset="0.35" stopColor="#FFFFFF" stopOpacity="0.25" />
+              <Stop offset="0.7" stopColor="#FFFFFF" stopOpacity="0.5" />
+              <Stop offset="1" stopColor="#FFFFFF" stopOpacity="0.7" />
             </LinearGradient>
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#bottomWhiteScrim)" />
@@ -230,16 +230,18 @@ const styles = StyleSheet.create({
     right: 16,
     zIndex: 51,
     borderRadius: 26,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.45)',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     elevation: 4,
   },
   navContainer: {
     borderRadius: 26,
-    backgroundColor: 'rgba(255, 255, 255, 0.82)',
+    backgroundColor: 'transparent',
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 4,

@@ -1534,13 +1534,14 @@ export default function HomeScreen() {
                         <BackgroundVideoLoop source={item.video} />
                       )}
 
-                      {/* SVG Foreground Gradient Overlay with Opacity so Video plays behind while maintaining vibrant colors */}
+                      {/* SVG Foreground Gradient Overlay with low opacity so video is crisp and clearly visible */}
                       <View style={StyleSheet.absoluteFill}>
                         <Svg width="100%" height="100%">
                           <Defs>
-                            <LinearGradient id={`grad-${item.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                              <Stop offset="0%" stopColor={item.colors[0]} stopOpacity={item.video ? 0.72 : 1} />
-                              <Stop offset="100%" stopColor={item.colors[1]} stopOpacity={item.video ? 0.78 : 1} />
+                            <LinearGradient id={`grad-${item.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                              <Stop offset="0%" stopColor={item.colors[0]} stopOpacity={item.video ? 0.25 : 1} />
+                              <Stop offset="45%" stopColor={item.colors[0]} stopOpacity={item.video ? 0.20 : 1} />
+                              <Stop offset="100%" stopColor="#09090B" stopOpacity={item.video ? 0.85 : 1} />
                             </LinearGradient>
                           </Defs>
                           <Rect width="100%" height="100%" fill={`url(#grad-${item.id})`} />
