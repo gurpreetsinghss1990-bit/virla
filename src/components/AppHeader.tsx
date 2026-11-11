@@ -6,7 +6,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { NotificationBadge } from './NotificationBadge';
 import { Ionicons } from '@expo/vector-icons';
 import { CommunicationCenterModal } from './CommunicationCenterModal';
-import { MASTER_TRAINER_AVATAR_IMAGE } from '../constants/masterTrainerAvatar';
+import { resolveAvatarSource } from './AvatarImage';
 import { Image as ExpoImage } from 'expo-image';
 
 interface AppHeaderProps {
@@ -34,17 +34,7 @@ export function AppHeader({ onNotificationPress, onAvatarPress }: AppHeaderProps
       <View className="flex-row items-center gap-3">
         <TouchableOpacity activeOpacity={0.8} onPress={onAvatarPress}>
           <ExpoImage
-            source={(() => {
-              const isMale = (user.gender || '').toLowerCase() === 'male' || role === 'trainer';
-              const rawAvatar = user.avatar;
-              if (isMale && (!rawAvatar || rawAvatar.includes('photo-1534528741775') || rawAvatar.includes('photo-1544005313') || rawAvatar.includes('selfie.jpg'))) {
-                return MASTER_TRAINER_AVATAR_IMAGE;
-              }
-              if (rawAvatar && typeof rawAvatar === 'string' && (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:') || rawAvatar.startsWith('file://')) && !rawAvatar.includes('selfie.jpg')) {
-                return { uri: rawAvatar };
-              }
-              return isMale ? MASTER_TRAINER_AVATAR_IMAGE : { uri: rawAvatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80' };
-            })()}
+            source={resolveAvatarSource(user.avatar, user.gender)}
             style={{ width: 48, height: 48, borderRadius: 24 }}
             contentFit="cover"
             cachePolicy="memory-disk"

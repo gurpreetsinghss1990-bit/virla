@@ -1,5 +1,5 @@
 import { useCoachStore } from '../store/coachStore';
-import { resolveAvatarSource, resolveAvatarUri } from '../components/AvatarImage';
+import { resolveAvatarSource } from '../components/AvatarImage';
 
 /**
  * One source of truth for a trainer's picture.
@@ -21,7 +21,7 @@ export function useTrainerAvatar(
 
   const photo = livePhoto || snapshotPhoto || '';
   const g = liveGender || gender;
-  return { source: resolveAvatarSource(photo, g), uri: resolveAvatarUri(photo, g) };
+  return { source: resolveAvatarSource(photo, g) };
 }
 
-export { resolveAvatarSource, resolveAvatarUri };
+export { resolveAvatarSource };

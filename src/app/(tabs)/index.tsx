@@ -27,7 +27,7 @@ import { LogMetricsModal } from '../../components/LogMetricsModal';
 import { useToastStore } from '../../store/toastStore';
 import { supabase } from '../../database/supabaseClient';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
-import { resolveAvatarUri } from '../../components/AvatarImage';
+import { resolveAvatarSource } from '../../components/AvatarImage';
 import { useAIWellnessStore } from '../../store/aiWellnessStore';
 import { SessionEngine } from '../../services/SessionEngine';
 import { locationTrackerService } from '../../services/LocationTrackerService';
@@ -542,9 +542,9 @@ export default function HomeScreen() {
 
   const currentCoach = coaches.find(c => c.id === user.id || c.name === user.name);
 
-  const trainerPhotoUri = useCallback((trainerId?: string | null, snapshot?: string | null) => {
+  const trainerPhotoSource = useCallback((trainerId?: string | null, snapshot?: string | null) => {
     const live = trainerId ? coaches.find(c => c.id === trainerId) : undefined;
-    return resolveAvatarUri(live?.photo || snapshot || '', live?.gender);
+    return resolveAvatarSource(live?.photo || snapshot || '', live?.gender);
   }, [coaches]);
 
   // Helper date calculations for Trainer Console Redesign
@@ -1648,7 +1648,7 @@ export default function HomeScreen() {
                         {/* Left: IPL-style animated Coach Video Avatar utilizing full frame height */}
                         <View className="relative">
                           <CoachVideoAvatar
-                            posterUri={trainerPhotoUri(activeBooking.trainerId || activeBooking.coachId, activeBooking.trainerPhoto)}
+                            posterUri={trainerPhotoSource(activeBooking.trainerId || activeBooking.coachId, activeBooking.trainerPhoto)}
                             width={110}
                             height={110}
                             borderRadius={18}
@@ -2080,7 +2080,7 @@ export default function HomeScreen() {
                             </View>
                           ) : (
                             <ExpoImage
-                              source={{ uri: trainerPhotoUri(bookingData.trainerId || bookingData.coachId, bookingData.trainerPhoto) }}
+                              source={trainerPhotoSource(bookingData.trainerId || bookingData.coachId, bookingData.trainerPhoto)}
                               cachePolicy="memory-disk"
                               contentFit="cover"
                               transition={150}

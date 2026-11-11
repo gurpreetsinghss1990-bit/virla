@@ -20,14 +20,14 @@ import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { formatToDDMMYYYY } from '../../utils/date';
 import { Image as ExpoImage } from 'expo-image';
-import { MASTER_TRAINER_AVATAR_URI, MASTER_TRAINER_AVATAR_IMAGE } from '../../constants/masterTrainerAvatar';
 import { resolveAvatarSource } from '../../components/AvatarImage';
 import { uploadAvatarToStorage } from '../../utils/uploadAvatar';
 import { AvatarImage } from '../../components/AvatarImage';
 
+// Empty uri means "use the built-in gender default avatar".
 const DEFAULT_AVATARS = [
-  { id: 'avatar_male', label: 'Men (Master Trainer)', gender: 'male', uri: MASTER_TRAINER_AVATAR_URI },
-  { id: 'avatar_female', label: 'Women (Yoga)', gender: 'female', uri: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=350&q=80' },
+  { id: 'avatar_male', label: 'Men', gender: 'male', uri: '' },
+  { id: 'avatar_female', label: 'Women', gender: 'female', uri: '' },
 ];
 
 export const getDefaultAvatarForGender = (gender?: string) => {

@@ -53,7 +53,7 @@ export function RecommendationCard() {
       addBooking({
         id: `b-auto-${Date.now()}`,
         trainerName: 'Priya Patel',
-        trainerPhoto: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
+        trainerPhoto: '',
         workoutTitle,
         date: 'Tomorrow',
         time: '09:00 AM',

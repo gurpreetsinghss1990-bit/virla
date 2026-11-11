@@ -150,9 +150,9 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
   }, [isPlaying, instanceId]);
 
   const posterSource = posterUri
-    ? typeof posterUri === 'number'
-      ? posterUri
-      : { uri: posterUri }
+    ? typeof posterUri === 'string'
+      ? { uri: posterUri }
+      : posterUri
     : { uri: DEFAULT_POSTER_URL };
 
   return (

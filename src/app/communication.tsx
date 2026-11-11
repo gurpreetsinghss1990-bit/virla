@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Alert, Anim
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
-import { resolveAvatarUri } from '../components/AvatarImage';
+import { resolveAvatarSource } from '../components/AvatarImage';
 import { useNotificationStore } from '../store/notificationStore';
 import { useWalletStore } from '../store/walletStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -394,15 +394,12 @@ export default function CommunicationScreen() {
   }, [role, booking]);
 
   const coachAvatar = useMemo(() => {
-    if (role === 'trainer') {
-      return 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
-    }
     const name = booking?.trainerName || '';
     if (!name || name.toLowerCase().includes('no trainer') || name.toLowerCase().includes('admin')) {
-      return 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
+      return '';
     }
-    return resolveAvatarUri(booking?.trainerPhoto);
-  }, [role, booking]);
+    return booking?.trainerPhoto || '';
+  }, [booking]);
 
   // ponytail: "Live" only when session is actually live (upcoming + inside 60-min window). No fake presence.
   const isLive = booking.status === 'upcoming' && !isCallLocked;
@@ -444,7 +441,7 @@ export default function CommunicationScreen() {
             {/* Avatar & Title (no presence dot — Live is text-gated, not faked) */}
             <View className="flex-row items-center gap-2.5 flex-1">
               <Image
-                source={{ uri: coachAvatar }}
+                source={resolveAvatarSource(coachAvatar)}
                 style={{ width: 38, height: 38, borderRadius: 19 }}
                 className="bg-[#EFECE6] border border-[#E5E0D8]"
               />

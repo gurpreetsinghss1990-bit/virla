@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBookingStore } from '../../store/bookingStore';
-import { resolveAvatarUri } from '../../components/AvatarImage';
+import { resolveAvatarSource } from '../../components/AvatarImage';
 import { useUserStore } from '../../store/userStore';
 import { useChatStore } from '../../store/chatStore';
 import { Database } from '../../database/Database';
@@ -198,7 +198,7 @@ export default function MessagesScreen() {
         bookingId: targetBookingId,
         name: personName,
         subtitle: `${primaryBooking.workoutTitle || 'Fitness Training'} • ${primaryBooking.sessionType === 'COUPLE' ? 'Couple' : 'Solo'}`,
-        avatar: resolveAvatarUri(primaryBooking.trainerPhoto),
+        avatar: primaryBooking.trainerPhoto || '',
         lastMessage: lastMsg,
         time: lastTime,
         unread: hasUnread,
@@ -217,7 +217,7 @@ export default function MessagesScreen() {
           id: 'mock-1',
           name: 'Coach Karan Sharma',
           subtitle: 'Strength & Conditioning Master',
-          avatar: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=200&q=80',
+          avatar: '',
           lastMessage: "I'll be bringing the resistance bands today. See you at 10 AM!",
           time: '',
           unread: !isMock1Read,
@@ -338,7 +338,7 @@ export default function MessagesScreen() {
                     ) : (
                       <>
                         <Image
-                          source={{ uri: chat.avatar }}
+                          source={resolveAvatarSource(chat.avatar)}
                           className="rounded-full bg-zinc-100"
                           style={{ width: 50, height: 50 }}
                         />

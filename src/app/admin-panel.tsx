@@ -14,7 +14,7 @@ import { useBookingStore } from '../store/bookingStore';
 import { SupportChatModal } from '../components/SupportChatModal';
 import { resolveAvatarSource } from '../components/AvatarImage';
 
-const DEFAULT_FALLBACK_AVATAR = 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=300&q=80';
+const DEFAULT_FALLBACK_AVATAR = '';
 const getSafeAvatarUri = (uri?: string | null) => {
   if (typeof uri === 'string' && uri.trim().length > 0) {
     return uri.trim();

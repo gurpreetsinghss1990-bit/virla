@@ -1,9 +1,6 @@
 import { Image, type ImageProps } from 'expo-image';
 import { useState } from 'react';
-import { MASTER_TRAINER_AVATAR_IMAGE, MASTER_TRAINER_AVATAR_URI } from '../constants/masterTrainerAvatar';
-
-export const FEMALE_DEFAULT_AVATAR_URI =
-  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=350&q=80';
+import { MALE_TRAINER_AVATAR_IMAGE, FEMALE_TRAINER_AVATAR_IMAGE } from '../constants/masterTrainerAvatar';
 
 // Stock images shipped before the upload flow existed, plus the old bundled selfie.
 const STOCK_AVATAR_MARKERS = [
@@ -16,8 +13,7 @@ const STOCK_AVATAR_MARKERS = [
 
 export function defaultAvatarSource(gender?: string) {
   const g = (gender || '').toLowerCase();
-  if (g === 'female' || g === 'women') return { uri: FEMALE_DEFAULT_AVATAR_URI };
-  return MASTER_TRAINER_AVATAR_IMAGE;
+  return g === 'female' || g === 'women' ? FEMALE_TRAINER_AVATAR_IMAGE : MALE_TRAINER_AVATAR_IMAGE;
 }
 
 export function resolveAvatarSource(rawAvatar?: string | null, gender?: string) {
@@ -35,10 +31,6 @@ export function resolveAvatarSource(rawAvatar?: string | null, gender?: string) 
 }
 
 /** Same rules as resolveAvatarSource, but always returns a string URI (for posters/video). */
-export function resolveAvatarUri(rawAvatar?: string | null, gender?: string) {
-  const source = resolveAvatarSource(rawAvatar, gender);
-  return typeof source === 'number' ? MASTER_TRAINER_AVATAR_URI : source.uri;
-}
 
 type AvatarImageProps = Omit<ImageProps, 'source'> & {
   uri?: string | null;

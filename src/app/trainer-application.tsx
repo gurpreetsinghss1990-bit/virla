@@ -122,7 +122,7 @@ export default function TrainerApplicationScreen() {
   const [showDobPicker, setShowDobPicker] = useState(false);
   const [dobPickerTab, setDobPickerTab] = useState<'day' | 'month' | 'year'>('day');
   const [gender, setGender] = useState('Male');
-  const [avatar, setAvatar] = useState('https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=300&q=80');
+  const [avatar, setAvatar] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('Mumbai');
   const [state, setState] = useState('Maharashtra');

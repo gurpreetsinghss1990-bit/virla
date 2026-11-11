@@ -20,7 +20,6 @@ import Svg, { Circle, Line, Defs, LinearGradient, Stop, Rect } from 'react-nativ
 import { AssignmentEngine } from '../services/AssignmentEngine';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
 import { WORKOUT_CATEGORY_MAPPING, getCategoryFromTitle } from '../config/WorkoutMapping';
-import { MASTER_TRAINER_AVATAR_IMAGE } from '../constants/masterTrainerAvatar';
 import { resolveAvatarSource } from '../components/AvatarImage';
 
 // Error boundary to prevent MapView crash if native Google Maps API Key is uninitialized on older client builds

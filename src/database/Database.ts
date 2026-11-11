@@ -1428,7 +1428,7 @@ class DatabaseClient {
         {
           id: 'c-1',
           name: 'Karan Sharma',
-          photo: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=300&q=80',
+          photo: '',
           experience: '8 yrs exp',
           rating: 4.9,
           specialty: 'Strength & HIIT',
@@ -2046,7 +2046,7 @@ class DatabaseClient {
       coach = {
         id: coachId,
         name: user ? user.name : 'Trainer Name',
-        photo: user ? user.avatar : 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=300&q=80',
+        photo: user ? user.avatar : '',
         experience: 'Not specified',
         rating: 5.0,
         specialty: 'Not specified',
@@ -3740,7 +3740,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       {
         id: 'chat-c-1',
         name: 'Coach Karan Sharma',
-        avatar: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=150&q=80',
+        avatar: '',
         lastMessage: this.getLastChatMessage('chat-c-1') || "I'll be bringing the resistance bands today. See you at 10 AM!",
         time: '20m ago',
         unread: this.hasUnreadMessages('chat-c-1')
