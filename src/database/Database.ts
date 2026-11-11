@@ -3693,19 +3693,26 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     this.deleteNotifications(userId, [id]);
   }
 
-  /** Removes notifications locally first, then deletes them server-side in one request. */
+  /** Removes notifications locally first, then deletes them server-side in batches. */
   deleteNotifications(userId: string, ids: string[]): void {
     if (!ids || ids.length === 0) return;
     const idSet = new Set(ids);
     this.schema.notifications = this.schema.notifications.filter(n => !idSet.has(n.id));
     this.save();
-    supabase
-      .from('notifications')
-      .delete()
-      .in('id', ids)
-      .then(({ error }) => {
-        if (error) console.warn('[DB] deleteNotifications failed:', error.message);
-      });
+    void this.deleteNotificationRows(ids);
+  }
+
+  // Batched so one huge id list never produces a request URL that a proxy rejects.
+  private async deleteNotificationRows(ids: string[]): Promise<void> {
+    const BATCH_SIZE = 100;
+    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+      const batch = ids.slice(i, i + BATCH_SIZE);
+      const { error } = await supabase.from('notifications').delete().in('id', batch);
+      if (error) {
+        console.warn('[DB] deleteNotifications failed:', error.message);
+        return;
+      }
+    }
   }
 
   // Chats & Chat Messages
