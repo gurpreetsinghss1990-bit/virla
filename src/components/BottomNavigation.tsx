@@ -45,30 +45,30 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
   };
 
   const getIcon = (routeName: string, isFocused: boolean) => {
-    let iconName: any = isFocused ? 'home' : 'home-outline';
+    let iconName: any = 'home';
     switch (routeName) {
       case 'index':
-        iconName = isFocused ? 'home' : 'home-outline';
+        iconName = 'home';
         break;
       case 'bookings':
-        iconName = isFocused ? 'calendar' : 'calendar-outline';
+        iconName = 'calendar';
         break;
       case 'progress':
-        iconName = isFocused ? 'trending-up' : 'trending-up-outline';
+        iconName = 'trending-up';
         break;
       case 'messages':
-        iconName = 'message-square';
+        iconName = 'chatbubble-ellipses';
         break;
       case 'profile':
-        iconName = isFocused ? 'person' : 'person-outline';
+        iconName = 'person';
         break;
     }
 
     return (
       <Ionicons
         name={iconName}
-        size={21}
-        color={isFocused ? '#E11D48' : '#64748B'}
+        size={22}
+        color={isFocused ? '#E11D48' : '#475569'}
       />
     );
   };
@@ -163,8 +163,8 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.8}
-                  className={`text-[8.5px] uppercase tracking-tight text-center ${
-                    isFocused ? 'text-[#E11D48] font-black' : 'text-[#64748B] font-bold'
+                  className={`text-[9px] uppercase tracking-tight text-center font-black ${
+                    isFocused ? 'text-[#E11D48]' : 'text-[#334155]'
                   }`}
                 >
                   {getLabel(route.name)}
