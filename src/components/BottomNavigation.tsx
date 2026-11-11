@@ -125,14 +125,20 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
               isTabPressingRef.current = false;
             }, 400);
 
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
+            const event = navigation?.emit
+              ? navigation.emit({
+                  type: 'tabPress',
+                  target: route.key,
+                  canPreventDefault: true,
+                })
+              : { defaultPrevented: false };
 
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
+            if (!isFocused && !event?.defaultPrevented) {
+              if (navigation?.navigate) {
+                navigation.navigate(route.name);
+              } else {
+                router.navigate(`/(tabs)/${route.name === 'index' ? '' : route.name}` as any);
+              }
             }
           };
 
@@ -221,11 +227,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 16,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 4,
     zIndex: 51,
   },
   navContainer: {
@@ -237,6 +238,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     borderWidth: 0,
     position: 'relative',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 4,
   },
   redDot: {
     position: 'absolute',
