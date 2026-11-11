@@ -184,10 +184,12 @@ export function RaiseSupportTicketModal({
 
           {/* Submit Button */}
           <TouchableOpacity
-            disabled={isSubmitting}
+            disabled={isSubmitting || !selectedReason}
             activeOpacity={0.8}
             onPress={handleSubmit}
-            className="w-full bg-[#101828] py-4 rounded-2xl items-center justify-center flex-row gap-2 shadow-sm"
+            className={`w-full py-4 rounded-2xl items-center justify-center flex-row gap-2 shadow-sm ${
+              isSubmitting || !selectedReason ? 'bg-[#101828]/40' : 'bg-[#101828]'
+            }`}
           >
             {isSubmitting ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
