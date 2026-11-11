@@ -2533,12 +2533,19 @@ class DatabaseClient {
     }
 
     if (bookingData.address && bookingData.address.trim().startsWith('{')) {
-      const { error: addrErr } = await supabase.rpc('set_booking_address', {
-        p_booking_id: bookingId,
-        p_address: bookingData.address,
-      });
+      // Coordinates are what the trainer's live route is built from, so retry before giving up.
+      let addrErr: any = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const res = await supabase.rpc('set_booking_address', {
+          p_booking_id: bookingId,
+          p_address: bookingData.address,
+        });
+        addrErr = res.error;
+        if (!addrErr) break;
+        await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+      }
       if (addrErr) {
-        console.warn('[DB WARN] set_booking_address failed:', addrErr.message);
+        console.error('[DB ERROR] set_booking_address failed after retries:', addrErr.message);
       }
     }
 
