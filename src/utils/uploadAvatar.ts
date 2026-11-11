@@ -2,7 +2,6 @@ import { Platform } from 'react-native';
 import { File } from 'expo-file-system';
 import { supabase } from '../database/supabaseClient';
 import { assertUploadableFile, safeStorageSegment } from './fileType';
-import { AVATAR_MAX_WIDTH, compressImageForUpload } from './imageCompression';
 
 const AVATAR_BUCKET = 'avatars';
 
@@ -34,11 +33,9 @@ export async function uploadAvatarToStorage(
   if (/^https?:\/\//i.test(localFileUri)) return localFileUri;
 
   const safeOwnerId = safeStorageSegment(ownerId);
-  const compressedUri = await compressImageForUpload(localFileUri, {
-    maxWidth: AVATAR_MAX_WIDTH,
-    quality: 0.7,
-  });
-  const bytes = await readFileBytes(compressedUri);
+  // The picker already re-encodes at a reduced JPEG quality, so no extra
+  // image module is needed here: the bytes are read straight from its output.
+  const bytes = await readFileBytes(localFileUri);
   const sniffed = assertUploadableFile(bytes, ['jpg', 'png', 'webp', 'heic']);
   const { ext, contentType } = sniffed;
 

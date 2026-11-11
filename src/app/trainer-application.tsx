@@ -16,7 +16,6 @@ import * as FileSystem from 'expo-file-system';
 import { File } from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { assertUploadableFile } from '../utils/fileType';
-import { DOCUMENT_MAX_WIDTH, compressImageForUpload, isCompressibleImage } from '../utils/imageCompression';
 const getNativePickerModules = () => {
   const g = globalThis as any;
   const expoModules = g.expo?.modules || g.ExpoModules || {};
@@ -536,7 +535,7 @@ export default function TrainerApplicationScreen() {
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsEditing: isProfilePic,
           aspect: isProfilePic ? [1, 1] : undefined,
-          quality: isProfilePic ? 0.7 : 0.8,
+          quality: isProfilePic ? 0.5 : 0.6,
         });
       } else if (source === 'library') {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -550,7 +549,7 @@ export default function TrainerApplicationScreen() {
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsEditing: isProfilePic,
           aspect: isProfilePic ? [1, 1] : undefined,
-          quality: isProfilePic ? 0.7 : 0.8,
+          quality: isProfilePic ? 0.5 : 0.6,
         });
       } else if (source === 'file') {
         result = await DocumentPicker.getDocumentAsync({
@@ -593,13 +592,6 @@ export default function TrainerApplicationScreen() {
         if (currentUploadingQual) {
           setQualUploadStatusMap(prev => ({ ...prev, [currentUploadingQual]: 'UPLOADING' }));
         }
-      }
-
-      if (isCompressibleImage(uri, previewType === 'pdf' ? 'application/pdf' : undefined)) {
-        uri = await compressImageForUpload(uri, {
-          maxWidth: docType === 'selfie' ? 1024 : DOCUMENT_MAX_WIDTH,
-          quality: docType === 'selfie' ? 0.7 : 0.75,
-        });
       }
 
       let arrayBuffer: ArrayBuffer;
