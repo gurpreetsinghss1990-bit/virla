@@ -529,9 +529,13 @@ export default function TrainerApplicationScreen() {
           Alert.alert('Permission Denied', 'Camera permission is required to take photos.');
           return;
         }
+
+        const isProfilePic = activeUploadType === 'selfie';
         result = await ImagePicker.launchCameraAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          quality: 0.8,
+          allowsEditing: isProfilePic,
+          aspect: isProfilePic ? [1, 1] : undefined,
+          quality: isProfilePic ? 0.7 : 0.8,
         });
       } else if (source === 'library') {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -539,9 +543,13 @@ export default function TrainerApplicationScreen() {
           Alert.alert('Permission Denied', 'Photo library permission is required to select photos.');
           return;
         }
+
+        const isProfilePic = activeUploadType === 'selfie';
         result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          quality: 0.8,
+          allowsEditing: isProfilePic,
+          aspect: isProfilePic ? [1, 1] : undefined,
+          quality: isProfilePic ? 0.7 : 0.8,
         });
       } else if (source === 'file') {
         result = await DocumentPicker.getDocumentAsync({

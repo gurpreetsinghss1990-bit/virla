@@ -13,6 +13,14 @@ import { assertUploadableFile } from '../utils/fileType';
 import { useBookingStore } from '../store/bookingStore';
 import { SupportChatModal } from '../components/SupportChatModal';
 
+const DEFAULT_FALLBACK_AVATAR = 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?auto=format&fit=crop&w=300&q=80';
+const getSafeAvatarUri = (uri?: string | null) => {
+  if (typeof uri === 'string' && uri.trim().length > 0) {
+    return uri.trim();
+  }
+  return DEFAULT_FALLBACK_AVATAR;
+};
+
 export default function AdminPanelScreen() {
   const router = useRouter();
   const searchParams = useLocalSearchParams<{ tab?: string }>();
@@ -51,6 +59,37 @@ export default function AdminPanelScreen() {
   const [interviewCompletedMap, setInterviewCompletedMap] = useState<{[appId: string]: boolean}>({});
   const [overrideStatus, setOverrideStatus] = useState<'verified' | 'pending' | 'rejected'>('verified');
   const [isSavingLocation, setIsSavingLocation] = useState<boolean>(false);
+  
+  // Section expand/collapse and cursor pagination states for Live Console
+  const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
+    liveStream: false,
+    todayBooked: false,
+    upcomingBooked: false,
+    liveOngoing: false,
+    historyAudit: false,
+  });
+
+  const [sectionLimits, setSectionLimits] = useState<{ [key: string]: number }>({
+    liveStream: 7,
+    todayBooked: 7,
+    upcomingBooked: 7,
+    liveOngoing: 7,
+    historyAudit: 7,
+  });
+
+  const toggleSection = (sectionKey: string) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [sectionKey]: !prev[sectionKey],
+    }));
+  };
+
+  const loadMoreForSection = (sectionKey: string) => {
+    setSectionLimits((prev) => ({
+      ...prev,
+      [sectionKey]: (prev[sectionKey] || 7) + 7,
+    }));
+  };
   
   // Connect shared bookingStore
   const { bookings, updateTimelineStatus } = useBookingStore();
@@ -320,9 +359,12 @@ export default function AdminPanelScreen() {
         Alert.alert('Permission Denied', 'Camera permission is required to capture photos.');
         return;
       }
+      const isProfilePic = target === 'profile';
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.8,
+        allowsEditing: isProfilePic,
+        aspect: isProfilePic ? [1, 1] : undefined,
+        quality: isProfilePic ? 0.7 : 0.8,
       });
       if (!result.canceled && result.assets?.[0]?.uri) {
         if (target === 'id') {
@@ -343,9 +385,12 @@ export default function AdminPanelScreen() {
         Alert.alert('Permission Denied', 'Gallery permission is required to select photos.');
         return;
       }
+      const isProfilePic = target === 'profile';
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.8,
+        allowsEditing: isProfilePic,
+        aspect: isProfilePic ? [1, 1] : undefined,
+        quality: isProfilePic ? 0.7 : 0.8,
       });
       if (!result.canceled && result.assets?.[0]?.uri) {
         if (target === 'id') {
@@ -663,7 +708,7 @@ export default function AdminPanelScreen() {
                         <LuxuryCard key={app.id} className="p-5 gap-4" interactive={false}>
                           <View className="flex-row justify-between items-start">
                             <View className="flex-row items-center gap-3 flex-1 pr-3">
-                              <Image source={{ uri: app.avatar }} className="w-10 h-10 rounded-full border border-zinc-200" />
+                              <Image source={{ uri: getSafeAvatarUri(app.avatar) }} className="w-10 h-10 rounded-full border border-zinc-200" />
                               <View className="flex-1">
                                 <Text className="text-zinc-950 text-xs font-black leading-tight">{app.fullName}</Text>
                                 <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{app.phone} • {app.email}</Text>
@@ -1255,92 +1300,128 @@ export default function AdminPanelScreen() {
 
               {/* LIVE BOOKINGS STREAM: User, Session Name & Latest Real-time Update */}
               <View className="gap-3">
-                <View className="flex-row items-center justify-between px-1">
-                  <View className="flex-row items-center gap-2">
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => toggleSection('liveStream')}
+                  className="bg-white border border-zinc-200 p-4 rounded-2xl flex-row items-center justify-between"
+                >
+                  <View className="flex-row items-center gap-2.5 flex-1 pr-2">
                     <View className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                    <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">
-                      Live Booking Updates ({bookings.length})
-                    </Text>
+                    <View>
+                      <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">
+                        Live Booking Updates ({bookings.length})
+                      </Text>
+                      <Text className="text-zinc-400 text-[9px] font-semibold mt-0.5">
+                        {expandedSections.liveStream ? 'Tap to collapse session list' : 'Tap to enlarge & view live bookings'}
+                      </Text>
+                    </View>
                   </View>
-                  <Text className="text-zinc-400 text-[9px] font-bold uppercase tracking-wider">Real-time Feed</Text>
-                </View>
-
-                {bookings.length === 0 ? (
-                  <View className="bg-white border border-zinc-200 p-6 rounded-2xl items-center justify-center">
-                    <Feather name="inbox" size={20} color="#9CA3AF" />
-                    <Text className="text-zinc-400 text-[10px] font-bold uppercase mt-2">No bookings recorded yet</Text>
+                  <View className="flex-row items-center gap-2">
+                    <View className="bg-emerald-50 border border-emerald-150 px-2 py-0.5 rounded-full">
+                      <Text className="text-emerald-700 text-[8px] font-black uppercase">Real-time</Text>
+                    </View>
+                    <Feather 
+                      name={expandedSections.liveStream ? 'chevron-up' : 'chevron-down'} 
+                      size={18} 
+                      color="#4B5563" 
+                    />
                   </View>
-                ) : (
-                  bookings
-                    .slice()
-                    .reverse()
-                    .slice(0, 15)
-                    .map((b) => {
-                      // Determine clean latest update text based on timeline status and trainer assignment
-                      const ts = (b.timelineStatus || '').toLowerCase();
-                      let latestUpdateText = 'Booking Created';
-                      let statusBadgeColor = 'bg-zinc-100 text-zinc-700 border-zinc-200';
+                </TouchableOpacity>
 
-                      if (ts === 'trainer_assigned' || ts === 'booked') {
-                        latestUpdateText = b.trainerName ? `Trainer Assigned: ${b.trainerName}` : 'Looking for Trainer';
-                        statusBadgeColor = 'bg-blue-50 text-blue-700 border-blue-200';
-                      } else if (ts === 'trainer_accepted') {
-                        latestUpdateText = `Accepted by ${b.trainerName || 'Trainer'}`;
-                        statusBadgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
-                      } else if (ts === 'travelling') {
-                        latestUpdateText = `${b.trainerName || 'Trainer'} is En Route`;
-                        statusBadgeColor = 'bg-amber-50 text-amber-700 border-amber-200';
-                      } else if (ts === 'arrived') {
-                        latestUpdateText = `${b.trainerName || 'Trainer'} Arrived at Location`;
-                        statusBadgeColor = 'bg-indigo-50 text-indigo-700 border-indigo-200';
-                      } else if (ts === 'workout_started') {
-                        latestUpdateText = 'Workout In Progress';
-                        statusBadgeColor = 'bg-purple-50 text-purple-700 border-purple-200';
-                      } else if (ts === 'workout_completed' || ts === 'session_closed' || b.status === 'completed') {
-                        latestUpdateText = 'Session Completed';
-                        statusBadgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
-                      } else if (b.status === 'cancelled') {
-                        latestUpdateText = 'Booking Cancelled';
-                        statusBadgeColor = 'bg-rose-50 text-rose-700 border-rose-200';
-                      } else if (b.status === 'client_no_show' || b.status === 'trainer_no_show') {
-                        latestUpdateText = b.status === 'client_no_show' ? 'Client No-Show' : 'Trainer No-Show';
-                        statusBadgeColor = 'bg-rose-50 text-rose-700 border-rose-200';
-                      }
+                {expandedSections.liveStream && (
+                  <View className="gap-2.5">
+                    {bookings.length === 0 ? (
+                      <View className="bg-white border border-zinc-200 p-6 rounded-2xl items-center justify-center">
+                        <Feather name="inbox" size={20} color="#9CA3AF" />
+                        <Text className="text-zinc-400 text-[10px] font-bold uppercase mt-2">No bookings recorded yet</Text>
+                      </View>
+                    ) : (
+                      <>
+                        {bookings
+                          .slice()
+                          .reverse()
+                          .slice(0, sectionLimits.liveStream || 7)
+                          .map((b) => {
+                            // Determine clean latest update text based on timeline status and trainer assignment
+                            const ts = (b.timelineStatus || '').toLowerCase();
+                            let latestUpdateText = 'Booking Created';
+                            let statusBadgeColor = 'bg-zinc-100 text-zinc-700 border-zinc-200';
 
-                      return (
-                        <View key={`live-stream-${b.id}`} className="bg-white border border-zinc-200 p-4 rounded-2xl gap-2.5">
-                          <View className="flex-row items-center justify-between">
-                            <View className="flex-1 pr-2">
-                              <Text className="text-zinc-950 text-sm font-black tracking-tight" numberOfLines={1}>
-                                {b.clientName || 'Client'}
-                              </Text>
-                              <Text className="text-[#E11D48] text-xs font-bold mt-0.5" numberOfLines={1}>
-                                {b.workoutTitle || 'Session'}
-                              </Text>
-                            </View>
-                            <View className={`px-2.5 py-1 rounded-full border ${statusBadgeColor.split(' ')[0]} ${statusBadgeColor.split(' ')[2]}`}>
-                              <Text className={`text-[8.5px] font-black uppercase tracking-wider ${statusBadgeColor.split(' ')[1]}`}>
-                                {b.time || 'Scheduled'}
-                              </Text>
-                            </View>
-                          </View>
+                            if (ts === 'trainer_assigned' || ts === 'booked') {
+                              latestUpdateText = b.trainerName ? `Trainer Assigned: ${b.trainerName}` : 'Looking for Trainer';
+                              statusBadgeColor = 'bg-blue-50 text-blue-700 border-blue-200';
+                            } else if (ts === 'trainer_accepted') {
+                              latestUpdateText = `Accepted by ${b.trainerName || 'Trainer'}`;
+                              statusBadgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                            } else if (ts === 'travelling') {
+                              latestUpdateText = `${b.trainerName || 'Trainer'} is En Route`;
+                              statusBadgeColor = 'bg-amber-50 text-amber-700 border-amber-200';
+                            } else if (ts === 'arrived') {
+                              latestUpdateText = `${b.trainerName || 'Trainer'} Arrived at Location`;
+                              statusBadgeColor = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+                            } else if (ts === 'workout_started') {
+                              latestUpdateText = 'Workout In Progress';
+                              statusBadgeColor = 'bg-purple-50 text-purple-700 border-purple-200';
+                            } else if (ts === 'workout_completed' || ts === 'session_closed' || b.status === 'completed') {
+                              latestUpdateText = 'Session Completed';
+                              statusBadgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                            } else if (b.status === 'cancelled') {
+                              latestUpdateText = 'Booking Cancelled';
+                              statusBadgeColor = 'bg-rose-50 text-rose-700 border-rose-200';
+                            } else if (b.status === 'client_no_show' || b.status === 'trainer_no_show') {
+                              latestUpdateText = b.status === 'client_no_show' ? 'Client No-Show' : 'Trainer No-Show';
+                              statusBadgeColor = 'bg-rose-50 text-rose-700 border-rose-200';
+                            }
 
-                          <View className="h-[1px] bg-zinc-100" />
+                            return (
+                              <View key={`live-stream-${b.id}`} className="bg-white border border-zinc-200 p-4 rounded-2xl gap-2.5">
+                                <View className="flex-row items-center justify-between">
+                                  <View className="flex-1 pr-2">
+                                    <Text className="text-zinc-950 text-sm font-black tracking-tight" numberOfLines={1}>
+                                      {b.clientName || 'Client'}
+                                    </Text>
+                                    <Text className="text-[#E11D48] text-xs font-bold mt-0.5" numberOfLines={1}>
+                                      {b.workoutTitle || 'Session'}
+                                    </Text>
+                                  </View>
+                                  <View className={`px-2.5 py-1 rounded-full border ${statusBadgeColor.split(' ')[0]} ${statusBadgeColor.split(' ')[2]}`}>
+                                    <Text className={`text-[8.5px] font-black uppercase tracking-wider ${statusBadgeColor.split(' ')[1]}`}>
+                                      {b.time || 'Scheduled'}
+                                    </Text>
+                                  </View>
+                                </View>
 
-                          <View className="flex-row items-center justify-between">
-                            <View className="flex-1 flex-row items-center gap-1.5 pr-2">
-                              <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">Latest Update:</Text>
-                              <Text className="text-zinc-900 text-xs font-extrabold flex-1" numberOfLines={1}>
-                                {latestUpdateText}
-                              </Text>
-                            </View>
-                            <Text className="text-zinc-400 text-[9px] font-medium">
-                              {b.date ? formatToDDMMYYYY(b.date) : ''}
+                                <View className="h-[1px] bg-zinc-100" />
+
+                                <View className="flex-row items-center justify-between">
+                                  <View className="flex-1 flex-row items-center gap-1.5 pr-2">
+                                    <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">Latest Update:</Text>
+                                    <Text className="text-zinc-900 text-xs font-extrabold flex-1" numberOfLines={1}>
+                                      {latestUpdateText}
+                                    </Text>
+                                  </View>
+                                  <Text className="text-zinc-400 text-[9px] font-medium">
+                                    {b.date ? formatToDDMMYYYY(b.date) : ''}
+                                  </Text>
+                                </View>
+                              </View>
+                            );
+                          })}
+
+                        {bookings.length > (sectionLimits.liveStream || 7) && (
+                          <TouchableOpacity
+                            onPress={() => loadMoreForSection('liveStream')}
+                            className="bg-zinc-100 border border-zinc-200 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
+                          >
+                            <Feather name="plus-circle" size={14} color="#374151" />
+                            <Text className="text-zinc-800 text-[10px] font-black uppercase tracking-wider">
+                              Load Next 7 Bookings (Showing {Math.min(sectionLimits.liveStream || 7, bookings.length)} of {bookings.length})
                             </Text>
-                          </View>
-                        </View>
-                      );
-                    })
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    )}
+                  </View>
                 )}
               </View>
 
@@ -1430,88 +1511,162 @@ export default function AdminPanelScreen() {
                 return (
                   <>
                     {/* TODAY'S BOOKED */}
-                    <View className="gap-4">
-                      <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">{"TODAY'S BOOKED SESSIONS (" + todayBooked.length + ")"}</Text>
-                      {todayBooked.length === 0 ? (
-                        <View className="bg-white border border-zinc-200 p-8 rounded-[24px] items-center justify-center">
-                          <Feather name="calendar" size={20} color="#9CA3AF" />
-                          <Text className="text-zinc-400 text-[10px] font-black uppercase mt-2">No bookings scheduled for today.</Text>
+                    <View className="gap-3">
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => toggleSection('todayBooked')}
+                        className="bg-white border border-zinc-200 p-4 rounded-2xl flex-row items-center justify-between"
+                      >
+                        <View className="flex-1 pr-2">
+                          <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">
+                            {"TODAY'S BOOKED SESSIONS (" + todayBooked.length + ")"}
+                          </Text>
+                          <Text className="text-zinc-400 text-[9px] font-semibold mt-0.5">
+                            {expandedSections.todayBooked ? 'Tap to collapse' : 'Tap to enlarge & view today’s sessions'}
+                          </Text>
                         </View>
-                      ) : (
-                        todayBooked.map((b) => (
-                          <LuxuryCard key={b.id} className="p-5" interactive={false}>
-                            <View className="flex-row justify-between items-start mb-3">
-                              <View className="gap-0.5">
-                                <Text className="text-[#101828] text-base font-extrabold">{b.workoutTitle}</Text>
-                                <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Booking ID: {b.id}</Text>
-                              </View>
-                              <View className="bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-xl">
-                                <Text className="text-emerald-600 text-[8px] font-bold uppercase tracking-wider">{b.timelineStatus}</Text>
-                              </View>
+                        <Feather 
+                          name={expandedSections.todayBooked ? 'chevron-up' : 'chevron-down'} 
+                          size={18} 
+                          color="#4B5563" 
+                        />
+                      </TouchableOpacity>
+
+                      {expandedSections.todayBooked && (
+                        <View className="gap-3">
+                          {todayBooked.length === 0 ? (
+                            <View className="bg-white border border-zinc-200 p-8 rounded-[24px] items-center justify-center">
+                              <Feather name="calendar" size={20} color="#9CA3AF" />
+                              <Text className="text-zinc-400 text-[10px] font-black uppercase mt-2">No bookings scheduled for today.</Text>
                             </View>
-                            <View className="h-[1px] bg-zinc-100 my-2" />
-                            <View className="gap-1.5 mb-3.5">
-                              <Text className="text-zinc-650 text-xs font-medium">Client Name: <Text className="font-bold text-zinc-900">{b.clientName || 'Client'}</Text></Text>
-                              <Text className="text-zinc-650 text-xs font-medium">Trainer Name: <Text className="font-bold text-zinc-900">{b.trainerName}</Text></Text>
-                              <Text className="text-zinc-650 text-xs font-medium">Workout Type: <Text className="font-bold text-zinc-900">{b.workoutTitle}</Text></Text>
-                              <Text className="text-zinc-650 text-xs font-medium">Booking Status: <Text className="font-bold text-zinc-900">Confirmed / Booked</Text></Text>
-                              <Text className="text-zinc-650 text-xs font-medium">Time: <Text className="font-bold text-zinc-900">{formatToDDMMYYYY(b.date)} @ {b.time}</Text></Text>
-                              <Text className="text-zinc-650 text-xs font-medium">Acceptance Type: <Text className="font-bold text-zinc-900">{b.acceptanceMethod === 'auto' ? 'AUTO-ACCEPTED' : (b.acceptanceMethod === 'manual' ? 'MANUALLY ACCEPTED' : 'PENDING')}</Text></Text>
-                              {(b.autoAcceptedAt || b.trainerAcceptedAt) && (
-                                <Text className="text-zinc-650 text-xs font-medium">Accepted At: <Text className="font-bold text-zinc-900">{new Date(Number(b.autoAcceptedAt || b.trainerAcceptedAt)).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</Text></Text>
+                          ) : (
+                            <>
+                              {todayBooked.slice(0, sectionLimits.todayBooked || 7).map((b) => (
+                                <LuxuryCard key={b.id} className="p-5" interactive={false}>
+                                  <View className="flex-row justify-between items-start mb-3">
+                                    <View className="gap-0.5">
+                                      <Text className="text-[#101828] text-base font-extrabold">{b.workoutTitle}</Text>
+                                      <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Booking ID: {b.id}</Text>
+                                    </View>
+                                    <View className="bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-xl">
+                                      <Text className="text-emerald-600 text-[8px] font-bold uppercase tracking-wider">{b.timelineStatus}</Text>
+                                    </View>
+                                  </View>
+                                  <View className="h-[1px] bg-zinc-100 my-2" />
+                                  <View className="gap-1.5 mb-3.5">
+                                    <Text className="text-zinc-650 text-xs font-medium">Client Name: <Text className="font-bold text-zinc-900">{b.clientName || 'Client'}</Text></Text>
+                                    <Text className="text-zinc-650 text-xs font-medium">Trainer Name: <Text className="font-bold text-zinc-900">{b.trainerName}</Text></Text>
+                                    <Text className="text-zinc-650 text-xs font-medium">Workout Type: <Text className="font-bold text-zinc-900">{b.workoutTitle}</Text></Text>
+                                    <Text className="text-zinc-650 text-xs font-medium">Booking Status: <Text className="font-bold text-zinc-900">Confirmed / Booked</Text></Text>
+                                    <Text className="text-zinc-650 text-xs font-medium">Time: <Text className="font-bold text-zinc-900">{formatToDDMMYYYY(b.date)} @ {b.time}</Text></Text>
+                                    <Text className="text-zinc-650 text-xs font-medium">Acceptance Type: <Text className="font-bold text-zinc-900">{b.acceptanceMethod === 'auto' ? 'AUTO-ACCEPTED' : (b.acceptanceMethod === 'manual' ? 'MANUALLY ACCEPTED' : 'PENDING')}</Text></Text>
+                                    {(b.autoAcceptedAt || b.trainerAcceptedAt) && (
+                                      <Text className="text-zinc-650 text-xs font-medium">Accepted At: <Text className="font-bold text-zinc-900">{new Date(Number(b.autoAcceptedAt || b.trainerAcceptedAt)).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</Text></Text>
+                                    )}
+                                  </View>
+                                  <TouchableOpacity
+                                    onPress={() => setSelectedAuditSession(b)}
+                                    className="bg-zinc-800 py-3 rounded-xl items-center justify-center"
+                                  >
+                                    <Text className="text-white text-xs font-black uppercase tracking-wider">View Audit Timeline</Text>
+                                  </TouchableOpacity>
+                                </LuxuryCard>
+                              ))}
+
+                              {todayBooked.length > (sectionLimits.todayBooked || 7) && (
+                                <TouchableOpacity
+                                  onPress={() => loadMoreForSection('todayBooked')}
+                                  className="bg-zinc-100 border border-zinc-200 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
+                                >
+                                  <Feather name="plus-circle" size={14} color="#374151" />
+                                  <Text className="text-zinc-800 text-[10px] font-black uppercase tracking-wider">
+                                    Load Next 7 Sessions (Showing {Math.min(sectionLimits.todayBooked || 7, todayBooked.length)} of {todayBooked.length})
+                                  </Text>
+                                </TouchableOpacity>
                               )}
-                            </View>
-                            <TouchableOpacity
-                              onPress={() => setSelectedAuditSession(b)}
-                              className="bg-zinc-800 py-3 rounded-xl items-center justify-center"
-                            >
-                              <Text className="text-white text-xs font-black uppercase tracking-wider">View Audit Timeline</Text>
-                            </TouchableOpacity>
-                          </LuxuryCard>
-                        ))
+                            </>
+                          )}
+                        </View>
                       )}
                     </View>
 
                     {/* UPCOMING BOOKED SESSIONS */}
-                    <View className="gap-4 mt-2">
-                      <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">UPCOMING BOOKED SESSIONS ({upcomingBooked.length})</Text>
-                      {upcomingBooked.length === 0 ? (
-                        <View className="bg-white border border-zinc-200 p-8 rounded-[24px] items-center justify-center">
-                          <Feather name="clock" size={20} color="#9CA3AF" />
-                          <Text className="text-zinc-400 text-[10px] font-black uppercase mt-2">No upcoming bookings scheduled.</Text>
+                    <View className="gap-3 mt-1">
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => toggleSection('upcomingBooked')}
+                        className="bg-white border border-zinc-200 p-4 rounded-2xl flex-row items-center justify-between"
+                      >
+                        <View className="flex-1 pr-2">
+                          <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">
+                            {"UPCOMING BOOKED SESSIONS (" + upcomingBooked.length + ")"}
+                          </Text>
+                          <Text className="text-zinc-400 text-[9px] font-semibold mt-0.5">
+                            {expandedSections.upcomingBooked ? 'Tap to collapse' : 'Tap to enlarge & view upcoming sessions'}
+                          </Text>
                         </View>
-                      ) : (
-                        upcomingBooked.map((b) => (
-                          <LuxuryCard key={b.id} className="p-5" interactive={false}>
-                            <View className="flex-row justify-between items-start mb-3">
-                              <View className="gap-0.5">
-                                <Text className="text-[#101828] text-base font-extrabold">{b.workoutTitle}</Text>
-                                <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Booking ID: {b.id}</Text>
-                              </View>
-                              <View className="bg-indigo-50 border border-indigo-150 px-3 py-1 rounded-xl">
-                                <Text className="text-indigo-600 text-[8px] font-bold uppercase tracking-wider">{b.timelineStatus}</Text>
-                              </View>
+                        <Feather 
+                          name={expandedSections.upcomingBooked ? 'chevron-up' : 'chevron-down'} 
+                          size={18} 
+                          color="#4B5563" 
+                        />
+                      </TouchableOpacity>
+
+                      {expandedSections.upcomingBooked && (
+                        <View className="gap-3">
+                          {upcomingBooked.length === 0 ? (
+                            <View className="bg-white border border-zinc-200 p-8 rounded-[24px] items-center justify-center">
+                              <Feather name="clock" size={20} color="#9CA3AF" />
+                              <Text className="text-zinc-400 text-[10px] font-black uppercase mt-2">No upcoming bookings scheduled.</Text>
                             </View>
-                            <View className="h-[1px] bg-zinc-100 my-2" />
-                            <View className="gap-1.5 mb-3.5">
-                              <Text className="text-zinc-650 text-xs font-medium">Client Name: <Text className="font-bold text-zinc-900">{b.clientName || 'Client'}</Text></Text>
-                              <Text className="text-zinc-650 text-xs font-medium">Trainer Name: <Text className="font-bold text-zinc-900">{b.trainerName}</Text></Text>
-                              <Text className="text-zinc-650 text-xs font-medium">Workout Type: <Text className="font-bold text-zinc-900">{b.workoutTitle}</Text></Text>
-                              <Text className="text-zinc-650 text-xs font-medium">Booking Status: <Text className="font-bold text-zinc-900">Confirmed / Booked</Text></Text>
-                              <Text className="text-zinc-650 text-xs font-medium">Time: <Text className="font-bold text-zinc-900">{formatToDDMMYYYY(b.date)} @ {b.time}</Text></Text>
-                              <Text className="text-zinc-650 text-xs font-medium">Acceptance Type: <Text className="font-bold text-zinc-900">{b.acceptanceMethod === 'auto' ? 'AUTO-ACCEPTED' : (b.acceptanceMethod === 'manual' ? 'MANUALLY ACCEPTED' : 'PENDING')}</Text></Text>
-                              {(b.autoAcceptedAt || b.trainerAcceptedAt) && (
-                                <Text className="text-zinc-650 text-xs font-medium">Accepted At: <Text className="font-bold text-zinc-900">{new Date(Number(b.autoAcceptedAt || b.trainerAcceptedAt)).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</Text></Text>
+                          ) : (
+                            <>
+                              {upcomingBooked.slice(0, sectionLimits.upcomingBooked || 7).map((b) => (
+                                <LuxuryCard key={b.id} className="p-5" interactive={false}>
+                                  <View className="flex-row justify-between items-start mb-3">
+                                    <View className="gap-0.5">
+                                      <Text className="text-[#101828] text-base font-extrabold">{b.workoutTitle}</Text>
+                                      <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Booking ID: {b.id}</Text>
+                                    </View>
+                                    <View className="bg-indigo-50 border border-indigo-150 px-3 py-1 rounded-xl">
+                                      <Text className="text-indigo-600 text-[8px] font-bold uppercase tracking-wider">{b.timelineStatus}</Text>
+                                    </View>
+                                  </View>
+                                  <View className="h-[1px] bg-zinc-100 my-2" />
+                                  <View className="gap-1.5 mb-3.5">
+                                    <Text className="text-zinc-650 text-xs font-medium">Client Name: <Text className="font-bold text-zinc-900">{b.clientName || 'Client'}</Text></Text>
+                                    <Text className="text-zinc-650 text-xs font-medium">Trainer Name: <Text className="font-bold text-zinc-900">{b.trainerName}</Text></Text>
+                                    <Text className="text-zinc-650 text-xs font-medium">Workout Type: <Text className="font-bold text-zinc-900">{b.workoutTitle}</Text></Text>
+                                    <Text className="text-zinc-650 text-xs font-medium">Booking Status: <Text className="font-bold text-zinc-900">Confirmed / Booked</Text></Text>
+                                    <Text className="text-zinc-650 text-xs font-medium">Time: <Text className="font-bold text-zinc-900">{formatToDDMMYYYY(b.date)} @ {b.time}</Text></Text>
+                                    <Text className="text-zinc-650 text-xs font-medium">Acceptance Type: <Text className="font-bold text-zinc-900">{b.acceptanceMethod === 'auto' ? 'AUTO-ACCEPTED' : (b.acceptanceMethod === 'manual' ? 'MANUALLY ACCEPTED' : 'PENDING')}</Text></Text>
+                                    {(b.autoAcceptedAt || b.trainerAcceptedAt) && (
+                                      <Text className="text-zinc-650 text-xs font-medium">Accepted At: <Text className="font-bold text-zinc-900">{new Date(Number(b.autoAcceptedAt || b.trainerAcceptedAt)).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</Text></Text>
+                                    )}
+                                  </View>
+                                  <TouchableOpacity
+                                    onPress={() => setSelectedAuditSession(b)}
+                                    className="bg-indigo-600 py-3 rounded-xl items-center justify-center"
+                                  >
+                                    <Text className="text-white text-xs font-black uppercase tracking-wider">View Audit Timeline</Text>
+                                  </TouchableOpacity>
+                                </LuxuryCard>
+                              ))}
+
+                              {upcomingBooked.length > (sectionLimits.upcomingBooked || 7) && (
+                                <TouchableOpacity
+                                  onPress={() => loadMoreForSection('upcomingBooked')}
+                                  className="bg-zinc-100 border border-zinc-200 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
+                                >
+                                  <Feather name="plus-circle" size={14} color="#374151" />
+                                  <Text className="text-zinc-800 text-[10px] font-black uppercase tracking-wider">
+                                    Load Next 7 Sessions (Showing {Math.min(sectionLimits.upcomingBooked || 7, upcomingBooked.length)} of {upcomingBooked.length})
+                                  </Text>
+                                </TouchableOpacity>
                               )}
-                            </View>
-                            <TouchableOpacity
-                              onPress={() => setSelectedAuditSession(b)}
-                              className="bg-indigo-600 py-3 rounded-xl items-center justify-center"
-                            >
-                              <Text className="text-white text-xs font-black uppercase tracking-wider">View Audit Timeline</Text>
-                            </TouchableOpacity>
-                          </LuxuryCard>
-                        ))
+                            </>
+                          )}
+                        </View>
                       )}
                     </View>
                   </>
@@ -1519,104 +1674,178 @@ export default function AdminPanelScreen() {
               })()}
 
               {/* Live Session List */}
-              <View className="gap-4">
-                <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider pl-1">Live Ongoing Sessions</Text>
-                {liveSessions.length === 0 ? (
-                  <View className="bg-white border border-zinc-200 p-8 rounded-[24px] items-center justify-center">
-                    <Feather name="activity" size={20} color="#9CA3AF" />
-                    <Text className="text-zinc-400 text-[10px] font-black uppercase mt-2">No active live tracking sessions</Text>
+              <View className="gap-3">
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => toggleSection('liveOngoing')}
+                  className="bg-white border border-zinc-200 p-4 rounded-2xl flex-row items-center justify-between"
+                >
+                  <View className="flex-1 pr-2">
+                    <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">
+                      {"Live Ongoing Sessions (" + liveSessions.length + ")"}
+                    </Text>
+                    <Text className="text-zinc-400 text-[9px] font-semibold mt-0.5">
+                      {expandedSections.liveOngoing ? 'Tap to collapse' : 'Tap to enlarge & view live tracking'}
+                    </Text>
                   </View>
-                ) : (
-                  liveSessions.map((b) => (
-                    <LuxuryCard key={b.id} className="p-4 gap-3.5" interactive={false}>
-                      <View className="flex-row items-center gap-3">
-                        <Image source={{ uri: b.trainerPhoto }} className="w-10 h-10 rounded-full" />
-                        <View className="flex-1">
-                          <Text className="text-zinc-950 text-xs font-black">Coach {b.trainerName} ↔ {b.clientName || 'Client'}</Text>
-                          <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{b.workoutTitle} • {formatToDDMMYYYY(b.date)} ({b.time})</Text>
-                        </View>
-                        <View className="bg-indigo-50 border border-indigo-150 px-2 py-0.5 rounded-full">
-                          <Text className="text-[#4F46E5] text-[7px] font-black uppercase">{b.timelineStatus}</Text>
-                        </View>
-                      </View>
+                  <Feather 
+                    name={expandedSections.liveOngoing ? 'chevron-up' : 'chevron-down'} 
+                    size={18} 
+                    color="#4B5563" 
+                  />
+                </TouchableOpacity>
 
-                      <View className="h-[1px] bg-zinc-50" />
-                      <View className="gap-1 pl-1">
-                        <Text className="text-zinc-450 text-[8px] font-black uppercase">Target Address</Text>
-                        <Text className="text-zinc-850 text-[10px] font-medium leading-relaxed" numberOfLines={1}>{b.address || 'Client Scheduled Address'}</Text>
+                {expandedSections.liveOngoing && (
+                  <View className="gap-3">
+                    {liveSessions.length === 0 ? (
+                      <View className="bg-white border border-zinc-200 p-8 rounded-[24px] items-center justify-center">
+                        <Feather name="activity" size={20} color="#9CA3AF" />
+                        <Text className="text-zinc-400 text-[10px] font-black uppercase mt-2">No active live tracking sessions</Text>
                       </View>
+                    ) : (
+                      <>
+                        {liveSessions.slice(0, sectionLimits.liveOngoing || 7).map((b) => (
+                          <LuxuryCard key={b.id} className="p-4 gap-3.5" interactive={false}>
+                            <View className="flex-row items-center gap-3">
+                              <Image source={{ uri: getSafeAvatarUri(b.trainerPhoto) }} className="w-10 h-10 rounded-full" />
+                              <View className="flex-1">
+                                <Text className="text-zinc-950 text-xs font-black">Coach {b.trainerName} ↔ {b.clientName || 'Client'}</Text>
+                                <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{b.workoutTitle} • {formatToDDMMYYYY(b.date)} ({b.time})</Text>
+                              </View>
+                              <View className="bg-indigo-50 border border-indigo-150 px-2 py-0.5 rounded-full">
+                                <Text className="text-[#4F46E5] text-[7px] font-black uppercase">{b.timelineStatus}</Text>
+                              </View>
+                            </View>
 
-                      <View className="flex-row gap-2 mt-1">
-                        <TouchableOpacity
-                          onPress={() => router.push({ pathname: '/session-detail' as any, params: { id: b.id } })}
-                          className="flex-1 bg-zinc-950 py-2 rounded-lg items-center justify-center"
-                        >
-                          <Text className="text-white text-[8px] font-black uppercase">Inspect Session</Text>
-                        </TouchableOpacity>
-                        
-                        <TouchableOpacity
-                          onPress={async () => {
-                            try {
-                              await updateTimelineStatus(b.id, 'trainer_arrived');
-                              Alert.alert('Session Advanced', 'Trainer marked as arrived.');
-                            } catch (err: any) {
-                              Alert.alert('Error', err.message || 'Could not advance status.');
-                            }
-                          }}
-                          className="flex-1 bg-zinc-100 border border-zinc-200 py-2 rounded-lg items-center justify-center"
-                        >
-                          <Text className="text-zinc-950 text-[8px] font-black uppercase">Force Arrived</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </LuxuryCard>
-                  ))
+                            <View className="h-[1px] bg-zinc-50" />
+                            <View className="gap-1 pl-1">
+                              <Text className="text-zinc-450 text-[8px] font-black uppercase">Target Address</Text>
+                              <Text className="text-zinc-850 text-[10px] font-medium leading-relaxed" numberOfLines={1}>{b.address || 'Client Scheduled Address'}</Text>
+                            </View>
+
+                            <View className="flex-row gap-2 mt-1">
+                              <TouchableOpacity
+                                onPress={() => router.push({ pathname: '/session-detail' as any, params: { id: b.id } })}
+                                className="flex-1 bg-zinc-950 py-2 rounded-lg items-center justify-center"
+                              >
+                                <Text className="text-white text-[8px] font-black uppercase">Inspect Session</Text>
+                              </TouchableOpacity>
+                              
+                              <TouchableOpacity
+                                onPress={async () => {
+                                  try {
+                                    await updateTimelineStatus(b.id, 'trainer_arrived');
+                                    Alert.alert('Session Advanced', 'Trainer marked as arrived.');
+                                  } catch (err: any) {
+                                    Alert.alert('Error', err.message || 'Could not advance status.');
+                                  }
+                                }}
+                                className="flex-1 bg-zinc-100 border border-zinc-200 py-2 rounded-lg items-center justify-center"
+                              >
+                                <Text className="text-zinc-950 text-[8px] font-black uppercase">Force Arrived</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </LuxuryCard>
+                        ))}
+
+                        {liveSessions.length > (sectionLimits.liveOngoing || 7) && (
+                          <TouchableOpacity
+                            onPress={() => loadMoreForSection('liveOngoing')}
+                            className="bg-zinc-100 border border-zinc-200 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
+                          >
+                            <Feather name="plus-circle" size={14} color="#374151" />
+                            <Text className="text-zinc-800 text-[10px] font-black uppercase tracking-wider">
+                              Load Next 7 Sessions (Showing {Math.min(sectionLimits.liveOngoing || 7, liveSessions.length)} of {liveSessions.length})
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    )}
+                  </View>
                 )}
               </View>
 
               {/* Sessions History & Audit */}
-              <View className="gap-3 mt-6">
-                <Text className="text-[#101828] text-xs font-semibold uppercase tracking-widest pl-1">Past & Missed Sessions Audit</Text>
-                {missedOrEndedSessions.length === 0 ? (
-                  <View className="bg-white border border-zinc-200 p-8 rounded-[24px] items-center justify-center">
-                    <Feather name="list" size={20} color="#9CA3AF" />
-                    <Text className="text-zinc-400 text-[10px] font-black uppercase mt-2">No historical sessions to display</Text>
+              <View className="gap-3 mt-1">
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => toggleSection('historyAudit')}
+                  className="bg-white border border-zinc-200 p-4 rounded-2xl flex-row items-center justify-between"
+                >
+                  <View className="flex-1 pr-2">
+                    <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">
+                      {"Past & Missed Sessions Audit (" + missedOrEndedSessions.length + ")"}
+                    </Text>
+                    <Text className="text-zinc-400 text-[9px] font-semibold mt-0.5">
+                      {expandedSections.historyAudit ? 'Tap to collapse' : 'Tap to enlarge & view past sessions'}
+                    </Text>
                   </View>
-                ) : (
-                  missedOrEndedSessions.map((b) => (
-                    <LuxuryCard key={b.id} className="p-4 gap-3.5" interactive={false}>
-                      <View className="flex-row items-center gap-3">
-                        <Image source={{ uri: b.trainerPhoto }} className="w-10 h-10 rounded-full" />
-                        <View className="flex-1">
-                          <Text className="text-zinc-950 text-xs font-black">Coach {b.trainerName} ↔ {b.clientName || 'Client'}</Text>
-                          <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{b.workoutTitle} • {formatToDDMMYYYY(b.date)} ({b.time})</Text>
-                        </View>
-                        <View className={`border px-2 py-0.5 rounded-full ${
-                          b.status === 'completed' 
-                            ? 'bg-zinc-50 border-zinc-200' 
-                            : b.status === 'cancelled' 
-                              ? 'bg-red-50 border-red-150' 
-                              : 'bg-amber-50 border-amber-150'
-                        }`}>
-                          <Text className={`text-[7px] font-black uppercase ${
-                            b.status === 'completed' 
-                              ? 'text-zinc-500' 
-                              : b.status === 'cancelled' 
-                                ? 'text-red-500' 
-                                : 'text-amber-600'
-                          }`}>{b.status}</Text>
-                        </View>
-                      </View>
+                  <Feather 
+                    name={expandedSections.historyAudit ? 'chevron-up' : 'chevron-down'} 
+                    size={18} 
+                    color="#4B5563" 
+                  />
+                </TouchableOpacity>
 
-                      <View className="flex-row gap-2 mt-1">
-                        <TouchableOpacity
-                          onPress={() => setSelectedAuditSession(b)}
-                          className="flex-1 bg-zinc-900 py-2 rounded-lg items-center justify-center"
-                        >
-                          <Text className="text-white text-[8px] font-black uppercase">View Audit Details</Text>
-                        </TouchableOpacity>
+                {expandedSections.historyAudit && (
+                  <View className="gap-3">
+                    {missedOrEndedSessions.length === 0 ? (
+                      <View className="bg-white border border-zinc-200 p-8 rounded-[24px] items-center justify-center">
+                        <Feather name="list" size={20} color="#9CA3AF" />
+                        <Text className="text-zinc-400 text-[10px] font-black uppercase mt-2">No historical sessions to display</Text>
                       </View>
-                    </LuxuryCard>
-                  ))
+                    ) : (
+                      <>
+                        {missedOrEndedSessions.slice(0, sectionLimits.historyAudit || 7).map((b) => (
+                          <LuxuryCard key={b.id} className="p-4 gap-3.5" interactive={false}>
+                            <View className="flex-row items-center gap-3">
+                              <Image source={{ uri: getSafeAvatarUri(b.trainerPhoto) }} className="w-10 h-10 rounded-full" />
+                              <View className="flex-1">
+                                <Text className="text-zinc-950 text-xs font-black">Coach {b.trainerName} ↔ {b.clientName || 'Client'}</Text>
+                                <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{b.workoutTitle} • {formatToDDMMYYYY(b.date)} ({b.time})</Text>
+                              </View>
+                              <View className={`border px-2 py-0.5 rounded-full ${
+                                b.status === 'completed' 
+                                  ? 'bg-zinc-50 border-zinc-200' 
+                                  : b.status === 'cancelled' 
+                                    ? 'bg-red-50 border-red-150' 
+                                    : 'bg-amber-50 border-amber-150'
+                              }`}>
+                                <Text className={`text-[7px] font-black uppercase ${
+                                  b.status === 'completed' 
+                                    ? 'text-zinc-500' 
+                                    : b.status === 'cancelled' 
+                                      ? 'text-red-500' 
+                                      : 'text-amber-600'
+                                }`}>{b.status}</Text>
+                              </View>
+                            </View>
+
+                            <View className="flex-row gap-2 mt-1">
+                              <TouchableOpacity
+                                onPress={() => setSelectedAuditSession(b)}
+                                className="flex-1 bg-zinc-900 py-2 rounded-lg items-center justify-center"
+                              >
+                                <Text className="text-white text-[8px] font-black uppercase">View Audit Details</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </LuxuryCard>
+                        ))}
+
+                        {missedOrEndedSessions.length > (sectionLimits.historyAudit || 7) && (
+                          <TouchableOpacity
+                            onPress={() => loadMoreForSection('historyAudit')}
+                            className="bg-zinc-100 border border-zinc-200 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
+                          >
+                            <Feather name="plus-circle" size={14} color="#374151" />
+                            <Text className="text-zinc-800 text-[10px] font-black uppercase tracking-wider">
+                              Load Next 7 Sessions (Showing {Math.min(sectionLimits.historyAudit || 7, missedOrEndedSessions.length)} of {missedOrEndedSessions.length})
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    )}
+                  </View>
                 )}
               </View>
 

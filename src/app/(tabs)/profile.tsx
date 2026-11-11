@@ -392,7 +392,7 @@ export default function ProfileScreen() {
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsEditing: true,
           aspect: [1, 1],
-          quality: 0.8,
+          quality: 0.7,
         });
         if (!result.canceled && result.assets?.[0]?.uri) {
           await handleAvatarPicked(result.assets[0].uri);
@@ -407,7 +407,7 @@ export default function ProfileScreen() {
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsEditing: true,
           aspect: [1, 1],
-          quality: 0.8,
+          quality: 0.7,
         });
         if (!result.canceled && result.assets?.[0]?.uri) {
           await handleAvatarPicked(result.assets[0].uri);
@@ -473,7 +473,7 @@ export default function ProfileScreen() {
               const res = await ImagePicker.launchCameraAsync({
                 allowsEditing: true,
                 aspect: [1, 1],
-                quality: 0.8,
+                quality: 0.7,
               });
               if (!res.canceled && res.assets?.[0]?.uri) {
                 await saveTrainerPhoto(res.assets[0].uri);
@@ -492,7 +492,7 @@ export default function ProfileScreen() {
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: true,
                 aspect: [1, 1],
-                quality: 0.8,
+                quality: 0.7,
               });
               if (!res.canceled && res.assets?.[0]?.uri) {
                 await saveTrainerPhoto(res.assets[0].uri);
