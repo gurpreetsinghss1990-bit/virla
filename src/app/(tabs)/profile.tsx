@@ -22,6 +22,7 @@ import { formatToDDMMYYYY } from '../../utils/date';
 import { Image as ExpoImage } from 'expo-image';
 import { MASTER_TRAINER_AVATAR_URI, MASTER_TRAINER_AVATAR_IMAGE } from '../../constants/masterTrainerAvatar';
 import { uploadAvatarToStorage } from '../../utils/uploadAvatar';
+import { AvatarImage } from '../../components/AvatarImage';
 
 const DEFAULT_AVATARS = [
   { id: 'avatar_male', label: 'Men (Master Trainer)', gender: 'male', uri: MASTER_TRAINER_AVATAR_URI },
@@ -968,18 +969,9 @@ export default function ProfileScreen() {
                   className="relative"
                 >
                   <View className="w-[78px] h-[78px] rounded-full p-[2.5px] border-2 border-[#F59E0B] bg-white shadow-sm">
-                    <ExpoImage
-                      source={(() => {
-                        const isMale = (profile.gender || '').toLowerCase() === 'male';
-                        const rawAvatar = profile.avatar || user?.avatar;
-                        if (isMale && (!rawAvatar || rawAvatar.includes('photo-1534528741775') || rawAvatar.includes('photo-1544005313') || rawAvatar.includes('selfie.jpg'))) {
-                          return MASTER_TRAINER_AVATAR_IMAGE;
-                        }
-                        if (rawAvatar && typeof rawAvatar === 'string' && (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:') || rawAvatar.startsWith('file://')) && !rawAvatar.includes('selfie.jpg')) {
-                          return { uri: rawAvatar };
-                        }
-                        return isMale ? MASTER_TRAINER_AVATAR_IMAGE : { uri: getDefaultAvatarForGender(profile.gender) };
-                      })()}
+                    <AvatarImage
+                      uri={profile.avatar || user?.avatar}
+                      gender={(profile.gender || (user as any)?.gender) as string}
                       style={{ width: '100%', height: '100%', borderRadius: 999 }}
                       contentFit="cover"
                       cachePolicy="memory-disk"
@@ -2808,19 +2800,9 @@ export default function ProfileScreen() {
                   <View className="flex-row items-center gap-4">
                     {/* Current Selected Avatar */}
                     <View className="w-16 h-16 rounded-full border-2 border-rose-500 p-0.5 bg-white shadow-sm">
-                      <ExpoImage
-                        source={(() => {
-                          const activeGender = (editGender || profile.gender || '').toLowerCase();
-                          const isMale = activeGender === 'male';
-                          const rawAvatar = editAvatar || profile.avatar || user?.avatar;
-                          if (isMale && (!rawAvatar || rawAvatar.includes('photo-1534528741775') || rawAvatar.includes('photo-1544005313') || rawAvatar.includes('photo-1506794778') || rawAvatar.includes('selfie.jpg'))) {
-                            return MASTER_TRAINER_AVATAR_IMAGE;
-                          }
-                          if (rawAvatar && typeof rawAvatar === 'string' && (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:') || rawAvatar.startsWith('file://')) && !rawAvatar.includes('selfie.jpg')) {
-                            return { uri: rawAvatar };
-                          }
-                          return isMale ? MASTER_TRAINER_AVATAR_IMAGE : { uri: getDefaultAvatarForGender(activeGender) };
-                        })()}
+                      <AvatarImage
+                        uri={editAvatar || profile.avatar || user?.avatar}
+                        gender={(editGender || profile.gender || (user as any)?.gender) as string}
                         style={{ width: '100%', height: '100%', borderRadius: 999 }}
                         contentFit="cover"
                         cachePolicy="memory-disk"

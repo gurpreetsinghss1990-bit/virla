@@ -32,8 +32,7 @@ import { SessionEngine } from '../../services/SessionEngine';
 import { locationTrackerService } from '../../services/LocationTrackerService';
 import { Booking } from '../../types';
 import { normalizeDate, canonicalizeTimeRange, getBookingISTDateRange, getDisplayWorkoutTitle, formatToDDMMYYYY } from '../../utils/date';
-import { MASTER_TRAINER_AVATAR_IMAGE } from '../../constants/masterTrainerAvatar';
-import { getDefaultAvatarForGender } from './profile';
+import { AvatarImage } from '../../components/AvatarImage';
 import { CoachVideoAvatar } from '../../components/CoachVideoAvatar';
 import { BackgroundVideoLoop } from '../../components/BackgroundVideoLoop';
 import { BUNNY_CDN_ASSETS } from '../../services/bunnyCdnService';
@@ -1254,19 +1253,9 @@ export default function HomeScreen() {
             className="w-11 h-11 rounded-full border border-zinc-200 overflow-hidden relative bg-zinc-100 items-center justify-center"
             style={{ minWidth: 44, minHeight: 44 }}
           >
-            <ExpoImage 
-              source={(() => {
-                const userGender = ((user as any)?.gender || profile?.gender || '').toLowerCase();
-                const isMale = userGender === 'male' || role === 'trainer';
-                const rawAvatar = profile?.avatar || user?.avatar;
-                if (isMale && (!rawAvatar || rawAvatar.includes('photo-1534528741775') || rawAvatar.includes('photo-1544005313') || rawAvatar.includes('selfie.jpg'))) {
-                  return MASTER_TRAINER_AVATAR_IMAGE;
-                }
-                if (rawAvatar && typeof rawAvatar === 'string' && (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:') || rawAvatar.startsWith('file://')) && !rawAvatar.includes('selfie.jpg')) {
-                  return { uri: rawAvatar };
-                }
-                return isMale ? MASTER_TRAINER_AVATAR_IMAGE : { uri: getDefaultAvatarForGender(userGender) };
-              })()} 
+            <AvatarImage
+              uri={profile?.avatar || user?.avatar}
+              gender={((user as any)?.gender || profile?.gender || (role === 'trainer' ? 'male' : '')) as string}
               style={{ width: '100%', height: '100%', borderRadius: 999 }}
               contentFit="cover"
               cachePolicy="memory-disk"

@@ -4,7 +4,6 @@ import { supabase } from '../database/supabaseClient';
 import { assertUploadableFile, safeStorageSegment } from './fileType';
 
 const AVATAR_BUCKET = 'avatars';
-const FALLBACK_BUCKET = 'trainer-documents';
 
 async function readFileBytes(uri: string): Promise<ArrayBuffer> {
   if (Platform.OS === 'web') {
@@ -38,28 +37,18 @@ export async function uploadAvatarToStorage(
   const sniffed = assertUploadableFile(bytes, ['jpg', 'png', 'webp', 'heic']);
   const { ext, contentType } = sniffed;
 
-  let bucket = AVATAR_BUCKET;
-  let filePath = `${folder}/${safeOwnerId}/avatar.${ext}`;
+  const filePath = `${folder}/${safeOwnerId}/avatar.${ext}`;
 
-  let { error } = await supabase.storage
-    .from(bucket)
+  const { error } = await supabase.storage
+    .from(AVATAR_BUCKET)
     .upload(filePath, bytes, { contentType, upsert: true });
 
-  // The project's `avatars` bucket may not exist yet; reuse the existing
-  // public document bucket so uploads keep working in the meantime.
-  if (error && /bucket/i.test(`${error.message ?? ''} ${error.name ?? ''}`)) {
-    bucket = FALLBACK_BUCKET;
-    filePath = `avatars/${folder}/${safeOwnerId}/avatar.${ext}`;
-    ({ error } = await supabase.storage
-      .from(bucket)
-      .upload(filePath, bytes, { contentType, upsert: true }));
-    console.warn(`[uploadAvatar] Bucket "${AVATAR_BUCKET}" missing, used "${FALLBACK_BUCKET}"`);
-  }
-
   if (error) {
+    // Never persist a URL we could not actually write: a private/absent bucket
+    // yields a public URL that renders as a blank avatar.
     throw new Error(`Avatar upload failed: ${error.message}`);
   }
 
-  const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
+  const { data } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(filePath);
   return `${data.publicUrl}?v=${Date.now()}`;
 }
