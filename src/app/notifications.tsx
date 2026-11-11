@@ -8,6 +8,8 @@ import Svg, { Line } from 'react-native-svg';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { EmptyState } from '../components/EmptyState';
 import { NotificationItem } from '../types';
+const INITIAL_PAGE_SIZE = 20;
+
 interface TimelineGroup {
   title: string;
   items: NotificationItem[];
@@ -16,10 +18,10 @@ interface TimelineGroup {
 export default function NotificationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { notifications, markAsRead, deleteNotification, unreadCount, syncFromDB } = useNotificationStore();
+  const { notifications, markAsRead, deleteNotifications, unreadCount, syncFromDB } = useNotificationStore();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(INITIAL_PAGE_SIZE);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -57,17 +59,18 @@ export default function NotificationsScreen() {
     });
   };
 
-  const handleSelectAll = (visibleItems: NotificationItem[]) => {
-    if (selectedIds.size === visibleItems.length) {
+  const handleSelectAll = (allItems: NotificationItem[]) => {
+    if (allItems.length > 0 && selectedIds.size >= allItems.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(visibleItems.map(n => n.id)));
+      setSelectedIds(new Set(allItems.map(n => n.id)));
     }
   };
 
   const handleDeleteSelected = () => {
     if (selectedIds.size === 0) return;
-    const count = selectedIds.size;
+    const ids = Array.from(selectedIds);
+    const count = ids.length;
     Alert.alert(
       'Delete Notifications',
       `Are you sure you want to delete ${count} selected ${count === 1 ? 'notification' : 'notifications'}?`,
@@ -77,11 +80,10 @@ export default function NotificationsScreen() {
           text: `Delete (${count})`, 
           style: 'destructive', 
           onPress: () => {
-            selectedIds.forEach((id) => {
-              deleteNotification(id);
-            });
+            deleteNotifications(ids);
             setSelectedIds(new Set());
             setIsSelectionMode(false);
+            setPageSize(INITIAL_PAGE_SIZE);
           }
         }
       ]
@@ -278,12 +280,12 @@ export default function NotificationsScreen() {
             <View className="flex-row items-center gap-2">
               <TouchableOpacity 
                 activeOpacity={0.7}
-                onPress={() => handleSelectAll(paginated)}
+                onPress={() => handleSelectAll(filteredNotifications)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 className="px-2.5 py-1.5 rounded-full bg-white border border-zinc-200/80 shadow-xs"
               >
                 <Text className="text-zinc-900 text-xs font-black">
-                  {selectedIds.size === paginated.length && paginated.length > 0 ? 'Deselect All' : 'Select All'}
+                  {filteredNotifications.length > 0 && selectedIds.size >= filteredNotifications.length ? 'Deselect All' : 'Select All'}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity 

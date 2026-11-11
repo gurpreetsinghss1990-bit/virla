@@ -3690,9 +3690,22 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
   }
 
   deleteNotification(userId: string, id: string): void {
-    this.schema.notifications = this.schema.notifications.filter(n => n.id !== id);
-    supabase.from('notifications').delete().eq('id', id).then();
+    this.deleteNotifications(userId, [id]);
+  }
+
+  /** Removes notifications locally first, then deletes them server-side in one request. */
+  deleteNotifications(userId: string, ids: string[]): void {
+    if (!ids || ids.length === 0) return;
+    const idSet = new Set(ids);
+    this.schema.notifications = this.schema.notifications.filter(n => !idSet.has(n.id));
     this.save();
+    supabase
+      .from('notifications')
+      .delete()
+      .in('id', ids)
+      .then(({ error }) => {
+        if (error) console.warn('[DB] deleteNotifications failed:', error.message);
+      });
   }
 
   // Chats & Chat Messages

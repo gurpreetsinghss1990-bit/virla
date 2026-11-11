@@ -13,6 +13,7 @@ interface NotificationState {
   clearAll: () => void;
   addNotification: (notification: Omit<NotificationItem, 'id' | 'read' | 'timestamp' | 'group'>) => void;
   deleteNotification: (id: string) => void;
+  deleteNotifications: (ids: string[]) => void;
   syncFromDB: () => void;
 }
 
@@ -84,10 +85,18 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     }
   },
   deleteNotification: (id) => {
+    get().deleteNotifications([id]);
+  },
+  deleteNotifications: (ids) => {
+    if (!ids || ids.length === 0) return;
+    const idSet = new Set(ids);
+    const remaining = get().notifications.filter((n) => !idSet.has(n.id));
+    // Optimistic: the list updates even if the network call fails.
+    set({ notifications: remaining, unreadCount: remaining.filter((n) => !n.read).length });
+
     const userId = Database.getCurrentUserId();
     if (userId) {
-      Database.deleteNotification(userId, id);
-      get().syncFromDB();
+      Database.deleteNotifications(userId, ids);
     }
   },
   syncFromDB: () => {
