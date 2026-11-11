@@ -351,38 +351,43 @@ export default function MessagesScreen() {
                   </View>
 
                   {/* Chat Content & WhatsApp-style bottom border */}
-                  <View className={`flex-1 justify-center py-0.5 ${!isLast ? 'border-b border-zinc-100' : ''}`}>
-                    <View className="flex-row items-center justify-between mb-1">
-                      <Text 
-                        numberOfLines={1} 
-                        className={`text-[16px] flex-1 pr-2 ${
-                          chat.unread ? 'font-bold text-zinc-950' : 'font-semibold text-zinc-900'
-                        }`}
-                      >
-                        {chat.name}
-                      </Text>
-                      {chat.time ? (
-                        <Text className={`text-xs ${chat.unread ? 'font-bold text-[#E11D48]' : 'text-zinc-400'}`}>
-                          {chat.time}
+                  <View className={`flex-1 flex-row items-center justify-between py-0.5 ${!isLast ? 'border-b border-zinc-100' : ''}`}>
+                    <View className="flex-1 pr-2">
+                      <View className="flex-row items-center justify-between mb-1">
+                        <Text 
+                          numberOfLines={1} 
+                          className={`text-[16px] flex-1 pr-2 ${
+                            chat.unread ? 'font-bold text-zinc-950' : 'font-semibold text-zinc-900'
+                          }`}
+                        >
+                          {chat.name}
                         </Text>
-                      ) : null}
+                        {chat.time ? (
+                          <Text className={`text-xs ${chat.unread ? 'font-bold text-[#E11D48]' : 'text-zinc-400'}`}>
+                            {chat.time}
+                          </Text>
+                        ) : null}
+                      </View>
+
+                      <View className="flex-row items-center justify-between">
+                        <Text
+                          numberOfLines={1}
+                          className={`text-[14px] flex-1 pr-2 ${
+                            chat.unread ? 'font-semibold text-zinc-800' : 'text-zinc-500'
+                          }`}
+                        >
+                          {chat.lastMessage}
+                        </Text>
+                        {chat.unread && (
+                          <View className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#E11D48] items-center justify-center ml-2">
+                            <Text className="text-[10px] font-bold text-white">1</Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
 
-                    <View className="flex-row items-center justify-between">
-                      <Text
-                        numberOfLines={1}
-                        className={`text-[14px] flex-1 pr-2 ${
-                          chat.unread ? 'font-semibold text-zinc-800' : 'text-zinc-500'
-                        }`}
-                      >
-                        {chat.lastMessage}
-                      </Text>
-                      {chat.unread && (
-                        <View className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#E11D48] items-center justify-center ml-2">
-                          <Text className="text-[10px] font-bold text-white">1</Text>
-                        </View>
-                      )}
-                    </View>
+                    {/* Right end subtle chevron icon */}
+                    <Feather name="chevron-right" size={17} color="#D1D5DB" />
                   </View>
                 </TouchableOpacity>
               );
