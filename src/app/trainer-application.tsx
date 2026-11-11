@@ -16,6 +16,7 @@ import * as FileSystem from 'expo-file-system';
 import { File } from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { assertUploadableFile } from '../utils/fileType';
+import { DOCUMENT_MAX_WIDTH, compressImageForUpload, isCompressibleImage } from '../utils/imageCompression';
 const getNativePickerModules = () => {
   const g = globalThis as any;
   const expoModules = g.expo?.modules || g.ExpoModules || {};
@@ -578,7 +579,7 @@ export default function TrainerApplicationScreen() {
     setShowPreview(false);
     
     const docType = activeUploadType;
-    const uri = previewUri;
+    let uri = previewUri;
 
     try {
       setUploadingDoc(docType);
@@ -592,6 +593,13 @@ export default function TrainerApplicationScreen() {
         if (currentUploadingQual) {
           setQualUploadStatusMap(prev => ({ ...prev, [currentUploadingQual]: 'UPLOADING' }));
         }
+      }
+
+      if (isCompressibleImage(uri, previewType === 'pdf' ? 'application/pdf' : undefined)) {
+        uri = await compressImageForUpload(uri, {
+          maxWidth: docType === 'selfie' ? 1024 : DOCUMENT_MAX_WIDTH,
+          quality: docType === 'selfie' ? 0.7 : 0.75,
+        });
       }
 
       let arrayBuffer: ArrayBuffer;
