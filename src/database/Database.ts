@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { AssignmentLog, Booking, Coach, Invoice, NotificationItem, ScheduleSlot, TrainerEarning, TrainerWorkoutAssignment, User, Workout } from '../types';
 import { canonicalizeTimeRange, getBookingISTDateRange, normalizeDate } from '../utils/date';
+import { parseBookingAddress } from '../utils/LocationParser';
 import { setClientUserId, supabase } from './supabaseClient';
 
 // Columns a normal client may write on its own row. Anything else (role
@@ -2782,12 +2783,17 @@ class DatabaseClient {
     const istMinutes = nowIst.getUTCMinutes();
     const nowIstFixed = new Date(Date.UTC(istYear, istMonth, istDay, istHours, istMinutes, 0));
 
-    let customerLat = 19.0176;
-    let customerLng = 72.8561;
+    const targetBooking = bookingIdToExclude
+      ? bookings.find(b => b.id === bookingIdToExclude)
+      : undefined;
+    const customerVenue = targetBooking ? parseBookingAddress(targetBooking.address || '') : null;
+    const hasCustomerCoords = !!customerVenue && customerVenue.lat !== null && customerVenue.lng !== null;
+    const customerLat = customerVenue?.lat ?? 0;
+    const customerLng = customerVenue?.lng ?? 0;
     let targetCategory = 'Strength';
 
     if (bookingIdToExclude) {
-      const targetB = bookings.find(b => b.id === bookingIdToExclude);
+      const targetB = targetBooking;
       if (targetB) {
         const t = (targetB.workoutTitle || '').toLowerCase();
         if (t.includes('aerial') || t.includes('hammock')) targetCategory = 'Aerial Yoga';
@@ -2809,7 +2815,7 @@ class DatabaseClient {
         const radiusLimit = Math.min(coach.preferences?.radiusKm || 5, 5);
         let insideRadius = false;
 
-        if (trainerLat !== undefined && trainerLng !== undefined && trainerLat !== null && trainerLng !== null) {
+        if (hasCustomerCoords && trainerLat !== undefined && trainerLng !== undefined && trainerLat !== null && trainerLng !== null) {
           const lat1 = trainerLat;
           const lon1 = trainerLng;
           const lat2 = customerLat;

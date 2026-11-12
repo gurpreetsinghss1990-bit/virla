@@ -13,7 +13,7 @@ import { useWalletStore } from '../../store/walletStore';
 import { useUserProfileStore } from '../../store/userProfileStore';
 import { Database, TrainerApplication } from '../../database/Database';
 import { syncAllDomainStores } from '../../store/syncAllStores';
-import { AutocompleteSuggestion, fetchGooglePlacesAutocomplete, reverseGeocodeCoords } from '../../utils/distance';
+import { AutocompleteSuggestion, fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords } from '../../utils/distance';
 import { LuxuryCard } from '../../components/LuxuryCard';
 import { SignOutConfirmationModal } from '../../components/SignOutConfirmationModal';
 import * as Location from 'expo-location';
@@ -750,9 +750,17 @@ export default function ProfileScreen() {
     setSearchSuggestions([]);
     setIsSearchingLocation(true);
     try {
-      setSelectedLocation({ address: item.description, lat: 12.9716, lng: 77.5946, placeId: item.placeId });
+      const details = await fetchGooglePlaceDetails(item.placeId);
+      setSelectedLocation({
+        address: details.address || item.description,
+        lat: details.latitude,
+        lng: details.longitude,
+        placeId: item.placeId,
+      });
     } catch (err) {
-      console.warn(err);
+      console.warn('[Profile] Place details lookup failed:', err);
+      Alert.alert('Location Fetch Failed', 'Is address ke coordinates nahi mil paye. Dobara try karein.');
+      setSelectedLocation(null as any);
     } finally {
       setIsSearchingLocation(false);
     }

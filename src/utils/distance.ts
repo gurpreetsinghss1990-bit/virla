@@ -25,47 +25,6 @@ export function calculateDistanceKm(
   return R * c;
 }
 
-/**
- * Fallback geocoder used strictly for offline/deterministic testing.
- * NOT to be used in production flows.
- */
-export function geocodeAddressSync(address: string): { lat: number; lng: number } {
-  if (!address) {
-    return { lat: 19.0176, lng: 72.8164 }; // Default Mumbai center
-  }
-
-  // Check if string contains coordinates pattern, e.g. "(19.0596, 72.8295)"
-  const match = address.match(/\((-?\d+\.\d+),\s*(-?\d+\.\d+)\)/);
-  if (match) {
-    const lat = parseFloat(match[1]);
-    const lng = parseFloat(match[2]);
-    if (!isNaN(lat) && !isNaN(lng)) {
-      return { lat, lng };
-    }
-  }
-
-  const lower = address.toLowerCase();
-  if (lower.includes('juhu')) {
-    return { lat: 19.1076, lng: 72.8264 };
-  }
-  if (lower.includes('bandra')) {
-    return { lat: 19.0596, lng: 72.8295 };
-  }
-  if (lower.includes('worli')) {
-    return { lat: 18.9986, lng: 72.8174 };
-  }
-  if (lower.includes('andheri')) {
-    return { lat: 19.1136, lng: 72.8697 };
-  }
-  if (lower.includes('powai')) {
-    return { lat: 19.1176, lng: 72.9060 };
-  }
-  if (lower.includes('colaba')) {
-    return { lat: 18.9067, lng: 72.8147 };
-  }
-  return { lat: 19.0176, lng: 72.8164 };
-}
-
 export interface AutocompleteSuggestion {
   placeId: string;
   description: string;

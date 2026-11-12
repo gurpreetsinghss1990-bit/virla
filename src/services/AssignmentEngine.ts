@@ -3,7 +3,8 @@ import { Coach, Booking } from '../types';
 import { AssignmentConfig } from '../config/AssignmentConfig';
 import { getCategoryFromTitle } from '../config/WorkoutMapping';
 import { normalizeDate, canonicalizeTimeRange } from '../utils/date';
-import { calculateDistanceKm, geocodeAddressSync } from '../utils/distance';
+import { calculateDistanceKm } from '../utils/distance';
+import { parseBookingAddress } from '../utils/LocationParser';
 
 export interface RatedTrainer {
   coach: Coach;
@@ -100,15 +101,21 @@ export class AssignmentEngine {
       let isLocationEligible = false;
       let distance = 0;
       if (locationStatus === 'verified' && trainerLat !== undefined && trainerLng !== undefined) {
-        const customerLoc = geocodeAddressSync(booking.address || '');
-        distance = calculateDistanceKm(
-          trainerLat,
-          trainerLng,
-          customerLoc.lat,
-          customerLoc.lng
-        );
-        const radiusLimit = coach.preferences?.radiusKm || AssignmentConfig.serviceRadiusKm;
-        if (distance <= radiusLimit) {
+        const customerLoc = parseBookingAddress(booking.address || '');
+        if (customerLoc.lat !== null && customerLoc.lng !== null) {
+          distance = calculateDistanceKm(
+            trainerLat,
+            trainerLng,
+            customerLoc.lat,
+            customerLoc.lng
+          );
+          const radiusLimit = coach.preferences?.radiusKm || AssignmentConfig.serviceRadiusKm;
+          if (distance <= radiusLimit) {
+            isLocationEligible = true;
+          }
+        } else {
+          // Legacy booking without stored coordinates: never measure against a made-up location.
+          console.warn('[AssignmentEngine] Booking has no venue coordinates; skipping radius rule.');
           isLocationEligible = true;
         }
       }

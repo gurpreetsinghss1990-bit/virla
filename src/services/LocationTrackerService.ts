@@ -250,6 +250,27 @@ class LocationTrackerService {
       speed?: number | null;
     }
   ): Promise<LiveTrainerCoordinates> {
+    const isValidFix =
+      Number.isFinite(coords.latitude) &&
+      Number.isFinite(coords.longitude) &&
+      Math.abs(coords.latitude) <= 90 &&
+      Math.abs(coords.longitude) <= 180 &&
+      !(Math.abs(coords.latitude) < 0.0001 && Math.abs(coords.longitude) < 0.0001);
+
+    if (!isValidFix) {
+      // A dropped/zero fix would put the client's map in the ocean, so keep the last good point.
+      const last = this.lastKnownCoords.get(bookingId);
+      if (last) return last;
+      return {
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        accuracy: 0,
+        heading: null,
+        speed: null,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
     const payloadData: LiveTrainerCoordinates = {
       latitude: coords.latitude,
       longitude: coords.longitude,
