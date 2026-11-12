@@ -184,11 +184,11 @@ export default function AdminPanelScreen() {
 
         const { data, error } = await supabase.storage
           .from(bucket)
-          .createSignedUrl(docUrlOrPath, 120);
+          .createSignedUrl(cleanPath, 120);
 
         if (error) {
           // Fallback to getPublicUrl
-          const { data: pubData } = supabase.storage.from(bucket).getPublicUrl(docUrlOrPath);
+          const { data: pubData } = supabase.storage.from(bucket).getPublicUrl(cleanPath);
           if (pubData?.publicUrl) {
             await Linking.openURL(pubData.publicUrl);
             return;
@@ -426,6 +426,15 @@ export default function AdminPanelScreen() {
     }
   };
 
+  const toFetchableUri = async (raw: string): Promise<string> => {
+    if (!raw) return raw;
+    if (/^(https?:|file:|content:|data:|ph:|assets-library:)/i.test(raw)) return raw;
+    const bucket = raw.includes('trainer-docs') ? 'trainer-documents' : 'trainer-verification';
+    const cleanPath = raw.replace(/^trainer-docs\//, '').replace(/^trainer-documents\//, '');
+    const { data } = await supabase.storage.from(bucket).createSignedUrl(cleanPath, 300);
+    return data?.signedUrl || '';
+  };
+
   const handleSaveInterviewForm = async () => {
     if (!interviewFormApp) return;
     if (!interviewIdDocUri && !interviewProfilePicUri) {
@@ -441,21 +450,25 @@ export default function AdminPanelScreen() {
       // Upload ID Document to Supabase if captured
       if (interviewIdDocUri) {
         try {
-          const resp = await fetch(interviewIdDocUri);
+          const resolvedIdUri = await toFetchableUri(interviewIdDocUri);
+          if (!resolvedIdUri) throw new Error('ID document could not be read from storage.');
+          const resp = await fetch(resolvedIdUri);
           const arrayBuffer = await resp.arrayBuffer();
-          const { ext, contentType } = assertUploadableFile(arrayBuffer, ['jpg', 'png', 'webp', 'heic', 'pdf']);
+          const { ext, contentType } = assertUploadableFile(arrayBuffer, ["jpg", "png", "webp", "heic", "pdf"]);
           const cleanFileName = `interview-${interviewIdType}-${interviewFormApp.id}-${Date.now()}.${ext}`;
           const filePath = `trainer-docs/${cleanFileName}`;
           
-          await supabase.storage
+          const { error: uploadError } = await supabase.storage
             .from('trainer-documents')
-            .upload(filePath, arrayBuffer, { upsert: true, contentType: `image/${ext}` });
-          
+            .upload(filePath, arrayBuffer, { upsert: true, contentType });
+
+          if (uploadError) throw uploadError;
+
           const { data: pubData } = supabase.storage.from('trainer-documents').getPublicUrl(filePath);
-          uploadedIdUrl = pubData?.publicUrl || filePath;
+          if (!pubData?.publicUrl) throw new Error('Storage did not return a public URL');
+          uploadedIdUrl = pubData.publicUrl;
         } catch (e: any) {
-          console.warn('[Admin] Direct upload fallback for ID:', e);
-          uploadedIdUrl = interviewIdDocUri;
+          throw new Error(`ID document upload failed: ${e.message || 'unknown error'}. Dobara try karein.`);
         }
       }
 
@@ -468,15 +481,17 @@ export default function AdminPanelScreen() {
           const cleanFileName = `interview-avatar-${interviewFormApp.id}-${Date.now()}.${ext}`;
           const filePath = `trainer-docs/${cleanFileName}`;
           
-          await supabase.storage
+          const { error: uploadError } = await supabase.storage
             .from('trainer-documents')
-            .upload(filePath, arrayBuffer, { upsert: true, contentType: `image/${ext}` });
-          
+            .upload(filePath, arrayBuffer, { upsert: true, contentType });
+
+          if (uploadError) throw uploadError;
+
           const { data: pubData } = supabase.storage.from('trainer-documents').getPublicUrl(filePath);
-          uploadedAvatarUrl = pubData?.publicUrl || filePath;
+          if (!pubData?.publicUrl) throw new Error('Storage did not return a public URL');
+          uploadedAvatarUrl = pubData.publicUrl;
         } catch (e: any) {
-          console.warn('[Admin] Direct upload fallback for Avatar:', e);
-          uploadedAvatarUrl = interviewProfilePicUri;
+          throw new Error(`Profile photo upload failed: ${e.message || 'unknown error'}. Dobara try karein.`);
         }
       }
 
@@ -2723,7 +2738,13 @@ export default function AdminPanelScreen() {
 
                   {/* ID Preview / Capture Box */}
                   <View className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-xl gap-2.5">
-                    {interviewIdDocUri ? (
+                    {interviewIdDocUri && !/^(https?:|file:|content:|data:)/i.test(interviewIdDocUri) ? (
+                      <View className="py-6 items-center justify-center gap-1 border border-emerald-200 bg-emerald-50 rounded-xl">
+                        <Feather name="shield" size={22} color="#059669" />
+                        <Text className="text-emerald-700 text-[11px] font-bold">Server par save hai</Text>
+                        <Text className="text-emerald-600 text-[10px]">Save karte waqt file storage se uth li jayegi.</Text>
+                      </View>
+                    ) : interviewIdDocUri ? (
                       <View className="items-center gap-2">
                         <Image
                           source={{ uri: interviewIdDocUri }}

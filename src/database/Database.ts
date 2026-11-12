@@ -4103,7 +4103,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     }).eq('id', appId);
 
     if (error) {
-      console.warn('[Database] Remote update failed, saving local schema:', error.message);
+      throw new Error(`Could not save to the server: ${error.message}`);
     }
     await this.save();
     this.log('CompleteInterviewForm', `Interview verification form completed for ${app.fullName}.`);
@@ -4126,7 +4126,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       }).eq('id', appId);
 
       if (error) {
-        console.warn('[Database] Remote update failed, saving local schema:', error.message);
+        throw new Error(`Could not save to the server: ${error.message}`);
       }
 
       await this.save();

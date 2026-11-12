@@ -62,6 +62,7 @@ export default function TrainerApplicationScreen() {
   
   const [currentStep, setCurrentStep] = useState(1);
   const [appId, setAppId] = useState<string | null>(null);
+  const [isSubmittingApplication, setIsSubmittingApplication] = useState(false);
   const [appStatus, setAppStatus] = useState<'draft' | 'pending' | 'interview_scheduled' | 'approved' | 'rejected' | 'info_requested'>('draft');
 
   // Policies Pre-Application Flow
@@ -848,6 +849,7 @@ export default function TrainerApplicationScreen() {
   };
 
   const handleSubmit = async () => {
+    if (isSubmittingApplication) return;
     if (!documentSelfie) {
       Alert.alert('Required Photo', 'Please upload your profile selfie photo.');
       return;
@@ -865,6 +867,7 @@ export default function TrainerApplicationScreen() {
       return;
     }
 
+    setIsSubmittingApplication(true);
     try {
       const emergencyContactJSON = JSON.stringify({
         name: emergencyName || 'Neha Sharma',
@@ -952,6 +955,8 @@ export default function TrainerApplicationScreen() {
       }
     } catch (err: any) {
       Alert.alert('Submission Error', err.message || 'Error occurred while saving application.');
+    } finally {
+      setIsSubmittingApplication(false);
     }
   };
 
@@ -2661,7 +2666,7 @@ export default function TrainerApplicationScreen() {
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={handleSubmit}
-                  disabled={!documentSelfie || (() => {
+                  disabled={isSubmittingApplication || !documentSelfie || (() => {
                     const selected = getSelectedQualificationsList();
                     if (selected.length === 0) return true;
                     return selected.some((q: string) => !qualCertMap[q] || !qualCertMap[q].trim());
@@ -2681,7 +2686,7 @@ export default function TrainerApplicationScreen() {
                     })()) ? 'bg-zinc-300' : 'bg-[#E11D48]'
                   }`}
                 >
-                  <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Submit Application</Text>
+                  <Text className="text-white text-xs font-black uppercase tracking-wider text-center">{isSubmittingApplication ? 'Submitting...' : 'Submit Application'}</Text>
                 </TouchableOpacity>
               )}
             </View>
