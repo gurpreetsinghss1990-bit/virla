@@ -250,11 +250,22 @@ export default function AdminPanelScreen() {
       }
     };
 
+    const hasRealBaseCoords = (lat?: number | null, lng?: number | null) => {
+      if (lat == null || lng == null) return false;
+      if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) return false;
+      if (Math.abs(Number(lat)) > 90 || Math.abs(Number(lng)) > 180) return false;
+      return !(Number(lat).toFixed(4) === '19.0176' && Number(lng).toFixed(4) === '72.8164');
+    };
+
     const handleApproveLocation = async (coachId: string) => {
       const coach = Database.schema.coaches.find(c => c.id === coachId);
       if (!coach || !coach.preferences?.addressChangeRequest) return;
-      
+
       const request = coach.preferences.addressChangeRequest;
+      if (!hasRealBaseCoords(request.requestedLatitude, request.requestedLongitude)) {
+        Alert.alert('Invalid Location', `Coach ${coach.name} ki request me asli coordinates nahi hain. Trainer se location dobara pin karwaayein.`);
+        return;
+      }
       const updatedPrefs = {
         ...coach.preferences,
         operatingAddress: request.requestedAddress,
@@ -281,7 +292,9 @@ export default function AdminPanelScreen() {
       
       const updatedPrefs = {
         ...coach.preferences,
-        operatingLocationStatus: coach.preferences.operatingAddress ? 'verified' as const : 'rejected' as const,
+        operatingLocationStatus: hasRealBaseCoords(coach.preferences.operatingLatitude, coach.preferences.operatingLongitude)
+          ? 'verified' as const
+          : 'pending' as const,
         addressChangeRequest: null
       };
       
