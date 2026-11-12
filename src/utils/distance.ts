@@ -155,11 +155,14 @@ export async function fetchGooglePlaceDetails(placeId: string): Promise<{
     const parts = placeId.split('_');
     const lat = parseFloat(parts[1]);
     const lng = parseFloat(parts[2]);
+    if (isNaN(lat) || isNaN(lng)) {
+      throw new Error('Is address ke exact coordinates nahi mile. Current location ya map se pin karein.');
+    }
     const decodedName = parts[3] ? decodeURIComponent(parts[3]) : 'Selected Location';
     return {
       address: decodedName,
-      latitude: !isNaN(lat) ? lat : 19.0176,
-      longitude: !isNaN(lng) ? lng : 72.8164,
+      latitude: lat,
+      longitude: lng,
       placeName: decodedName.split(',')[0],
       types: ['sublocality', 'point_of_interest'],
       addressComponents: []
@@ -167,6 +170,9 @@ export async function fetchGooglePlaceDetails(placeId: string): Promise<{
   }
 
   if (placeId.startsWith('mock-')) {
+    if (!__DEV__) {
+      throw new Error('Is address ke exact coordinates nahi mile. Current location ya map se pin karein.');
+    }
     const mock = getMockPlaceDetails(placeId);
     let placeName = 'Selected Location';
     if (placeId === 'mock-juhu') placeName = 'Juhu Beach';
@@ -413,14 +419,7 @@ function getMockSuggestions(input: string): AutocompleteSuggestion[] {
     }));
   }
 
-  return [
-    {
-      placeId: `mock-generic-${input}`,
-      description: `${input}, Mumbai, Maharashtra, India`,
-      mainText: input,
-      secondaryText: 'Mumbai, Maharashtra, India'
-    }
-  ];
+  return [];
 }
 
 function getMockPlaceDetails(placeId: string): { address: string; latitude: number; longitude: number } {
@@ -440,12 +439,8 @@ function getMockPlaceDetails(placeId: string): { address: string; latitude: numb
     return { address: 'Powai, Mumbai, Maharashtra, India', latitude: 19.1176, longitude: 72.9060 };
   }
   
-  const address = placeId.replace('mock-generic-', '') + ', Mumbai, Maharashtra, India';
-  return {
-    address,
-    latitude: 19.0176,
-    longitude: 72.8164
-  };
+  // A typed address has no known coordinates in dev; refuse instead of inventing Mumbai centre.
+  throw new Error('Is address ke exact coordinates nahi mile. Current location ya map se pin karein.');
 }
 
 /**
