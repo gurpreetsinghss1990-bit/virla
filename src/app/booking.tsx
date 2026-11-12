@@ -506,25 +506,27 @@ export default function BookingScreen() {
       return;
     }
     let active = true;
+    const controller = new AbortController();
     const delay = setTimeout(async () => {
       setIsSearchingLocation(true);
       try {
-        const res = await fetchGooglePlacesAutocomplete(searchQuery, sessionToken);
+        const res = await fetchGooglePlacesAutocomplete(searchQuery, sessionToken, controller.signal);
         if (active) {
           setGoogleSuggestions(res);
           setShowSearchDropdown(true);
         }
-      } catch (err) {
-        console.warn('Google autocomplete failed:', err);
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') console.warn('Google autocomplete failed:', err);
       } finally {
         if (active) {
           setIsSearchingLocation(false);
         }
       }
-    }, 450);
+    }, 350);
 
     return () => {
       active = false;
+      controller.abort();
       clearTimeout(delay);
     };
   }, [searchQuery, sessionToken, hasConfirmedSearchSelection]);

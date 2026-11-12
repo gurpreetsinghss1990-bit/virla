@@ -703,23 +703,25 @@ export default function ProfileScreen() {
       return;
     }
     let active = true;
+    const controller = new AbortController();
     const delayDebounceFn = setTimeout(async () => {
       setIsSearchingLocation(true);
       try {
-        const suggestions = await fetchGooglePlacesAutocomplete(addressInput, locationSessionToken);
+        const suggestions = await fetchGooglePlacesAutocomplete(addressInput, locationSessionToken, controller.signal);
         if (active) {
           setSearchSuggestions(suggestions);
         }
-      } catch (err) {
-        console.warn(err);
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') console.warn(err);
       } finally {
         if (active) {
           setIsSearchingLocation(false);
         }
       }
-    }, 450);
+    }, 350);
     return () => {
       active = false;
+      controller.abort();
       clearTimeout(delayDebounceFn);
     };
   }, [addressInput, locationSessionToken]);

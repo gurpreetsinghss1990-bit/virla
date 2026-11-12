@@ -38,7 +38,32 @@ export interface AutocompleteSuggestion {
  */
 export async function fetchGooglePlacesAutocomplete(
   input: string,
-  sessionToken: string
+  sessionToken: string,
+  signal?: AbortSignal
+): Promise<AutocompleteSuggestion[]> {
+  const cacheKey = input.trim().toLowerCase();
+  const cached = AUTOCOMPLETE_CACHE.get(cacheKey);
+  if (cached && Date.now() - cached.at < AUTOCOMPLETE_CACHE_TTL_MS) {
+    return cached.data;
+  }
+  const data = await fetchAutocompleteUncached(input, sessionToken, signal);
+  if (!signal?.aborted && data.length > 0) {
+    if (AUTOCOMPLETE_CACHE.size >= 60) {
+      const oldest = AUTOCOMPLETE_CACHE.keys().next().value;
+      if (oldest !== undefined) AUTOCOMPLETE_CACHE.delete(oldest);
+    }
+    AUTOCOMPLETE_CACHE.set(cacheKey, { at: Date.now(), data });
+  }
+  return data;
+}
+
+const AUTOCOMPLETE_CACHE_TTL_MS = 2 * 60 * 1000;
+const AUTOCOMPLETE_CACHE = new Map<string, { at: number; data: AutocompleteSuggestion[] }>();
+
+async function fetchAutocompleteUncached(
+  input: string,
+  sessionToken: string,
+  signal?: AbortSignal
 ): Promise<AutocompleteSuggestion[]> {
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
   if (!apiKey || apiKey.includes('YOUR_KEY')) {
@@ -60,7 +85,8 @@ export async function fetchGooglePlacesAutocomplete(
         input,
         includedRegionCodes: ['IN'],
         sessionToken
-      })
+      }),
+      signal,
     });
 
     if (!res.ok) {
@@ -85,16 +111,17 @@ export async function fetchGooglePlacesAutocomplete(
     
     // If Google returned no suggestions, try OSM
     return fetchOsmPlacesAutocomplete(input);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.name === 'AbortError') throw error;
     console.error('Autocomplete error, falling back to OSM:', error);
-    return fetchOsmPlacesAutocomplete(input);
+    return fetchOsmPlacesAutocomplete(input, signal);
   }
 }
 
 /**
  * Free OSM (OpenStreetMap / Nominatim) Autocomplete Search Fallback
  */
-async function fetchOsmPlacesAutocomplete(input: string): Promise<AutocompleteSuggestion[]> {
+async function fetchOsmPlacesAutocomplete(input: string, signal?: AbortSignal): Promise<AutocompleteSuggestion[]> {
   try {
     const trimmed = input.trim();
     if (trimmed.length < 2) return [];
@@ -106,6 +133,7 @@ async function fetchOsmPlacesAutocomplete(input: string): Promise<AutocompleteSu
         'User-Agent': 'VirlaFitnessApp/1.0',
         'Accept-Language': 'en',
       },
+      signal,
     });
 
     if (res.ok) {

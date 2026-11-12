@@ -55,24 +55,26 @@ export default function AddressManagementScreen() {
       return;
     }
     let active = true;
+    const controller = new AbortController();
     const delay = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const res = await fetchGooglePlacesAutocomplete(searchQuery, sessionToken);
+        const res = await fetchGooglePlacesAutocomplete(searchQuery, sessionToken, controller.signal);
         if (active) {
           setSuggestions(res);
         }
-      } catch (err) {
-        console.warn('Autocomplete fetch failed:', err);
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') console.warn('Autocomplete fetch failed:', err);
       } finally {
         if (active) {
           setIsSearching(false);
         }
       }
-    }, 450);
+    }, 350);
 
     return () => {
       active = false;
+      controller.abort();
       clearTimeout(delay);
     };
   }, [searchQuery, sessionToken]);
