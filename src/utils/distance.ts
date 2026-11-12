@@ -25,6 +25,21 @@ export function calculateDistanceKm(
   return R * c;
 }
 
+/**
+ * Hard cap on how far a trainer may travel from their operating base.
+ * Mirrors AssignmentConfig.serviceRadiusKm and the admin/profile UI cap.
+ */
+export const SERVICE_AREA_MAX_KM = 5;
+
+/** Effective straight-line service radius for one trainer, always capped at SERVICE_AREA_MAX_KM. */
+export function trainerServiceRadiusKm(radiusKm?: number | null): number {
+  const value =
+    typeof radiusKm === 'number' && Number.isFinite(radiusKm) && radiusKm > 0
+      ? radiusKm
+      : SERVICE_AREA_MAX_KM;
+  return Math.min(value, SERVICE_AREA_MAX_KM);
+}
+
 export interface AutocompleteSuggestion {
   placeId: string;
   description: string;

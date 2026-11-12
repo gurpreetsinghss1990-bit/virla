@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { AssignmentLog, Booking, Coach, Invoice, NotificationItem, ScheduleSlot, TrainerEarning, TrainerWorkoutAssignment, User, Workout } from '../types';
 import { canonicalizeTimeRange, getBookingISTDateRange, normalizeDate } from '../utils/date';
+import { calculateDistanceKm, trainerServiceRadiusKm } from '../utils/distance';
 import { parseBookingAddress } from '../utils/LocationParser';
 import { setClientUserId, supabase } from './supabaseClient';
 
@@ -2812,23 +2813,11 @@ class DatabaseClient {
       if (trainerId === 'searching') {
         const trainerLat = coach.preferences?.operatingLatitude;
         const trainerLng = coach.preferences?.operatingLongitude;
-        const radiusLimit = Math.min(coach.preferences?.radiusKm || 5, 5);
+        const radiusLimit = trainerServiceRadiusKm(coach.preferences?.radiusKm);
         let insideRadius = false;
 
         if (hasCustomerCoords && trainerLat !== undefined && trainerLng !== undefined && trainerLat !== null && trainerLng !== null) {
-          const lat1 = trainerLat;
-          const lon1 = trainerLng;
-          const lat2 = customerLat;
-          const lon2 = customerLng;
-          const R = 6371;
-          const dLat = (lat2 - lat1) * Math.PI / 180;
-          const dLon = (lon2 - lon1) * Math.PI / 180;
-          const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-          const distance = R * c;
-          insideRadius = distance <= radiusLimit;
+          insideRadius = calculateDistanceKm(trainerLat, trainerLng, customerLat, customerLng) <= radiusLimit;
         }
         if (!insideRadius) continue;
 

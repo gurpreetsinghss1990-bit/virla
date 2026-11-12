@@ -3,7 +3,7 @@ import { Coach, Booking } from '../types';
 import { AssignmentConfig } from '../config/AssignmentConfig';
 import { getCategoryFromTitle } from '../config/WorkoutMapping';
 import { normalizeDate, canonicalizeTimeRange } from '../utils/date';
-import { calculateDistanceKm } from '../utils/distance';
+import { calculateDistanceKm, trainerServiceRadiusKm } from '../utils/distance';
 import { parseBookingAddress } from '../utils/LocationParser';
 
 export interface RatedTrainer {
@@ -109,7 +109,7 @@ export class AssignmentEngine {
             customerLoc.lat,
             customerLoc.lng
           );
-          const radiusLimit = coach.preferences?.radiusKm || AssignmentConfig.serviceRadiusKm;
+          const radiusLimit = trainerServiceRadiusKm(coach.preferences?.radiusKm);
           if (distance <= radiusLimit) {
             isLocationEligible = true;
           }

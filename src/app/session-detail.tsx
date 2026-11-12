@@ -25,6 +25,7 @@ import { useUserStore } from '../store/userStore';
 import { formatToDDMMYYYY, getBookingISTDateRange, getDisplayWorkoutTitle } from '../utils/date';
 import { resolveAvatarSource } from '../components/AvatarImage';
 import { parseBookingAddress } from '../utils/LocationParser';
+import { calculateDistanceKm } from '../utils/distance';
 
 function formatToIndianDate(dateStr: string): string {
   return formatToDDMMYYYY(dateStr);
@@ -390,19 +391,6 @@ export default function SessionDetailScreen() {
       supabase.removeChannel(channel);
     };
   }, [bookingId, syncFromDB]);
-
-  const calculateHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; // km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  };
-
 
 
   // Input & Questionnaire state variables
@@ -927,7 +915,7 @@ export default function SessionDetailScreen() {
     }
 
     if (parsedAddress && parsedAddress.lat && parsedAddress.lng && !isNaN(parsedAddress.lat) && !isNaN(parsedAddress.lng)) {
-      const realDist = calculateHaversineDistance(
+      const realDist = calculateDistanceKm(
         activeTrainerCoords.latitude,
         activeTrainerCoords.longitude,
         parsedAddress.lat,
