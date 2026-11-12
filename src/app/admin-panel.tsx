@@ -303,10 +303,14 @@ export default function AdminPanelScreen() {
 
     const handleSaveLocationOverride = async () => {
       if (!editingCoachLocation) return;
+      const coach = Database.schema.coaches.find(c => c.id === editingCoachLocation.id) || editingCoachLocation;
+      const currentPrefs = coach.preferences || { online: false, radiusKm: 5, maxDailySessions: 5, categories: [] };
+      if (overrideStatus === 'verified' && (currentPrefs.operatingLatitude == null || currentPrefs.operatingLongitude == null)) {
+        Alert.alert('Location Missing', `Coach ${coach.name} ne abhi apna operating base pin nahi kiya hai. Pehle trainer se location request bhejwaayein, phir verify karein.`);
+        return;
+      }
       setIsSavingLocation(true);
       try {
-        const coach = Database.schema.coaches.find(c => c.id === editingCoachLocation.id) || editingCoachLocation;
-        const currentPrefs = coach.preferences || { online: false, radiusKm: 5, maxDailySessions: 5, categories: [] };
         
         const updatedPrefs = {
           ...currentPrefs,
@@ -329,8 +333,12 @@ export default function AdminPanelScreen() {
     const handleQuickVerifyLocation = async (coachId: string) => {
       const coach = Database.schema.coaches.find(c => c.id === coachId);
       if (!coach) return;
+      const currentPrefs = coach.preferences || { online: false, radiusKm: 5, maxDailySessions: 5, categories: [] };
+      if (currentPrefs.operatingLatitude == null || currentPrefs.operatingLongitude == null) {
+        Alert.alert('Location Missing', `Coach ${coach.name} ne abhi apna operating base pin nahi kiya hai. Pehle trainer se location request bhejwaayein, phir verify karein.`);
+        return;
+      }
       try {
-        const currentPrefs = coach.preferences || { online: false, radiusKm: 5, maxDailySessions: 5, categories: [] };
         await Database.updateTrainerPreferences(coachId, {
           ...currentPrefs,
           radiusKm: Math.min(currentPrefs.radiusKm || 5, 5),
