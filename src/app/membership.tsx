@@ -1,7 +1,7 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Animated, BackHandler, LayoutAnimation, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { InteractionManager } from '../utils/interactionManager';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -119,7 +119,7 @@ const PLANS: Plan[] = [
       'Lowest per-session rate (₹1,075)',
       'Save ₹13,568 across 32 sessions',
       'VIP coach dedicated matching',
-      'Unlimited validity & pause anytime'
+      'Pause anytime within pack validity'
     ],
     badge: 'BEST VALUE',
     category: 'individual'
@@ -235,8 +235,10 @@ const PLANS: Plan[] = [
 export default function MembershipScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { purchasePlan, creditBalance } = useWalletStore();
+  const footerInset = Math.max((insets.bottom || 0) + (Platform.OS === 'android' ? 24 : 8), Platform.OS === 'android' ? 36 : 14);
+  const { creditBalance } = useWalletStore();
 
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const [activeCategory, setActiveCategory] = useState<'individual' | 'couple'>('individual');
 
   const activePlans = useMemo(() => {
@@ -257,6 +259,10 @@ export default function MembershipScreen() {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setActiveCategory(cat);
     setSelectedPlan(null); // Keep unselected on tab change
+    setBuddyNotice(false);
+    // The other category has a different number of cards; without this the list can
+    // stay scrolled past the new content and render a blank area.
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
   };
 
   const [buddyNotice, setBuddyNotice] = useState(false);
@@ -348,6 +354,7 @@ export default function MembershipScreen() {
       Animated.timing(slideUpAnim, { toValue: 600, duration: 200, useNativeDriver: true })
     ]).start(() => {
       setIsModalOpen(false);
+      if (isSuccess) setSelectedPlan(null);
     });
   };
 
@@ -413,12 +420,14 @@ export default function MembershipScreen() {
       <StatusBar style="dark" />
 
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         className="flex-1"
-        contentContainerStyle={{ 
-          paddingHorizontal: 16, 
-          paddingTop: insets.top + 60, 
-          paddingBottom: 24 
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingTop: insets.top + 60,
+          // Sticky checkout bar floats over the list, so reserve room for it
+          paddingBottom: selectedPlan ? 96 + footerInset : 24 + insets.bottom
         }}
       >
         {/* Hero Title - matching design screenshot */}
@@ -650,7 +659,7 @@ export default function MembershipScreen() {
                       {isBuddyAddon && (
                         <View style={{ marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F4F4F5' }}>
                           <Text style={{ fontSize: 11, color: '#71717A', fontStyle: 'italic', lineHeight: 16 }}>
-                            * This is an add-on plan, not a standalone pack so it does not follows 6 Months Validity.
+                            * This is an add-on plan, not a standalone pack, so the 6-month pack validity does not apply.
                           </Text>
                         </View>
                       )}
@@ -764,7 +773,7 @@ export default function MembershipScreen() {
       {selectedPlan && (
         <Animated.View
           style={{
-            paddingBottom: Math.max((insets.bottom || 0) + (Platform.OS === 'android' ? 24 : 8), Platform.OS === 'android' ? 36 : 14),
+            paddingBottom: footerInset,
             opacity: footerBarAnim,
             transform: [
               {
@@ -820,7 +829,7 @@ export default function MembershipScreen() {
             }}
           >
             <Text className="text-white text-[12px] font-black tracking-wider uppercase">
-              Pay {selectedPlan.price}
+              Pay {selectedPlan.finalPrice || selectedPlan.price}
             </Text>
             <Feather name="arrow-right" size={13} color="#FFFFFF" />
           </TouchableOpacity>
