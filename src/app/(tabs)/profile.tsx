@@ -13,7 +13,7 @@ import { useWalletStore } from '../../store/walletStore';
 import { useUserProfileStore } from '../../store/userProfileStore';
 import { Database, TrainerApplication } from '../../database/Database';
 import { syncAllDomainStores } from '../../store/syncAllStores';
-import { AutocompleteSuggestion, fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords } from '../../utils/distance';
+import { AutocompleteSuggestion, fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords, trainerServiceRadiusKm } from '../../utils/distance';
 import { LuxuryCard } from '../../components/LuxuryCard';
 import { SignOutConfirmationModal } from '../../components/SignOutConfirmationModal';
 import * as Location from 'expo-location';
@@ -1949,7 +1949,7 @@ export default function ProfileScreen() {
                     <View className="flex-row justify-between items-center py-2 border-b border-zinc-200/60">
                       <Text className="text-zinc-500 text-xs font-medium">Service Radius</Text>
                       <Text className="text-zinc-900 text-xs font-semibold">
-                        {coach?.preferences?.radiusKm ? `${Math.min(coach.preferences.radiusKm, 5)} km` : '5 km'}
+                        {`${trainerServiceRadiusKm(coach?.preferences?.radiusKm)} km`}
                       </Text>
                     </View>
 
@@ -1989,7 +1989,7 @@ export default function ProfileScreen() {
                         activeOpacity={0.8}
                         onPress={() => {
                           setAddressInput(coach?.preferences?.operatingAddress || '');
-                          setRadiusInput(Math.min((coach?.preferences?.radiusKm as number) || 5, 5));
+                          setRadiusInput(trainerServiceRadiusKm(coach?.preferences?.radiusKm as number));
                           setShowAddressForm(true);
                         }}
                         className="bg-white border border-zinc-200 p-3 rounded-xl flex-row justify-center items-center mt-1"

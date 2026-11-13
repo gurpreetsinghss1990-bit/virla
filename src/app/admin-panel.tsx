@@ -10,6 +10,7 @@ import { Booking, Coach } from '../types';
 import { LuxuryCard } from '../components/LuxuryCard';
 import { supabase } from '../database/supabaseClient';
 import { assertUploadableFile } from '../utils/fileType';
+import { trainerServiceRadiusKm } from '../utils/distance';
 import { useBookingStore } from '../store/bookingStore';
 import { SupportChatModal } from '../components/SupportChatModal';
 import { resolveAvatarSource } from '../components/AvatarImage';
@@ -309,7 +310,7 @@ export default function AdminPanelScreen() {
 
     const handleOpenEditLocation = (coach: Coach) => {
       setEditingCoachLocation(coach);
-      setOverrideRadius(Math.min(coach.preferences?.radiusKm || 5, 5));
+      setOverrideRadius(trainerServiceRadiusKm(coach.preferences?.radiusKm));
       setOverrideAddress(coach.preferences?.operatingAddress || '');
       setOverrideStatus(coach.preferences?.operatingLocationStatus || 'pending');
     };
@@ -354,7 +355,7 @@ export default function AdminPanelScreen() {
       try {
         await Database.updateTrainerPreferences(coachId, {
           ...currentPrefs,
-          radiusKm: Math.min(currentPrefs.radiusKm || 5, 5),
+          radiusKm: trainerServiceRadiusKm(currentPrefs.radiusKm),
           operatingLocationStatus: 'verified' as const
         });
         Alert.alert('Status Updated', `Coach ${coach.name}'s location has been marked as VERIFIED.`);
@@ -1131,7 +1132,7 @@ export default function AdminPanelScreen() {
                   <Text className="text-zinc-400 text-[10px] font-bold">
                     Showing {coaches.filter((c) => {
                       const status = c.preferences?.operatingLocationStatus || 'pending';
-                      const radius = String(Math.min(c.preferences?.radiusKm || 5, 5));
+                      const radius = String(trainerServiceRadiusKm(c.preferences?.radiusKm));
                       if (statusFilter !== 'all' && status !== statusFilter) return false;
                       if (radiusFilter !== 'all' && radius !== radiusFilter) return false;
                       return true;
@@ -1183,7 +1184,7 @@ export default function AdminPanelScreen() {
                 {coaches
                   .filter((c) => {
                     const status = c.preferences?.operatingLocationStatus || 'pending';
-                    const radius = String(Math.min(c.preferences?.radiusKm || 5, 5));
+                    const radius = String(trainerServiceRadiusKm(c.preferences?.radiusKm));
                     if (statusFilter !== 'all' && status !== statusFilter) return false;
                     if (radiusFilter !== 'all' && radius !== radiusFilter) return false;
                     return true;
@@ -1191,7 +1192,7 @@ export default function AdminPanelScreen() {
                   .map((coach) => {
                     const hasRequest = !!coach.preferences?.addressChangeRequest;
                     const status = coach.preferences?.operatingLocationStatus || 'pending';
-                    const radius = Math.min(coach.preferences?.radiusKm || 5, 5);
+                    const radius = trainerServiceRadiusKm(coach.preferences?.radiusKm);
                     const address = coach.preferences?.operatingAddress;
                     const hasCoords = coach.preferences?.operatingLatitude !== undefined && coach.preferences?.operatingLongitude !== undefined;
 

@@ -8,6 +8,7 @@ import { useUserStore } from '../store/userStore';
 import { useCoachStore, generateMonthlySlots } from '../store/coachStore';
 import { Database, getCurrentServerTime } from '../database/Database';
 import { normalizeDate, canonicalizeTimeRange, formatToDDMMYYYY } from '../utils/date';
+import { trainerServiceRadiusKm } from '../utils/distance';
 
 const getEndLimit = (baseDate: Date) => {
   const endLimit = new Date(baseDate);
@@ -560,7 +561,7 @@ export default function TrainerAvailabilityScreen() {
                   <Text className="text-zinc-900 text-xs font-black">Service Radius Limit</Text>
                   <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Maximum travel distance in Mumbai</Text>
                 </View>
-                <Text className="text-[#4F46E5] text-xs font-black">{Math.min(prefs.radiusKm || 5, 5)} km</Text>
+                <Text className="text-[#4F46E5] text-xs font-black">{trainerServiceRadiusKm(prefs.radiusKm)} km</Text>
               </TouchableOpacity>
 
               {/* Max Daily Sessions */}

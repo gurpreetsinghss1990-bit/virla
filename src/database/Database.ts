@@ -460,7 +460,7 @@ export function mapCoachToPostgres(coach: Coach): any {
     operating_longitude: prefs.operatingLongitude !== undefined ? prefs.operatingLongitude : null,
     operating_place_id: prefs.operatingPlaceId || null,
     operating_location_status: prefs.operatingLocationStatus || 'pending',
-    service_radius_km: Math.min(prefs.radiusKm || 5, 5),
+    service_radius_km: trainerServiceRadiusKm(prefs.radiusKm),
     address_change_request: prefs.addressChangeRequest || null,
     gender: coach.gender ? coach.gender.toLowerCase() : null,
     preferences: prefs
@@ -2108,7 +2108,7 @@ class DatabaseClient {
     if (fields.preferences !== undefined) {
       const prefs = fields.preferences;
       updatePayload.preferences = prefs;
-      updatePayload.service_radius_km = Math.min(prefs.radiusKm || 5, 5);
+      updatePayload.service_radius_km = trainerServiceRadiusKm(prefs.radiusKm);
       updatePayload.address_change_request = prefs.addressChangeRequest || null;
 
       const currentUserRole = this.schema.users.find(u => u.id === this.currentUserId)?.role;
@@ -4174,7 +4174,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
         coach.preferences = { online: isOnline, radiusKm: 5, maxDailySessions: 5, categories: [] };
       } else {
         coach.preferences.online = isOnline;
-        coach.preferences.radiusKm = Math.min(coach.preferences.radiusKm || 5, 5);
+        coach.preferences.radiusKm = trainerServiceRadiusKm(coach.preferences.radiusKm);
       }
       await this.updateCoach(coachId, { preferences: coach.preferences });
     }
@@ -4183,7 +4183,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
   async updateTrainerPreferences(coachId: string, preferences: any): Promise<void> {
     const coach = this.schema.coaches.find(c => c.id === coachId);
     if (coach) {
-      const mergedRadius = preferences.radiusKm !== undefined ? Math.min(preferences.radiusKm, 5) : Math.min(coach.preferences?.radiusKm || 5, 5);
+      const mergedRadius = trainerServiceRadiusKm(preferences.radiusKm ?? coach.preferences?.radiusKm);
       coach.preferences = {
         ...(coach.preferences || { online: false, radiusKm: 5, maxDailySessions: 5, categories: [] }),
         ...preferences,
