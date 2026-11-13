@@ -11,6 +11,7 @@ import { normalizeDate, canonicalizeTimeRange, formatToDDMMYYYY } from '../utils
 import * as Location from 'expo-location';
 import { useAddressStore } from '../store/addressStore';
 import { useCoachStore, generateMonthlySlots } from '../store/coachStore';
+import { isAreaServedByAnyTrainer } from '../utils/serviceArea';
 import { useNotificationStore } from '../store/notificationStore';
 import { useUserStore } from '../store/userStore';
 import { EmptyState, ApplePayConfirmation, BookingSuccessAnimation } from '../components';
@@ -530,28 +531,9 @@ export default function BookingScreen() {
   // Online/offline status is NOT checked here because this strictly evaluates geographical serviceability.
   // Stops early immediately on the first matching trainer (no extra loops). Trainer identity is never exposed.
   const isAreaCoveredByTrainer = useCallback((userLat: number, userLng: number): boolean => {
-    if (!userLat || !userLng) return false;
-
     // Database se fresh coaches uthao, na ki stale store se
     const freshCoaches = Database.getCoaches() || coaches;
-
-    for (let i = 0; i < freshCoaches.length; i++) {
-      const coach = freshCoaches[i];
-      const tLat = coach.preferences?.operatingLatitude;
-      const tLng = coach.preferences?.operatingLongitude;
-      if (tLat === undefined || tLat === null || tLng === undefined || tLng === null) {
-        continue;
-      }
-
-      // Same straight-line rule the trainer list and the assignment engine use,
-      // so "Not Available" can never contradict the trainers actually shown.
-      const distKm = calculateDistanceKm(userLat, userLng, tLat, tLng);
-      if (distKm <= trainerServiceRadiusKm(coach.preferences?.radiusKm)) {
-        return true; // Early exit immediately on first matching trainer, no extra loops
-      }
-    }
-
-    return false;
+    return isAreaServedByAnyTrainer(userLat, userLng, freshCoaches);
   }, [coaches]);
   const [successBookingId, setSuccessBookingId] = useState(initialBookingId);
 
@@ -2283,6 +2265,10 @@ export default function BookingScreen() {
   const showAddressCustomLabelError = (addressFormAttempted || addressFieldTouched.customLabel) && !!addressCustomLabelError;
 
   const isAddressFormValid = !addressHouseError && !addressBuildingError && !addressCustomLabelError;
+  // Same 5 km service-area rule as the rest of the flow; null = coach list not loaded yet (unknown, not "outside").
+  const isActiveCoordsServed = activeCoords.lat && activeCoords.lng && coaches.length > 0
+    ? isAreaCoveredByTrainer(activeCoords.lat, activeCoords.lng)
+    : null;
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
@@ -3433,6 +3419,23 @@ export default function BookingScreen() {
                                   </Text>
                                 </View>
 
+                                {isActiveCoordsServed !== null && (
+                                  <View className={`flex-row items-center gap-2 px-3 py-2.5 rounded-2xl border ${
+                                    isActiveCoordsServed ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'
+                                  }`}>
+                                    <Ionicons
+                                      name={isActiveCoordsServed ? 'shield-checkmark' : 'close-circle'}
+                                      size={14}
+                                      color={isActiveCoordsServed ? '#059669' : '#E11D48'}
+                                    />
+                                    <Text className={`text-[10px] font-black uppercase tracking-wider ${
+                                      isActiveCoordsServed ? 'text-emerald-700' : 'text-rose-600'
+                                    }`}>
+                                      {isActiveCoordsServed ? 'Virla Service Area Active' : 'Outside Virla Service Area'}
+                                    </Text>
+                                  </View>
+                                )}
+
                                 {/* Save Button */}
                                 <TouchableOpacity
                                   activeOpacity={0.8}
@@ -3467,6 +3470,10 @@ export default function BookingScreen() {
                                     }
                                     if (!isMapConfirmed) {
                                       Alert.alert('Validation Error', 'Please confirm your location pin on the map.');
+                                      return;
+                                    }
+                                    if (isActiveCoordsServed === false) {
+                                      Alert.alert('Outside Service Area', 'Sorry, Virla is not yet available in this area. Pick a location closer to our trainers.');
                                       return;
                                     }
 

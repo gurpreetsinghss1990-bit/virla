@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Switch, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -7,11 +7,14 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import { ScreenHeader } from '../components/ScreenHeader';
 import * as Location from 'expo-location';
 import { fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords, AutocompleteSuggestion, getCurrentLocationCoords } from '../utils/distance';
+import { useCoachStore } from '../store/coachStore';
+import { isAreaServedByAnyTrainer } from '../utils/serviceArea';
 
 export default function AddressManagementScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { addresses, addAddress, updateAddress, deleteAddress, setDefaultAddress } = useUserProfileStore();
+  const coaches = useCoachStore((state) => state.coaches);
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -79,6 +82,18 @@ export default function AddressManagementScreen() {
     };
   }, [searchQuery, sessionToken]);
 
+  useEffect(() => {
+    useCoachStore.getState().syncFromDB();
+  }, []);
+
+  // Service area = any trainer base within that trainer's radius (max 5 km) — same rule as booking.
+  // An empty coach list is treated as unknown, never as "outside", so a cold start cannot block a save.
+  const isOutsideCoverage = useMemo(() => {
+    if (!coaches.length) return false;
+    if (lat === undefined || lng === undefined || lat === 0 || lng === 0) return false;
+    return !isAreaServedByAnyTrainer(lat, lng, coaches);
+  }, [coaches, lat, lng]);
+
   const handleUseCurrentLocation = async () => {
     setIsSearching(true);
     try {
@@ -140,6 +155,10 @@ export default function AddressManagementScreen() {
     }
     if (lat === undefined || lng === undefined || lat === 0 || lng === 0) {
       Alert.alert('Location Required', 'Please resolve your coordinates by using Current Location or selecting an autocomplete suggestion.');
+      return;
+    }
+    if (coaches.length > 0 && !isAreaServedByAnyTrainer(lat, lng, coaches)) {
+      Alert.alert('Outside Service Area', 'Sorry, Virla is not yet available in this area. Try another address closer to our trainers.');
       return;
     }
 
@@ -322,6 +341,23 @@ export default function AddressManagementScreen() {
                       <Text className="text-[#10B981] text-[9px] font-black uppercase">Location selected</Text>
                     </View>
                   )}
+
+                  {lat !== undefined && lng !== undefined && coaches.length > 0 && (
+                    <View className={`flex-row items-center gap-1.5 mt-1.5 px-2.5 py-2 rounded-xl border ${
+                      isOutsideCoverage ? 'bg-rose-50 border-rose-200' : 'bg-emerald-50 border-emerald-200'
+                    }`}>
+                      <Ionicons
+                        name={isOutsideCoverage ? 'close-circle' : 'shield-checkmark'}
+                        size={13}
+                        color={isOutsideCoverage ? '#E11D48' : '#059669'}
+                      />
+                      <Text className={`text-[9px] font-black uppercase tracking-wider ${
+                        isOutsideCoverage ? 'text-rose-600' : 'text-emerald-700'
+                      }`}>
+                        {isOutsideCoverage ? 'Outside Virla Service Area' : 'Virla Service Area Active'}
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
                 <View className="gap-1">
@@ -374,10 +410,17 @@ export default function AddressManagementScreen() {
 
                 <TouchableOpacity
                   onPress={handleSave}
-                  className="w-full bg-[#101828] py-4 rounded-2xl items-center justify-center mt-2 shadow-xs"
+                  disabled={coaches.length > 0 && isOutsideCoverage}
+                  className={`w-full py-4 rounded-2xl items-center justify-center mt-2 shadow-xs ${
+                    coaches.length > 0 && isOutsideCoverage ? 'bg-zinc-300' : 'bg-[#101828]'
+                  }`}
                 >
-                  <Text className="text-white text-xs font-black uppercase">
-                    {editingId ? 'Update Address' : 'Save Address'}
+                  <Text className={`text-xs font-black uppercase ${
+                    coaches.length > 0 && isOutsideCoverage ? 'text-zinc-500' : 'text-white'
+                  }`}>
+                    {coaches.length > 0 && isOutsideCoverage
+                      ? 'Outside Service Area'
+                      : (editingId ? 'Update Address' : 'Save Address')}
                   </Text>
                 </TouchableOpacity>
               </View>

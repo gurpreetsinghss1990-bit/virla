@@ -3887,7 +3887,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     }
 
     this.schema.addresses.push(newAddr);
-    supabase.from('addresses').insert(mapSavedAddressToPostgres(newAddr)).then();
+    supabase.from('addresses').insert(mapSavedAddressToPostgres(newAddr)).then(({ error }) => { if (error) console.error('[DB] insert address failed:', error); });
 
     this.save();
     return newAddr;
@@ -3912,7 +3912,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
         const snakeKey = k.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
         updateFields[snakeKey] = pgAddr[snakeKey];
       }
-      supabase.from('addresses').update(updateFields).eq('id', id).then();
+      supabase.from('addresses').update(updateFields).eq('id', id).then(({ error }) => { if (error) console.error('[DB] update address failed:', error); });
 
       this.save();
     }
@@ -3920,7 +3920,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
 
   deleteAddress(id: string): void {
     this.schema.addresses = this.schema.addresses.filter(a => a.id !== id);
-    supabase.from('addresses').delete().eq('id', id).then();
+    supabase.from('addresses').delete().eq('id', id).then(({ error }) => { if (error) console.error('[DB] delete address failed:', error); });
     this.save();
   }
 
