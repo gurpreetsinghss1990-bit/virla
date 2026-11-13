@@ -3,6 +3,7 @@ import { useUserStore } from './userStore';
 import { useMembershipStore } from './membershipStore';
 import { Database } from '../database/Database';
 import { supabase } from '../database/supabaseClient';
+import { clampLotsToBalance } from '../utils/creditLots';
 
 export interface LedgerTransaction {
   id: string;
@@ -124,7 +125,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
         const used = ledgerList
           .filter(t => t.type === 'spend' || t.type === 'transfer_sent' || t.type === 'penalty' || t.type === 'expired')
-          .reduce((sum, curr) => sum + Math.abs(curr.credits || 1), 0);
+          .reduce((sum, curr) => sum + Math.abs(Number(curr.credits) || 0), 0);
 
         const parseTxTimestamp = (tx: any): number => {
           const idMatch = (tx.id || '').match(/(?:tx-|TXN_)(\d{10,13})/);
@@ -223,7 +224,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
         set({
           creditBalance: profile.creditsBalance,
-          creditLots: lots || [],
+          creditLots: clampLotsToBalance(lots as any[], profile.creditsBalance),
           ledger: consolidatedLedger,
           payments: paymentList,
           lifetimePurchased: purchased,

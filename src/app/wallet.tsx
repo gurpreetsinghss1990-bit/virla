@@ -31,7 +31,7 @@ export default function WalletScreen() {
     return creditLots.filter((l) => l.remaining_credits > 0);
   }, [creditLots]);
 
-  const [scrollY, setScrollY] = useState(0);
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -451,7 +451,8 @@ export default function WalletScreen() {
         scrollEventThrottle={16}
         onScroll={({ nativeEvent }) => {
           const y = nativeEvent.contentOffset.y;
-          setScrollY(y);
+          const collapsed = y > 120;
+          if (collapsed !== isHeaderCollapsed) setIsHeaderCollapsed(collapsed);
 
           if (activeTab !== 'ledger') return;
           const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
@@ -1232,7 +1233,7 @@ export default function WalletScreen() {
             }}
             className="flex-row items-center px-5 py-2 rounded-full shadow-2xs gap-2"
           >
-            {scrollY > 120 ? (
+            {isHeaderCollapsed ? (
               <>
                 <Text className="text-[#E11D48] text-[15px] font-black tracking-tight">
                   {creditBalance ?? 0}

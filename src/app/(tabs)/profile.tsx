@@ -104,7 +104,7 @@ export default function ProfileScreen() {
   const { ledger, creditBalance, creditLots, syncFromDB: syncWallet } = useWalletStore();
   const profile = useUserProfileStore();
   const [isSignOutModalVisible, setIsSignOutModalVisible] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
 
   const handleLogout = () => {
     setIsSignOutModalVisible(true);
@@ -938,8 +938,8 @@ export default function ProfileScreen() {
             showsVerticalScrollIndicator={false}
             scrollEventThrottle={16}
             onScroll={(e) => {
-              const y = e.nativeEvent.contentOffset.y;
-              setScrollY(y);
+              const collapsed = e.nativeEvent.contentOffset.y > 60;
+              if (collapsed !== isHeaderCollapsed) setIsHeaderCollapsed(collapsed);
             }}
             className="flex-1 bg-[#F7F8FC]"
             contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 62, paddingBottom: 140 }}
@@ -2720,7 +2720,7 @@ export default function ProfileScreen() {
             {/* Profile Title Element: Clean, prominent Tab Name font without pill background */}
             <View className="flex-row items-center py-1">
               <Text className="text-[#101828] text-2xl font-black tracking-tight" numberOfLines={1}>
-                {scrollY > 60 
+                {isHeaderCollapsed 
                   ? (profile.name || user?.name || (activeRole === 'trainer' ? 'Trainer' : 'User'))
                   : (activeRole === 'trainer' ? 'Trainer Profile' : 'Profile')}
               </Text>
