@@ -318,8 +318,23 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
       ? 'CANCELLED'
       : 'UPCOMING';
 
+    // Completed / cancelled rows have no upcoming action, so they read better as
+    // self-contained cards than as full-width rows split by a hairline.
+    const isHistoryRow = isCompletedStatus || isCancelledOrMissed;
+
     return (
-      <View className="py-4 border-b border-zinc-200/80">
+      <View
+        className={isHistoryRow
+          ? 'mb-3 rounded-2xl border border-zinc-200/80 bg-white px-4 py-4'
+          : 'py-4 border-b border-zinc-200/80'}
+        style={isHistoryRow ? {
+          shadowColor: '#101828',
+          shadowOpacity: 0.04,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 2 },
+          elevation: 2,
+        } : undefined}
+      >
         {/* Status indicator row */}
         <View className="flex-row items-center justify-between mb-3">
           <View className="flex-row items-center gap-1.5">

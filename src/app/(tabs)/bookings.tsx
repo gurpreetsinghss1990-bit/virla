@@ -133,7 +133,9 @@ export default function BookingsScreen() {
   const [currentCursor, setCurrentCursor] = useState<string | null>(null);
   const [cursorHistory, setCursorHistory] = useState<(string | null)[]>([]);
   const [loading, setLoading] = useState(() => !Database.getIsLoaded());
-  const [scrollY, setScrollY] = useState(0);
+  // Only the "collapsed" threshold matters, so we keep a boolean instead of the raw
+  // offset: the raw value re-rendered this whole screen on every scroll frame.
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
 
   const handleOpenSupport = React.useCallback(async (b: Booking) => {
     setSupportBooking(b);
@@ -1301,7 +1303,8 @@ export default function BookingsScreen() {
             }}
             scrollEventThrottle={16}
             onScroll={({ nativeEvent }) => {
-              setScrollY(nativeEvent.contentOffset.y);
+              const collapsed = nativeEvent.contentOffset.y > 90;
+              setIsHeaderCollapsed((prev) => (prev === collapsed ? prev : collapsed));
             }}
           >
             {/* Header Title Section inside page scroll */}
@@ -1557,7 +1560,7 @@ export default function BookingsScreen() {
               }}
               className="flex-row items-center px-4 py-1.5 rounded-full shadow-2xs gap-1.5"
             >
-              {scrollY > 90 ? (
+              {isHeaderCollapsed ? (
                 <>
                   <Text className="text-[#E11D48] text-[13.5px] font-black tracking-tight">
                     {groupedCustomerBookings.completed.length}
