@@ -157,6 +157,10 @@ export default function AddressManagementScreen() {
       Alert.alert('Location Required', 'Please resolve your coordinates by using Current Location or selecting an autocomplete suggestion.');
       return;
     }
+    if (placeId && placeId.startsWith('mock-')) {
+      Alert.alert('Location Not Verified', 'Ye location Google se verify nahi hui. Search se apna asli address chunein ya map par pin karein.');
+      return;
+    }
     if (coaches.length > 0 && !isAreaServedByAnyTrainer(lat, lng, coaches)) {
       Alert.alert('Outside Service Area', 'Sorry, Virla is not yet available in this area. Try another address closer to our trainers.');
       return;

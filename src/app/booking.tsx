@@ -483,7 +483,8 @@ export default function BookingScreen() {
   const [networkFailure, setNetworkFailure] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
-  const [activeCoords, setActiveCoords] = useState({ lat: 19.0176, lng: 72.8164 });
+  // 0/0 means "not chosen yet": the map is only ever centred on a real point (never a fabricated Mumbai pair).
+  const [activeCoords, setActiveCoords] = useState({ lat: 0, lng: 0 });
   const [googleSuggestions, setGoogleSuggestions] = useState<Array<AutocompleteSuggestion>>([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [sessionToken, setSessionToken] = useState(() => Math.random().toString(36).substring(2, 15) + Date.now().toString());
@@ -651,9 +652,11 @@ export default function BookingScreen() {
     setHasConfirmedSearchSelection(false);
     setIsPinSelectionAuthoritative(true);
     
-    // Automatically fetch current GPS location so user starts at their current spot
-    let lat = activeCoords.lat !== 0 ? activeCoords.lat : 19.0176;
-    let lng = activeCoords.lng !== 0 ? activeCoords.lng : 72.8164;
+    // Automatically fetch current GPS location so user starts at their current spot.
+    // Fall back to a previously chosen point or the user's saved address — never to invented coordinates.
+    const savedFallback = addresses.find((a) => a.isDefault && a.lat && a.lng) ?? addresses.find((a) => a.lat && a.lng);
+    let lat = activeCoords.lat !== 0 ? activeCoords.lat : (savedFallback?.lat ?? 0);
+    let lng = activeCoords.lng !== 0 ? activeCoords.lng : (savedFallback?.lng ?? 0);
 
     try {
       const loc = await Location.getCurrentPositionAsync({
@@ -669,6 +672,11 @@ export default function BookingScreen() {
       }).catch(() => {});
     } catch (locErr) {
       console.warn('[Booking] Initial GPS position fetch error:', locErr);
+    }
+
+    if (!lat || !lng) {
+      Alert.alert('Location Required 📍', 'Aapki current location nahi mil saki. Search se apna address chunein ya location ON karke dobara try karein.');
+      return;
     }
 
     setActiveCoords({ lat, lng });
@@ -3470,6 +3478,10 @@ export default function BookingScreen() {
                                     }
                                     if (!isMapConfirmed) {
                                       Alert.alert('Validation Error', 'Please confirm your location pin on the map.');
+                                      return;
+                                    }
+                                    if (placeId && placeId.startsWith('mock-')) {
+                                      Alert.alert('Location Not Verified', 'Ye location Google se verify nahi hui. Search se apna asli address chunein ya map par pin karein.');
                                       return;
                                     }
                                     if (isActiveCoordsServed === false) {
