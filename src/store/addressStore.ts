@@ -184,9 +184,13 @@ export const useAddressStore = create<AddressState>((set, get) => ({
 
     if (userId) {
       const list = Database.getAddresses(userId).map(mapAddrToStore);
+      // A row deleted on the server must not stay selected: only keep a still-existing id.
+      const currentSelection = get().selectedAddressId;
       set({
         addresses: list,
-        selectedAddressId: get().selectedAddressId || list.find(a => a.isDefault)?.id || list[0]?.id || ''
+        selectedAddressId: (currentSelection && list.some(a => a.id === currentSelection))
+          ? currentSelection
+          : (list.find(a => a.isDefault)?.id || list[0]?.id || '')
       });
 
       // Fallback: if local cache is empty (e.g. initial load happened before x-user-id header was set),
@@ -224,9 +228,12 @@ export const useAddressStore = create<AddressState>((set, get) => ({
                 }
               }
               const refreshed = Database.getAddresses(targetUserId).map(mapAddrToStore);
+              const currentSelection = get().selectedAddressId;
               set({
                 addresses: refreshed,
-                selectedAddressId: get().selectedAddressId || refreshed.find(a => a.isDefault)?.id || refreshed[0]?.id || ''
+                selectedAddressId: (currentSelection && refreshed.some(a => a.id === currentSelection))
+                  ? currentSelection
+                  : (refreshed.find(a => a.isDefault)?.id || refreshed[0]?.id || '')
               });
             }
           }, () => {});
