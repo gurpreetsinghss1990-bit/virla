@@ -41,7 +41,7 @@ export const useMembershipStore = create<MembershipState>((set, get) => ({
     
     if (isCurrentlyExpired) {
       const future = new Date(now);
-      future.setFullYear(future.getFullYear() + 1);
+      future.setMonth(future.getMonth() + 6);
       newDate = future.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
     } else {
       const past = new Date(now);
@@ -197,14 +197,14 @@ export const useMembershipStore = create<MembershipState>((set, get) => ({
             const sortedPurchases = [...purchases].sort((a, b) => parseDate(b.date).getTime() - parseDate(a.date).getTime());
             const latestPurchaseDate = parseDate(sortedPurchases[0].date);
             const expiryDate = new Date(latestPurchaseDate);
-            expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+            expiryDate.setMonth(expiryDate.getMonth() + 6);
             
             const now = new Date();
             hasActiveValidCredits = now.getTime() < expiryDate.getTime();
             calculatedExpiryStr = expiryDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
           } else {
             // No purchase transaction in ledger, but creditsBalance > 0 (e.g. admin 50 credits or reset)
-            // Treat as valid, expiry is 1 year from registration or 1 year from today
+            // Treat as valid, expiry is 6 months from registration or 6 months from today
             hasActiveValidCredits = true;
             let regDate = new Date();
             if (user.createdDate) {
@@ -215,7 +215,7 @@ export const useMembershipStore = create<MembershipState>((set, get) => ({
               if (!isNaN(d.getTime())) regDate = d;
             }
             const expiryDate = new Date(regDate);
-            expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+            expiryDate.setMonth(expiryDate.getMonth() + 6);
             calculatedExpiryStr = expiryDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
           }
         }

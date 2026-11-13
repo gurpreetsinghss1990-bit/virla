@@ -157,3 +157,12 @@ The system is currently considered STABLE through the point where the trainer ca
 Tomorrow's work must resume from this exact checkpoint. Do not reopen or revisit frozen modules unless the owner explicitly authorizes a protected-module change after receiving the full prior-change assessment.
 
 The next authorized development area is AFTER trainer acceptance, not before it.
+
+# CREDIT VALIDITY POLICY
+
+Session-pack credits are valid for **6 months** from purchase, plus a 7-day grace
+window. This is enforced in `fulfill_payment_order`, `sync_credit_lots_on_transaction`,
+`backfill_credit_lots_from_transactions` and `reconcile_credit_lots`
+(migration `20261107080000_credit_validity_6_months.sql`) and mirrored in the pricing
+page copy, `src/store/membershipStore.ts` and `src/app/legal-center.tsx`.
+Lots created before that migration keep the expiry they were granted with.

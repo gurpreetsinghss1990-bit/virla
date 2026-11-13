@@ -45,7 +45,7 @@ export default function LegalCenterScreen() {
       title: 'Refund & Credit Policy',
       desc: 'Credits expiry and package refund rules.',
       icon: 'credit-card',
-      content: 'Wallet credits purchased via Single Session, Starter, Premium, or Elite packs do not expire for 12 months. Refund packages are evaluated on request by our VIP Concierge support team.',
+      content: 'Wallet credits purchased via Single Session, Starter, Premium, or Elite packs do not expire for 6 months. Refund packages are evaluated on request by our VIP Concierge support team.',
     },
     {
       id: 'medical',
