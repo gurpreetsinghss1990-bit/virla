@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
+import { Loading } from '../components/Loading';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Image, Animated, Modal, KeyboardAvoidingView, Platform, ActivityIndicator, Share, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Image, Animated, Modal, KeyboardAvoidingView, Platform, Share, StyleSheet, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -3212,7 +3213,7 @@ export default function BookingScreen() {
                                 }`}
                               >
                                 {isReverseGeocoding ? (
-                                  <ActivityIndicator size="small" color="#6B7280" />
+                                  <Loading size="small" color="#6B7280" />
                                 ) : (
                                   <Text className={`text-xs font-black uppercase tracking-wider ${
                                     isLocationOutsideCoverage ? 'text-zinc-400' : 'text-white'
@@ -3846,7 +3847,7 @@ export default function BookingScreen() {
                               minHeight: 180
                             }}
                           >
-                            <ActivityIndicator size="large" color="#4F46E5" />
+                            <Loading size="large" color="#4F46E5" />
                             <Text className="text-zinc-650 text-xs font-black uppercase tracking-widest text-center mt-4">
                               Checking availability for {formatToDDMMYYYY(selectedDate)}...
                             </Text>
@@ -4947,7 +4948,7 @@ export default function BookingScreen() {
                     }}
                   >
                     {isConfirming ? (
-                      <ActivityIndicator size="small" color="white" />
+                      <Loading size="small" color="white" />
                     ) : (
                       <>
                         <Text className="text-white text-base font-bold">Confirm Booking</Text>

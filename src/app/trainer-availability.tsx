@@ -1,5 +1,6 @@
+import { Loading } from '../components/Loading';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -228,7 +229,7 @@ export default function TrainerAvailabilityScreen() {
   if (!coach) {
     return (
       <View style={{ flex: 1, backgroundColor: '#F7F8FC', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <ActivityIndicator size="small" color="#4F46E5" />
+        <Loading size="small" color="#4F46E5" />
         <Text className="text-zinc-500 text-xs font-bold text-center mt-4">
           Unable to load availability
         </Text>

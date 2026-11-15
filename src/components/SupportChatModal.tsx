@@ -1,16 +1,6 @@
+import { Loading } from './Loading';
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Keyboard,
-  ActivityIndicator
-} from 'react-native';
+import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -391,7 +381,7 @@ export function SupportChatModal({
                 }`}
               >
                 {isSending ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <Loading size="small" color="#FFFFFF" />
                 ) : (
                   <Feather name="arrow-up" size={18} color={inputText.trim() ? '#FFFFFF' : '#9CA3AF'} />
                 )}

@@ -1,19 +1,6 @@
+import { Loading } from '../components/Loading';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  Animated,
-  Vibration,
-  Platform,
-  KeyboardAvoidingView,
-  Dimensions,
-  Alert,
-  ActivityIndicator,
-  Image,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Animated, Vibration, Platform, KeyboardAvoidingView, Dimensions, Alert, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -778,7 +765,7 @@ export default function UserMetricsLandingScreen() {
               className="w-full py-4 rounded-full items-center justify-center flex-row gap-2"
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <Loading size="small" color="#FFFFFF" />
               ) : (
                 <>
                   <Text className="text-white text-base font-extrabold tracking-wide">

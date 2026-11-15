@@ -1,5 +1,6 @@
+import { Loading } from './Loading';
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Database, SupportTicket } from '../database/Database';
@@ -177,7 +178,7 @@ export function RaiseSupportTicketModal({
             }`}
           >
             {isSubmitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <Loading size="small" color="#FFFFFF" />
             ) : (
               <>
                 <Feather name="send" size={15} color={selectedReason ? 'white' : '#71717A'} />

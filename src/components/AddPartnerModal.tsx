@@ -1,5 +1,6 @@
+import { Loading } from './Loading';
 import React, { useState } from 'react';
-import { View, Text, Modal, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Modal, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Database } from '../database/Database';
 import { useUserStore } from '../store/userStore';
@@ -141,7 +142,7 @@ export const AddPartnerModal: React.FC<AddPartnerModalProps> = ({
                 className="w-full bg-[#E11D48] py-4 rounded-xl items-center justify-center flex-row gap-2 shadow-sm min-h-[48px]"
               >
                 {isSubmitting ? (
-                  <ActivityIndicator size="small" color="white" />
+                  <Loading size="small" color="white" />
                 ) : (
                   <>
                     <Text className="text-white text-xs font-black uppercase tracking-wider">Confirm Add Partner</Text>

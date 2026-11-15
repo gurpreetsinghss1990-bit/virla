@@ -1,13 +1,6 @@
+import { Loading } from './Loading';
 import React from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  ActivityIndicator,
-  Platform,
-} from 'react-native';
+import { View, Text, Modal, TouchableOpacity, TouchableWithoutFeedback, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 export interface ConfirmationDialogProps {
@@ -116,7 +109,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
               >
                 {isLoading ? (
                   <View className="flex-row items-center gap-1.5">
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <Loading size="small" color="#FFFFFF" />
                     <Text className="text-white text-xs font-bold uppercase tracking-wider">
                       {loadingText}
                     </Text>

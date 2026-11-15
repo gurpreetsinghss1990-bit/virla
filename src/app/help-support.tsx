@@ -1,5 +1,6 @@
+import { Loading } from '../components/Loading';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Platform, KeyboardAvoidingView, Linking, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Platform, KeyboardAvoidingView, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -368,7 +369,7 @@ export default function HelpSupportScreen() {
                   }}
                 >
                   {isSubmittingTicket ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <Loading size="small" color="#FFFFFF" />
                   ) : (
                     <>
                       <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>

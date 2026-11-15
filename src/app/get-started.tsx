@@ -1,8 +1,9 @@
+import { Loading } from '../components/Loading';
 import { AppLogo, Heading, PrimaryButton, Subtitle } from '@/presentation/components';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, AppState, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { Alert, Animated, AppState, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { Database } from '../database/Database';
@@ -816,7 +817,7 @@ export default function GetStartedScreen() {
 
                 {isLoading && (
                   <View className="items-center justify-center py-2">
-                    <ActivityIndicator size="small" color="#4F46E5" />
+                    <Loading size="small" color="#4F46E5" />
                   </View>
                 )}
 
@@ -1037,7 +1038,7 @@ export default function GetStartedScreen() {
 
                 {isLoading && (
                   <View className="items-center justify-center py-2">
-                    <ActivityIndicator size="small" color="#E11D48" />
+                    <Loading size="small" color="#E11D48" />
                   </View>
                 )}
 

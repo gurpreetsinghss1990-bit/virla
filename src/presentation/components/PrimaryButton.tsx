@@ -1,5 +1,6 @@
+import { Loading } from '../../components/Loading';
 import React, { useRef, useState } from 'react';
-import { Animated, TouchableOpacity, Text, ActivityIndicator, View, StyleSheet } from 'react-native';
+import { Animated, TouchableOpacity, Text, View, StyleSheet } from 'react-native';
 import Svg, { Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 interface PrimaryButtonProps {
@@ -72,7 +73,7 @@ export function PrimaryButton({
         </View>
 
         {loading ? (
-          <ActivityIndicator color="#ffffff" size="small" />
+          <Loading color="#ffffff" size="small" />
         ) : (
           <View className="flex-row items-center justify-center px-4">
             {icon && <View className="mr-2">{icon}</View>}

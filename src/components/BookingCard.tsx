@@ -1,5 +1,6 @@
+import { Loading } from './Loading';
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, Alert, Modal, ScrollView, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, Image, TouchableOpacity, Alert, Modal, ScrollView, Platform } from 'react-native';
 import { Booking } from '../types';
 import { BookingStatusBadge } from './BookingStatusBadge';
 import { useBookingStore } from '../store/bookingStore';
@@ -500,7 +501,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
                 className="w-full bg-[#E11D48] py-4 rounded-2xl items-center justify-center flex-row gap-2"
               >
                 {isCancelling ? (
-                  <ActivityIndicator color="white" size="small" />
+                  <Loading color="white" size="small" />
                 ) : (
                   <Text className="text-white text-xs font-black uppercase tracking-wider">
                     {booking.sessionType === 'COUPLE' ? 'Cancel & Forfeit 2 Credits' : 'Cancel & Forfeit 1 Credit'}
@@ -623,7 +624,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
                 }`}
               >
                 {isRescheduling ? (
-                  <ActivityIndicator color="white" size="small" />
+                  <Loading color="white" size="small" />
                 ) : (
                   <Text className={`text-xs font-black uppercase tracking-wider ${
                     (!selectedRescheduleDate || !selectedRescheduleTime) ? 'text-zinc-400' : 'text-white'
@@ -996,7 +997,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
               className="w-full bg-[#E11D48] py-4 rounded-2xl items-center justify-center flex-row gap-2"
             >
               {isCancelling ? (
-                <ActivityIndicator color="white" size="small" />
+                <Loading color="white" size="small" />
               ) : (
                 <Text className="text-white text-xs font-black uppercase tracking-wider">
                   {booking.sessionType === 'COUPLE' ? 'Cancel & Forfeit 2 Credits' : 'Cancel & Forfeit 1 Credit'}
@@ -1121,7 +1122,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
               }`}
             >
               {isRescheduling ? (
-                <ActivityIndicator color="white" size="small" />
+                <Loading color="white" size="small" />
               ) : (
                 <Text className={`text-xs font-black uppercase tracking-wider ${
                   (!selectedRescheduleDate || !selectedRescheduleTime) ? 'text-zinc-400' : 'text-white'

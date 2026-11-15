@@ -1,5 +1,6 @@
+import { Loading } from '../components/Loading';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Modal, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Modal, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -185,7 +186,7 @@ export default function AdminWorkoutApprovalsScreen() {
       {/* List Container */}
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="small" color="#18181B" />
+          <Loading size="small" color="#18181B" />
         </View>
       ) : (
         <ScrollView className="flex-1 p-6" contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>

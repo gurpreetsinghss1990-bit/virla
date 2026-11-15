@@ -1,5 +1,6 @@
+import { Loading } from './Loading';
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Database, SupportTicket } from '../database/Database';
@@ -81,7 +82,7 @@ export function UserTicketsModal({
         >
           {isLoading ? (
             <View className="py-24 items-center justify-center">
-              <ActivityIndicator size="small" color="#101828" />
+              <Loading size="small" color="#101828" />
               <Text className="text-zinc-400 text-xs font-semibold mt-3">Loading support history...</Text>
             </View>
           ) : tickets.length === 0 ? (

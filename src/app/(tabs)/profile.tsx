@@ -1,5 +1,6 @@
+import { Loading } from '../../components/Loading';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, BackHandler, Modal, LayoutAnimation, UIManager, ActivityIndicator, Pressable, TouchableWithoutFeedback, StyleSheet, Easing, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, BackHandler, Modal, LayoutAnimation, UIManager, Pressable, TouchableWithoutFeedback, StyleSheet, Easing, Dimensions } from 'react-native';
 import { InteractionManager } from '../../utils/interactionManager';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -1629,7 +1630,7 @@ export default function ProfileScreen() {
                     className="absolute bottom-2 right-0 bg-[#E11D48] w-8 h-8 rounded-full border-2 border-white shadow-md items-center justify-center"
                   >
                     {isUploadingTrainerPhoto ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <Loading size="small" color="#FFFFFF" />
                     ) : (
                       <Feather name="edit-2" size={13} color="#FFFFFF" />
                     )}
@@ -2815,7 +2816,7 @@ export default function ProfileScreen() {
                       />
                       {isUploadingAvatar && (
                         <View className="absolute inset-0 rounded-full bg-black/45 items-center justify-center">
-                          <ActivityIndicator size="small" color="#FFFFFF" />
+                          <Loading size="small" color="#FFFFFF" />
                         </View>
                       )}
                     </View>
@@ -3011,7 +3012,7 @@ export default function ProfileScreen() {
               >
                 {isSavingProfile ? (
                   <>
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <Loading size="small" color="#FFFFFF" />
                     <Text className="text-white text-xs font-black uppercase tracking-wider">Saving...</Text>
                   </>
                 ) : (

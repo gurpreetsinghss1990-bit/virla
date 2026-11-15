@@ -1,5 +1,6 @@
+import { Loading } from './Loading';
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { StyleSheet, View, Text, ActivityIndicator, Platform, TouchableOpacity, Animated } from 'react-native';
+import { StyleSheet, View, Text, Platform, TouchableOpacity, Animated } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -374,7 +375,7 @@ export default function TrackingMap({
       {/* Waiting for live GPS signal overlay badge */}
       {!trainerLatLng && (
         <View style={styles.staleOverlay}>
-          <ActivityIndicator size="small" color="#E11D48" style={{ marginRight: 6 }} />
+          <Loading size="small" color="#E11D48" style={{ marginRight: 6 }} />
           <Text style={styles.staleText}>Connecting to live trainer GPS...</Text>
         </View>
       )}

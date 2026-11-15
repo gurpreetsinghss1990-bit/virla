@@ -1,9 +1,10 @@
+import { Loading } from '../components/Loading';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Image, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Image, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AddPartnerModal } from '../components/AddPartnerModal';
 import { PostSessionHealthReportModal } from '../components/PostSessionHealthReportModal';
@@ -1084,7 +1085,7 @@ export default function SessionDetailScreen() {
               </View>
 
               {loadingAssessments ? (
-                <ActivityIndicator size="small" color="#4F46E5" className="py-2" />
+                <Loading size="small" color="#4F46E5" className="py-2" />
               ) : assessments.length > 0 ? (
                 <View className="gap-2.5">
                   {/* Active Injury or Limitation Details from latest session */}
@@ -1273,7 +1274,7 @@ export default function SessionDetailScreen() {
               <Text className="text-white text-sm font-black uppercase">BOOKING CONFIRMED</Text>
             ) : isAccepting ? (
               <View className="flex-row items-center gap-2">
-                <ActivityIndicator color="white" size="small" />
+                <Loading color="white" size="small" />
                 <Text className="text-white text-sm font-black uppercase">ACCEPTING...</Text>
               </View>
             ) : (
@@ -1618,7 +1619,7 @@ export default function SessionDetailScreen() {
                 </View>
 
                 {loadingAssessments ? (
-                  <ActivityIndicator size="small" color="#4F46E5" className="py-2" />
+                  <Loading size="small" color="#4F46E5" className="py-2" />
                 ) : assessments.length > 0 ? (
                   <View className="gap-3">
                     {/* Active Injury / Limitation Details from latest session */}
@@ -2689,7 +2690,7 @@ export default function SessionDetailScreen() {
               />
             ) : (
               <View className="flex-1 items-center justify-center bg-slate-950">
-                <ActivityIndicator size="large" color="#E11D48" />
+                <Loading size="large" color="#E11D48" />
                 <Text className="text-zinc-400 text-xs font-semibold mt-2">Loading coordinates...</Text>
               </View>
             )}
@@ -2827,7 +2828,7 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Pro
 
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7F8FC' }}>
-      <ActivityIndicator size="large" color="#E11D48" />
+      <Loading size="large" color="#E11D48" />
     </View>
   );
 }
