@@ -190,26 +190,31 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
   useEffect(() => {
     const calculateTimeLeft = () => {
       const nowMs = getCurrentServerTime().getTime();
-      const elapsed = Math.floor((nowMs - (booking.createdAt || nowMs)) / 1000);
-      
+      const totalWindowSec = 1800;
+      const deadlineMs = booking.acceptanceDeadline && booking.acceptanceDeadline > 0
+        ? booking.acceptanceDeadline
+        : (booking.createdAt || nowMs) + totalWindowSec * 1000;
+      const secsLeft = Math.max(0, Math.floor((deadlineMs - nowMs) / 1000));
+      const elapsed = totalWindowSec - secsLeft;
+
       let num: 1 | 2 | 3 | null = 1;
       let remaining = 600 - elapsed;
-      
-      if (elapsed >= 1800) {
+
+      if (secsLeft <= 0) {
         num = null;
         remaining = 0;
-      } else if (elapsed >= 1200) {
+      } else if (secsLeft <= 600) {
         num = 3;
-        remaining = 1800 - elapsed;
-      } else if (elapsed >= 600) {
+        remaining = secsLeft;
+      } else if (secsLeft <= 1200) {
         num = 2;
-        remaining = 1200 - elapsed;
+        remaining = secsLeft - 600;
       }
-      return { num, remaining, elapsed };
+      return { num, remaining, expired: secsLeft <= 0 };
     };
 
     const updateTimer = () => {
-      const { num, remaining, elapsed } = calculateTimeLeft();
+      const { num, remaining, expired } = calculateTimeLeft();
       setCountdownNum(num);
       setTimeLeft(remaining);
 
@@ -219,7 +224,7 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
         Vibration.vibrate(500);
       }
 
-      if (elapsed >= 1800 && !isTimeoutTriggeredRef.current) {
+      if (expired && !isTimeoutTriggeredRef.current) {
         isTimeoutTriggeredRef.current = true;
         onTimeout(booking.id);
       }
