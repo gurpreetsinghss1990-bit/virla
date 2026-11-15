@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Modal, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Modal, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { Database } from '../database/Database';
 import { useCoachStore } from '../store/coachStore';
 import { supabase } from '../database/supabaseClient';
+import { VirlaSpinner } from '../components/VirlaSpinner';
 
 const CATEGORY_DISPLAY_MAP: Record<string, string> = {
   'Strength': 'Strength Training',
@@ -185,7 +186,7 @@ export default function AdminWorkoutApprovalsScreen() {
       {/* List Container */}
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="small" color="#18181B" />
+          <VirlaSpinner size="small" color="#18181B" />
         </View>
       ) : (
         <ScrollView className="flex-1 p-6" contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>

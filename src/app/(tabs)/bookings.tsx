@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useTransition } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, Text, ScrollView, TouchableOpacity, Platform, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Platform, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBookingStore } from '../../store/bookingStore';
 import { BookingCard } from '../../components/BookingCard';

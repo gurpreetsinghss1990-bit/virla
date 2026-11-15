@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, ActivityIndicator, Linking, Share } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Linking, Share } from 'react-native';
 import { InteractionManager } from '../utils/interactionManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +17,7 @@ import { formatToDDMMYYYY } from '../utils/date';
 import { supabase } from '../database/supabaseClient';
 import { t } from '../utils/i18n';
 import { PayPhiService } from '../services/payphiService';
+import { VirlaSpinner } from '../components/VirlaSpinner';
 
 export default function WalletScreen() {
   const router = useRouter();
@@ -930,7 +931,7 @@ export default function WalletScreen() {
                     {/* Recipient status confirmations */}
                     {recipientStatus === 'searching' && (
                       <View className="flex-row items-center gap-2 mt-2.5 ml-1">
-                        <ActivityIndicator size="small" color="#4F46E5" />
+                        <VirlaSpinner size="small" color="#4F46E5" />
                         <Text className="text-zinc-500 text-[10px] font-bold">Checking registered Virla users...</Text>
                       </View>
                     )}

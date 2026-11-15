@@ -1,21 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Keyboard,
-  ActivityIndicator
-} from 'react-native';
+import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../database/supabaseClient';
 import { Database, SupportTicket, ChatMessage } from '../database/Database';
+import { VirlaSpinner } from './VirlaSpinner';
 
 interface SupportChatModalProps {
   visible: boolean;
@@ -391,7 +381,7 @@ export function SupportChatModal({
                 }`}
               >
                 {isSending ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <VirlaSpinner size="small" color="#FFFFFF" />
                 ) : (
                   <Feather name="arrow-up" size={18} color={inputText.trim() ? '#FFFFFF' : '#9CA3AF'} />
                 )}
