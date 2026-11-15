@@ -3891,6 +3891,59 @@ export default function BookingScreen() {
                         );
                       }
 
+                      const targetCategory = selectedExperience ? (WORKOUT_CATEGORY_MAPPING[selectedExperience.id] || '') : '';
+                      const customerLat = customerAddress?.lat || 0;
+                      const customerLng = customerAddress?.lng || 0;
+                      const finalEligibleTrainers = coaches.filter(coach => {
+                        const assignments = Database.getWorkoutAssignments(coach.id);
+                        const isApproved = assignments.some(a => a.workoutCategory === targetCategory && a.status === 'APPROVED');
+                        const acceptsAll = assignments.some(a => a.workoutCategory === 'All Workouts' && a.status === 'APPROVED');
+                        const workoutApproved = acceptsAll || isApproved;
+
+                        const isOnline = coach.preferences?.online !== false;
+                        const isPartnerApproved = coach.verifiedBadge !== false;
+
+                        const locationStatus = coach.preferences?.operatingLocationStatus;
+                        const locationApproved = locationStatus === 'verified';
+
+                        const trainerLat = coach.preferences?.operatingLatitude;
+                        const trainerLng = coach.preferences?.operatingLongitude;
+                        const radiusLimit = trainerServiceRadiusKm(coach.preferences?.radiusKm);
+
+                        let distance = 999999;
+                        let insideRadius = false;
+                        if (trainerLat !== undefined && trainerLat !== null && trainerLng !== undefined && trainerLng !== null) {
+                          distance = calculateDistanceKm(trainerLat, trainerLng, customerLat, customerLng);
+                          insideRadius = distance <= radiusLimit;
+                        }
+
+                        // Apply gender filters
+                        const trainerGender = (coach.gender || '').toLowerCase();
+                        const genderValid = trainerGender === 'male' || trainerGender === 'female';
+
+                        let genderApproved = false;
+                        if (genderValid) {
+                          if (trainerPref === 'any') {
+                            genderApproved = true;
+                          } else if (trainerPref === 'male') {
+                            genderApproved = trainerGender === 'male';
+                          } else if (trainerPref === 'female') {
+                            genderApproved = trainerGender === 'female';
+                          } else if (trainerPref === 'favourite') {
+                            const clientPref = (Database.getProfile(user.id || '')?.trainerPreference || 'no_preference').toLowerCase();
+                            if (clientPref === 'male') {
+                              genderApproved = trainerGender === 'male';
+                            } else if (clientPref === 'female') {
+                              genderApproved = trainerGender === 'female';
+                            } else {
+                              genderApproved = true;
+                            }
+                          }
+                        }
+
+                        return isOnline && isPartnerApproved && workoutApproved && locationApproved && insideRadius && genderValid && genderApproved;
+                      });
+
                       const slotsToDisplay = displaySlots;
 
                       if (slotsToDisplay.length === 0) {

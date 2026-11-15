@@ -2399,6 +2399,7 @@ class DatabaseClient {
   async refreshBookings(): Promise<void> {
     try {
       await supabase.rpc('expire_stale_bookings');
+      await supabase.rpc('expire_stale_acceptances');
       await supabase.rpc('apply_auto_acceptances');
       const { data, error } = await supabase.from('bookings').select('*');
       if (data && !error) {
