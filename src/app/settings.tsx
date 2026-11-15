@@ -1,5 +1,6 @@
+import { NativeSwitch } from '../components/NativeSwitch';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Switch, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore } from '../store/userProfileStore';
@@ -128,7 +129,7 @@ export default function SettingsScreen() {
                 <Text className="text-zinc-900 text-xs font-black">Push Notifications</Text>
                 <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Master toggle for push alerts</Text>
               </View>
-              <Switch
+              <NativeSwitch
                 value={notifications.pushNotifications}
                 onValueChange={(val) => updateNotificationPrefs({ pushNotifications: val })}
               />
@@ -139,7 +140,7 @@ export default function SettingsScreen() {
                 <Text className="text-zinc-900 text-xs font-black">Booking Notifications</Text>
                 <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Get slots checks and matches alerts</Text>
               </View>
-              <Switch
+              <NativeSwitch
                 value={notifications.bookingUpdates}
                 onValueChange={(val) => updateNotificationPrefs({ bookingUpdates: val })}
               />
@@ -150,7 +151,7 @@ export default function SettingsScreen() {
                 <Text className="text-zinc-900 text-xs font-black">Trainer Updates</Text>
                 <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Real-time chat pushes from coaches</Text>
               </View>
-              <Switch
+              <NativeSwitch
                 value={notifications.trainerMessages}
                 onValueChange={(val) => updateNotificationPrefs({ trainerMessages: val })}
               />
@@ -161,7 +162,7 @@ export default function SettingsScreen() {
                 <Text className="text-zinc-900 text-xs font-black">Membership & Credits Alerts</Text>
                 <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Alerts when credits run low or expire</Text>
               </View>
-              <Switch
+              <NativeSwitch
                 value={notifications.membershipAlerts}
                 onValueChange={(val) => updateNotificationPrefs({ membershipAlerts: val })}
               />
@@ -172,7 +173,7 @@ export default function SettingsScreen() {
                 <Text className="text-zinc-900 text-xs font-black">Offers & Marketing</Text>
                 <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Receive discount codes and package campaigns</Text>
               </View>
-              <Switch
+              <NativeSwitch
                 value={notifications.offers}
                 onValueChange={(val) => updateNotificationPrefs({ offers: val, promotions: val })}
               />
@@ -183,7 +184,7 @@ export default function SettingsScreen() {
                 <Text className="text-zinc-900 text-xs font-black">SMS Notifications</Text>
                 <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Send transaction alerts via SMS</Text>
               </View>
-              <Switch
+              <NativeSwitch
                 value={notifications.smsNotifications}
                 onValueChange={(val) => updateNotificationPrefs({ smsNotifications: val })}
               />
@@ -194,7 +195,7 @@ export default function SettingsScreen() {
                 <Text className="text-zinc-900 text-xs font-black">Email Alerts</Text>
                 <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Receive session summaries and invoice bills</Text>
               </View>
-              <Switch
+              <NativeSwitch
                 value={notifications.emailNotifications}
                 onValueChange={(val) => updateNotificationPrefs({ emailNotifications: val })}
               />
@@ -205,7 +206,7 @@ export default function SettingsScreen() {
                 <Text className="text-zinc-900 text-xs font-black">Sound Alerts</Text>
                 <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Play dynamic sound notification alerts</Text>
               </View>
-              <Switch
+              <NativeSwitch
                 value={notifications.workoutReminders}
                 onValueChange={(val) => updateNotificationPrefs({ workoutReminders: val })}
               />
@@ -216,7 +217,7 @@ export default function SettingsScreen() {
                 <Text className="text-zinc-900 text-xs font-black">Vibration feedback</Text>
                 <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Trigger device vibration on push notifications</Text>
               </View>
-              <Switch
+              <NativeSwitch
                 value={notifications.progressReports}
                 onValueChange={(val) => updateNotificationPrefs({ progressReports: val })}
               />

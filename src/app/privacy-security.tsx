@@ -1,5 +1,6 @@
+import { NativeSwitch } from '../components/NativeSwitch';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Switch, Alert, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Platform, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore } from '../store/userProfileStore';
@@ -98,7 +99,7 @@ export default function PrivacySecurityScreen() {
                   <Text className="text-zinc-900 text-[14px] font-semibold">Biometric Login</Text>
                   <Text className="text-zinc-500 text-xs font-normal mt-0.5 leading-snug">Use Face ID or fingerprint checks</Text>
                 </View>
-                <Switch
+                <NativeSwitch
                   value={privacy.biometricLogin}
                   onValueChange={(val) => updatePrivacySettings({ biometricLogin: val })}
                   trackColor={{ false: '#E5E7EB', true: '#E11D48' }}
@@ -110,7 +111,7 @@ export default function PrivacySecurityScreen() {
                   <Text className="text-zinc-900 text-[14px] font-semibold">Face ID unlock</Text>
                   <Text className="text-zinc-500 text-xs font-normal mt-0.5 leading-snug">Re-authenticate check-in lists via face</Text>
                 </View>
-                <Switch
+                <NativeSwitch
                   value={privacy.faceId}
                   onValueChange={(val) => updatePrivacySettings({ faceId: val })}
                   trackColor={{ false: '#E5E7EB', true: '#E11D48' }}
@@ -122,7 +123,7 @@ export default function PrivacySecurityScreen() {
                   <Text className="text-zinc-900 text-[14px] font-semibold">Secure PIN lock</Text>
                   <Text className="text-zinc-500 text-xs font-normal mt-0.5 leading-snug">Prompt 4-digit code on app launches</Text>
                 </View>
-                <Switch
+                <NativeSwitch
                   value={privacy.pinLock}
                   onValueChange={(val) => updatePrivacySettings({ pinLock: val })}
                   trackColor={{ false: '#E5E7EB', true: '#E11D48' }}
@@ -175,7 +176,7 @@ export default function PrivacySecurityScreen() {
                   <Text className="text-zinc-900 text-[14px] font-semibold">Location permission</Text>
                   <Text className="text-zinc-500 text-xs font-normal mt-0.5 leading-snug">Used for calculating nearest match radius</Text>
                 </View>
-                <Switch
+                <NativeSwitch
                   value={privacy.locationPermission}
                   onValueChange={(val) => updatePrivacySettings({ locationPermission: val })}
                   trackColor={{ false: '#E5E7EB', true: '#E11D48' }}
@@ -187,7 +188,7 @@ export default function PrivacySecurityScreen() {
                   <Text className="text-zinc-900 text-[14px] font-semibold">Camera permission</Text>
                   <Text className="text-zinc-500 text-xs font-normal mt-0.5 leading-snug">Used for scanning check-in QR codes</Text>
                 </View>
-                <Switch
+                <NativeSwitch
                   value={privacy.cameraPermission}
                   onValueChange={(val) => updatePrivacySettings({ cameraPermission: val })}
                   trackColor={{ false: '#E5E7EB', true: '#E11D48' }}
@@ -199,7 +200,7 @@ export default function PrivacySecurityScreen() {
                   <Text className="text-zinc-900 text-[14px] font-semibold">Microphone permission</Text>
                   <Text className="text-zinc-500 text-xs font-normal mt-0.5 leading-snug">Used for voice support assistant channels</Text>
                 </View>
-                <Switch
+                <NativeSwitch
                   value={privacy.microphonePermission}
                   onValueChange={(val) => updatePrivacySettings({ microphonePermission: val })}
                   trackColor={{ false: '#E5E7EB', true: '#E11D48' }}

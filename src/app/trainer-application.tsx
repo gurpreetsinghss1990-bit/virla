@@ -1,5 +1,6 @@
+import { NativeSwitch } from '../components/NativeSwitch';
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Switch, StyleSheet, Platform, KeyboardAvoidingView, NativeModules, Image } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, StyleSheet, Platform, KeyboardAvoidingView, NativeModules, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -2479,15 +2480,15 @@ export default function TrainerApplicationScreen() {
                     <View className="gap-2.5">
                       <View className="flex-row justify-between items-center">
                         <Text className="text-zinc-700 text-xs font-semibold text-start">Morning Slot (06:00 AM - 12:00 PM)</Text>
-                        <Switch value={availabilityMorning} onValueChange={setAvailabilityMorning} trackColor={{ true: '#E11D48' }} />
+                        <NativeSwitch value={availabilityMorning} onValueChange={setAvailabilityMorning} trackColor={{ true: '#E11D48' }} />
                       </View>
                       <View className="flex-row justify-between items-center">
                         <Text className="text-zinc-700 text-xs font-semibold text-start">Afternoon Slot (12:00 PM - 04:00 PM)</Text>
-                        <Switch value={availabilityAfternoon} onValueChange={setAvailabilityAfternoon} trackColor={{ true: '#E11D48' }} />
+                        <NativeSwitch value={availabilityAfternoon} onValueChange={setAvailabilityAfternoon} trackColor={{ true: '#E11D48' }} />
                       </View>
                       <View className="flex-row justify-between items-center">
                         <Text className="text-zinc-700 text-xs font-semibold text-start">Evening Slot (04:00 PM - 09:00 PM)</Text>
-                        <Switch value={availabilityEvening} onValueChange={setAvailabilityEvening} trackColor={{ true: '#E11D48' }} />
+                        <NativeSwitch value={availabilityEvening} onValueChange={setAvailabilityEvening} trackColor={{ true: '#E11D48' }} />
                       </View>
                     </View>
                   </View>

@@ -1,5 +1,6 @@
+import { NativeSwitch } from '../components/NativeSwitch';
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TextInput, Alert, Switch, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore, EmergencyContact } from '../store/userProfileStore';
@@ -177,7 +178,7 @@ export default function EmergencyContactsScreen() {
 
               <View className="flex-row justify-between items-center py-2">
                 <Text className="text-zinc-950 text-xs font-black uppercase">Primary Contact Toggle</Text>
-                <Switch value={isPrimary} onValueChange={setIsPrimary} />
+                <NativeSwitch value={isPrimary} onValueChange={setIsPrimary} />
               </View>
 
               <TouchableOpacity

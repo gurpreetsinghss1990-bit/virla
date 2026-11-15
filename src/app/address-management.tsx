@@ -1,5 +1,6 @@
+import { NativeSwitch } from '../components/NativeSwitch';
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Switch, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore, SavedAddress } from '../store/userProfileStore';
@@ -409,7 +410,7 @@ export default function AddressManagementScreen() {
 
                 <View className="flex-row justify-between items-center py-2">
                   <Text className="text-zinc-950 text-xs font-black uppercase">Set Default Address</Text>
-                  <Switch value={isDefault} onValueChange={setIsDefault} />
+                  <NativeSwitch value={isDefault} onValueChange={setIsDefault} />
                 </View>
 
                 <TouchableOpacity
