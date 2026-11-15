@@ -15,7 +15,7 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 const SPIKES = 12;
 const POINTS = SPIKES * 2;
 const OUTER = 40;
-const INNER_MIN = 11;
+const INNER_MIN = 13;
 const INNER_MAX = 26;
 const CENTER = 50;
 
@@ -36,7 +36,6 @@ export type VirlaSpinnerProps = {
   style?: StyleProp<ViewStyle>;
   className?: string;
   speed?: number;
-  spinDuration?: number;
 };
 
 export function VirlaSpinner({
@@ -46,7 +45,6 @@ export function VirlaSpinner({
   style,
   className,
   speed = 2600,
-  spinDuration = 5000,
 }: VirlaSpinnerProps) {
   const progress = useSharedValue(0);
   const spin = useSharedValue(0);
@@ -55,8 +53,8 @@ export function VirlaSpinner({
     progress.value = 0;
     progress.value = withRepeat(withTiming(1, { duration: speed, easing: Easing.linear }), -1, false);
     spin.value = 0;
-    spin.value = withRepeat(withTiming(1, { duration: spinDuration, easing: Easing.linear }), -1, false);
-  }, [progress, spin, speed, spinDuration]);
+    spin.value = withRepeat(withTiming(1, { duration: speed * 4.6, easing: Easing.linear }), -1, false);
+  }, [progress, spin, speed]);
 
   const animatedProps = useAnimatedProps(() => {
     'worklet';
