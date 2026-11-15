@@ -10,15 +10,12 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PushNotificationService } from '../services/PushNotificationService';
 import { useUserStore } from '../store/userStore';
 import { TopToastNotification } from '../components/TopToastNotification';
-import { CustomAlertTopNotification } from '../components/CustomAlertTopNotification';
-import { installCustomAlert } from '../utils/customAlertInterceptor';
 import { configureGlobalTextInputCursor } from '../utils/configureTextInputCursor';
 import { useEngagementNudges } from '../hooks/useEngagementNudges';
 import { useToastStore } from '../store/toastStore';
 import '../global.css';
 
 // Install custom alert interceptor so Alert.alert routes to clean top popup
-installCustomAlert();
 
 // Configure universal black cursor & rounded teardrop selection handle across all input bars
 configureGlobalTextInputCursor();
@@ -200,7 +197,6 @@ export default function RootLayout() {
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }} />
       <TopToastNotification />
-      <CustomAlertTopNotification />
     </SafeAreaProvider>
   );
 }

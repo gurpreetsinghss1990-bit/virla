@@ -23,6 +23,7 @@ import { AssignmentEngine } from '../services/AssignmentEngine';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
 import { WORKOUT_CATEGORY_MAPPING, getCategoryFromTitle } from '../config/WorkoutMapping';
 import { resolveAvatarSource } from '../components/AvatarImage';
+import { NativeSheet } from '../components/NativeSheet';
 
 // Error boundary to prevent MapView crash if native Google Maps API Key is uninitialized on older client builds
 class SafeMapWrapper extends React.Component<{ children: React.ReactNode; fallback?: React.ReactNode }, { hasError: boolean }> {
@@ -4966,17 +4967,8 @@ export default function BookingScreen() {
               )}
 
               {/* Health & Safety Details Modal */}
-              <Modal
-                visible={showHealthDetailsModal}
-                animationType="slide"
-                transparent={true}
-                onRequestClose={() => setShowHealthDetailsModal(false)}
-              >
-                <View className="flex-1 bg-black/60 justify-end">
-                  <View 
-                    style={{ maxHeight: '82%', paddingBottom: Math.max(insets.bottom, 20) }}
-                    className="bg-white rounded-t-[32px] p-6 shadow-2xl"
-                  >
+              <NativeSheet visible={showHealthDetailsModal} onClose={() => setShowHealthDetailsModal(false)} fullHeight>
+                  <View className="w-full p-6 pb-6">
                     {/* Modal Header */}
                     <View className="flex-row items-center justify-between pb-4 border-b border-zinc-100">
                       <View className="flex-row items-center gap-2">
@@ -5059,8 +5051,7 @@ export default function BookingScreen() {
                       </TouchableOpacity>
                     </ScrollView>
                   </View>
-                </View>
-              </Modal>
+              </NativeSheet>
 
               {/* STEP 7: SUCCESS EXPERIENCE */}
               {step === 7 && (

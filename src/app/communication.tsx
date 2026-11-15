@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Alert, Animated, KeyboardAvoidingView, Platform, Keyboard, Modal, Share, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Alert, Animated, KeyboardAvoidingView, Platform, Keyboard, Share, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
@@ -15,6 +15,7 @@ import { useUserStore } from '../store/userStore';
 import { useChatStore } from '../store/chatStore';
 import { supabase } from '../database/supabaseClient';
 import { getBookingISTDateRange, getDisplayWorkoutTitle } from '../utils/date';
+import { NativeSheet } from '../components/NativeSheet';
 
 interface ChatMessage {
   id: string;
@@ -716,17 +717,8 @@ export default function CommunicationScreen() {
       )}
 
       {/* Overflow menu — Centered on Screen */}
-      <Modal visible={isMenuVisible} transparent animationType="fade" onRequestClose={() => setIsMenuVisible(false)}>
-        <TouchableOpacity 
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }} 
-          activeOpacity={1} 
-          onPress={() => setIsMenuVisible(false)}
-        >
-          <TouchableOpacity 
-            activeOpacity={1} 
-            className="w-full max-w-[340px] bg-white rounded-3xl border border-[#E8E4DC] p-3 shadow-xl"
-            onPress={(e) => e.stopPropagation()}
-          >
+      <NativeSheet visible={isMenuVisible} onClose={() => setIsMenuVisible(false)}>
+        <View className="w-full p-3">
             {/* Header / Title */}
             <View className="px-3 pt-2 pb-2.5 flex-row items-center justify-between border-b border-[#F0ECE1]">
               <Text className="text-[#1F1E1D] text-sm font-bold tracking-tight">Session Actions</Text>
@@ -808,9 +800,8 @@ export default function CommunicationScreen() {
                 </>
               )}
             </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+        </View>
+      </NativeSheet>
 
       {/* Lean v1 Confirmation Dialog: Live Location */}
       <ConfirmationDialog

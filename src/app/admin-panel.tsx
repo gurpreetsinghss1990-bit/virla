@@ -1,7 +1,7 @@
 import { Loading } from '../components/Loading';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Platform, Image, Modal, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Platform, Image, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -15,6 +15,7 @@ import { trainerServiceRadiusKm } from '../utils/distance';
 import { useBookingStore } from '../store/bookingStore';
 import { SupportChatModal } from '../components/SupportChatModal';
 import { resolveAvatarSource } from '../components/AvatarImage';
+import { NativeSheet } from '../components/NativeSheet';
 
 const DEFAULT_FALLBACK_AVATAR = '';
 const getSafeAvatarUri = (uri?: string | null) => {
@@ -2494,14 +2495,8 @@ export default function AdminPanelScreen() {
       />
 
       {/* Detailed Audit Modal */}
-      <Modal
-        visible={selectedAuditSession !== null}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setSelectedAuditSession(null)}
-      >
-        <View style={{ flex: 1, backgroundColor: 'rgba(9, 9, 11, 0.7)', justifyContent: 'center', padding: 20 }}>
-          <View className="bg-white rounded-[32px] border border-zinc-200 p-6 shadow-2xl max-h-[85%]">
+      <NativeSheet visible={selectedAuditSession !== null} onClose={() => setSelectedAuditSession(null)} fullHeight>
+          <View className="w-full p-6 pb-8">
             <View className="flex-row justify-between items-center border-b border-zinc-100 pb-4 mb-4">
               <Text className="text-[#101828] text-base font-black uppercase tracking-wider">Session Audit Log</Text>
               <TouchableOpacity 
@@ -2682,19 +2677,12 @@ export default function AdminPanelScreen() {
                 </ScrollView>
               );
             })()}
-          </View>
-        </View>
-      </Modal>
+      </View>
+    </NativeSheet>
 
       {/* Physical Interview Verification Form Modal */}
-      <Modal
-        visible={!!interviewFormApp}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setInterviewFormApp(null)}
-      >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
-          <View className="bg-white rounded-[26px] p-6 w-full max-w-lg gap-4 shadow-2xl">
+      <NativeSheet visible={!!interviewFormApp} onClose={() => setInterviewFormApp(null)} fullHeight>
+          <View className="w-full p-6 pb-8 gap-4">
             {/* Header */}
             <View className="flex-row items-center justify-between border-b border-zinc-100 pb-3">
               <View className="gap-0.5">
@@ -2843,19 +2831,12 @@ export default function AdminPanelScreen() {
                 </Text>
               )}
             </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      </View>
+    </NativeSheet>
 
       {/* Direct Admin Location & Radius Override Modal */}
-      <Modal
-        visible={editingCoachLocation !== null}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setEditingCoachLocation(null)}
-      >
-        <View style={{ flex: 1, backgroundColor: 'rgba(9, 9, 11, 0.7)', justifyContent: 'center', padding: 20 }}>
-          <View className="bg-white rounded-[32px] border border-zinc-200 p-6 shadow-2xl max-h-[90%] gap-4">
+      <NativeSheet visible={editingCoachLocation !== null} onClose={() => setEditingCoachLocation(null)} fullHeight>
+          <View className="w-full p-6 pb-8 gap-4">
             {/* Modal Header */}
             <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
               <View>
@@ -2985,9 +2966,8 @@ export default function AdminPanelScreen() {
                 </TouchableOpacity>
               </View>
             </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      </View>
+    </NativeSheet>
     </SafeAreaViewWrapper>
   );
 }

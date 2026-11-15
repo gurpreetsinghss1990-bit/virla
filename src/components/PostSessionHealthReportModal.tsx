@@ -1,18 +1,8 @@
 import React, { useState } from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-  TouchableWithoutFeedback,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Alert,  } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { Booking } from '../types';
+import { NativeSheet } from './NativeSheet';
 
 interface PostSessionHealthReportModalProps {
   visible: boolean;
@@ -148,19 +138,10 @@ export function PostSessionHealthReportModal({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={onClose}
-    >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View className="flex-1 bg-black/60 justify-end">
-          <TouchableWithoutFeedback onPress={() => {}}>
+    <NativeSheet visible={visible} onClose={onClose} fullHeight backgroundColor="#FFFFFF">
             <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-              className="bg-white rounded-t-[32px] max-h-[92%] overflow-hidden"
+              className="bg-white"
             >
               {/* Header */}
               <View className="px-6 pt-5 pb-4 border-b border-zinc-100 flex-row items-center justify-between bg-white">
@@ -513,9 +494,6 @@ export function PostSessionHealthReportModal({
                 </TouchableOpacity>
               </ScrollView>
             </KeyboardAvoidingView>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
+    </NativeSheet>
   );
 }

@@ -1,16 +1,8 @@
-import React, { useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
-  StyleSheet,
-} from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { NativeSheet } from './NativeSheet';
 
 interface TrainerStatusModalProps {
   visible: boolean;
@@ -30,85 +22,11 @@ export const TrainerStatusModal: React.FC<TrainerStatusModalProps> = ({
   const safeBottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 56 : 24) + 20;
   const isGoingOffline = targetStatus === 'offline';
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(300)).current;
-
-  useEffect(() => {
-    if (visible) {
-      fadeAnim.setValue(0);
-      slideAnim.setValue(300);
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible]);
-
-  const handleDismiss = () => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 300,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      onClose();
-    });
-  };
+  const handleDismiss = () => onClose();
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      statusBarTranslucent
-      onRequestClose={handleDismiss}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
-        {/* Animated Static Fade Backdrop (no sliding black shade) */}
-        <Animated.View
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              backgroundColor: 'rgba(0, 0, 0, 0.6)',
-              opacity: fadeAnim,
-            },
-          ]}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={handleDismiss}
-            style={{ flex: 1 }}
-          />
-        </Animated.View>
-
-        {/* Modal Bottom Sheet Content sliding up cleanly on top of faded backdrop */}
-        <View style={{ flex: 1, justifyContent: 'flex-end' }} pointerEvents="box-none">
-          <Animated.View
-            style={[
-              {
-                paddingBottom: safeBottomPadding,
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
-            className="bg-white rounded-t-[36px] px-6 pt-3 gap-5 shadow-2xl border-t border-rose-100"
-          >
+    <NativeSheet visible={visible} onClose={handleDismiss}>
+      <View style={{ paddingBottom: safeBottomPadding }} className="w-full px-6 pt-3 pb-4 gap-5">
             {/* Subtle Pull Indicator Bar */}
             <View className="w-12 h-1.5 rounded-full bg-zinc-200 self-center mb-1" />
 
@@ -209,9 +127,7 @@ export const TrainerStatusModal: React.FC<TrainerStatusModalProps> = ({
                 </Text>
               </TouchableOpacity>
             </View>
-          </Animated.View>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+      </View>
+    </NativeSheet>
   );
 };

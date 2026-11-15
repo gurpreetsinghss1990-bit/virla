@@ -1,16 +1,8 @@
-import React, { useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
-  StyleSheet,
-} from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { NativeSheet } from './NativeSheet';
 
 interface CommunicationCenterModalProps {
   visible: boolean;
@@ -31,87 +23,11 @@ export const CommunicationCenterModal: React.FC<CommunicationCenterModalProps> =
   // Ensure ample clearance above Android 3-button navigation bar (~48-56dp) or iOS indicator bar (~34dp)
   const safeBottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 68 : 28) + 24;
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(260)).current;
-
-  useEffect(() => {
-    if (visible) {
-      fadeAnim.setValue(0);
-      slideAnim.setValue(260);
-
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 280,
-          useNativeDriver: true,
-        }),
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          tension: 65,
-          friction: 11,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible]);
-
-  const handleDismiss = () => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 260,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      onClose();
-    });
-  };
+  const handleDismiss = () => onClose();
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      statusBarTranslucent
-      onRequestClose={handleDismiss}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
-        {/* Animated Fade Backdrop */}
-        <Animated.View
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              backgroundColor: 'rgba(0, 0, 0, 0.4)',
-              opacity: fadeAnim,
-            },
-          ]}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={handleDismiss}
-            style={{ flex: 1 }}
-          />
-        </Animated.View>
-
-        {/* Modal Bottom Sheet Content with Smooth Slide-Up */}
-        <View style={{ flex: 1, justifyContent: 'flex-end' }} pointerEvents="box-none">
-          <Animated.View
-            style={{
-              transform: [{ translateY: slideAnim }],
-            }}
-          >
-            <View
-              style={{ paddingBottom: safeBottomPadding }}
-              className="bg-white rounded-t-[28px] px-5 pt-3 gap-3 shadow-xl"
-            >
+    <NativeSheet visible={visible} onClose={handleDismiss}>
+      <View style={{ paddingBottom: safeBottomPadding }} className="w-full px-5 pt-3 pb-4 gap-3">
             {/* Minimal Pull Indicator Bar */}
             <View className="w-8 h-1 rounded-full bg-zinc-200 self-center mb-1" />
 
@@ -178,10 +94,7 @@ export const CommunicationCenterModal: React.FC<CommunicationCenterModalProps> =
                 <Feather name="chevron-right" size={16} color="#94A3B8" />
               </TouchableOpacity>
             </View>
-          </View>
-        </Animated.View>
       </View>
-    </KeyboardAvoidingView>
-  </Modal>
+    </NativeSheet>
   );
 };

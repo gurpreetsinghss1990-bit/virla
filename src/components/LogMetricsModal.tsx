@@ -1,13 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Modal,
-  Text,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
-} from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useUserStore } from '../store/userStore';
+import { NativeSheet } from './NativeSheet';
 
 interface LogMetricsModalProps {
   visible: boolean;
@@ -68,35 +63,8 @@ export const LogMetricsModal: React.FC<LogMetricsModalProps> = ({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={onClose}
-    >
-      <TouchableOpacity
-        activeOpacity={1}
-        onPress={onClose}
-        className="flex-1 bg-slate-950/50 items-center justify-center px-5"
-        style={{
-          backgroundColor: 'rgba(15, 23, 42, 0.45)',
-        }}
-      >
-        <TouchableWithoutFeedback>
-          <View
-            className="w-full max-w-sm rounded-[32px] p-6 shadow-2xl"
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.96)',
-              borderWidth: 1.5,
-              borderColor: 'rgba(255, 255, 255, 0.85)',
-              elevation: 16,
-              shadowColor: '#000000',
-              shadowOffset: { width: 0, height: 12 },
-              shadowOpacity: 0.2,
-              shadowRadius: 24,
-            }}
-          >
+    <NativeSheet visible={visible} onClose={onClose} backgroundColor="#FFFFFF">
+          <View className="w-full p-6 pb-8">
             {/* Header with Title and Top-Right Dismiss ✕ Icon */}
             <View className="flex-row items-start justify-between mb-3">
               <View className="flex-1 pr-2">
@@ -295,9 +263,7 @@ export const LogMetricsModal: React.FC<LogMetricsModalProps> = ({
               </TouchableOpacity>
             </View>
           </View>
-        </TouchableWithoutFeedback>
-      </TouchableOpacity>
-    </Modal>
+    </NativeSheet>
   );
 };
 

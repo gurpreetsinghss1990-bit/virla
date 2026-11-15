@@ -1,7 +1,8 @@
 import { Loading } from './Loading';
 import React from 'react';
-import { View, Text, Modal, TouchableOpacity, TouchableWithoutFeedback, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { NativeSheet } from './NativeSheet';
 
 export interface ConfirmationDialogProps {
   visible: boolean;
@@ -37,24 +38,14 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   const defaultIcon = iconName || (isDestructive ? 'alert-triangle' : 'help-circle');
 
   return (
-    <Modal
+    <NativeSheet
       visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={() => {
+      onClose={() => {
         if (!isLoading) onCancel();
       }}
+      backgroundColor="#FAF9F5"
     >
-      <TouchableOpacity
-        activeOpacity={1}
-        onPress={() => {
-          if (!isLoading) onCancel();
-        }}
-        className="flex-1 bg-black/60 items-center justify-center px-6"
-      >
-        <TouchableWithoutFeedback>
-          <View className="w-full max-w-sm bg-[#FAF9F5] rounded-[28px] p-6 shadow-2xl border border-[#E8E4DC]">
+          <View className="w-full p-6 pb-8">
             {/* Leading Icon Badge */}
             <View
               className={`w-14 h-14 rounded-2xl items-center justify-center self-center mb-4 ${
@@ -122,8 +113,6 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
               </TouchableOpacity>
             </View>
           </View>
-        </TouchableWithoutFeedback>
-      </TouchableOpacity>
-    </Modal>
+    </NativeSheet>
   );
 };

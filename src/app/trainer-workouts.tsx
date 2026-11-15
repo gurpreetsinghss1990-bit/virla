@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useUserStore } from '../store/userStore';
 import { useCoachStore } from '../store/coachStore';
 import { Database } from '../database/Database';
+import { NativeSheet } from '../components/NativeSheet';
 
 const CATEGORIES = [
   { key: 'Strength', name: 'Strength Training', icon: '💪' },
@@ -262,14 +263,8 @@ export default function TrainerWorkoutsScreen() {
       </ScrollView>
 
       {/* Picker Modal */}
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View className="flex-1 justify-end bg-black/60">
-          <View className="bg-white rounded-t-[40px] px-6 pt-8 pb-10 max-h-[80%]">
+      <NativeSheet visible={modalVisible} onClose={() => setModalVisible(false)}>
+        <View className="w-full px-6 pt-4 pb-8">
             <View className="flex-row items-center justify-between mb-6">
               <View>
                 <Text className="text-zinc-900 text-lg font-black">Request Qualifications</Text>
@@ -307,9 +302,8 @@ export default function TrainerWorkoutsScreen() {
                 ))
               )}
             </ScrollView>
-          </View>
         </View>
-      </Modal>
+      </NativeSheet>
     </View>
   );
 }

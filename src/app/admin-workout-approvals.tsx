@@ -1,12 +1,13 @@
 import { Loading } from '../components/Loading';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Modal, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { Database } from '../database/Database';
 import { useCoachStore } from '../store/coachStore';
 import { supabase } from '../database/supabaseClient';
+import { NativeSheet } from '../components/NativeSheet';
 
 const CATEGORY_DISPLAY_MAP: Record<string, string> = {
   'Strength': 'Strength Training',
@@ -257,13 +258,8 @@ export default function AdminWorkoutApprovalsScreen() {
       )}
 
       {/* Reject Modal */}
-      <Modal
-        visible={rejectModalVisible}
-        transparent
-        animationType="fade"
-      >
-        <View className="flex-1 bg-black/60 items-center justify-center p-6">
-          <View className="bg-white rounded-[32px] w-full max-w-sm p-6 shadow-xl">
+      <NativeSheet visible={rejectModalVisible} onClose={() => setRejectModalVisible(false)}>
+        <View className="w-full p-6 pb-8">
             <Text className="text-zinc-950 text-lg font-black">Decline Request</Text>
             <Text className="text-zinc-400 text-[10px] font-bold uppercase mt-0.5">Please provide feedback/rejection reason</Text>
 
@@ -292,9 +288,8 @@ export default function AdminWorkoutApprovalsScreen() {
                 <Text className="text-white text-xs font-black uppercase">Confirm Decline</Text>
               </TouchableOpacity>
             </View>
-          </View>
         </View>
-      </Modal>
+      </NativeSheet>
     </View>
   );
 }

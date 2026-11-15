@@ -1,13 +1,7 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  Platform,
-} from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { NativeSheet } from './NativeSheet';
 
 export interface SignOutConfirmationModalProps {
   visible: boolean;
@@ -29,20 +23,8 @@ export const SignOutConfirmationModal: React.FC<SignOutConfirmationModalProps> =
   cancelText = 'Cancel',
 }) => {
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={onClose}
-    >
-      <TouchableOpacity
-        activeOpacity={1}
-        onPress={onClose}
-        className="flex-1 bg-black/60 items-center justify-center px-6"
-      >
-        <TouchableWithoutFeedback>
-          <View className="w-full max-w-sm bg-white rounded-[28px] p-6 shadow-2xl border border-zinc-100">
+    <NativeSheet visible={visible} onClose={onClose}>
+      <View className="w-full p-6 pb-8">
             {/* Top Icon Badge */}
             <View className="w-14 h-14 items-center justify-center self-center mb-4">
               <Feather name="log-out" size={24} color="#DC2626" style={{ marginLeft: 2, transform: [{ rotate: '-90deg' }] }} />
@@ -83,9 +65,7 @@ export const SignOutConfirmationModal: React.FC<SignOutConfirmationModalProps> =
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </TouchableWithoutFeedback>
-      </TouchableOpacity>
-    </Modal>
+      </View>
+    </NativeSheet>
   );
 };

@@ -1,10 +1,11 @@
 import { Loading } from './Loading';
 import React, { useState } from 'react';
-import { View, Text, Modal, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Database } from '../database/Database';
 import { useUserStore } from '../store/userStore';
 import { useRouter } from 'expo-router';
+import { NativeSheet } from './NativeSheet';
 
 interface AddPartnerModalProps {
   visible: boolean;
@@ -52,19 +53,9 @@ export const AddPartnerModal: React.FC<AddPartnerModalProps> = ({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1 bg-black/60 justify-end"
-      >
-        <TouchableOpacity activeOpacity={1} onPress={onClose} className="flex-1" />
-        
-        <View className="bg-white rounded-t-[36px] p-6 pb-12 gap-5 shadow-2xl">
+    <NativeSheet visible={visible} onClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View className="w-full p-6 pb-10 gap-5">
           {/* Modal Header */}
           <View className="flex-row justify-between items-center border-b border-zinc-100 pb-4">
             <View className="gap-0.5">
@@ -175,6 +166,6 @@ export const AddPartnerModal: React.FC<AddPartnerModalProps> = ({
           </View>
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </NativeSheet>
   );
 };
