@@ -1,4 +1,5 @@
 import { Loading } from '../../components/Loading';
+import { NativePressable } from '../../components/NativePressable';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, BackHandler, Modal, LayoutAnimation, UIManager, Pressable, TouchableWithoutFeedback, StyleSheet, Easing, Dimensions } from 'react-native';
 import { InteractionManager } from '../../utils/interactionManager';
@@ -1440,16 +1441,9 @@ export default function ProfileScreen() {
                       })
                       .map((goal, idx) => (
                       <View key={`${goal}-${idx}`} className="rounded-full overflow-hidden">
-                        <Pressable
-                          android_ripple={{
-                            color: idx < 2 ? 'rgba(4, 120, 87, 0.25)' : 'rgba(71, 85, 105, 0.2)',
-                            borderless: false,
-                          }}
+                        <NativePressable
+                          rippleColor={idx < 2 ? 'rgba(4, 120, 87, 0.25)' : 'rgba(71, 85, 105, 0.2)'}
                           onPress={() => navigateThrottled('/fitness-goals')}
-                          style={({ pressed }) => [
-                            pressed && { transform: [{ scale: 0.96 }] },
-                            Platform.OS === 'ios' && pressed && { opacity: 0.75 },
-                          ]}
                           className={
                             idx < 2
                               ? "bg-[#E6F4F1] border border-[#A7F3D0] px-3.5 py-2 rounded-full flex-row items-center gap-1.5"
@@ -1460,42 +1454,28 @@ export default function ProfileScreen() {
                             {goal}
                           </Text>
                           {idx < 2 && <Feather name="arrow-up-right" size={12} color="#065F46" />}
-                        </Pressable>
+                        </NativePressable>
                       </View>
                     ))}
                   </View>
                 ) : (
                   <View className="rounded-2xl overflow-hidden mb-3.5 border border-dashed border-zinc-250 bg-zinc-50/80">
-                    <Pressable
-                      android_ripple={{
-                        color: 'rgba(79, 70, 229, 0.15)',
-                        borderless: false,
-                      }}
+                    <NativePressable
+                      rippleColor="rgba(79, 70, 229, 0.15)"
                       onPress={() => navigateThrottled('/fitness-goals')}
-                      style={({ pressed }) => [
-                        pressed && { transform: [{ scale: 0.98 }] },
-                        Platform.OS === 'ios' && pressed && { opacity: 0.75 },
-                      ]}
                       className="p-4 items-center justify-center flex-row gap-2"
                     >
                       <Feather name="plus-circle" size={15} color="#64748B" />
                       <Text className="text-zinc-600 text-xs font-bold">No fitness goals set yet. Tap to add</Text>
-                    </Pressable>
+                    </NativePressable>
                   </View>
                 )}
 
                 {/* Motivational Banner */}
                 <View className="rounded-2xl overflow-hidden border border-[#D1FAE5] bg-[#EDF7F2]">
-                  <Pressable
-                    android_ripple={{
-                      color: 'rgba(4, 120, 87, 0.2)',
-                      borderless: false,
-                    }}
+                  <NativePressable
+                    rippleColor="rgba(4, 120, 87, 0.2)"
                     onPress={() => navigateThrottled('/fitness-goals')}
-                    style={({ pressed }) => [
-                      pressed && { transform: [{ scale: 0.98 }] },
-                      Platform.OS === 'ios' && pressed && { opacity: 0.8 },
-                    ]}
                     className="p-3.5 flex-row items-center justify-between"
                   >
                     <View className="flex-row items-center gap-3 flex-1 pr-2">
@@ -1510,7 +1490,7 @@ export default function ProfileScreen() {
                       </View>
                     </View>
                     <Feather name="chevron-right" size={16} color="#047857" />
-                  </Pressable>
+                  </NativePressable>
                 </View>
               </View>
 

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, TouchableOpacity, Platform, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { InteractionManager } from '../utils/interactionManager';
+import { NativePressable } from '../components/NativePressable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore } from '../store/userProfileStore';
@@ -32,11 +33,8 @@ interface GoalCapsuleButtonProps {
 
 const GoalCapsuleButton = React.memo(({ goal, isSelected, onPress }: GoalCapsuleButtonProps) => {
   return (
-    <Pressable
-      android_ripple={{
-        color: isSelected ? 'rgba(255, 255, 255, 0.4)' : 'rgba(225, 29, 72, 0.25)',
-        borderless: false,
-      }}
+    <NativePressable
+      rippleColor={isSelected ? 'rgba(255, 255, 255, 0.4)' : 'rgba(225, 29, 72, 0.25)'}
       onPress={onPress}
       style={[
         styles.capsule,
@@ -52,7 +50,7 @@ const GoalCapsuleButton = React.memo(({ goal, isSelected, onPress }: GoalCapsule
         {goal}
       </Text>
       {isSelected && <Feather name="check" size={13} color="#FFFFFF" />}
-    </Pressable>
+    </NativePressable>
   );
 });
 
@@ -167,16 +165,13 @@ export default function FitnessGoalsScreen() {
           </View>
 
           {/* Action Save button with increased height & asynchronous handling */}
-          <Pressable
-            android_ripple={{
-              color: 'rgba(255, 255, 255, 0.25)',
-              borderless: false,
-            }}
+          <NativePressable
+            rippleColor="rgba(255, 255, 255, 0.25)"
             onPress={handleExitScreen}
             style={[styles.saveButton]}
           >
             <Text style={styles.saveButtonText}>Save Training Goals</Text>
-          </Pressable>
+          </NativePressable>
 
         </View>
       </ScrollView>
