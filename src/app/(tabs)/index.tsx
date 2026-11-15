@@ -27,6 +27,7 @@ import { LogMetricsModal } from '../../components/LogMetricsModal';
 import { useToastStore } from '../../store/toastStore';
 import { supabase } from '../../database/supabaseClient';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
+import { NativeProgressBar } from '../../components/NativeProgressBar';
 import { resolveAvatarSource } from '../../components/AvatarImage';
 import { useAIWellnessStore } from '../../store/aiWellnessStore';
 import { SessionEngine } from '../../services/SessionEngine';
@@ -1858,9 +1859,12 @@ export default function HomeScreen() {
                       <Text className="text-zinc-400 text-[13px] font-medium mt-0.5">/{caloriesGoal} kcal</Text>
                     </View>
                     {/* Progress Bar */}
-                    <View className="w-full h-1.5 bg-[#FFE4E6] rounded-full overflow-hidden">
-                      <View className="h-full bg-rose-500 rounded-full" style={{ width: `${Math.min(100, (caloriesToday / caloriesGoal) * 100)}%` }} />
-                    </View>
+                    <NativeProgressBar
+                      progress={(caloriesToday / Math.max(caloriesGoal, 1))}
+                      color="#F43F5E"
+                      trackColor="#FFE4E6"
+                      height={8}
+                    />
                   </TouchableOpacity>
 
                   {/* Hydration Widget */}
@@ -1881,9 +1885,12 @@ export default function HomeScreen() {
                       <Text className="text-zinc-400 text-[13px] font-medium mt-0.5">/{waterGoal} ml</Text>
                     </View>
                     {/* Progress Bar */}
-                    <View className="w-full h-1.5 bg-[#CFFAFE] rounded-full overflow-hidden">
-                      <View className="h-full bg-[#06B6D4] rounded-full" style={{ width: `${Math.min(100, (waterMl / waterGoal) * 100)}%` }} />
-                    </View>
+                    <NativeProgressBar
+                      progress={(waterMl / Math.max(waterGoal, 1))}
+                      color="#06B6D4"
+                      trackColor="#CFFAFE"
+                      height={8}
+                    />
                   </TouchableOpacity>
 
                   {/* Wallet Credits Widget */}
@@ -1901,9 +1908,12 @@ export default function HomeScreen() {
                       <Text className="text-zinc-400 text-[13px] font-medium mt-0.5">Credits Available</Text>
                     </View>
                     {/* Progress Bar */}
-                    <View className="w-full h-1.5 bg-[#EDE9FE] rounded-full overflow-hidden">
-                      <View className="h-full bg-violet-600 rounded-full" style={{ width: `${Math.min(100, (membership.availableCredits / Math.max(membership.totalCredits, membership.availableCredits, 1)) * 100)}%` }} />
-                    </View>
+                    <NativeProgressBar
+                      progress={(membership.availableCredits / Math.max(membership.totalCredits, membership.availableCredits, 1))}
+                      color="#7C3AED"
+                      trackColor="#EDE9FE"
+                      height={8}
+                    />
                   </TouchableOpacity>
 
                   {/* Workout Streak Widget */}
@@ -1924,9 +1934,12 @@ export default function HomeScreen() {
                       <Text className="text-zinc-400 text-[13px] font-medium mt-0.5">/{weeklyStreakGoal} days this week</Text>
                     </View>
                     {/* Progress Bar */}
-                    <View className="w-full h-1.5 bg-[#FFE4E6] rounded-full overflow-hidden">
-                      <View className="h-full bg-[#EC4899] rounded-full" style={{ width: `${Math.min(100, (streak / weeklyStreakGoal) * 100)}%` }} />
-                    </View>
+                    <NativeProgressBar
+                      progress={(streak / Math.max(weeklyStreakGoal, 1))}
+                      color="#EC4899"
+                      trackColor="#FFE4E6"
+                      height={8}
+                    />
                   </TouchableOpacity>
                 </View>
               </View>
