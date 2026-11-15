@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Database, SupportTicket } from '../database/Database';
 import { Booking } from '../types';
 import { formatToDDMMYYYY } from '../utils/date';
-import { VirlaSpinner } from './VirlaSpinner';
 
 interface RaiseSupportTicketModalProps {
   visible: boolean;
@@ -178,7 +177,7 @@ export function RaiseSupportTicketModal({
             }`}
           >
             {isSubmitting ? (
-              <VirlaSpinner size="small" color="#FFFFFF" />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
                 <Feather name="send" size={15} color={selectedReason ? 'white' : '#71717A'} />

@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Platform, Image, Modal, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, Image, Modal, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -14,7 +14,6 @@ import { trainerServiceRadiusKm } from '../utils/distance';
 import { useBookingStore } from '../store/bookingStore';
 import { SupportChatModal } from '../components/SupportChatModal';
 import { resolveAvatarSource } from '../components/AvatarImage';
-import { VirlaSpinner } from '../components/VirlaSpinner';
 
 const DEFAULT_FALLBACK_AVATAR = '';
 const getSafeAvatarUri = (uri?: string | null) => {
@@ -581,7 +580,7 @@ export default function AdminPanelScreen() {
     return (
       <SafeAreaViewWrapper>
         <View className="flex-1 bg-[#FCF5F5] justify-center items-center">
-          <VirlaSpinner size="large" color="#4F46E5" />
+          <ActivityIndicator size="large" color="#4F46E5" />
           <Text className="text-zinc-400 text-xs font-black uppercase tracking-wider mt-4">Verifying Credentials...</Text>
         </View>
       </SafeAreaViewWrapper>
@@ -721,7 +720,7 @@ export default function AdminPanelScreen() {
 
               {isLoading ? (
                 <View className="py-20 justify-center items-center">
-                  <VirlaSpinner size="small" color="#4F46E5" />
+                  <ActivityIndicator size="small" color="#4F46E5" />
                 </View>
               ) : (
                 <>
@@ -2836,7 +2835,7 @@ export default function AdminPanelScreen() {
               }`}
             >
               {isSavingInterviewForm ? (
-                <VirlaSpinner size="small" color="#FFFFFF" />
+                <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Text className="text-white text-xs font-black uppercase tracking-wider">
                   Save Interview Details & Enable Approval
@@ -2975,7 +2974,7 @@ export default function AdminPanelScreen() {
                   className="flex-1 py-3.5 bg-zinc-950 rounded-2xl items-center justify-center flex-row gap-2 shadow-sm"
                 >
                   {isSavingLocation ? (
-                    <VirlaSpinner size="small" color="#FFFFFF" />
+                    <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
                     <>
                       <Feather name="save" size={14} color="#FFFFFF" />

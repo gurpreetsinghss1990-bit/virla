@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, BackHandler, Modal, LayoutAnimation, UIManager, Pressable, TouchableWithoutFeedback, StyleSheet, Easing, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, BackHandler, Modal, LayoutAnimation, UIManager, ActivityIndicator, Pressable, TouchableWithoutFeedback, StyleSheet, Easing, Dimensions } from 'react-native';
 import { InteractionManager } from '../../utils/interactionManager';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,7 +23,6 @@ import { Image as ExpoImage } from 'expo-image';
 import { resolveAvatarSource } from '../../components/AvatarImage';
 import { uploadAvatarToStorage } from '../../utils/uploadAvatar';
 import { AvatarImage } from '../../components/AvatarImage';
-import { VirlaSpinner } from '../../components/VirlaSpinner';
 
 // Empty uri means "use the built-in gender default avatar".
 const DEFAULT_AVATARS = [
@@ -1630,7 +1629,7 @@ export default function ProfileScreen() {
                     className="absolute bottom-2 right-0 bg-[#E11D48] w-8 h-8 rounded-full border-2 border-white shadow-md items-center justify-center"
                   >
                     {isUploadingTrainerPhoto ? (
-                      <VirlaSpinner size="small" color="#FFFFFF" />
+                      <ActivityIndicator size="small" color="#FFFFFF" />
                     ) : (
                       <Feather name="edit-2" size={13} color="#FFFFFF" />
                     )}
@@ -2816,7 +2815,7 @@ export default function ProfileScreen() {
                       />
                       {isUploadingAvatar && (
                         <View className="absolute inset-0 rounded-full bg-black/45 items-center justify-center">
-                          <VirlaSpinner size="small" color="#FFFFFF" />
+                          <ActivityIndicator size="small" color="#FFFFFF" />
                         </View>
                       )}
                     </View>
@@ -3012,7 +3011,7 @@ export default function ProfileScreen() {
               >
                 {isSavingProfile ? (
                   <>
-                    <VirlaSpinner size="small" color="#FFFFFF" />
+                    <ActivityIndicator size="small" color="#FFFFFF" />
                     <Text className="text-white text-xs font-black uppercase tracking-wider">Saving...</Text>
                   </>
                 ) : (

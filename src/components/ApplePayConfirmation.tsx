@@ -1,7 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, Animated, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { VirlaSpinner } from './VirlaSpinner';
 
 interface ApplePayConfirmationProps {
   onConfirm: () => void;
@@ -81,7 +80,7 @@ export function ApplePayConfirmation({ onConfirm, priceText = '₹1,200', credit
           }}
         >
           {loading ? (
-            <VirlaSpinner color="#09090B" size="small" />
+            <ActivityIndicator color="#09090B" size="small" />
           ) : confirmed ? (
             <View className="flex-row items-center justify-center gap-2">
               <Feather name="check" size={18} color="white" />

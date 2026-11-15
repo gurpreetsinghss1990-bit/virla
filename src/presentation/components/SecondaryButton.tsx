@@ -1,6 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Animated, TouchableOpacity, Text, View } from 'react-native';
-import { VirlaSpinner } from '../../components/VirlaSpinner';
+import { Animated, TouchableOpacity, Text, ActivityIndicator, View } from 'react-native';
 
 interface SecondaryButtonProps {
   onPress: () => void;
@@ -58,7 +57,7 @@ export function SecondaryButton({
         }}
       >
         {loading ? (
-          <VirlaSpinner color="#101828" size="small" />
+          <ActivityIndicator color="#101828" size="small" />
         ) : (
           <View className="flex-row items-center justify-center px-4">
             {icon && <View className="mr-2">{icon}</View>}

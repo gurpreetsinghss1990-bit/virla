@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -9,7 +9,6 @@ import { useCoachStore, generateMonthlySlots } from '../store/coachStore';
 import { Database, getCurrentServerTime } from '../database/Database';
 import { normalizeDate, canonicalizeTimeRange, formatToDDMMYYYY } from '../utils/date';
 import { trainerServiceRadiusKm } from '../utils/distance';
-import { VirlaSpinner } from '../components/VirlaSpinner';
 
 const getEndLimit = (baseDate: Date) => {
   const endLimit = new Date(baseDate);
@@ -229,7 +228,7 @@ export default function TrainerAvailabilityScreen() {
   if (!coach) {
     return (
       <View style={{ flex: 1, backgroundColor: '#F7F8FC', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <VirlaSpinner size="small" color="#4F46E5" />
+        <ActivityIndicator size="small" color="#4F46E5" />
         <Text className="text-zinc-500 text-xs font-bold text-center mt-4">
           Unable to load availability
         </Text>
