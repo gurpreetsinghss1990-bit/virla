@@ -41,7 +41,13 @@ export interface GeneratedDaySlots {
   }>;
 }
 
-// Reusable slot generation system helper
+// Reusable slot generation system helper.
+// The grid only depends on (month, year, options), so it is cached: the booking
+// screen asks for the same month once per visible calendar day and rebuilding
+// ~700 slot objects for each of them froze the JS thread on mid-range devices.
+const MONTHLY_SLOTS_CACHE = new Map<string, GeneratedDaySlots[]>();
+const MONTHLY_SLOTS_CACHE_LIMIT = 8;
+
 export const generateMonthlySlots = (
   month: number, // 0-indexed: 0-11
   year: number,
@@ -52,6 +58,10 @@ export const generateMonthlySlots = (
     gapMinutes: number; // e.g. 30
   } = { startHour: 6, endHour: 23, durationMinutes: 60, gapMinutes: 30 }
 ): GeneratedDaySlots[] => {
+  const cacheKey = `${year}-${month}-${options.startHour}-${options.endHour}-${options.durationMinutes}-${options.gapMinutes}`;
+  const cached = MONTHLY_SLOTS_CACHE.get(cacheKey);
+  if (cached) return cached;
+
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const daySlotsList: GeneratedDaySlots[] = [];
 
@@ -99,6 +109,12 @@ export const generateMonthlySlots = (
       slots
     });
   }
+
+  if (MONTHLY_SLOTS_CACHE.size >= MONTHLY_SLOTS_CACHE_LIMIT) {
+    const oldestKey = MONTHLY_SLOTS_CACHE.keys().next().value;
+    if (oldestKey !== undefined) MONTHLY_SLOTS_CACHE.delete(oldestKey);
+  }
+  MONTHLY_SLOTS_CACHE.set(cacheKey, daySlotsList);
 
   return daySlotsList;
 };

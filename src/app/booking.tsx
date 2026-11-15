@@ -398,7 +398,6 @@ export default function BookingScreen() {
     ? Math.min(Math.max(parseInt(params.step as string, 10), 1), 7)
     : (initialBookingId ? 7 : 1);
   const [step, setStep] = useState<number>(initialStep);
-  const [scrollY, setScrollY] = useState(0);
 
   // Animated slide-up and fade for the floating Continue button
   const continueButtonAnim = useRef(new Animated.Value(0)).current;
@@ -734,7 +733,6 @@ export default function BookingScreen() {
   const [selectedTime, setSelectedTime] = useState('');
 
   // Matchmaker and reveal state
-  const [matchStage, setMatchStage] = useState(0);
   const [matchDone, setMatchDone] = useState(false);
   const [matchedCoach, setMatchedCoach] = useState<any>(null);
   const [trainerNote, setTrainerNote] = useState('');
@@ -755,6 +753,7 @@ export default function BookingScreen() {
   // Reservation states (Phase 3.1)
   const [reservationId, setReservationId] = useState<string>('');
   const [reservationTimeLeft, setReservationTimeLeft] = useState<number>(0);
+  const reservationTimeRef = useRef<number>(0);
 
   // Layout Animation
   const [slideAnim] = useState(() => new Animated.Value(0));
@@ -1590,23 +1589,25 @@ export default function BookingScreen() {
   };
 
   useEffect(() => {
-    let timer: any;
-    if (reservationTimeLeft > 0) {
-      timer = setInterval(() => {
-        setReservationTimeLeft(prev => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            handleReleaseReservation();
-            Alert.alert('Reservation Expired ⚠️', 'Your temporary slot holding time has expired. Please re-select the slot.');
-            setStep(4);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
+    reservationTimeRef.current = reservationTimeLeft;
+  }, [reservationTimeLeft]);
+
+  useEffect(() => {
+    if (!reservationId) return;
+    const timer = setInterval(() => {
+      const next = Math.max(0, reservationTimeRef.current - 1);
+      reservationTimeRef.current = next;
+      setReservationTimeLeft(next);
+      if (next === 0) {
+        clearInterval(timer);
+        handleReleaseReservation();
+        Alert.alert('Reservation Expired ⚠️', 'Your temporary slot holding time has expired. Please re-select the slot.');
+        setStep(4);
+      }
+    }, 1000);
     return () => clearInterval(timer);
-  }, [reservationTimeLeft, reservationId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reservationId]);
 
   useEffect(() => {
     return () => {
@@ -1708,17 +1709,20 @@ export default function BookingScreen() {
 
   // Pulse animation for radar scanning map
   useEffect(() => {
-
-    if (step === 3) {
+    if (step !== 3) return;
+    radarAnim.setValue(0);
+    const loop = Animated.loop(
+      Animated.timing(radarAnim, {
+        toValue: 1,
+        duration: 3000,
+        useNativeDriver: true,
+      })
+    );
+    loop.start();
+    return () => {
+      loop.stop();
       radarAnim.setValue(0);
-      Animated.loop(
-        Animated.timing(radarAnim, {
-          toValue: 1,
-          duration: 3000,
-          useNativeDriver: true,
-        })
-      ).start();
-    }
+    };
   }, [step, radarAnim]);
 
   // Step transitions
@@ -1885,23 +1889,6 @@ export default function BookingScreen() {
         router.replace('/(tabs)');
       }
     }
-  };
-
-  // Matchmaker simulation trigger
-  const startMatchmaker = () => {
-    setMatchStage(0);
-    setMatchDone(false);
-    
-    const interval = setInterval(() => {
-      setMatchStage((prev) => {
-        if (prev >= 4) {
-          clearInterval(interval);
-          finalizeMatch();
-          return 5;
-        }
-        return prev + 1;
-      });
-    }, 600);
   };
 
   const finalizeMatch = () => {
@@ -2142,14 +2129,105 @@ export default function BookingScreen() {
     return slotTimeMs <= istNow.getTime();
   };
 
-  const getFilteredSlotsForPeriod = (): SlotItem[] => {
-    const allAvailable = getDynamicAvailableSlots();
+  // Slot + calendar availability are O(days x trainers x bookings) and used to be
+  // recomputed two or three times per render, once per visible calendar capsule.
+  // This screen re-renders on every tap and every reservation tick, so the results
+  // are memoized and only recomputed when the underlying data really changes.
+  const reservationSignature = (() => {
+    const reservations = Database.schema.slot_reservations || [];
+    return `${reservations.length}:${reservations[reservations.length - 1]?.id || ''}`;
+  })();
+
+  const slotDataKey = [
+    selectedExperience?.id,
+    selectedAddressId,
+    selectedDate,
+    trainerPref,
+    selectedTrainerId,
+    reservationSignature,
+    coaches.length,
+    bookings.length,
+  ].join('|');
+
+  const dynamicSlots = React.useMemo(
+    () => (step === 4 ? getDynamicAvailableSlots() : []),
+    [step, slotDataKey, coaches, bookings, addresses]
+  );
+
+  const [availabilityClock, setAvailabilityClock] = useState(0);
+
+  useEffect(() => {
+    if (step !== 4) return;
+    const clock = setInterval(() => setAvailabilityClock(Date.now()), 60000);
+    return () => clearInterval(clock);
+  }, [step]);
+
+  const displaySlots = React.useMemo(() => {
     const todayNormalized = normalizeDate(getCurrentServerTime());
     if (normalizeDate(selectedDate) === todayNormalized) {
-      return allAvailable.filter(slot => !isTimeSlotPassed(slot.time, selectedDate));
+      return dynamicSlots.filter((slot: any) => !isTimeSlotPassed(slot.time, selectedDate));
     }
-    return allAvailable;
-  };
+    return dynamicSlots;
+  }, [dynamicSlots, selectedDate, availabilityClock]);
+
+  const calendarDayKey = normalizeDate(getCurrentServerTime());
+
+  const calendarItems = React.useMemo(() => {
+    if (!calendarDayKey) return [];
+    const istNow = getCurrentServerTime();
+    const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthsFull = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const weekdaysShort = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
+    const items: any[] = [];
+    let lastMonthIdx = -1;
+
+    // Show 21 days forward from day after tomorrow onwards
+    for (let i = 2; i < 25; i++) {
+      const dateObj = new Date(istNow.getTime() + i * 24 * 60 * 60 * 1000);
+      const info = getISTDateInfo(dateObj);
+      const currentMonthIdx = info.month - 1;
+
+      if (currentMonthIdx !== lastMonthIdx) {
+        items.push({
+          type: 'month-badge',
+          key: `cal-month-${info.year}-${currentMonthIdx}`,
+          shortName: monthsShort[currentMonthIdx].toUpperCase(),
+          fullName: monthsFull[currentMonthIdx],
+        });
+        lastMonthIdx = currentMonthIdx;
+      }
+
+      const dateFormatted = `${monthsShort[currentMonthIdx]} ${info.day}, ${info.year}`;
+      const dayDate = new Date(info.year, currentMonthIdx, info.day);
+      const weekday = weekdaysShort[dayDate.getDay()];
+
+      items.push({
+        type: 'date-capsule',
+        key: `cal-date-${info.year}-${info.month}-${info.day}`,
+        dateString: dateFormatted,
+        dayNum: info.day,
+        monthShort: monthsShort[currentMonthIdx].toUpperCase(),
+        weekday,
+      });
+    }
+    return items;
+  }, [calendarDayKey]);
+
+  const calendarAvailability = React.useMemo(() => {
+    const availability: Record<string, boolean> = {};
+    if (!showCalendarPicker) return availability;
+    for (const item of calendarItems) {
+      if (item.type === 'date-capsule') {
+        availability[item.dateString] = checkDateHasAvailableSlots(item.dateString);
+      }
+    }
+    return availability;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCalendarPicker, calendarItems, slotDataKey, coaches, bookings, addresses]);
 
   const isContinueVisible = step <= 4 && (step !== 1 || !!selectedExperience) && (step !== 4 || !!selectedTime) && (step !== 3 || (!!selectedAddressId && !isLocationOutsideCoverage));
 
@@ -2298,10 +2376,6 @@ export default function BookingScreen() {
               paddingTop: insets.top + 60, 
               paddingBottom: (step === 4 || step === 5) ? 0 : 100,
               flexGrow: (step === 4 || step === 5) ? 1 : undefined
-            }}
-            scrollEventThrottle={16}
-            onScroll={(e) => {
-              setScrollY(e.nativeEvent.contentOffset.y);
             }}
           >
             <View className="gap-6">
@@ -3660,49 +3734,7 @@ export default function BookingScreen() {
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={{ gap: 8, paddingVertical: 2, alignItems: 'center' }}
                       >
-                        {(() => {
-                          const istNow = getCurrentServerTime();
-                          const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                          const monthsFull = [
-                            'January', 'February', 'March', 'April', 'May', 'June',
-                            'July', 'August', 'September', 'October', 'November', 'December'
-                          ];
-                          const weekdaysShort = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-
-                          const items: any[] = [];
-                          let lastMonthIdx = -1;
-
-                          // Show 21 days forward from day after tomorrow onwards
-                          for (let i = 2; i < 25; i++) {
-                            const dateObj = new Date(istNow.getTime() + i * 24 * 60 * 60 * 1000);
-                            const info = getISTDateInfo(dateObj);
-                            const currentMonthIdx = info.month - 1;
-
-                            if (currentMonthIdx !== lastMonthIdx) {
-                              items.push({
-                                type: 'month-badge',
-                                key: `cal-month-${info.year}-${currentMonthIdx}`,
-                                shortName: monthsShort[currentMonthIdx].toUpperCase(),
-                                fullName: monthsFull[currentMonthIdx],
-                              });
-                              lastMonthIdx = currentMonthIdx;
-                            }
-
-                            const dateFormatted = `${monthsShort[currentMonthIdx]} ${info.day}, ${info.year}`;
-                            const dayDate = new Date(info.year, currentMonthIdx, info.day);
-                            const weekday = weekdaysShort[dayDate.getDay()];
-
-                            items.push({
-                              type: 'date-capsule',
-                              key: `cal-date-${info.year}-${info.month}-${info.day}`,
-                              dateString: dateFormatted,
-                              dayNum: info.day,
-                              monthShort: monthsShort[currentMonthIdx].toUpperCase(),
-                              weekday,
-                            });
-                          }
-
-                          return items.map((item) => {
+                        {calendarItems.map((item) => {
                             if (item.type === 'month-badge') {
                               return (
                                 <View 
@@ -3720,7 +3752,7 @@ export default function BookingScreen() {
                             }
 
                             const isPicked = selectedDate === item.dateString;
-                            const isAvailable = checkDateHasAvailableSlots(item.dateString);
+                            const isAvailable = calendarAvailability[item.dateString] === true;
                             return (
                               <TouchableOpacity
                                 key={item.key}
@@ -3761,8 +3793,7 @@ export default function BookingScreen() {
                                 />
                               </TouchableOpacity>
                             );
-                          });
-                        })()}
+                          })}
                       </ScrollView>
                     </View>
                   )}
@@ -3860,61 +3891,7 @@ export default function BookingScreen() {
                         );
                       }
 
-                      const availableSlots = getDynamicAvailableSlots();
-                      const targetCategory = selectedExperience ? (WORKOUT_CATEGORY_MAPPING[selectedExperience.id] || '') : '';
-                      const customerLat = customerAddress?.lat || 0;
-                      const customerLng = customerAddress?.lng || 0;
-                      const finalEligibleTrainers = coaches.filter(coach => {
-                        const assignments = Database.getWorkoutAssignments(coach.id);
-                        const isApproved = assignments.some(a => a.workoutCategory === targetCategory && a.status === 'APPROVED');
-                        const acceptsAll = assignments.some(a => a.workoutCategory === 'All Workouts' && a.status === 'APPROVED');
-                        const workoutApproved = acceptsAll || isApproved;
-
-                        const isOnline = coach.preferences?.online !== false;
-                        const isPartnerApproved = coach.verifiedBadge !== false;
-
-                        const locationStatus = coach.preferences?.operatingLocationStatus;
-                        const locationApproved = locationStatus === 'verified';
-
-                        const trainerLat = coach.preferences?.operatingLatitude;
-                        const trainerLng = coach.preferences?.operatingLongitude;
-                        const radiusLimit = trainerServiceRadiusKm(coach.preferences?.radiusKm);
-
-                        let distance = 999999;
-                        let insideRadius = false;
-                        if (trainerLat !== undefined && trainerLat !== null && trainerLng !== undefined && trainerLng !== null) {
-                          distance = calculateDistanceKm(trainerLat, trainerLng, customerLat, customerLng);
-                          insideRadius = distance <= radiusLimit;
-                        }
-
-                        // Apply gender filters
-                        const trainerGender = (coach.gender || '').toLowerCase();
-                        const genderValid = trainerGender === 'male' || trainerGender === 'female';
-                        
-                        let genderApproved = false;
-                        if (genderValid) {
-                          if (trainerPref === 'any') {
-                            genderApproved = true;
-                          } else if (trainerPref === 'male') {
-                            genderApproved = trainerGender === 'male';
-                          } else if (trainerPref === 'female') {
-                            genderApproved = trainerGender === 'female';
-                          } else if (trainerPref === 'favourite') {
-                            const clientPref = (Database.getProfile(user.id || '')?.trainerPreference || 'no_preference').toLowerCase();
-                            if (clientPref === 'male') {
-                              genderApproved = trainerGender === 'male';
-                            } else if (clientPref === 'female') {
-                              genderApproved = trainerGender === 'female';
-                            } else {
-                              genderApproved = true;
-                            }
-                          }
-                        }
-
-                        return isOnline && isPartnerApproved && workoutApproved && locationApproved && insideRadius && genderValid && genderApproved;
-                      });
-
-                      const slotsToDisplay = getFilteredSlotsForPeriod();
+                      const slotsToDisplay = displaySlots;
 
                       if (slotsToDisplay.length === 0) {
                         const selectedNormalized = normalizeDate(selectedDate);
