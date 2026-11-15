@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAIWellnessStore, AIWellnessPlan } from '../store/aiWellnessStore';
 import { useUserProfileStore } from '../store/userProfileStore';
+import { NativeProgressBar } from './NativeProgressBar';
 
 interface CalculatedTargetsCardProps {
   plan?: AIWellnessPlan | null;
@@ -180,9 +181,7 @@ export const CalculatedTargetsCard: React.FC<CalculatedTargetsCardProps> = ({
               {targets.protein}g
             </Text>
           </View>
-          <View className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-            <View className="h-full bg-rose-500 rounded-full" style={{ width: `${proteinPercent}%` }} />
-          </View>
+          <NativeProgressBar progress={proteinPercent / 100} color="#F43F5E" trackColor="#27272A" height={6} />
         </View>
 
         {/* Carbohydrates */}
@@ -203,9 +202,7 @@ export const CalculatedTargetsCard: React.FC<CalculatedTargetsCardProps> = ({
               {targets.carbs}g
             </Text>
           </View>
-          <View className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-            <View className="h-full bg-indigo-500 rounded-full" style={{ width: `${carbsPercent}%` }} />
-          </View>
+          <NativeProgressBar progress={carbsPercent / 100} color="#6366F1" trackColor="#27272A" height={6} />
         </View>
 
         {/* Fats */}
@@ -226,9 +223,7 @@ export const CalculatedTargetsCard: React.FC<CalculatedTargetsCardProps> = ({
               {targets.fats}g
             </Text>
           </View>
-          <View className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-            <View className="h-full bg-amber-500 rounded-full" style={{ width: `${fatsPercent}%` }} />
-          </View>
+          <NativeProgressBar progress={fatsPercent / 100} color="#F59E0B" trackColor="#27272A" height={6} />
         </View>
       </View>
 
