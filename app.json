@@ -100,7 +100,25 @@
       "expo-image",
       "expo-secure-store",
       "expo-web-browser",
-      "expo-video"
+      "expo-video",
+      [
+        "react-native-fbsdk-next",
+        {
+          "appID": "1152811947398926",
+          "clientToken": "b1b3ffd90cbf2359e7e861021e1b9c79",
+          "displayName": "VIRLA",
+          "scheme": "fb1152811947398926",
+          "advertiserIDCollectionEnabled": true,
+          "autoLogAppEventsEnabled": true,
+          "isAutoInitEnabled": true
+        }
+      ],
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "Used only to measure which ads led to app installs."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

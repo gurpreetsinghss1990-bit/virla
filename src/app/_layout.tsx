@@ -13,6 +13,7 @@ import { TopToastNotification } from '../components/TopToastNotification';
 import { configureGlobalTextInputCursor } from '../utils/configureTextInputCursor';
 import { useEngagementNudges } from '../hooks/useEngagementNudges';
 import { useToastStore } from '../store/toastStore';
+import { initMetaTracking } from '../utils/metaTracking';
 import '../global.css';
 
 // Install custom alert interceptor so Alert.alert routes to clean top popup
@@ -35,6 +36,9 @@ export default function RootLayout() {
   useEffect(() => {
     // Hide splash screen immediately since we handle the premium splash layout in index.tsx
     SplashScreen.hideAsync();
+
+    // Initialize Meta SDK & request iOS ATT permission
+    initMetaTracking();
 
     // Lazy load fonts asynchronously so startup/bundling is resilient and never blocks
     (async () => {
