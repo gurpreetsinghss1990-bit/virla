@@ -1,7 +1,8 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { InteractionManager } from '../utils/interactionManager';
-import { NativePressable } from '../components/NativePressable';
+import { NativeGoalChip } from '../components/NativeGoalChip';
+import { NativePrimaryButton } from '../components/NativePrimaryButton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore } from '../store/userProfileStore';
@@ -25,34 +26,6 @@ const allGoals = [
   'Maintain Weight'
 ];
 
-interface GoalCapsuleButtonProps {
-  goal: string;
-  isSelected: boolean;
-  onPress: () => void;
-}
-
-const GoalCapsuleButton = React.memo(({ goal, isSelected, onPress }: GoalCapsuleButtonProps) => {
-  return (
-    <NativePressable
-      rippleColor={isSelected ? 'rgba(255, 255, 255, 0.4)' : 'rgba(225, 29, 72, 0.25)'}
-      onPress={onPress}
-      style={[
-        styles.capsule,
-        isSelected ? styles.capsuleSelected : styles.capsuleUnselected,
-      ]}
-    >
-      <Text
-        style={[
-          styles.capsuleText,
-          isSelected ? styles.capsuleTextSelected : styles.capsuleTextUnselected,
-        ]}
-      >
-        {goal}
-      </Text>
-      {isSelected && <Feather name="check" size={13} color="#FFFFFF" />}
-    </NativePressable>
-  );
-});
 
 export default function FitnessGoalsScreen() {
   const router = useRouter();
@@ -154,24 +127,21 @@ export default function FitnessGoalsScreen() {
             {visibleGoals.map((goal) => {
               const isSelected = selectedGoals.includes(goal);
               return (
-                <GoalCapsuleButton
+                <NativeGoalChip
                   key={goal}
-                  goal={goal}
-                  isSelected={isSelected}
+                  label={goal}
+                  selected={isSelected}
                   onPress={() => handleToggle(goal)}
                 />
               );
             })}
           </View>
 
-          {/* Action Save button with increased height & asynchronous handling */}
-          <NativePressable
-            rippleColor="rgba(255, 255, 255, 0.25)"
+          {/* Action Save button */}
+          <NativePrimaryButton
+            label="Save Training Goals"
             onPress={handleExitScreen}
-            style={[styles.saveButton]}
-          >
-            <Text style={styles.saveButtonText}>Save Training Goals</Text>
-          </NativePressable>
+          />
 
         </View>
       </ScrollView>

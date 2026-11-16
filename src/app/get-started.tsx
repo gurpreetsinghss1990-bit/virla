@@ -17,6 +17,7 @@ import { useUserStore } from '../store/userStore';
 import { useWalletStore } from '../store/walletStore';
 import Constants from 'expo-constants';
 import { LegalWebViewModal } from '../components/LegalWebViewModal';
+import { NativePrimaryButton } from '../components/NativePrimaryButton';
 
 export default function GetStartedScreen() {
   const insets = useSafeAreaInsets();
@@ -86,12 +87,8 @@ export default function GetStartedScreen() {
   const [weight, setWeight] = useState<string>('');
 
   const handlePhoneChange = (val: string) => {
-    if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      setPhone(val);
-      setFormattedPhone(val);
-      return;
-    }
-    const cleanDigits = val.replace(/\D/g, '').slice(0, 10);
+    // Strictly strip all non-digit and special characters, allowing only numbers
+    const cleanDigits = val.replace(/[^0-9]/g, '').slice(0, 10);
     setPhone(cleanDigits);
 
     if (cleanDigits.length > 5) {
@@ -834,55 +831,54 @@ export default function GetStartedScreen() {
               </View>
             ) : (
               /* Mobile Login/Register Form - Reference Exact Implementation */
-              <View
-                className="bg-[#0F0F12] p-6 rounded-[36px] border border-white/10 gap-5 my-4 items-center"
-                style={{
-                  elevation: 12,
-                  shadowColor: '#000000',
-                  shadowOffset: { width: 0, height: 12 },
-                  shadowOpacity: 0.4,
-                  shadowRadius: 24,
-                }}
-              >
+              <View className="w-full gap-3.5 my-3 items-center">
                 {/* Mobile Number Entry Field */}
-                <View className="gap-2 w-full">
-                  <Text className="text-xs font-bold uppercase tracking-widest text-zinc-400">
+                <View className="gap-1.5 w-full">
+                  <Text className="text-xs font-bold uppercase tracking-widest text-[#E11D48]">
                     Mobile Number
                   </Text>
-                  <View className="flex-row gap-2 w-full items-center">
-                    <View 
-                      className="flex-1 flex-row items-center bg-[#1A1A1E] border border-white/10 rounded-2xl py-1"
+                  <View className="flex-row gap-2.5 w-full items-center">
+                    {/* Separate +91 Prefix Box */}
+                    <View
+                      className="bg-[#1A1A1E] border border-white/10 rounded-2xl px-3.5 items-center justify-center"
+                      style={{ paddingVertical: Platform.OS === 'android' ? 11 : 14 }}
+                    >
+                      <Text className="text-white font-black" style={{ fontSize: 16 }}>+91</Text>
+                    </View>
+
+                    {/* Separate Curvy Number Input Box */}
+                    <View
+                      className="flex-1 bg-[#1A1A1E] border border-white/10 rounded-2xl"
                       style={{ paddingHorizontal: Platform.OS === 'android' ? 12 : 16 }}
                     >
-                      <Text className="text-[#E11D48] font-black mr-2" style={{ fontSize: 17 }}>+91</Text>
                       <TextInput
                         maxLength={20}
                         placeholder="XXXXX XXXXX"
                         placeholderTextColor="#666666"
-                        keyboardType="phone-pad"
+                        keyboardType="number-pad"
                         value={formattedPhone}
                         onChangeText={handlePhoneChange}
                         editable={!isLoading}
                         multiline={false}
                         numberOfLines={1}
-                        className="flex-1 text-white font-bold"
-                        style={{ 
+                        className="text-white font-bold"
+                        style={{
                           fontSize: 16,
                           paddingVertical: Platform.OS === 'android' ? 8 : 14,
                           includeFontPadding: false,
                         }}
                       />
                     </View>
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={isLoading ? () => { } : handleSendOtp}
-                      disabled={isLoading || resendCountdown > 0}
-                      className={`px-4 py-3.5 rounded-2xl justify-center items-center ${isLoading || resendCountdown > 0 ? 'bg-zinc-800' : 'bg-[#E11D48]'}`}
-                    >
-                      <Text className="text-white text-xs font-extrabold uppercase tracking-wider">
-                        {otpSent ? (resendCountdown > 0 ? `Resend (${resendCountdown}s)` : 'Resend') : 'Send OTP'}
-                      </Text>
-                    </TouchableOpacity>
+
+                    {/* Native Blue Send OTP Button (appears after entering 10-digit number) */}
+                    {(phone.replace(/\D/g, '').length >= 10 || otpSent) && (
+                      <NativePrimaryButton
+                        compact
+                        color={isLoading || resendCountdown > 0 ? '#3F3F46' : '#2563EB'}
+                        label={otpSent ? (resendCountdown > 0 ? `${resendCountdown}s` : 'Resend') : 'Send OTP'}
+                        onPress={isLoading || resendCountdown > 0 ? () => {} : handleSendOtp}
+                      />
+                    )}
                   </View>
                   {otpStatusMessage ? (
                     <Text
@@ -899,7 +895,7 @@ export default function GetStartedScreen() {
 
                 {/* 6-Digit Animated OTP Entry & Success Sequence Component */}
                 {otpSent && (
-                  <View className="w-full items-center gap-4 my-2">
+                  <View className="w-full items-center gap-2 mt-1 mb-0.5">
                     <View className="flex-row justify-between items-center w-full px-1">
                       <Text className="text-xs font-bold uppercase tracking-widest text-zinc-400">
                         Verify 6-Digit Code
@@ -911,7 +907,7 @@ export default function GetStartedScreen() {
 
                     {/* Container for 6 Animated Rotated Digit Cards */}
                     <TouchableWithoutFeedback onPress={() => otpInputRef.current?.focus()}>
-                      <View className="relative w-full py-2 items-center justify-center min-h-[140px]">
+                      <View className="relative w-full py-1 items-center justify-center min-h-[76px]">
                         {/* Hidden Native TextInput for 6-digit Keyboard Entry & Autofill */}
                         <TextInput
                           ref={otpInputRef}
@@ -1042,30 +1038,19 @@ export default function GetStartedScreen() {
                 )}
 
                 {isLoading && (
-                  <View className="items-center justify-center py-2">
+                  <View className="items-center justify-center py-1">
                     <Loading size="small" color="#E11D48" />
                   </View>
                 )}
 
-                <View className="mt-2 w-full">
-                  <TouchableOpacity
-                    activeOpacity={0.85}
-                    onPress={isLoading ? () => { } : handleMobileSubmit}
-                    disabled={isLoading}
-                    className="w-full bg-[#E11D48] py-4 rounded-2xl items-center justify-center shadow-lg"
-                    style={{
-                      shadowColor: '#E11D48',
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.35,
-                      shadowRadius: 10,
-                      elevation: 6,
-                    }}
-                  >
-                    <Text className="text-white text-sm font-black uppercase tracking-wider">
-                      {isLoading ? 'Processing...' : 'Verify & Log In'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                {otpSent && (
+                  <View className="mt-1 w-full">
+                    <NativePrimaryButton
+                      label={isLoading ? 'Processing...' : 'Verify & Log In'}
+                      onPress={isLoading ? () => {} : handleMobileSubmit}
+                    />
+                  </View>
+                )}
               </View>
             )}
 

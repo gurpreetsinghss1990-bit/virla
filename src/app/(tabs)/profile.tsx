@@ -1,5 +1,6 @@
 import { Loading } from '../../components/Loading';
 import { NativePressable } from '../../components/NativePressable';
+import { NativeGoalChip } from '../../components/NativeGoalChip';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, BackHandler, Modal, LayoutAnimation, UIManager, Pressable, TouchableWithoutFeedback, StyleSheet, Easing, Dimensions } from 'react-native';
 import { InteractionManager } from '../../utils/interactionManager';
@@ -302,20 +303,8 @@ export default function ProfileScreen() {
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
       UIManager.setLayoutAnimationEnabledExperimental(true);
     }
-    LayoutAnimation.configureNext({
-      duration: 260,
-      create: {
-        type: LayoutAnimation.Types.easeInEaseOut,
-        property: LayoutAnimation.Properties.opacity,
-      },
-      update: {
-        type: LayoutAnimation.Types.easeInEaseOut,
-      },
-      delete: {
-        type: LayoutAnimation.Types.easeInEaseOut,
-        property: LayoutAnimation.Properties.opacity,
-      },
-    });
+    // Native spring animation for smooth, native-feel expansion/collapse
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
     setIsPersonalInfoExpanded(prev => (typeof targetState === 'boolean' ? targetState : !prev));
   }, []);
   const [editName, setEditName] = useState(profile.name || '');
@@ -1431,7 +1420,7 @@ export default function ProfileScreen() {
 
                 {/* Goal Chips */}
                 {Array.isArray(profile.selectedGoals) && profile.selectedGoals.length > 0 ? (
-                  <View className="flex-row flex-wrap gap-2 mb-3.5">
+                  <View className="flex-row flex-wrap gap-2.5 mb-3.5">
                     {profile.selectedGoals
                       .filter((goal) => {
                         if (goal === 'Post Pregnancy') {
@@ -1440,22 +1429,12 @@ export default function ProfileScreen() {
                         return true;
                       })
                       .map((goal, idx) => (
-                      <View key={`${goal}-${idx}`} className="rounded-full overflow-hidden">
-                        <NativePressable
-                          rippleColor={idx < 2 ? 'rgba(4, 120, 87, 0.25)' : 'rgba(71, 85, 105, 0.2)'}
+                        <NativeGoalChip
+                          key={`${goal}-${idx}`}
+                          label={goal}
+                          selected={idx < 2}
                           onPress={() => navigateThrottled('/fitness-goals')}
-                          className={
-                            idx < 2
-                              ? "bg-[#E6F4F1] border border-[#A7F3D0] px-3.5 py-2 rounded-full flex-row items-center gap-1.5"
-                              : "bg-[#F1F5F9] border border-[#E2E8F0] px-3.5 py-2 rounded-full"
-                          }
-                        >
-                          <Text className={idx < 2 ? "text-[#065F46] text-xs font-bold" : "text-[#475569] text-xs font-semibold"}>
-                            {goal}
-                          </Text>
-                          {idx < 2 && <Feather name="arrow-up-right" size={12} color="#065F46" />}
-                        </NativePressable>
-                      </View>
+                        />
                     ))}
                   </View>
                 ) : (
@@ -1472,24 +1451,24 @@ export default function ProfileScreen() {
                 )}
 
                 {/* Motivational Banner */}
-                <View className="rounded-2xl overflow-hidden border border-[#D1FAE5] bg-[#EDF7F2]">
+                <View className="rounded-2xl overflow-hidden bg-emerald-500/10 border border-emerald-500/20">
                   <NativePressable
-                    rippleColor="rgba(4, 120, 87, 0.2)"
+                    rippleColor="rgba(16, 185, 129, 0.2)"
                     onPress={() => navigateThrottled('/fitness-goals')}
                     className="p-3.5 flex-row items-center justify-between"
                   >
                     <View className="flex-row items-center gap-3 flex-1 pr-2">
-                      <View className="w-8 h-8 rounded-full bg-[#D1FAE5] items-center justify-center">
-                        <Feather name="target" size={16} color="#047857" />
+                      <View className="w-8 h-8 rounded-full bg-emerald-500/20 items-center justify-center">
+                        <Ionicons name="sparkles" size={16} color="#059669" />
                       </View>
                       <View className="flex-1">
-                        <Text className="text-[#064E3B] text-xs font-black">Your fitness journey matters.</Text>
-                        <Text className="text-[#047857] text-[11px] font-medium mt-0.5">
+                        <Text className="text-emerald-950 text-xs font-black">Your fitness journey matters.</Text>
+                        <Text className="text-emerald-700 text-[11px] font-medium mt-0.5">
                           Let's set your goals for better results.
                         </Text>
                       </View>
                     </View>
-                    <Feather name="chevron-right" size={16} color="#047857" />
+                    <Feather name="chevron-right" size={16} color="#059669" />
                   </NativePressable>
                 </View>
               </View>
