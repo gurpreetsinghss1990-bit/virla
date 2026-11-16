@@ -18,6 +18,7 @@ import { formatToDDMMYYYY } from '../utils/date';
 import { supabase } from '../database/supabaseClient';
 import { t } from '../utils/i18n';
 import { PayPhiService } from '../services/payphiService';
+import { clampInt } from '../utils/inputSafety';
 
 export default function WalletScreen() {
   const router = useRouter();
@@ -976,7 +977,7 @@ export default function WalletScreen() {
                       placeholder="Number of credits to send"
                       placeholderTextColor="#9CA3AF"
                       value={transferAmount}
-                      onChangeText={setTransferAmount}
+                      onChangeText={(v) => setTransferAmount(clampInt(v, 6))}
                       keyboardType="numeric"
                       editable={recipientStatus === 'found'}
                       className={`bg-zinc-50 border border-zinc-200 px-4 py-3 rounded-xl text-zinc-900 text-xs font-bold ${recipientStatus !== 'found' ? 'opacity-50' : ''}`}

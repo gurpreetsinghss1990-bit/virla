@@ -18,6 +18,7 @@ import { useWalletStore } from '../store/walletStore';
 import Constants from 'expo-constants';
 import { LegalWebViewModal } from '../components/LegalWebViewModal';
 import { NativePrimaryButton } from '../components/NativePrimaryButton';
+import { cleanOtp, clampInt } from '../utils/inputSafety';
 
 export default function GetStartedScreen() {
   const insets = useSafeAreaInsets();
@@ -785,30 +786,32 @@ export default function GetStartedScreen() {
                     <Subtitle>Complete your details to finish setup.</Subtitle>
                     <View className="gap-3">
                       <TextInput
-                        maxLength={12}
+                        maxLength={3}
                         placeholder="Age"
                         placeholderTextColor="#9CA3AF"
                         keyboardType="number-pad"
                         value={age}
-                        onChangeText={setAge}
+                        onChangeText={(v) => setAge(clampInt(v, 3))}
                         editable={!isLoading}
                         className="w-full bg-zinc-50 border border-zinc-150 p-4 rounded-xl text-zinc-900 text-sm font-semibold"
                       />
                       <TextInput
-                        maxLength={250}
+                        maxLength={20}
+                        keyboardType="numeric"
                         placeholder="Height (e.g. 175 cm)"
                         placeholderTextColor="#9CA3AF"
                         value={height}
-                        onChangeText={setHeight}
+                        onChangeText={(v) => setHeight(clampInt(v, 3))}
                         editable={!isLoading}
                         className="w-full bg-zinc-50 border border-zinc-150 p-4 rounded-xl text-zinc-900 text-sm font-semibold"
                       />
                       <TextInput
-                        maxLength={250}
+                        maxLength={20}
+                        keyboardType="numeric"
                         placeholder="Weight (e.g. 70 kg)"
                         placeholderTextColor="#9CA3AF"
                         value={weight}
-                        onChangeText={setWeight}
+                        onChangeText={(v) => setWeight(clampInt(v, 3))}
                         editable={!isLoading}
                         className="w-full bg-zinc-50 border border-zinc-150 p-4 rounded-xl text-zinc-900 text-sm font-semibold"
                       />
@@ -918,7 +921,7 @@ export default function GetStartedScreen() {
                           autoComplete="one-time-code"
                           maxLength={6}
                           value={otpCode}
-                          onChangeText={setOtpCode}
+                          onChangeText={(v) => setOtpCode(cleanOtp(v))}
                           editable={!isLoading && !isOtpSuccessAnimating}
                           className="absolute w-full h-full opacity-0 z-50"
                           autoFocus

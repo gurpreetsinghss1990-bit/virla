@@ -8,11 +8,12 @@ import { useUserStore } from '../store/userStore';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView } from 'react-native';
+import { digitsOnly, cleanIfsc, cleanUpi, isValidIfsc, isValidUpi } from '../utils/inputSafety';
 
 export default function PayoutSetupScreen() {
   const user = useUserStore(state => state.user);
   const insets = useSafeAreaInsets();
-  
+
   const coach = Database.schema.coaches.find((c: any) => c.name === user.name || c.id === user.id) || null;
 
   const initialBankDetails = useMemo(() => {
@@ -34,6 +35,18 @@ export default function PayoutSetupScreen() {
   const handleSave = async () => {
     if (!accountHolderName || !bankName || !bankAccountNumber || !bankIfsc) {
       Alert.alert('Missing Fields', 'Please fill in Account Holder, Bank Name, Account Number, and IFSC.');
+      return;
+    }
+    if (bankAccountNumber.length < 6) {
+      Alert.alert('Invalid Account Number', 'Please enter a valid bank account number.');
+      return;
+    }
+    if (!isValidIfsc(bankIfsc)) {
+      Alert.alert('Invalid IFSC', 'IFSC code 11 characters ka hota hai, jaise HDFC0000060.');
+      return;
+    }
+    if (bankUpiId.trim() && !isValidUpi(bankUpiId)) {
+      Alert.alert('Invalid UPI ID', 'UPI ID ka format galat hai, jaise naam@okhdfc.');
       return;
     }
 
@@ -67,8 +80,8 @@ export default function PayoutSetupScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#FCF5F5', paddingTop: insets.top }}>
       <View className="h-16 flex-row items-center px-6 justify-between bg-white border-b border-zinc-150">
-        <TouchableOpacity 
-          activeOpacity={0.8} 
+        <TouchableOpacity
+          activeOpacity={0.8}
           onPress={() => router.replace('/(tabs)/profile' as any)}
           className="flex-row items-center gap-1"
         >
@@ -79,11 +92,11 @@ export default function PayoutSetupScreen() {
         <View className="w-10" />
       </View>
 
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
       >
-        <ScrollView 
+        <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 100 }}
           className="flex-1 bg-[#FCF5F5]"
@@ -98,14 +111,14 @@ export default function PayoutSetupScreen() {
 
           <LuxuryCard className="p-5 gap-4" interactive={false}>
             <Text className="text-[#101828] text-xs font-black uppercase tracking-widest border-b border-zinc-100 pb-2">Payout Destination</Text>
-            
+
             <View className="gap-3.5">
               <View>
                 <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1">Account Holder Name</Text>
                 <TextInput
-                  maxLength={250} 
-                  value={accountHolderName} 
-                  onChangeText={setAccountHolderName} 
+                  maxLength={250}
+                  value={accountHolderName}
+                  onChangeText={setAccountHolderName}
                   placeholder="Karan Sharma"
                   className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold"
                 />
@@ -115,9 +128,9 @@ export default function PayoutSetupScreen() {
                 <View className="flex-1">
                   <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1">Bank Name</Text>
                   <TextInput
-                    maxLength={250} 
-                    value={bankName} 
-                    onChangeText={setBankName} 
+                    maxLength={250}
+                    value={bankName}
+                    onChangeText={setBankName}
                     placeholder="HDFC Bank"
                     className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold"
                   />
@@ -125,9 +138,10 @@ export default function PayoutSetupScreen() {
                 <View className="flex-1">
                   <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1">IFSC Code</Text>
                   <TextInput
-                    maxLength={250} 
-                    value={bankIfsc} 
-                    onChangeText={setBankIfsc} 
+                    maxLength={11}
+                    autoCapitalize="characters"
+                    value={bankIfsc}
+                    onChangeText={(v) => setBankIfsc(cleanIfsc(v))}
                     placeholder="HDFC0000060"
                     className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold"
                   />
@@ -137,10 +151,10 @@ export default function PayoutSetupScreen() {
               <View>
                 <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1">Account Number</Text>
                 <TextInput
-                  maxLength={12} 
-                  value={bankAccountNumber} 
-                  onChangeText={setBankAccountNumber} 
-                  keyboardType="number-pad" 
+                  maxLength={18}
+                  value={bankAccountNumber}
+                  onChangeText={(v) => setBankAccountNumber(digitsOnly(v, 18))}
+                  keyboardType="number-pad"
                   placeholder="50100412345678"
                   className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold"
                 />
@@ -149,9 +163,11 @@ export default function PayoutSetupScreen() {
               <View>
                 <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1">UPI ID (Optional)</Text>
                 <TextInput
-                  maxLength={254} 
-                  value={bankUpiId} 
-                  onChangeText={setBankUpiId} 
+                  maxLength={60}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={bankUpiId}
+                  onChangeText={(v) => setBankUpiId(cleanUpi(v))}
                   placeholder="karan@okhdfc"
                   className="bg-zinc-50 border border-zinc-150 p-3 rounded-xl text-zinc-900 text-xs font-semibold"
                 />

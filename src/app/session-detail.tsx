@@ -27,6 +27,7 @@ import { formatToDDMMYYYY, getBookingISTDateRange, getDisplayWorkoutTitle } from
 import { resolveAvatarSource } from '../components/AvatarImage';
 import { parseBookingAddress } from '../utils/LocationParser';
 import { calculateDistanceKm } from '../utils/distance';
+import { cleanOtp } from '../utils/inputSafety';
 
 function formatToIndianDate(dateStr: string): string {
   return formatToDDMMYYYY(dateStr);
@@ -2162,7 +2163,7 @@ export default function SessionDetailScreen() {
                       <Text className="text-zinc-400 text-[9px] font-bold uppercase pl-0.5">Or enter OTP on your phone</Text>
                       <TextInput
                         value={customerOtpInput}
-                        onChangeText={setCustomerOtpInput}
+                        onChangeText={(v) => setCustomerOtpInput(cleanOtp(v))}
                         placeholder="0 0 0 0 0 0"
                         placeholderTextColor="#4B5563"
                         keyboardType="numeric"
@@ -2207,7 +2208,7 @@ export default function SessionDetailScreen() {
                   <View className="gap-3">
                     <TextInput
                       value={otpInput}
-                      onChangeText={setOtpInput}
+                      onChangeText={(v) => setOtpInput(cleanOtp(v))}
                       placeholder="0 0 0 0 0 0"
                       placeholderTextColor="#4B5563"
                       keyboardType="numeric"

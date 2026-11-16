@@ -6,6 +6,7 @@ import { Database } from '../database/Database';
 import { useUserStore } from '../store/userStore';
 import { useRouter } from 'expo-router';
 import { NativeSheet } from './NativeSheet';
+import { digitsOnly, isValidPhone } from '../utils/inputSafety';
 
 interface AddPartnerModalProps {
   visible: boolean;
@@ -35,7 +36,7 @@ export const AddPartnerModal: React.FC<AddPartnerModalProps> = ({
       Alert.alert('Required Info ⚠️', 'Please enter your partner/friend\'s name.');
       return;
     }
-    if (!partnerPhone.trim() || partnerPhone.trim().length < 10) {
+    if (!isValidPhone(partnerPhone) || partnerPhone.trim().length !== 10) {
       Alert.alert('Required Info ⚠️', 'Please enter a valid 10-digit mobile number.');
       return;
     }
@@ -102,7 +103,7 @@ export const AddPartnerModal: React.FC<AddPartnerModalProps> = ({
                 <Text className="text-zinc-500 text-[9px] font-bold uppercase pl-0.5">Partner Mobile Phone</Text>
                 <TextInput
                   value={partnerPhone}
-                  onChangeText={setPartnerPhone}
+                  onChangeText={(v) => setPartnerPhone(digitsOnly(v, 10))}
                   keyboardType="phone-pad"
                   maxLength={10}
                   placeholder="Enter 10-digit mobile number"

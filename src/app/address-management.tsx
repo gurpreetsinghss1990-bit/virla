@@ -10,6 +10,7 @@ import * as Location from 'expo-location';
 import { fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords, AutocompleteSuggestion, getCurrentLocationCoords } from '../utils/distance';
 import { useCoachStore } from '../store/coachStore';
 import { isAreaServedByAnyTrainer } from '../utils/serviceArea';
+import { digitsOnly } from '../utils/inputSafety';
 
 export default function AddressManagementScreen() {
   const router = useRouter();
@@ -405,7 +406,7 @@ export default function AddressManagementScreen() {
                     <Text className="text-zinc-500 text-[8px] font-black uppercase">PIN Code</Text>
                     <TextInput
                       value={pinCode}
-                      onChangeText={setPinCode}
+                      onChangeText={(v) => setPinCode(digitsOnly(v, 6))}
                       placeholder="400030"
                       keyboardType="numeric"
                       maxLength={6}

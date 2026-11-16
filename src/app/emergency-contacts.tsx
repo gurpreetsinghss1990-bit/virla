@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { useUserProfileStore, EmergencyContact } from '../store/userProfileStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { digitsOnly, isValidPhone } from '../utils/inputSafety';
 
 export default function EmergencyContactsScreen() {
   const router = useRouter();
@@ -37,6 +38,10 @@ export default function EmergencyContactsScreen() {
   const handleAdd = () => {
     if (!name.trim() || !phone.trim() || !relationship.trim()) {
       Alert.alert('Incomplete Fields', 'Please fill in Name, Relationship, and Phone Number.');
+      return;
+    }
+    if (!isValidPhone(phone) || (altPhone.trim() && !isValidPhone(altPhone))) {
+      Alert.alert('Invalid Number', 'Please enter a valid 10 to 13 digit mobile number.');
       return;
     }
     if (editingId) {
@@ -151,7 +156,7 @@ export default function EmergencyContactsScreen() {
                 <TextInput
                   maxLength={20}
                   value={phone}
-                  onChangeText={setPhone}
+                  onChangeText={(v) => setPhone(digitsOnly(v, 15))}
                   placeholder="e.g. +91 98200 11223"
                   keyboardType="phone-pad"
                   className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
@@ -163,7 +168,7 @@ export default function EmergencyContactsScreen() {
                 <TextInput
                   maxLength={20}
                   value={altPhone}
-                  onChangeText={setAltPhone}
+                  onChangeText={(v) => setAltPhone(digitsOnly(v, 15))}
                   placeholder="e.g. +91 98200 44556"
                   keyboardType="phone-pad"
                   className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
