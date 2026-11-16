@@ -2649,7 +2649,7 @@ class DatabaseClient {
       throw new Error(error.message);
     }
     await this.refreshBookings();
-    
+
     // Ensure local schema copy also stores the cancelledAtStage in ratingDetails
     const updated = this.schema.bookings.find(b => b.id === bookingId);
     if (updated) {
@@ -3188,8 +3188,8 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     }
 
     // Graceful local cache fallback (allows coaches to view past assessments for completed sessions)
-    const localPastBookings = this.schema.bookings.filter(b => 
-      b.clientId === clientId && 
+    const localPastBookings = this.schema.bookings.filter(b =>
+      b.clientId === clientId &&
       (b.status === 'completed' || b.timelineStatus === 'workout_completed' || b.timelineStatus === 'trainer_report_submitted' || b.timelineStatus === 'customer_review_pending' || b.timelineStatus === 'session_closed') &&
       Boolean(b.questionnaire?.nextTrainerInfo || b.questionnaire?.coachNotes)
     );

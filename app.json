@@ -118,7 +118,8 @@
         {
           "userTrackingPermission": "Used only to measure which ads led to app installs."
         }
-      ]
+      ],
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true,
