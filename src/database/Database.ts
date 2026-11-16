@@ -59,17 +59,16 @@ export function hashPassword(password: string): string {
 
 // --- Authoritative NTP Clock & Timezone-Safe Asia/Kolkata (IST) Helpers ---
 import {
-  syncServerTime,
   getCurrentServerTime,
   getISTDateInfo,
-  parseISTToUTCDate
+  parseISTToUTCDate,
+  syncServerTime
 } from '../utils/clock';
 
 export {
-  syncServerTime,
   getCurrentServerTime,
   getISTDateInfo,
-  parseISTToUTCDate
+  parseISTToUTCDate, syncServerTime
 };
 
 export function calculateDurationFromTime(timeStr: string): number {
