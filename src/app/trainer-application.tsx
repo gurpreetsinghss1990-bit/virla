@@ -1511,7 +1511,8 @@ export default function TrainerApplicationScreen() {
                     <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">
                       Full Name <Text className="text-rose-500">*</Text>
                     </Text>
-                    <TextInput 
+                    <TextInput
+                      maxLength={250} 
                       value={fullName} 
                       onChangeText={(val) => {
                         const clean = sanitizeInput(val);
@@ -1572,7 +1573,8 @@ export default function TrainerApplicationScreen() {
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">
                         Email <Text className="text-rose-500">*</Text>
                       </Text>
-                      <TextInput 
+                      <TextInput
+                        maxLength={254} 
                         value={email} 
                         onChangeText={(val) => {
                           const clean = sanitizeInput(val);
@@ -1810,7 +1812,8 @@ export default function TrainerApplicationScreen() {
                     <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">
                       Residential Address <Text className="text-rose-500">*</Text>
                     </Text>
-                    <TextInput 
+                    <TextInput
+                      maxLength={250} 
                       value={address} 
                       onChangeText={(val) => {
                         const clean = sanitizeInput(val);
@@ -1834,7 +1837,8 @@ export default function TrainerApplicationScreen() {
                   <View className="flex-row gap-2">
                     <View className="flex-1">
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">City</Text>
-                      <TextInput 
+                      <TextInput
+                        maxLength={250} 
                         value={city} 
                         onChangeText={(val) => setCity(sanitizeInput(val))} 
                         placeholder="e.g. - Mumbai"
@@ -1873,7 +1877,8 @@ export default function TrainerApplicationScreen() {
                   <View className="flex-row gap-2">
                     <View className="flex-1">
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Emergency Contact Name</Text>
-                      <TextInput 
+                      <TextInput
+                        maxLength={250} 
                         value={emergencyName} 
                         onChangeText={(val) => setEmergencyName(sanitizeInput(val))} 
                         placeholder="e.g. - Neha Sharma" 
@@ -1883,7 +1888,8 @@ export default function TrainerApplicationScreen() {
                     </View>
                     <View className="flex-1">
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Emergency Phone</Text>
-                      <TextInput 
+                      <TextInput
+                        maxLength={20} 
                         value={emergencyPhone} 
                         onChangeText={(val) => setEmergencyPhone(sanitizeInput(val))} 
                         keyboardType="phone-pad" 
@@ -1908,7 +1914,8 @@ export default function TrainerApplicationScreen() {
                       Primary Workout Specialization <Text className="text-rose-500">*</Text>
                     </Text>
                     <View className="relative">
-                      <TextInput 
+                      <TextInput
+                        maxLength={1200} 
                         value={primaryWorkout} 
                         onChangeText={(val) => {
                           const clean = sanitizeInput(val);
@@ -2079,7 +2086,8 @@ export default function TrainerApplicationScreen() {
                   <View>
                     <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Secondary Skills</Text>
                     <View className="relative">
-                      <TextInput 
+                      <TextInput
+                        maxLength={1200} 
                         value={secondarySkills} 
                         onChangeText={(val) => setSecondarySkills(sanitizeInput(val))} 
                         placeholder="e.g. - HIIT, Core Stability, Mobility" 
@@ -2239,7 +2247,8 @@ export default function TrainerApplicationScreen() {
                       Fitness Qualifications <Text className="text-rose-500">*</Text>
                     </Text>
                     <View className="relative">
-                      <TextInput 
+                      <TextInput
+                        maxLength={1200} 
                         value={fitnessQualifications} 
                         onChangeText={(val) => {
                           const clean = sanitizeInput(val);
@@ -2415,7 +2424,8 @@ export default function TrainerApplicationScreen() {
                   {/* About Me / Coach Bio */}
                   <View>
                     <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">About Me / Coach Bio</Text>
-                    <TextInput 
+                    <TextInput
+                      maxLength={1200} 
                       value={aboutMe} 
                       onChangeText={(val) => setAboutMe(sanitizeInput(val))} 
                       multiline 
@@ -2437,7 +2447,8 @@ export default function TrainerApplicationScreen() {
                   <View className="flex-row gap-2">
                     <View className="flex-1">
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Years of Experience</Text>
-                      <TextInput 
+                      <TextInput
+                        maxLength={12} 
                         value={yearsOfExperience} 
                         onChangeText={(val) => setYearsOfExperience(sanitizeInput(val))} 
                         keyboardType="number-pad" 
@@ -2448,7 +2459,8 @@ export default function TrainerApplicationScreen() {
                     </View>
                     <View className="flex-1">
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Languages Spoken</Text>
-                      <TextInput 
+                      <TextInput
+                        maxLength={250} 
                         value={languages} 
                         onChangeText={(val) => setLanguages(sanitizeInput(val))} 
                         placeholder="e.g. - English, Hindi, Marathi" 
@@ -2496,7 +2508,8 @@ export default function TrainerApplicationScreen() {
                   <View className="flex-row gap-2">
                     <View className="flex-1">
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Max Sessions/Day</Text>
-                      <TextInput 
+                      <TextInput
+                        maxLength={12} 
                         value={maxSessionsPerDay} 
                         onChangeText={(val) => setMaxSessionsPerDay(sanitizeInput(val))} 
                         keyboardType="number-pad" 
@@ -2507,7 +2520,8 @@ export default function TrainerApplicationScreen() {
                     </View>
                     <View className="flex-1">
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">Working Radius (km)</Text>
-                      <TextInput 
+                      <TextInput
+                        maxLength={12} 
                         value={preferredWorkingRadius} 
                         onChangeText={(val) => setPreferredWorkingRadius(sanitizeInput(val))} 
                         keyboardType="number-pad" 

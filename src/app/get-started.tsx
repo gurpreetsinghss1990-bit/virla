@@ -721,6 +721,7 @@ export default function GetStartedScreen() {
                     <Heading>What is your name?</Heading>
                     <Subtitle>Enter your full name to start registration.</Subtitle>
                     <TextInput
+                      maxLength={250}
                       placeholder="Full Name"
                       placeholderTextColor="#9CA3AF"
                       value={name}
@@ -787,6 +788,7 @@ export default function GetStartedScreen() {
                     <Subtitle>Complete your details to finish setup.</Subtitle>
                     <View className="gap-3">
                       <TextInput
+                        maxLength={12}
                         placeholder="Age"
                         placeholderTextColor="#9CA3AF"
                         keyboardType="number-pad"
@@ -796,6 +798,7 @@ export default function GetStartedScreen() {
                         className="w-full bg-zinc-50 border border-zinc-150 p-4 rounded-xl text-zinc-900 text-sm font-semibold"
                       />
                       <TextInput
+                        maxLength={250}
                         placeholder="Height (e.g. 175 cm)"
                         placeholderTextColor="#9CA3AF"
                         value={height}
@@ -804,6 +807,7 @@ export default function GetStartedScreen() {
                         className="w-full bg-zinc-50 border border-zinc-150 p-4 rounded-xl text-zinc-900 text-sm font-semibold"
                       />
                       <TextInput
+                        maxLength={250}
                         placeholder="Weight (e.g. 70 kg)"
                         placeholderTextColor="#9CA3AF"
                         value={weight}
@@ -852,6 +856,7 @@ export default function GetStartedScreen() {
                     >
                       <Text className="text-[#E11D48] font-black mr-2" style={{ fontSize: 17 }}>+91</Text>
                       <TextInput
+                        maxLength={20}
                         placeholder="XXXXX XXXXX"
                         placeholderTextColor="#666666"
                         keyboardType="phone-pad"

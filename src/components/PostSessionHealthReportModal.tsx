@@ -301,6 +301,7 @@ export function PostSessionHealthReportModal({
                           Brief details: What has the client reported?
                         </Text>
                         <TextInput
+                          maxLength={1200}
                           value={injuryDetails}
                           onChangeText={setInjuryDetails}
                           placeholder="e.g. Mild lower back stiffness while bending, started 2 days ago"
@@ -363,6 +364,7 @@ export function PostSessionHealthReportModal({
                         Which movements, and why?
                       </Text>
                       <TextInput
+                        maxLength={1200}
                         value={exercisesAvoidDetails}
                         onChangeText={setExercisesAvoidDetails}
                         placeholder="e.g. Avoid heavy overhead presses due to right shoulder fatigue"
@@ -421,6 +423,7 @@ export function PostSessionHealthReportModal({
                         Brief details:
                       </Text>
                       <TextInput
+                        maxLength={1200}
                         value={healthChangeDetails}
                         onChangeText={setHealthChangeDetails}
                         placeholder="Provide details about the improved, new or worsened concern..."
@@ -447,6 +450,7 @@ export function PostSessionHealthReportModal({
                     What must the next trainer know before training this client?
                   </Text>
                   <TextInput
+                    maxLength={1200}
                     value={nextTrainerInfo}
                     onChangeText={setNextTrainerInfo}
                     placeholder="e.g. Excellent core strength. Keep warm-up extended to 8 mins. Focus on mobility before weighted sets."

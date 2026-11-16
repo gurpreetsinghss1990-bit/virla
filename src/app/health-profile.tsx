@@ -74,6 +74,7 @@ export default function HealthProfileScreen() {
 
                   {isEditing ? (
                     <TextInput
+                      maxLength={250}
                       value={form[field.key]}
                       onChangeText={(val) => setForm(prev => ({ ...prev, [field.key]: val }))}
                       placeholder={field.placeholder}

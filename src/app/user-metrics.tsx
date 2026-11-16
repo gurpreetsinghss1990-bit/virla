@@ -502,6 +502,7 @@ export default function UserMetricsLandingScreen() {
                     FULL NAME
                   </Text>
                   <TextInput
+                    maxLength={250}
                     value={name}
                     onChangeText={setName}
                     placeholder="Enter your full name"

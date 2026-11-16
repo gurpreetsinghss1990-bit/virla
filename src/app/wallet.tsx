@@ -972,6 +972,7 @@ export default function WalletScreen() {
                   <View>
                     <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1.5">Credits Amount</Text>
                     <TextInput
+                      maxLength={12}
                       placeholder="Number of credits to send"
                       placeholderTextColor="#9CA3AF"
                       value={transferAmount}

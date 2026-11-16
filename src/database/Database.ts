@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { AssignmentLog, Booking, Coach, Invoice, NotificationItem, ScheduleSlot, TrainerEarning, TrainerWorkoutAssignment, User, Workout } from '../types';
 import { canonicalizeTimeRange, getBookingISTDateRange, normalizeDate } from '../utils/date';
 import { calculateDistanceKm, trainerServiceRadiusKm } from '../utils/distance';
+import { cleanMultiline, INPUT_LIMITS } from '../utils/inputSafety';
 import { parseBookingAddress } from '../utils/LocationParser';
 import { setClientUserId, supabase } from './supabaseClient';
 
@@ -3809,12 +3810,16 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
   }
 
   sendChatMessage(chatId: string, text: string, sender: ChatMessage['sender']): ChatMessage {
+    const safeText = cleanMultiline(text, INPUT_LIMITS.message);
+    if (!safeText) {
+      return { id: '', chatId, sender, text: '', timestamp: new Date().toISOString() };
+    }
     const timeStr = new Date().toISOString();
     const msg: ChatMessage = {
       id: generateUUID('msg'),
       chatId,
       sender,
-      text,
+      text: safeText,
       timestamp: timeStr
     };
     this.schema.messages.push(msg);
@@ -3833,7 +3838,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
       });
 
     this.save();
-    this.log('SendMessage', `Sent message: "${text}" in chat ${chatId}`);
+    this.log('SendMessage', `Sent message: "${safeText.slice(0, 40)}" in chat ${chatId}`);
     return msg;
   }
 

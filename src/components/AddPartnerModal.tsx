@@ -90,6 +90,7 @@ export const AddPartnerModal: React.FC<AddPartnerModalProps> = ({
               <View className="gap-1.5">
                 <Text className="text-zinc-500 text-[9px] font-bold uppercase pl-0.5">Partner Name</Text>
                 <TextInput
+                  maxLength={250}
                   value={partnerName}
                   onChangeText={setPartnerName}
                   placeholder="Enter partner's full name"

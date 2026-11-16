@@ -160,6 +160,7 @@ export function RaiseSupportTicketModal({
             Optional — anything else the team should know.
           </Text>
           <TextInput
+            maxLength={1200}
             value={description}
             onChangeText={setDescription}
             placeholder="Explain what happened..."

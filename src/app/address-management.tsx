@@ -286,6 +286,7 @@ export default function AddressManagementScreen() {
                 <View className="gap-1">
                   <Text className="text-zinc-500 text-[8px] font-black uppercase">Location Nickname</Text>
                   <TextInput
+                    maxLength={250}
                     value={name}
                     onChangeText={setName}
                     placeholder="e.g. My Residence, Worli HQ"
@@ -296,6 +297,7 @@ export default function AddressManagementScreen() {
                 <View className="gap-1">
                   <Text className="text-zinc-500 text-[8px] font-black uppercase">Flat / Building name</Text>
                   <TextInput
+                    maxLength={250}
                     value={building}
                     onChangeText={setBuilding}
                     placeholder="Flat 12A, Sea Tower"
@@ -317,6 +319,7 @@ export default function AddressManagementScreen() {
                   </TouchableOpacity>
 
                   <TextInput
+                    maxLength={250}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                     placeholder="Search address..."
@@ -368,6 +371,7 @@ export default function AddressManagementScreen() {
                 <View className="gap-1">
                   <Text className="text-zinc-500 text-[8px] font-black uppercase">Street / Locality</Text>
                   <TextInput
+                    maxLength={250}
                     value={street}
                     onChangeText={setStreet}
                     placeholder="e.g. Worli Sea Face road"
@@ -378,6 +382,7 @@ export default function AddressManagementScreen() {
                 <View className="gap-1">
                   <Text className="text-zinc-500 text-[8px] font-black uppercase">Landmark (Optional)</Text>
                   <TextInput
+                    maxLength={250}
                     value={landmark}
                     onChangeText={setLandmark}
                     placeholder="e.g. Opposite Trident Hotel"
@@ -389,6 +394,7 @@ export default function AddressManagementScreen() {
                   <View className="flex-1 gap-1">
                     <Text className="text-zinc-500 text-[8px] font-black uppercase">City</Text>
                     <TextInput
+                      maxLength={250}
                       value={city}
                       onChangeText={setCity}
                       placeholder="Mumbai"

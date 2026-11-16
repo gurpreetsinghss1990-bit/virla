@@ -305,6 +305,7 @@ export default function HelpSupportScreen() {
                     Subject Summary
                   </Text>
                   <TextInput
+                    maxLength={250}
                     value={ticketSubject}
                     onChangeText={setTicketSubject}
                     placeholder="e.g. Session reschedule or credit discrepancy"
@@ -329,6 +330,7 @@ export default function HelpSupportScreen() {
                     Describe the Issue
                   </Text>
                   <TextInput
+                    maxLength={1200}
                     value={ticketDetails}
                     onChangeText={setTicketDetails}
                     placeholder="Please include session date, coach name, or reference ID..."

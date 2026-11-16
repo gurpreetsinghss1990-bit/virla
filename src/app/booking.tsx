@@ -3063,6 +3063,7 @@ export default function BookingScreen() {
                               <View className="flex-row items-center bg-zinc-100/70 px-3 h-10 rounded-xl">
                                 <Feather name="search" size={14} color="#71717A" />
                                 <TextInput
+                                  maxLength={250}
                                   placeholder="Search location, street, area..."
                                   placeholderTextColor="#A1A1AA"
                                   value={searchQuery}

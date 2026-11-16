@@ -102,7 +102,8 @@ export default function PayoutSetupScreen() {
             <View className="gap-3.5">
               <View>
                 <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1">Account Holder Name</Text>
-                <TextInput 
+                <TextInput
+                  maxLength={250} 
                   value={accountHolderName} 
                   onChangeText={setAccountHolderName} 
                   placeholder="Karan Sharma"
@@ -113,7 +114,8 @@ export default function PayoutSetupScreen() {
               <View className="flex-row gap-2">
                 <View className="flex-1">
                   <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1">Bank Name</Text>
-                  <TextInput 
+                  <TextInput
+                    maxLength={250} 
                     value={bankName} 
                     onChangeText={setBankName} 
                     placeholder="HDFC Bank"
@@ -122,7 +124,8 @@ export default function PayoutSetupScreen() {
                 </View>
                 <View className="flex-1">
                   <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1">IFSC Code</Text>
-                  <TextInput 
+                  <TextInput
+                    maxLength={250} 
                     value={bankIfsc} 
                     onChangeText={setBankIfsc} 
                     placeholder="HDFC0000060"
@@ -133,7 +136,8 @@ export default function PayoutSetupScreen() {
 
               <View>
                 <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1">Account Number</Text>
-                <TextInput 
+                <TextInput
+                  maxLength={12} 
                   value={bankAccountNumber} 
                   onChangeText={setBankAccountNumber} 
                   keyboardType="number-pad" 
@@ -144,7 +148,8 @@ export default function PayoutSetupScreen() {
 
               <View>
                 <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1">UPI ID (Optional)</Text>
-                <TextInput 
+                <TextInput
+                  maxLength={254} 
                   value={bankUpiId} 
                   onChangeText={setBankUpiId} 
                   placeholder="karan@okhdfc"

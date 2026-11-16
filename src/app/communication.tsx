@@ -686,6 +686,7 @@ export default function CommunicationScreen() {
           <View className="bg-white border border-[#E2DDD5] rounded-[24px] pl-4 pr-1.5 py-1.5 flex-row items-end gap-2 shadow-xs">
             {/* Text Input */}
             <TextInput
+              maxLength={1200}
               value={messageText}
               onChangeText={setMessageText}
               placeholder={role === 'trainer' ? "Message client securely..." : `Message ${coachDisplayName}...`}

@@ -366,6 +366,7 @@ export function SupportChatModal({
               style={{ paddingBottom: Math.max(insets.bottom, 12) }}
             >
               <TextInput
+                maxLength={1200}
                 value={inputText}
                 onChangeText={setInputText}
                 placeholder={currentRole === 'admin' ? "Reply to client as Support Admin..." : "Type your message to Virla Support..."}

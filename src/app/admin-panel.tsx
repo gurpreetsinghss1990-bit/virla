@@ -2872,6 +2872,7 @@ export default function AdminPanelScreen() {
                   Operating Base Address
                 </Text>
                 <TextInput
+                  maxLength={1200}
                   value={overrideAddress}
                   onChangeText={setOverrideAddress}
                   placeholder="e.g. Andheri West, Mumbai, MH"

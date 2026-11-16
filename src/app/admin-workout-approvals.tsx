@@ -264,6 +264,7 @@ export default function AdminWorkoutApprovalsScreen() {
             <Text className="text-zinc-400 text-[10px] font-bold uppercase mt-0.5">Please provide feedback/rejection reason</Text>
 
             <TextInput
+              maxLength={1200}
               value={rejectionReason}
               onChangeText={setRejectionReason}
               placeholder="e.g. Certification document required."

@@ -1468,6 +1468,7 @@ export default function VirlaAIScreen() {
                           }}
                         >
                           <TextInput
+                            maxLength={1200}
                             placeholder="Type your condition or injury here..."
                             placeholderTextColor="#94A3B8"
                             value={otherConditionText}
@@ -1646,6 +1647,7 @@ export default function VirlaAIScreen() {
                           }}
                         >
                           <TextInput
+                            maxLength={1200}
                             placeholder="Specify other supplements (e.g. Ashwagandha, Zinc, Collagen)..."
                             placeholderTextColor="#94A3B8"
                             value={otherSupplementText}

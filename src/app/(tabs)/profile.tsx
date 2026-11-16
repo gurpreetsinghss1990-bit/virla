@@ -1671,7 +1671,8 @@ export default function ProfileScreen() {
                     <View className="gap-4">
                       <View className="gap-1.5">
                         <Text className="text-zinc-600 text-[11px] font-bold uppercase tracking-wider">Full Name</Text>
-                        <TextInput 
+                        <TextInput
+                          maxLength={250} 
                           value={trainerName} 
                           onChangeText={setTrainerName} 
                           placeholder="Your full legal name"
@@ -1681,7 +1682,8 @@ export default function ProfileScreen() {
                       </View>
                       <View className="gap-1.5">
                         <Text className="text-zinc-600 text-[11px] font-bold uppercase tracking-wider">Email Address</Text>
-                        <TextInput 
+                        <TextInput
+                          maxLength={254} 
                           value={trainerEmail} 
                           onChangeText={setTrainerEmail} 
                           keyboardType="email-address" 
@@ -1709,7 +1711,8 @@ export default function ProfileScreen() {
                           <Text className="text-zinc-600 text-[11px] font-bold uppercase tracking-wider">Coach Short Bio</Text>
                           <Text className="text-zinc-400 text-[10px] font-medium">Appears on booking card</Text>
                         </View>
-                        <TextInput 
+                        <TextInput
+                          maxLength={1200} 
                           value={trainerBio} 
                           onChangeText={setTrainerBio} 
                           multiline 
@@ -1881,6 +1884,7 @@ export default function ProfileScreen() {
                             <View className="gap-1.5 mt-1">
                               <Text className="text-zinc-600 text-xs font-semibold">Reason for requesting change</Text>
                               <TextInput
+                                maxLength={250}
                                 value={specialtyMessage}
                                 onChangeText={setSpecialtyMessage}
                                 placeholder="Add certifications, ACE, fitness coach experience..."
@@ -1999,6 +2003,7 @@ export default function ProfileScreen() {
                         <View className="gap-1.5">
                           <Text className="text-zinc-600 text-xs font-semibold">Search address</Text>
                           <TextInput
+                            maxLength={250}
                             value={addressInput}
                             onChangeText={setAddressInput}
                             placeholder="Enter address..."
@@ -2218,7 +2223,8 @@ export default function ProfileScreen() {
                         <View className="gap-3 bg-white p-4 border border-zinc-200 rounded-2xl shadow-2xs">
                           <View className="gap-1.5">
                             <Text className="text-zinc-600 text-xs font-semibold">Account Name</Text>
-                            <TextInput 
+                            <TextInput
+                              maxLength={250} 
                               value={bankAccName} 
                               onChangeText={setBankAccName} 
                               className="border border-zinc-200 bg-zinc-50 p-3 rounded-xl text-xs text-zinc-900 font-medium" 
@@ -2226,7 +2232,8 @@ export default function ProfileScreen() {
                           </View>
                           <View className="gap-1.5">
                             <Text className="text-zinc-600 text-xs font-semibold">Bank Name</Text>
-                            <TextInput 
+                            <TextInput
+                              maxLength={250} 
                               value={bankNameStr} 
                               onChangeText={setBankNameStr} 
                               className="border border-zinc-200 bg-zinc-50 p-3 rounded-xl text-xs text-zinc-900 font-medium" 
@@ -2234,7 +2241,8 @@ export default function ProfileScreen() {
                           </View>
                           <View className="gap-1.5">
                             <Text className="text-zinc-600 text-xs font-semibold">Account Number</Text>
-                            <TextInput 
+                            <TextInput
+                              maxLength={12} 
                               value={bankAccNumber} 
                               onChangeText={setBankAccNumber} 
                               keyboardType="number-pad" 
@@ -2243,7 +2251,8 @@ export default function ProfileScreen() {
                           </View>
                           <View className="gap-1.5">
                             <Text className="text-zinc-600 text-xs font-semibold">IFSC Code</Text>
-                            <TextInput 
+                            <TextInput
+                              maxLength={250} 
                               value={bankIfscStr} 
                               onChangeText={setBankIfscStr} 
                               className="border border-zinc-200 bg-zinc-50 p-3 rounded-xl text-xs text-zinc-900 font-medium" 
@@ -2251,7 +2260,8 @@ export default function ProfileScreen() {
                           </View>
                           <View className="gap-1.5">
                             <Text className="text-zinc-600 text-xs font-semibold">UPI ID</Text>
-                            <TextInput 
+                            <TextInput
+                              maxLength={250} 
                               value={bankUpiIdStr} 
                               onChangeText={setBankUpiIdStr} 
                               className="border border-zinc-200 bg-zinc-50 p-3 rounded-xl text-xs text-zinc-900 font-medium" 
@@ -2364,7 +2374,8 @@ export default function ProfileScreen() {
                         </View>
                         <View className="gap-1.5">
                           <Text className="text-zinc-600 text-xs font-semibold">Booking ID (Optional)</Text>
-                          <TextInput 
+                          <TextInput
+                            maxLength={250} 
                             value={disputeBookingId} 
                             onChangeText={setDisputeBookingId} 
                             placeholder="e.g. bk-728200" 
@@ -2374,7 +2385,8 @@ export default function ProfileScreen() {
                         </View>
                         <View className="gap-1.5">
                           <Text className="text-zinc-600 text-xs font-semibold">Describe the issue</Text>
-                          <TextInput 
+                          <TextInput
+                            maxLength={1200} 
                             value={disputeDescription} 
                             onChangeText={setDisputeDescription} 
                             placeholder="Please detail the cancellation timing, client safety concern, or dispute..." 
@@ -2827,6 +2839,7 @@ export default function ProfileScreen() {
                 <View className="gap-1">
                   <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Full Name</Text>
                   <TextInput
+                    maxLength={250}
                     value={editName}
                     onChangeText={setEditName}
                     placeholder="Your Full Name"
@@ -2861,6 +2874,7 @@ export default function ProfileScreen() {
                 <View className="gap-1">
                   <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Email address</Text>
                   <TextInput
+                    maxLength={254}
                     value={editEmail}
                     onChangeText={setEditEmail}
                     keyboardType="email-address"
@@ -2915,6 +2929,7 @@ export default function ProfileScreen() {
                 <View className="gap-1">
                   <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Date of Birth</Text>
                   <TextInput
+                    maxLength={250}
                     value={editDob}
                     onChangeText={setEditDob}
                     placeholder="DD/MM/YYYY"
@@ -2928,6 +2943,7 @@ export default function ProfileScreen() {
                   <View className="flex-1 gap-1">
                     <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Height (cm)</Text>
                     <TextInput
+                      maxLength={250}
                       value={editHeight}
                       onChangeText={setEditHeight}
                       placeholder="175 cm"
@@ -2938,6 +2954,7 @@ export default function ProfileScreen() {
                   <View className="flex-1 gap-1">
                     <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Weight (kg)</Text>
                     <TextInput
+                      maxLength={250}
                       value={editWeight}
                       onChangeText={setEditWeight}
                       placeholder="70 kg"
@@ -2951,6 +2968,7 @@ export default function ProfileScreen() {
                 <View className="gap-1">
                   <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Fitness Level</Text>
                   <TextInput
+                    maxLength={250}
                     value={editFitnessLevel}
                     onChangeText={setEditFitnessLevel}
                     placeholder="Beginner / Intermediate / Advanced"
@@ -2963,6 +2981,7 @@ export default function ProfileScreen() {
                 <View className="gap-1">
                   <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Area</Text>
                   <TextInput
+                    maxLength={250}
                     value={editCity}
                     onChangeText={setEditCity}
                     placeholder="e.g. Koramangala, Indiranagar"

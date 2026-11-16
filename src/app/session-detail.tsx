@@ -2469,6 +2469,7 @@ export default function SessionDetailScreen() {
                     </View>
 
                     <TextInput
+                      maxLength={250}
                       value={comments}
                       onChangeText={setComments}
                       placeholder="Write feedback comments..."

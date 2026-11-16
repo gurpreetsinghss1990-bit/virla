@@ -321,6 +321,7 @@ export default function NotificationsScreen() {
           <View className="flex-row items-center bg-white/90 border border-transparent px-3.5 py-2.5 rounded-2xl shadow-xs">
             <Feather name="search" size={15} color="#9CA3AF" />
             <TextInput
+              maxLength={250}
               placeholder="Search notifications..."
               placeholderTextColor="#9CA3AF"
               value={searchQuery}

@@ -127,6 +127,7 @@ export default function EmergencyContactsScreen() {
               <View className="gap-1">
                 <Text className="text-zinc-500 text-[8px] font-black uppercase">Contact Name</Text>
                 <TextInput
+                  maxLength={250}
                   value={name}
                   onChangeText={setName}
                   placeholder="Enter full name"
@@ -137,6 +138,7 @@ export default function EmergencyContactsScreen() {
               <View className="gap-1">
                 <Text className="text-zinc-500 text-[8px] font-black uppercase">Relationship</Text>
                 <TextInput
+                  maxLength={250}
                   value={relationship}
                   onChangeText={setRelationship}
                   placeholder="e.g. Spouse, Brother, Father"
@@ -147,6 +149,7 @@ export default function EmergencyContactsScreen() {
               <View className="gap-1">
                 <Text className="text-zinc-500 text-[8px] font-black uppercase">Mobile Number</Text>
                 <TextInput
+                  maxLength={20}
                   value={phone}
                   onChangeText={setPhone}
                   placeholder="e.g. +91 98200 11223"
@@ -158,6 +161,7 @@ export default function EmergencyContactsScreen() {
               <View className="gap-1">
                 <Text className="text-zinc-500 text-[8px] font-black uppercase">Alternate Phone (Optional)</Text>
                 <TextInput
+                  maxLength={20}
                   value={altPhone}
                   onChangeText={setAltPhone}
                   placeholder="e.g. +91 98200 44556"
@@ -169,6 +173,7 @@ export default function EmergencyContactsScreen() {
               <View className="gap-1">
                 <Text className="text-zinc-500 text-[8px] font-black uppercase">Important Medical Notes</Text>
                 <TextInput
+                  maxLength={250}
                   value={medicalNotes}
                   onChangeText={setMedicalNotes}
                   placeholder="e.g. Heart condition history, Asthma"
