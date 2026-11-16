@@ -45,22 +45,22 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
   };
 
   const getIcon = (routeName: string, isFocused: boolean) => {
-    let iconName: any = 'home';
+    let iconName: any = isFocused ? 'home' : 'home-outline';
     switch (routeName) {
       case 'index':
-        iconName = 'home';
+        iconName = isFocused ? 'home' : 'home-outline';
         break;
       case 'bookings':
-        iconName = 'calendar';
+        iconName = isFocused ? 'calendar' : 'calendar-outline';
         break;
       case 'progress':
-        iconName = 'trending-up';
+        iconName = isFocused ? 'trending-up' : 'trending-up-outline';
         break;
       case 'messages':
-        iconName = 'chatbubble-ellipses';
+        iconName = isFocused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline';
         break;
       case 'profile':
-        iconName = 'person';
+        iconName = isFocused ? 'person' : 'person-outline';
         break;
     }
 

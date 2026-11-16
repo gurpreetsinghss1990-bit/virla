@@ -12,18 +12,17 @@ export interface NativeGoalChipProps {
 }
 
 export const NativeGoalChip = React.memo(({ label, selected, onPress, color, size = 'small' }: NativeGoalChipProps) => {
-  const activeColor = color || '#059669'; // default emerald green
   const isSmall = size === 'small';
 
   return (
     <NativePressable
-      rippleColor={selected ? 'rgba(255, 255, 255, 0.4)' : 'rgba(5, 150, 105, 0.25)'}
+      rippleColor={selected ? 'rgba(5, 150, 105, 0.2)' : 'rgba(100, 116, 139, 0.15)'}
       onPress={onPress}
       style={[
         styles.capsule,
         isSmall && { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
         selected
-          ? [styles.capsuleSelected, { backgroundColor: activeColor, borderColor: activeColor }]
+          ? styles.capsuleSelected
           : styles.capsuleUnselected,
       ]}
     >
@@ -36,7 +35,7 @@ export const NativeGoalChip = React.memo(({ label, selected, onPress, color, siz
       >
         {label}
       </Text>
-      {selected && <Feather name="check" size={isSmall ? 10 : 13} color="#FFFFFF" />}
+      {selected && <Feather name="check" size={isSmall ? 10 : 13} color="#059669" />}
     </NativePressable>
   );
 });
@@ -45,7 +44,7 @@ const styles = StyleSheet.create({
   capsule: {
     borderRadius: 16,
     overflow: 'hidden',
-    borderWidth: 1.5,
+    borderWidth: 1,
     paddingHorizontal: 18,
     paddingVertical: 12,
     flexDirection: 'row',
@@ -54,22 +53,22 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   capsuleSelected: {
-    backgroundColor: '#E11D48',
-    borderColor: '#E11D48',
+    backgroundColor: '#ECFDF5', // subtle soft light green
+    borderColor: '#A7F3D0', // light emerald border
   },
   capsuleUnselected: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#E4E4E7',
+    borderColor: '#E2E8F0',
   },
   capsuleText: {
     fontSize: 13,
     fontWeight: '700',
   },
   capsuleTextSelected: {
-    color: '#FFFFFF',
+    color: '#065F46', // deep readable green
   },
   capsuleTextUnselected: {
-    color: '#27272A',
+    color: '#475569',
   },
 });
 

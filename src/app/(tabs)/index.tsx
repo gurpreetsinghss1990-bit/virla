@@ -1845,7 +1845,13 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={handleLogCalories}
-                    className="w-[47%] h-[148px] p-5 rounded-[28px] bg-[#FFF5F5] border border-[#FFE4E6] justify-between"
+                    className="w-[47%] h-[142px] p-4 rounded-2xl justify-between"
+                    style={{
+                      backgroundColor: '#FFF5F5',
+                      borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
+                      borderColor: 'rgba(60, 60, 67, 0.12)',
+                      elevation: Platform.OS === 'android' ? 1 : 0,
+                    }}
                   >
                     <View className="flex-row items-center justify-between">
                       <View className="flex-row items-center gap-2">
@@ -1871,7 +1877,13 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={handleLogWater}
-                    className="w-[47%] h-[148px] p-5 rounded-[28px] bg-[#ECFEFF] border border-[#CFFAFE] justify-between"
+                    className="w-[47%] h-[142px] p-4 rounded-2xl justify-between"
+                    style={{
+                      backgroundColor: '#ECFEFF',
+                      borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
+                      borderColor: 'rgba(60, 60, 67, 0.12)',
+                      elevation: Platform.OS === 'android' ? 1 : 0,
+                    }}
                   >
                     <View className="flex-row items-center justify-between">
                       <View className="flex-row items-center gap-2">
@@ -1897,7 +1909,13 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={() => navigateSafely('/membership')}
-                    className="w-[47%] h-[148px] p-5 rounded-[28px] bg-[#F5F3FF] border border-[#EDE9FE] justify-between"
+                    className="w-[47%] h-[142px] p-4 rounded-2xl justify-between"
+                    style={{
+                      backgroundColor: '#F5F3FF',
+                      borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
+                      borderColor: 'rgba(60, 60, 67, 0.12)',
+                      elevation: Platform.OS === 'android' ? 1 : 0,
+                    }}
                   >
                     <View className="flex-row items-center gap-2">
                       <Text className="text-base">💳</Text>
@@ -1920,7 +1938,13 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={() => navigateSafely('/(tabs)/progress')}
-                    className="w-[47%] h-[148px] p-5 rounded-[28px] bg-[#FFF1F2] border border-[#FFE4E6] justify-between"
+                    className="w-[47%] h-[142px] p-4 rounded-2xl justify-between"
+                    style={{
+                      backgroundColor: '#FFF1F2',
+                      borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
+                      borderColor: 'rgba(60, 60, 67, 0.12)',
+                      elevation: Platform.OS === 'android' ? 1 : 0,
+                    }}
                   >
                     <View className="flex-row items-center justify-between">
                       <View className="flex-row items-center gap-2">
@@ -2079,14 +2103,12 @@ export default function HomeScreen() {
 
                   return (
                     <View 
-                      className="bg-white border border-[#E5E7EB] p-6 rounded-[32px] gap-4"
+                      className="p-4 rounded-2xl gap-3.5"
                       style={{
-                        backgroundColor: '#FFFFFF',
-                        shadowColor: '#101828',
-                        shadowOffset: { width: 0, height: 6 },
-                        shadowOpacity: 0.04,
-                        shadowRadius: 12,
-                        elevation: 3,
+                        backgroundColor: Platform.OS === 'ios' ? 'rgba(255, 255, 255, 0.92)' : '#FFFFFF',
+                        borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
+                        borderColor: 'rgba(60, 60, 67, 0.12)',
+                        elevation: Platform.OS === 'android' ? 1 : 0,
                       }}
                     >
                       {/* Top: Coach avatar, title, and badge */}
@@ -2216,14 +2238,12 @@ export default function HomeScreen() {
                   );
                 })() : (
                   <View 
-                    className="bg-white border border-[#E5E7EB] p-8 rounded-[32px] items-center justify-center gap-3"
+                    className="p-5 rounded-2xl items-center justify-center gap-2.5"
                     style={{
-                      backgroundColor: '#FFFFFF',
-                      shadowColor: '#101828',
-                      shadowOffset: { width: 0, height: 6 },
-                      shadowOpacity: 0.04,
-                      shadowRadius: 12,
-                      elevation: 3,
+                      backgroundColor: '#FFF5F5',
+                      borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
+                      borderColor: 'rgba(60, 60, 67, 0.12)',
+                      elevation: Platform.OS === 'android' ? 1 : 0,
                     }}
                   >
                     <Text className="text-3xl">🗓️</Text>

@@ -8,7 +8,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import Svg, { Path, Defs, LinearGradient, Stop, Polygon, Polyline, Rect } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient, RadialGradient, Stop, Polygon, Polyline, Rect, Ellipse } from 'react-native-svg';
 import { useUserStore } from '../../store/userStore';
 import { useMembershipStore } from '../../store/membershipStore';
 import { useCoachStore } from '../../store/coachStore';
@@ -304,8 +304,21 @@ export default function ProfileScreen() {
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
       UIManager.setLayoutAnimationEnabledExperimental(true);
     }
-    // Native spring animation for smooth, native-feel expansion/collapse
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+    // Clean, controlled native animation without spring bounce or overshoot jitter
+    LayoutAnimation.configureNext({
+      duration: 250,
+      create: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+      update: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+      },
+      delete: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+    });
     setIsPersonalInfoExpanded(prev => (typeof targetState === 'boolean' ? targetState : !prev));
   }, []);
   const [editName, setEditName] = useState(profile.name || '');
@@ -2680,51 +2693,47 @@ export default function ProfileScreen() {
 
         </ScrollView>
 
-        {/* Floating Top Header: Inline title with ChatGPT-style subtle scrim right next to the element */}
-        <View
-          pointerEvents="box-none"
-          style={{
-            position: 'absolute',
-            top: 10,
-            left: 20,
+        {/* Top Header: Clean inline title with soft white sunlight-rays radial scrim */}
+        <View 
+          pointerEvents="none" 
+          style={{ 
+            position: 'absolute', 
+            top: 12, 
+            left: 24, 
             zIndex: 40,
-            flexDirection: 'row',
-            alignItems: 'center',
+            alignSelf: 'flex-start',
           }}
         >
-          {/* Inline Profile Badge with surrounding scrim backdrop */}
-          <View pointerEvents="none" className="relative flex-row items-center">
-            {/* Scrim Glow / Fade specifically localized behind and to the side of the profile element */}
+          <View style={{ position: 'relative', justifyContent: 'center' }}>
+            {/* Soft white sunlight-rays radial scrim behind text (no visible box/pill) */}
             <View
+              pointerEvents="none"
               style={{
                 position: 'absolute',
-                top: -8,
-                left: -12,
-                right: -45,
-                bottom: -8,
+                top: -14,
+                left: -22,
+                right: -28,
+                bottom: -14,
               }}
             >
               <Svg width="100%" height="100%" preserveAspectRatio="none">
                 <Defs>
-                  <LinearGradient id="elementSideScrim" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <Stop offset="0%" stopColor="#F7F8FC" stopOpacity="0.95" />
-                    <Stop offset="65%" stopColor="#F7F8FC" stopOpacity="0.85" />
-                    <Stop offset="85%" stopColor="#F7F8FC" stopOpacity="0.4" />
+                  <RadialGradient id="profileTitleSunScrim" cx="45%" cy="50%" rx="55%" ry="55%">
+                    <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.92" />
+                    <Stop offset="45%" stopColor="#F7F8FC" stopOpacity="0.72" />
+                    <Stop offset="80%" stopColor="#F7F8FC" stopOpacity="0.22" />
                     <Stop offset="100%" stopColor="#F7F8FC" stopOpacity="0" />
-                  </LinearGradient>
+                  </RadialGradient>
                 </Defs>
-                <Rect x="0" y="0" width="100%" height="100%" rx={20} ry={20} fill="url(#elementSideScrim)" />
+                <Ellipse cx="50%" cy="50%" rx="50%" ry="50%" fill="url(#profileTitleSunScrim)" />
               </Svg>
             </View>
 
-            {/* Profile Title Element: Clean, prominent Tab Name font without pill background */}
-            <View className="flex-row items-center py-1">
-              <Text className="text-[#101828] text-2xl font-black tracking-tight" numberOfLines={1}>
-                {isHeaderCollapsed
-                  ? (profile.name || user?.name || (activeRole === 'trainer' ? 'Trainer' : 'User'))
-                  : (activeRole === 'trainer' ? 'Trainer Profile' : 'Profile')}
-              </Text>
-            </View>
+            <Text className="text-[#101828] text-2xl font-black tracking-tight" numberOfLines={1}>
+              {isHeaderCollapsed 
+                ? (profile.name || user?.name || (activeRole === 'trainer' ? 'Trainer' : 'User'))
+                : (activeRole === 'trainer' ? 'Trainer Profile' : 'Profile')}
+            </Text>
           </View>
         </View>
       </View>

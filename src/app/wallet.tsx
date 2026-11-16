@@ -1,6 +1,6 @@
 import { Loading } from '../components/Loading';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Linking, Share } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Linking, Share, Platform } from 'react-native';
 import { InteractionManager } from '../utils/interactionManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -639,23 +639,31 @@ export default function WalletScreen() {
             </View>
           </View>
 
-          {/* Quick Stats 3-Column Card */}
-          <View className="bg-white rounded-3xl p-5 shadow-sm border border-zinc-100/80 flex-row justify-between items-center">
+          {/* Quick Stats 3-Column Native Grouped Section */}
+          <View
+            className="rounded-2xl py-3.5 px-3 flex-row justify-between items-center"
+            style={{
+              backgroundColor: Platform.OS === 'ios' ? 'rgba(255, 255, 255, 0.92)' : '#FFFFFF',
+              borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
+              borderColor: 'rgba(60, 60, 67, 0.12)',
+              elevation: Platform.OS === 'android' ? 1 : 0,
+            }}
+          >
             <View className="flex-1 items-center">
               <Text className="text-zinc-400 text-[10px] font-bold uppercase">PURCHASED</Text>
-              <Text className="text-zinc-950 text-2xl font-bold mt-0.5">{lifetimePurchased}</Text>
-              <Text className="text-zinc-400 text-xs font-medium mt-0.5">Lifetime</Text>
+              <Text className="text-zinc-950 text-xl font-bold mt-0.5">{lifetimePurchased}</Text>
+              <Text className="text-zinc-400 text-[11px] font-medium mt-0.5">Lifetime</Text>
             </View>
 
-            <View className="w-[1px] h-9 bg-zinc-100" />
+            <View className="h-8" style={{ width: 0.5, backgroundColor: 'rgba(60, 60, 67, 0.14)' }} />
 
             <View className="flex-1 items-center">
               <Text className="text-zinc-400 text-[10px] font-bold uppercase">CONSUMED</Text>
-              <Text className="text-zinc-950 text-2xl font-bold mt-0.5">{creditsUsed}</Text>
-              <Text className="text-[#E11D48] text-xs font-semibold mt-0.5">{consumptionRate}% Rate</Text>
+              <Text className="text-zinc-950 text-xl font-bold mt-0.5">{creditsUsed}</Text>
+              <Text className="text-[#E11D48] text-[11px] font-semibold mt-0.5">{consumptionRate}% Rate</Text>
             </View>
 
-            <View className="w-[1px] h-9 bg-zinc-100" />
+            <View className="h-8" style={{ width: 0.5, backgroundColor: 'rgba(60, 60, 67, 0.14)' }} />
 
             <TouchableOpacity
               activeOpacity={0.7}
@@ -666,7 +674,7 @@ export default function WalletScreen() {
               <Text className="text-zinc-950 text-sm font-bold mt-1" numberOfLines={1}>
                 {nextRitual ? formatToDDMMYYYY(nextRitual.date) : 'No Sessions'}
               </Text>
-              <Text className="text-zinc-400 text-xs font-medium mt-0.5">{upcomingCount} Upcoming</Text>
+              <Text className="text-zinc-400 text-[11px] font-medium mt-0.5">{upcomingCount} Upcoming</Text>
             </TouchableOpacity>
           </View>
 

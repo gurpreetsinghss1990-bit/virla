@@ -11,15 +11,15 @@ export interface NativeGoalChipProps {
 }
 
 export const NativeGoalChip = React.memo(({ label, selected, onPress, color, size = 'small' }: NativeGoalChipProps) => {
-  const activeColor = color || '#059669'; // default emerald green
+  const activeColor = color || '#059669'; // emerald green
   return (
     <Host matchContents>
       <Button
         label={selected ? `${label} ✓` : label}
         onPress={onPress}
         modifiers={[
-          buttonStyle(selected ? 'borderedProminent' : 'bordered'),
-          tint(selected ? activeColor : '#475569'),
+          buttonStyle('bordered'),
+          tint(selected ? activeColor : '#64748B'),
           controlSize(size === 'small' ? 'small' : 'regular'),
         ]}
       />
