@@ -726,118 +726,101 @@ export default function WalletScreen() {
           {/* Tab 1: Credit Lots */}
           {activeTab === 'lots' && (
             <View className="gap-3">
-              <View className="flex-row items-center justify-between px-1">
-                <View className="flex-1 pr-2">
-                  <Text className="text-zinc-950 text-[15px] font-bold">Credit Expiry Breakdown</Text>
-                  <Text className="text-zinc-500 text-xs font-medium mt-0.5">Credits consume in chronological order</Text>
-                </View>
-                <View className="bg-[#FEE2E2] px-2.5 py-1 rounded-full">
-                  <Text className="text-[#E11D48] text-[10px] font-bold uppercase">
-                    {activeLots.length} ACTIVE
-                  </Text>
-                </View>
+              <View className="px-1">
+                <Text className="text-zinc-950 text-[15px] font-bold">Credit Expiry Breakdown</Text>
+                <Text className="text-zinc-500 text-xs font-medium mt-0.5">Oldest expiring credits are used first</Text>
               </View>
 
-              {/* 3-Queue Visual Card */}
+              {/* Clean Circle Breakdown */}
               <View className="bg-white rounded-3xl p-5 shadow-sm border border-zinc-100/80 relative">
-                {/* Connecting horizontal line */}
-                <View 
-                  className="absolute h-[2px] bg-[#E11D48]" 
-                  style={{ top: 40, left: '16.6%', width: '33.4%' }} 
-                  pointerEvents="none" 
-                />
-                <View 
-                  className="absolute h-[2px] bg-[#DBEAFE]" 
-                  style={{ top: 40, left: '50%', width: '33.4%' }} 
-                  pointerEvents="none" 
-                />
-
-                <View className="flex-row justify-between items-start">
-                  {/* Node 1: Burning Now */}
-                  <View className="items-center flex-1">
-                    <View className="w-10 h-10 rounded-full bg-[#E11D48] items-center justify-center shadow-sm">
-                      <Text className="text-white text-sm font-bold">
-                        {activeLots[0]?.remaining_credits || 0}
-                      </Text>
-                    </View>
-                    <Text className="text-[#E11D48] text-[10px] font-bold uppercase mt-2">EXPIRING SOON</Text>
-                    <Text className="text-zinc-900 text-xs font-bold mt-0.5">
-                      Lot #{activeLots[0]?.id?.slice(-3) || '1'}
-                    </Text>
-                    <Text className="text-[#E11D48] text-[10px] font-bold mt-0.5">{burningDaysLeft}d left</Text>
-                    <Text className="text-zinc-400 text-[10px] font-medium mt-0.5">
-                      Exp: {activeLots[0] ? formatToDDMMYYYY(activeLots[0].official_expiry_date) : '-'}
-                    </Text>
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => router.push('/membership' as any)}
-                      className="mt-2.5 bg-[#E11D48] px-3.5 py-1.5 rounded-full items-center justify-center shadow-sm"
-                    >
-                      <Text className="text-white text-[10px] font-bold uppercase">EXTEND</Text>
-                    </TouchableOpacity>
+                {activeLots.length === 0 ? (
+                  <View className="py-4 items-center justify-center">
+                    <Text className="text-zinc-500 text-xs font-medium">No active credit packs right now.</Text>
                   </View>
+                ) : (
+                  <>
+                    {activeLots.length > 1 && (
+                      <View
+                        className="absolute h-[2px] bg-[#E11D48]/25"
+                        style={{
+                          top: 40,
+                          left: activeLots.length === 2 ? '25%' : '16.6%',
+                          width: activeLots.length === 2 ? '50%' : '66.8%',
+                        }}
+                        pointerEvents="none"
+                      />
+                    )}
 
-                  {/* Node 2: Next in Line */}
-                  <View className="items-center flex-1">
-                    <View className="w-10 h-10 rounded-full bg-[#E0EDFD] items-center justify-center">
-                      <Text className="text-[#1E293B] text-sm font-bold">
-                        {activeLots[1]?.remaining_credits || 0}
-                      </Text>
-                    </View>
-                    <Text className="text-zinc-500 text-[10px] font-bold uppercase mt-2">NEXT IN LINE</Text>
-                    <Text className="text-zinc-900 text-xs font-bold mt-0.5">
-                      Lot #{activeLots[1]?.id?.slice(-3) || '2'}
-                    </Text>
-                    <Text className="text-zinc-700 text-[10px] font-bold mt-0.5">Safe</Text>
-                    <Text className="text-zinc-400 text-[10px] font-medium mt-0.5">
-                      Exp: {activeLots[1] ? formatToDDMMYYYY(activeLots[1].official_expiry_date) : '-'}
-                    </Text>
-                    <Text className="text-zinc-400 text-[10px] font-bold uppercase mt-1.5">QUEUE 02</Text>
-                  </View>
+                    <View className="flex-row justify-around items-start">
+                      {activeLots.slice(0, 3).map((lot: any, idx: number) => {
+                        const expiryMs = new Date(lot.official_expiry_date).getTime();
+                        const daysLeft = isNaN(expiryMs)
+                          ? 0
+                          : Math.max(0, Math.ceil((expiryMs - Date.now()) / (1000 * 60 * 60 * 24)));
+                        const isFirst = idx === 0;
+                        const isExpiringSoon = daysLeft <= 14;
+                        const stepLabel = isFirst ? 'USE FIRST' : idx === 1 ? 'NEXT' : 'LATER';
 
-                  {/* Node 3: Dormant */}
-                  <View className="items-center flex-1">
-                    <View className="w-10 h-10 rounded-full bg-[#E0EDFD] items-center justify-center">
-                      <Text className="text-[#1E293B] text-sm font-bold">
-                        {activeLots[2]?.remaining_credits || 0}
-                      </Text>
-                    </View>
-                    <Text className="text-zinc-500 text-[10px] font-bold uppercase mt-2">RESERVE</Text>
-                    <Text className="text-zinc-900 text-xs font-bold mt-0.5">
-                      Lot #{activeLots[2]?.id?.slice(-3) || '3'}
-                    </Text>
-                    <Text className="text-zinc-700 text-[10px] font-bold mt-0.5">Safe</Text>
-                    <Text className="text-zinc-400 text-[10px] font-medium mt-0.5">
-                      Exp: {activeLots[2] ? formatToDDMMYYYY(activeLots[2].official_expiry_date) : '-'}
-                    </Text>
-                    <Text className="text-zinc-400 text-[10px] font-bold uppercase mt-1.5">QUEUE 03</Text>
-                  </View>
-                </View>
-
-                {/* Optional Expand Lots */}
-                {activeLots.length > 3 && (
-                  <View className="mt-4 pt-3 border-t border-zinc-100">
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      onPress={() => setShowAllLots(!showAllLots)}
-                      className="items-center justify-center"
-                    >
-                      <Text className="text-zinc-600 text-[11px] font-bold uppercase">
-                        {showAllLots ? 'Show Less' : `View All ${activeLots.length} Lots`}
-                      </Text>
-                    </TouchableOpacity>
-
-                    {showAllLots && (
-                      <View className="gap-2 mt-3">
-                        {activeLots.slice(3).map((lot: any, idx: number) => (
-                          <View key={lot.id || idx} className="flex-row justify-between items-center py-1">
-                            <Text className="text-zinc-900 text-xs font-bold">{lot.remaining_credits} Credits</Text>
-                            <Text className="text-zinc-500 text-[11px] font-medium">Expires {formatToDDMMYYYY(lot.official_expiry_date)}</Text>
+                        return (
+                          <View key={lot.id || idx} className="items-center flex-1">
+                            <View
+                              className={`w-10 h-10 rounded-full items-center justify-center ${
+                                isFirst ? 'bg-[#E11D48] shadow-sm' : 'bg-[#E0EDFD]'
+                              }`}
+                            >
+                              <Text className={`text-sm font-bold ${isFirst ? 'text-white' : 'text-[#1E293B]'}`}>
+                                {lot.remaining_credits || 0}
+                              </Text>
+                            </View>
+                            <Text
+                              className={`text-[10px] font-bold uppercase mt-2 ${
+                                isFirst ? 'text-[#E11D48]' : 'text-zinc-500'
+                              }`}
+                            >
+                              {stepLabel}
+                            </Text>
+                            <Text
+                              className={`text-[10px] font-bold mt-0.5 ${
+                                isExpiringSoon ? 'text-[#E11D48]' : 'text-emerald-600'
+                              }`}
+                            >
+                              {daysLeft}d left
+                            </Text>
+                            <Text className="text-zinc-400 text-[10px] font-medium mt-0.5">
+                              {lot.official_expiry_date ? formatToDDMMYYYY(lot.official_expiry_date) : '-'}
+                            </Text>
                           </View>
-                        ))}
+                        );
+                      })}
+                    </View>
+
+                    {activeLots.length > 3 && (
+                      <View className="mt-4 pt-3 border-t border-zinc-100">
+                        <TouchableOpacity
+                          activeOpacity={0.7}
+                          onPress={() => setShowAllLots(!showAllLots)}
+                          className="items-center justify-center"
+                        >
+                          <Text className="text-zinc-600 text-[11px] font-bold uppercase">
+                            {showAllLots ? 'Show Less' : `View All ${activeLots.length} Packs`}
+                          </Text>
+                        </TouchableOpacity>
+
+                        {showAllLots && (
+                          <View className="gap-2 mt-3">
+                            {activeLots.slice(3).map((lot: any, idx: number) => (
+                              <View key={lot.id || idx} className="flex-row justify-between items-center py-1">
+                                <Text className="text-zinc-900 text-xs font-bold">{lot.remaining_credits} Credits</Text>
+                                <Text className="text-zinc-500 text-[11px] font-medium">
+                                  Expires {lot.official_expiry_date ? formatToDDMMYYYY(lot.official_expiry_date) : '-'}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        )}
                       </View>
                     )}
-                  </View>
+                  </>
                 )}
               </View>
 
