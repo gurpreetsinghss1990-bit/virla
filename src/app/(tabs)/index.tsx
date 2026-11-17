@@ -859,7 +859,9 @@ export default function HomeScreen() {
 
   useEffect(() => {
     let isMounted = true;
+    let hasSynced = false;
     const syncData = async () => {
+      if (!isMounted || hasSynced) return;
       // 1. Wait for Zustand store hydration
       if (!useUserStore.persist.hasHydrated()) {
         const unsub = useUserStore.persist.onFinishHydration(() => {
@@ -871,6 +873,7 @@ export default function HomeScreen() {
         }, 300);
         return;
       }
+      hasSynced = true;
 
       // 2. Set currentUserId context on Database
       const userId = useUserStore.getState().user?.id;
