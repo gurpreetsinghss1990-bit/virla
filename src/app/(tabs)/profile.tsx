@@ -643,12 +643,14 @@ export default function ProfileScreen() {
   const [disputeDescription, setDisputeDescription] = useState('');
   const [disputeBookingId, setDisputeBookingId] = useState('');
   const [disputesList, setDisputesList] = useState<any[]>([]);
+  const [isSubmittingDispute, setIsSubmittingDispute] = useState(false);
 
   // Kit Request States
   const [showKitForm, setShowKitForm] = useState(false);
   const [selectedTshirtSize, setSelectedTshirtSize] = useState<'S' | 'M' | 'L' | 'XL' | 'XXL' | null>(null);
   const [kitQuantities, setKitQuantities] = useState<{ [item: string]: number }>({ 'T-shirt': 0, 'Towel': 0, 'Duffel Bag': 0, 'Water Bottle': 0 });
   const [kitRequestsList, setKitRequestsList] = useState<any[]>([]);
+  const [isSubmittingKit, setIsSubmittingKit] = useState(false);
 
   // Reload disputes and kit requests on user load
   const reloadDynamicLists = async () => {
@@ -916,20 +918,30 @@ export default function ProfileScreen() {
   };
 
   const handleDisputeSubmit = async () => {
-    if (!coach || !disputeDescription) return;
+    if (!coach || !disputeDescription || isSubmittingDispute) return;
+    setIsSubmittingDispute(true);
     try {
       await Database.addClientDispute(coach.id, {
         category: disputeCategory,
         description: disputeDescription,
         bookingId: disputeBookingId
       });
-      setDisputeDescription('');
-      setDisputeBookingId('');
-      setShowDisputeForm(false);
-      await reloadDynamicLists();
-      Alert.alert('Ticket Submitted', 'Our support team will review this case and reply within 24 hours.');
     } catch (e: any) {
-      Alert.alert('Error', e.message || 'Failed to submit dispute ticket.');
+      setIsSubmittingDispute(false);
+      Alert.alert('Ticket Not Submitted', e?.message || 'Failed to submit dispute ticket. Please try again.');
+      return;
+    }
+    setIsSubmittingDispute(false);
+    setDisputeDescription('');
+    setDisputeBookingId('');
+    setShowDisputeForm(false);
+    Alert.alert('Ticket Submitted', 'Our support team will review this case and reply within 24 hours.');
+    // Refresh is best-effort: the ticket already exists server-side, so a failed
+    // reload must never be reported as a failed submission.
+    try {
+      await reloadDynamicLists();
+    } catch (err) {
+      console.warn('[Profile] Dispute list refresh failed:', err);
     }
   };
 
@@ -956,18 +968,27 @@ export default function ProfileScreen() {
       return;
     }
 
+    if (isSubmittingKit) return;
+    setIsSubmittingKit(true);
     try {
       await Database.addKitRequest(coach.id, {
         items: itemsList,
         size: kitQuantities['T-shirt'] > 0 ? selectedTshirtSize : null
       });
-      setShowKitForm(false);
-      setKitQuantities({ 'T-shirt': 0, 'Towel': 0, 'Duffel Bag': 0, 'Water Bottle': 0 });
-      setSelectedTshirtSize(null);
-      await reloadDynamicLists();
-      Alert.alert('Kit Requested', 'Brand kit request submitted successfully.');
     } catch (e: any) {
-      Alert.alert('Error', e.message || 'Failed to submit kit request.');
+      setIsSubmittingKit(false);
+      Alert.alert('Request Not Submitted', e?.message || 'Failed to submit kit request. Please try again.');
+      return;
+    }
+    setIsSubmittingKit(false);
+    setShowKitForm(false);
+    setKitQuantities({ 'T-shirt': 0, 'Towel': 0, 'Duffel Bag': 0, 'Water Bottle': 0 });
+    setSelectedTshirtSize(null);
+    Alert.alert('Kit Requested', 'Brand kit request submitted successfully.');
+    try {
+      await reloadDynamicLists();
+    } catch (err) {
+      console.warn('[Profile] Kit list refresh failed:', err);
     }
   };
 
@@ -2442,9 +2463,10 @@ export default function ProfileScreen() {
                           </TouchableOpacity>
                           <TouchableOpacity
                             onPress={handleDisputeSubmit}
-                            className="flex-1 bg-zinc-900 py-2.5 rounded-xl items-center"
+                            disabled={isSubmittingDispute}
+                            className={`flex-1 bg-zinc-900 py-2.5 rounded-xl items-center ${isSubmittingDispute ? 'opacity-60' : ''}`}
                           >
-                            <Text className="text-white text-xs font-semibold">Submit Ticket</Text>
+                            <Text className="text-white text-xs font-semibold">{isSubmittingDispute ? 'Submitting...' : 'Submit Ticket'}</Text>
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -2600,9 +2622,10 @@ export default function ProfileScreen() {
                           </TouchableOpacity>
                           <TouchableOpacity
                             onPress={handleKitSubmit}
-                            className="flex-1 bg-zinc-900 py-2.5 rounded-xl items-center"
+                            disabled={isSubmittingKit}
+                            className={`flex-1 bg-zinc-900 py-2.5 rounded-xl items-center ${isSubmittingKit ? 'opacity-60' : ''}`}
                           >
-                            <Text className="text-white text-xs font-semibold">Submit Request</Text>
+                            <Text className="text-white text-xs font-semibold">{isSubmittingKit ? 'Submitting...' : 'Submit Request'}</Text>
                           </TouchableOpacity>
                         </View>
                       </View>
