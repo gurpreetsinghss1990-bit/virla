@@ -740,65 +740,6 @@ export default function HomeScreen() {
   const formattedBookedHours = todayAvail.booked.toFixed(1).replace('.0', '');
   const formattedAvailableHours = todayAvail.available.toFixed(1).replace('.0', '');
 
-  const getUpcomingDaysData = () => {
-    const list = [];
-    const weekdays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-    const reservations = Database.schema.slot_reservations || [];
-    
-    for (let i = 1; i <= 7; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() + i);
-      const dateStrYMD = normalizeDate(d);
-      
-      const dayBookingsCount = confirmedBookings.filter(b => 
-        getISTDateInfo(getBookingISTDateRange(b).start).dateString === dateStrYMD
-      ).length;
-
-      let availableSlots = 0;
-      if (currentCoach) {
-        const allDaysSlots = generateMonthlySlots(d.getMonth(), d.getFullYear());
-        const daySlotsData = allDaysSlots.find((day: any) => day.date === dateStrYMD)?.slots || [];
-        const availabilityOverrides = currentCoach.preferences?.availabilityOverrides || [];
-        
-        daySlotsData.forEach((slot: any) => {
-          const isBooked = bookings.some((b: any) => 
-            b.trainerId === currentCoach.id && 
-            normalizeDate(b.date) === dateStrYMD && 
-            canonicalizeTimeRange(b.time) === canonicalizeTimeRange(slot.time) && 
-            b.status === 'upcoming'
-          );
-          const isReserved = reservations.some((r: any) =>
-            r.trainer_id === currentCoach.id &&
-            normalizeDate(r.slot_date) === dateStrYMD &&
-            canonicalizeTimeRange(r.slot_time) === canonicalizeTimeRange(slot.time) &&
-            r.expires_at > Date.now()
-          );
-          const override = availabilityOverrides.find((o: any) => 
-            normalizeDate(o.date) === dateStrYMD && 
-            canonicalizeTimeRange(o.time) === canonicalizeTimeRange(slot.time)
-          );
-          const isAvailable = override ? override.isAvailable : true;
-          if (!isBooked && !isReserved && isAvailable) {
-            availableSlots++;
-          }
-        });
-      }
-
-      list.push({
-        dateStr: dateStrYMD,
-        label: `${weekdays[d.getDay()]} ${d.getDate()}`,
-        sessionsCount: dayBookingsCount,
-        availableHours: availableSlots * 1.5
-      });
-    }
-    return list;
-  };
-  
-  const upcomingDays = useMemo(
-    () => getUpcomingDaysData(),
-    [currentCoach, bookings, confirmedBookings, availabilityDayKey, reservationCount]
-  );
-
   React.useEffect(() => {
     if (currentCoach) {
       setTrainerOnlineStatus(currentCoach.preferences?.online ? 'online' : 'offline');
