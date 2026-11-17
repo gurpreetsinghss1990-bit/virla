@@ -40,6 +40,12 @@ import { CoachVideoAvatar } from '../../components/CoachVideoAvatar';
 import { BackgroundVideoLoop } from '../../components/BackgroundVideoLoop';
 import { BUNNY_CDN_ASSETS } from '../../services/bunnyCdnService';
 
+// Bundled local assets: required once at module load so the reference is stable
+// and a wrong path fails the build instead of leaving a blank frame at runtime.
+const ATHLETE_HERO_IMAGE = require('../../../assets/images/athlete_hero.webp');
+const SPLASH_ICON = require('../../../assets/images/splash-icon.png');
+const AI_COACH_EMBLEM = require('../../../assets/images/ai-coach-emblem.png');
+
 const WORKOUT_BG_STRENGTH = BUNNY_CDN_ASSETS.WORKOUT_BG_STRENGTH;
 const WORKOUT_BG_YOGA = BUNNY_CDN_ASSETS.WORKOUT_BG_YOGA;
 const WORKOUT_BG_RHYTHM = BUNNY_CDN_ASSETS.WORKOUT_BG_RHYTHM;
@@ -1202,7 +1208,7 @@ export default function HomeScreen() {
           >
             <View className="flex-row items-center">
               <Image
-                source={require('../../../assets/images/splash-icon.png')}
+                source={SPLASH_ICON}
                 style={{
                   width: 24,
                   height: 24,
@@ -1399,10 +1405,11 @@ export default function HomeScreen() {
                 <View className="w-full bg-[#FFF1F1] rounded-[32px] p-6 relative overflow-hidden border border-[#FFE4E6] min-h-[250px]">
                 {/* Athlete Image on the right */}
                 <View className="absolute right-0 top-0 bottom-0 w-[52%] z-0">
-                  <Image 
-                    source={require('../../../assets/images/athlete_hero.webp')} 
-                    className="w-full h-full" 
-                    resizeMode="cover"
+                  <ExpoImage
+                    source={ATHLETE_HERO_IMAGE}
+                    style={{ width: '100%', height: '100%' }}
+                    contentFit="cover"
+                    transition={0}
                   />
                   {/* Blending Mask */}
                   <View style={StyleSheet.absoluteFill}>
@@ -1982,7 +1989,7 @@ export default function HomeScreen() {
 
                     <View className="absolute z-10 w-9 h-9 rounded-full bg-white/10 items-center justify-center border border-white/20">
                       <Image
-                        source={require('../../../assets/images/ai-coach-emblem.png')}
+                        source={AI_COACH_EMBLEM}
                         style={{ width: 22, height: 22 }}
                         resizeMode="contain"
                       />
@@ -1993,7 +2000,7 @@ export default function HomeScreen() {
                   <View className="z-10 gap-4 pr-16">
                     <View className="flex-row items-center gap-1.5 pl-0.5">
                       <Image
-                        source={require('../../../assets/images/ai-coach-emblem.png')}
+                        source={AI_COACH_EMBLEM}
                         style={{ width: 14, height: 14 }}
                         resizeMode="contain"
                       />
