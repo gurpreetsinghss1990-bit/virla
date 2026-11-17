@@ -12,7 +12,7 @@ LANGUAGE sql IMMUTABLE AS $fn$
   SELECT left(
     btrim(
       regexp_replace(
-        regexp_replace(replace(coalesce(v, ''), chr(0), ''), '[[:cntrl:]]', '', 'g'),
+        regexp_replace(coalesce(v, ''), '[[:cntrl:]]', '', 'g'),
         '[ \t]{2,}', ' ', 'g'
       )
     ),
@@ -26,7 +26,7 @@ LANGUAGE sql IMMUTABLE AS $fn$
   SELECT left(
     btrim(
       regexp_replace(
-        replace(replace(coalesce(v, ''), chr(0), ''), chr(13), ''),
+        replace(coalesce(v, ''), chr(13), ''),
         '[ \t]{2,}', ' ', 'g'
       )
     ),

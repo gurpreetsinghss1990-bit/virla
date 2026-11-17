@@ -166,3 +166,18 @@ window. This is enforced in `fulfill_payment_order`, `sync_credit_lots_on_transa
 (migration `20261107080000_credit_validity_6_months.sql`) and mirrored in the pricing
 page copy, `src/store/membershipStore.ts` and `src/app/legal-center.tsx`.
 Lots created before that migration keep the expiry they were granted with.
+
+# SQL HARD RULES
+
+- Never call `chr(0)` (or any NUL literal) in Postgres. `SELECT chr(0)` raises
+  `null character not permitted`, so a trigger that uses it fails every write on
+  its table. Text columns cannot hold U+0000 — there is nothing to strip.
+- A data-cleaning trigger must never block a business write: wrap the body in
+  `EXCEPTION WHEN others THEN RETURN NEW;`.
+- `20261107120000_fix_text_limits_null_char.sql` is the hotfix for the chr(0)
+  bug that broke sign-up, login, profile saves, chat, addresses and support
+  tickets until it is applied to the live database.
+- `20261107130000_text_limits_followup.sql` is the canonical, self-contained
+  version of the text guard and supersedes both of the above. It also clamps
+  only the columns a client actually changed on UPDATE, so an existing value
+  that is longer than the new cap is never truncated behind the user's back.

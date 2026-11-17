@@ -53,3 +53,14 @@ skills-lock.json
 
 
 deploy_out.log
+
+# stray/backup artifacts
+*.bak
+*.dump
+*.orig
+*.rej
+local_dump*.sql
+build_logs*.txt
+decompressed_output*.txt
+diff.txt
+backups/
