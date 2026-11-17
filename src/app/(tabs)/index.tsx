@@ -985,31 +985,6 @@ export default function HomeScreen() {
   const [slideAnim] = useState(() => new Animated.Value(0));
   const [pulseAnim] = useState(() => new Animated.Value(1));
 
-  // AI recommendations array
-  const [recs, setRecs] = useState<{ title: string; desc: string }[]>([]);
-  const [recIdx, setRecIdx] = useState(0);
-
-  useEffect(() => {
-    if (user.id) {
-      setRecs(Database.getAIRecommendations(user.id));
-    } else {
-      setRecs([
-        { title: 'Stretch Today', desc: 'Recovery Day: Release lower back tension with a reset session.' },
-        { title: 'Increase Intensity', desc: 'Optimal Recovery (80%): Great day for a high-intensity Forge Strength.' },
-        { title: 'Try Combat Core', desc: 'Build Cardio: Book a boxing conditioning slot for tomorrow.' },
-        { title: 'Book Next Session', desc: 'Keep the Streak: Schedule your mobility visit now.' }
-      ]);
-    }
-  }, [user.id, bookings]);
-
-  useEffect(() => {
-    if (recs.length === 0) return;
-    const interval = setInterval(() => {
-      setRecIdx((prev) => (prev + 1) % recs.length);
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [recs]);
-
   useEffect(() => {
     slideAnim.setValue(10);
     Animated.timing(slideAnim, {
