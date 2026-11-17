@@ -47,9 +47,11 @@ export const FitnessGoalsModal: React.FC<FitnessGoalsModalProps> = ({
   useEffect(() => {
     if (visible) {
       const storeGoals = useUserProfileStore.getState().selectedGoals;
-      setSelectedGoals(Array.isArray(storeGoals) && storeGoals.length > 0 ? [...storeGoals] : ['Strength']);
+      const initial = Array.isArray(storeGoals) && storeGoals.length > 0 ? storeGoals : ['Strength'];
+      // Only keep goals that are legitimately available (e.g. no 'Post Pregnancy' for non-females)
+      setSelectedGoals(initial.filter((g) => visibleGoals.includes(g)));
     }
-  }, [visible]);
+  }, [visible, visibleGoals]);
 
   const handleToggle = useCallback((goal: string) => {
     setSelectedGoals((prev) =>
@@ -95,29 +97,26 @@ export const FitnessGoalsModal: React.FC<FitnessGoalsModalProps> = ({
 
   return (
     <NativeSheet visible={visible} onClose={onClose}>
-      <View style={{ paddingBottom: safeBottomPadding }} className="w-full px-5 pt-3 pb-3 gap-4">
-        {/* Subtle Pull Indicator Bar */}
-        <View className="w-10 h-1 rounded-full bg-zinc-200 self-center" />
-
-        {/* Header */}
-        <View className="flex-row justify-between items-center pb-2 border-b border-zinc-100">
+      <View style={{ paddingBottom: safeBottomPadding }} className="w-full px-5 pt-4 pb-3 gap-4">
+        {/* Header without drag lid, with clear spacing */}
+        <View className="flex-row justify-between items-start pb-3 border-b border-zinc-100/80">
           <View className="flex-1 pr-3">
             <Text className="text-zinc-900 text-lg font-black tracking-tight">Focus Training Targets</Text>
-            <Text className="text-zinc-500 text-[11px] font-medium mt-0.5 leading-snug">
+            <Text className="text-zinc-500 text-xs font-medium mt-1.5 leading-relaxed">
               Select multiple targets for custom workout drills.
             </Text>
           </View>
           <TouchableOpacity
             onPress={onClose}
             activeOpacity={0.7}
-            className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center border border-zinc-200"
+            className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center border border-zinc-200 mt-0.5"
           >
             <Feather name="x" size={15} color="#101828" />
           </TouchableOpacity>
         </View>
 
         {/* Goals Chips List */}
-        <View className="flex-row flex-wrap gap-x-2 gap-y-1.5 py-1">
+        <View className="flex-row flex-wrap gap-x-2 gap-y-2 py-1">
           {visibleGoals.map((goal) => {
             const isSelected = selectedGoals.includes(goal);
             return (
@@ -132,7 +131,7 @@ export const FitnessGoalsModal: React.FC<FitnessGoalsModalProps> = ({
         </View>
 
         {/* Save Button */}
-        <View className="pt-1">
+        <View className="pt-2">
           <NativePrimaryButton
             label="Save Training Goals"
             onPress={handleSave}

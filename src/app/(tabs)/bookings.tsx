@@ -696,7 +696,12 @@ export default function BookingsScreen() {
 
             {/* Content flows underneath header scrim */}
             <ScrollView 
-              showsVerticalScrollIndicator={false} 
+              showsVerticalScrollIndicator={false}
+              decelerationRate={0.96}
+              bounces={true}
+              alwaysBounceVertical={true}
+              overScrollMode="always"
+              nestedScrollEnabled={true}
               className="flex-1 bg-[#FCF5F5]"
               contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 180 }}
             >
@@ -1284,7 +1289,15 @@ export default function BookingsScreen() {
         <View style={{ flex: 1 }}>
           {/* Scrollable Content flowing underneath floating top bar */}
           <ScrollView 
-            showsVerticalScrollIndicator={false} 
+            showsVerticalScrollIndicator={false}
+            decelerationRate={0.96}
+            bounces={true}
+            alwaysBounceVertical={true}
+            overScrollMode="always"
+            snapToOffsets={[0, 90]}
+            snapToStart={false}
+            snapToEnd={false}
+            nestedScrollEnabled={true}
             className="flex-1 px-4"
             contentContainerStyle={{ 
               paddingTop: insets.top + 60,

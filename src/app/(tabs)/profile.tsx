@@ -318,9 +318,6 @@ export default function ProfileScreen() {
   const [isPersonalInfoExpanded, setIsPersonalInfoExpanded] = useState(false);
 
   const togglePersonalInfoExpansion = useCallback((targetState?: boolean) => {
-    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-      UIManager.setLayoutAnimationEnabledExperimental(true);
-    }
     // Clean, controlled native animation without spring bounce or overshoot jitter
     LayoutAnimation.configureNext({
       duration: 250,
@@ -1478,7 +1475,9 @@ export default function ProfileScreen() {
                 {(() => {
                   const isFemale = (profile.gender || '').trim().toLowerCase() === 'female';
                   const availableGoals = ALL_FITNESS_GOALS.filter((g) => g !== 'Post Pregnancy' || isFemale);
-                  const userSelectedGoals = Array.isArray(profile.selectedGoals) ? profile.selectedGoals : [];
+                  const rawUserGoals = Array.isArray(profile.selectedGoals) ? profile.selectedGoals : [];
+                  // Strictly filter out any gender-mismatched or non-existent goals
+                  const userSelectedGoals = rawUserGoals.filter((g) => availableGoals.includes(g));
 
                   // Show user selected goals first, then remaining available goals up to 6 total chips
                   const unselectedGoals = availableGoals.filter((g) => !userSelectedGoals.includes(g));

@@ -29,6 +29,14 @@ import { parseBookingAddress } from '../utils/LocationParser';
 import { calculateDistanceKm } from '../utils/distance';
 import { cleanOtp } from '../utils/inputSafety';
 
+let useMaterialColorsSafe: any = null;
+if (Platform.OS === 'android') {
+  try {
+    const compose = require('@expo/ui/jetpack-compose');
+    useMaterialColorsSafe = compose.useMaterialColors;
+  } catch {}
+}
+
 function formatToIndianDate(dateStr: string): string {
   return formatToDDMMYYYY(dateStr);
 }
@@ -563,6 +571,20 @@ export default function SessionDetailScreen() {
 
   const [otpInput, setOtpInput] = useState('');
 
+  let materialColors: any = null;
+  if (Platform.OS === 'android' && useMaterialColorsSafe) {
+    try {
+      materialColors = useMaterialColorsSafe();
+    } catch {}
+  }
+
+  const backgroundColor = useMemo(() => {
+    if (Platform.OS === 'android' && materialColors?.background) {
+      return materialColors.background;
+    }
+    return '#FCF5F5';
+  }, [materialColors]);
+
   // Rating review feedback states
   const [overallRating, setOverallRating] = useState(5);
   const trainerRating = 5;
@@ -716,7 +738,7 @@ export default function SessionDetailScreen() {
 
   if (!booking) {
     return (
-      <View style={{ flex: 1, backgroundColor: 'white', paddingTop: insets.top }} className="justify-center items-center">
+      <View style={{ flex: 1, backgroundColor, paddingTop: insets.top }} className="justify-center items-center">
         <Text className="text-zinc-400 font-semibold">No booking details found.</Text>
         <TouchableOpacity onPress={handleSafeBack} className="mt-4 bg-zinc-900 px-6 py-2 rounded-full">
           <Text className="text-white font-bold text-xs">Go Back</Text>
@@ -944,7 +966,7 @@ export default function SessionDetailScreen() {
     const customerGender = getClientGender(booking);
 
     return (
-      <View style={{ flex: 1, backgroundColor: '#F8F9FC', paddingTop: insets.top }}>
+      <View style={{ flex: 1, backgroundColor, paddingTop: insets.top }}>
         {/* Header */}
         <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
           <TouchableOpacity onPress={handleSafeBack} className="w-8 h-8 items-center justify-center">
@@ -1288,7 +1310,7 @@ export default function SessionDetailScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8F9FC' }}>
+    <View style={{ flex: 1, backgroundColor }}>
       <StatusBar style="dark" />
       {/* Header extending to the very top */}
       <View

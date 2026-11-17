@@ -1741,6 +1741,13 @@ export default function HomeScreen() {
                     <ScrollView 
                       horizontal 
                       showsHorizontalScrollIndicator={false}
+                      decelerationRate="fast"
+                      snapToInterval={124}
+                      snapToAlignment="start"
+                      overScrollMode="always"
+                      bounces={true}
+                      alwaysBounceHorizontal={true}
+                      nestedScrollEnabled={true}
                       contentContainerStyle={{ paddingHorizontal: 10, gap: 16 }}
                     >
                       {TOP_PERFORMING_TRAINERS.map((trainer) => (
