@@ -177,3 +177,7 @@ Lots created before that migration keep the expiry they were granted with.
 - `20261107120000_fix_text_limits_null_char.sql` is the hotfix for the chr(0)
   bug that broke sign-up, login, profile saves, chat, addresses and support
   tickets until it is applied to the live database.
+- `20261107130000_text_limits_followup.sql` is the canonical, self-contained
+  version of the text guard and supersedes both of the above. It also clamps
+  only the columns a client actually changed on UPDATE, so an existing value
+  that is longer than the new cap is never truncated behind the user's back.
