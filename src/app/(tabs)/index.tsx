@@ -440,6 +440,11 @@ export default function HomeScreen() {
     }
     try {
       const { data, error } = await supabase.from('users').select('role').eq('id', userId).single();
+      if (error) {
+        console.error('Admin role check failed:', error.message);
+        Alert.alert('Error', 'Unable to verify administrative authorization.');
+        return;
+      }
       if (data && data.role === 'admin') {
         navigateSafely('/admin-panel');
       } else {
@@ -586,18 +591,18 @@ export default function HomeScreen() {
     });
   };
 
-  const trainerBookings = bookings.filter(b => 
+  const trainerBookings = useMemo(() => bookings.filter(b =>
     (b.trainerId === user.id || b.trainerName === user.name || (currentCoach && b.trainerId === currentCoach.id))
-  );
+  ), [bookings, user.id, user.name, currentCoach]);
 
-  const confirmedBookings = trainerBookings.filter(b => 
+  const confirmedBookings = useMemo(() => trainerBookings.filter(b =>
     b.status === 'upcoming' && 
     b.timelineStatus !== 'booked' &&
     b.timelineStatus !== 'trainer_assigned' &&
     b.timelineStatus !== 'session_closed'
-  );
+  ), [trainerBookings]);
 
-  const sortedConfirmed = sortBookingsChronologically(confirmedBookings);
+  const sortedConfirmed = useMemo(() => sortBookingsChronologically(confirmedBookings), [confirmedBookings]);
   const serverNow = getCurrentServerTime();
   
   const activeSession = sortedConfirmed.find(b => 
@@ -725,7 +730,12 @@ export default function HomeScreen() {
     };
   };
 
-  const todayAvail = getTodayAvailability();
+  const availabilityDayKey = new Date().toDateString();
+  const reservationCount = (Database.schema.slot_reservations || []).length;
+  const todayAvail = useMemo(
+    () => getTodayAvailability(),
+    [currentCoach, bookings, availabilityDayKey, reservationCount]
+  );
   const formattedBookedHours = todayAvail.booked.toFixed(1).replace('.0', '');
   const formattedAvailableHours = todayAvail.available.toFixed(1).replace('.0', '');
 
@@ -783,7 +793,10 @@ export default function HomeScreen() {
     return list;
   };
   
-  const upcomingDays = getUpcomingDaysData();
+  const upcomingDays = useMemo(
+    () => getUpcomingDaysData(),
+    [currentCoach, bookings, confirmedBookings, availabilityDayKey, reservationCount]
+  );
 
   React.useEffect(() => {
     if (currentCoach) {
@@ -809,7 +822,7 @@ export default function HomeScreen() {
 
     // Immediately revoke pending requests assigned to this coach when going offline
     if (!isNextOnline) {
-      const pendingRequests = bookings.filter(b => 
+      const pendingRequests = bookings.filter(b =>
         (b.trainerId === currentCoach.id || b.trainerName === currentCoach.name) && 
         b.timelineStatus === 'booked'
       );
@@ -1048,12 +1061,15 @@ export default function HomeScreen() {
       useNativeDriver: true,
     }).start();
 
-    Animated.loop(
+    const pulseLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1.03, duration: 1500, useNativeDriver: true }),
         Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: true })
       ])
-    ).start();
+    );
+    pulseLoop.start();
+
+    return () => pulseLoop.stop();
   }, [role, slideAnim, pulseAnim]);
 
   useEffect(() => {
@@ -2279,7 +2295,7 @@ export default function HomeScreen() {
 
               {/* Priority 0: Auto-Accepted Pending Acknowledgements */}
               {(() => {
-                const pendingAcks = bookings.filter(b => 
+                const pendingAcks = bookings.filter(b =>
                   b.timelineStatus === 'trainer_accepted' && 
                   b.trainerAcknowledgement === 'pending' &&
                   (b.trainerId === user.id || b.trainerName === user.name || (currentCoach && b.trainerId === currentCoach.id))
@@ -2306,7 +2322,7 @@ export default function HomeScreen() {
 
               {/* Priority 1: New Requests */}
               {(() => {
-                const requests = bookings.filter(b => 
+                const requests = bookings.filter(b =>
                   b.timelineStatus === 'booked' && 
                   (b.trainerId === user.id || b.trainerName === user.name || (currentCoach && b.trainerId === currentCoach.id))
                 );
