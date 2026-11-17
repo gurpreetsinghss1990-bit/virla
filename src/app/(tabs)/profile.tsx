@@ -112,10 +112,13 @@ export default function ProfileScreen() {
     }
   }, [role]);
 
+  const roleChangeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleRoleChange = useCallback((newRole: 'customer' | 'trainer' | 'admin') => {
     setActiveRole(newRole);
     InteractionManager.runAfterInteractions(() => {
-      setTimeout(() => {
+      if (roleChangeTimerRef.current) clearTimeout(roleChangeTimerRef.current);
+      roleChangeTimerRef.current = setTimeout(() => {
         setRole(newRole);
       }, 100);
     });
@@ -141,14 +144,23 @@ export default function ProfileScreen() {
 
   // Navigation Throttle to prevent duplicate screen pushes on double tap
   const isNavigatingRef = useRef(false);
+  const navThrottleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigateThrottled = useCallback((path: string) => {
     if (isNavigatingRef.current) return;
     isNavigatingRef.current = true;
     router.push(path as any);
-    setTimeout(() => {
+    if (navThrottleTimerRef.current) clearTimeout(navThrottleTimerRef.current);
+    navThrottleTimerRef.current = setTimeout(() => {
       isNavigatingRef.current = false;
     }, 1000);
   }, [router]);
+
+  useEffect(() => {
+    return () => {
+      if (roleChangeTimerRef.current) clearTimeout(roleChangeTimerRef.current);
+      if (navThrottleTimerRef.current) clearTimeout(navThrottleTimerRef.current);
+    };
+  }, []);
 
   const checkApplicationStatus = async () => {
     const userPhone = profile.mobile;
@@ -168,9 +180,10 @@ export default function ProfileScreen() {
   };
 
   useEffect(() => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       checkApplicationStatus();
     }, 0);
+    return () => clearTimeout(timer);
   }, [profile.mobile]);
 
   const shimmerAnim = useMemo(() => new Animated.Value(0.3), []);
@@ -666,8 +679,9 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       // Run all sync operations asynchronously after tab transition so switching tabs is instant
+      let focusTimer: ReturnType<typeof setTimeout> | null = null;
       const task = InteractionManager.runAfterInteractions(() => {
-        setTimeout(() => {
+        focusTimer = setTimeout(() => {
           const storedUser = useUserStore.getState().user;
           const isLoggedIn = useUserStore.getState().isLoggedIn;
           if (isLoggedIn && storedUser && storedUser.id) {
@@ -709,6 +723,7 @@ export default function ProfileScreen() {
 
       return () => {
         task.cancel();
+        if (focusTimer) clearTimeout(focusTimer);
       };
     }, [user.name, user.id])
   );
@@ -722,20 +737,20 @@ export default function ProfileScreen() {
   }, []);
 
   useEffect(() => {
-    if (showAddressForm) {
-      setTimeout(() => {
-        setLocationSessionToken(Math.random().toString(36).substring(2, 15) + Date.now().toString());
-      }, 0);
-    }
+    if (!showAddressForm) return;
+    const timer = setTimeout(() => {
+      setLocationSessionToken(Math.random().toString(36).substring(2, 15) + Date.now().toString());
+    }, 0);
+    return () => clearTimeout(timer);
   }, [showAddressForm]);
 
   // Places search autocomplete
   useEffect(() => {
     if (addressInput.trim().length < 3) {
-      setTimeout(() => {
+      const clearTimer = setTimeout(() => {
         setSearchSuggestions([]);
       }, 0);
-      return;
+      return () => clearTimeout(clearTimer);
     }
     let active = true;
     const controller = new AbortController();

@@ -44,20 +44,20 @@ export default function AddressManagementScreen() {
 
   // Generate session token on form open
   useEffect(() => {
-    if (showForm) {
-      setTimeout(() => {
-        setSessionToken(Math.random().toString(36).substring(2, 15) + Date.now().toString());
-      }, 0);
-    }
+    if (!showForm) return;
+    const timer = setTimeout(() => {
+      setSessionToken(Math.random().toString(36).substring(2, 15) + Date.now().toString());
+    }, 0);
+    return () => clearTimeout(timer);
   }, [showForm]);
 
   // Debounced search query autocomplete
   useEffect(() => {
     if (searchQuery.trim().length < 3) {
-      setTimeout(() => {
+      const clearTimer = setTimeout(() => {
         setSuggestions([]);
       }, 0);
-      return;
+      return () => clearTimeout(clearTimer);
     }
     let active = true;
     const controller = new AbortController();

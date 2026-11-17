@@ -417,14 +417,22 @@ export default function HomeScreen() {
   const router = useRouter();
   const isNavigatingRef = useRef(false);
 
+  const navThrottleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigateSafely = useCallback((route: Href) => {
     if (isNavigatingRef.current) return;
     isNavigatingRef.current = true;
     router.push(route);
-    setTimeout(() => {
+    if (navThrottleTimerRef.current) clearTimeout(navThrottleTimerRef.current);
+    navThrottleTimerRef.current = setTimeout(() => {
       isNavigatingRef.current = false;
     }, 700);
   }, [router]);
+
+  useEffect(() => {
+    return () => {
+      if (navThrottleTimerRef.current) clearTimeout(navThrottleTimerRef.current);
+    };
+  }, []);
 
   const { bookings, acceptBooking, updateTimelineStatus, reassignTrainer } = useBookingStore();
   const { membership } = useMembershipStore();

@@ -227,8 +227,12 @@ export default function SessionDetailScreen() {
     if (params.openMap !== 'true') return;
     const b = useBookingStore.getState().bookings.find(x => x.id === bookingId);
     if (!b) return;
+    let openMapTimer: ReturnType<typeof setTimeout> | null = null;
     if (SessionEngine.isTravelWindowOpen(b)) {
-      setTimeout(() => setIsNavigationMapVisible(true), 0);
+      openMapTimer = setTimeout(() => setIsNavigationMapVisible(true), 0);
+      return () => {
+        if (openMapTimer) clearTimeout(openMapTimer);
+      };
     } else {
       Alert.alert(
         'Travel Window Locked ⚠️',
@@ -297,6 +301,7 @@ export default function SessionDetailScreen() {
     if (!bookingId) return;
 
     let unsubscribe: (() => void) | null = null;
+    let resetCoordsTimer: ReturnType<typeof setTimeout> | null = null;
 
     if (role === 'trainer') {
       if (currentStatus === 'trainer_travelling') {
@@ -319,7 +324,7 @@ export default function SessionDetailScreen() {
         }
       );
     } else {
-      setTimeout(() => {
+      resetCoordsTimer = setTimeout(() => {
         setLiveTrainerCoords(null);
         setIsLiveConnectionStale(false);
         setRouteMetrics(null);
@@ -327,6 +332,7 @@ export default function SessionDetailScreen() {
     }
 
     return () => {
+      if (resetCoordsTimer) clearTimeout(resetCoordsTimer);
       if (unsubscribe) {
         unsubscribe();
       }
@@ -444,8 +450,9 @@ export default function SessionDetailScreen() {
       return Math.max(0, 600 - elapsed);
     };
 
+    let initialTimeLeftTimer: ReturnType<typeof setTimeout> | null = null;
     if (role === 'trainer' && currentStatus === 'booked') {
-      setTimeout(() => setTimeLeft(calculateTimeLeft()), 0);
+      initialTimeLeftTimer = setTimeout(() => setTimeLeft(calculateTimeLeft()), 0);
     }
 
     const updateTimers = () => {
@@ -504,11 +511,16 @@ export default function SessionDetailScreen() {
       currentStatus === 'workout_started';
 
     if (!needsSecondInterval) {
-      return;
+      return () => {
+        if (initialTimeLeftTimer) clearTimeout(initialTimeLeftTimer);
+      };
     }
 
     const interval = setInterval(updateTimers, 1000);
-    return () => clearInterval(interval);
+    return () => {
+      if (initialTimeLeftTimer) clearTimeout(initialTimeLeftTimer);
+      clearInterval(interval);
+    };
   }, [booking?.id, booking?.createdAt, currentStatus, role]);
 
   const getSessionStartDate = (): Date => {
