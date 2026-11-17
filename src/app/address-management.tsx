@@ -7,7 +7,7 @@ import { useUserProfileStore, SavedAddress } from '../store/userProfileStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { ScreenHeader } from '../components/ScreenHeader';
 import * as Location from 'expo-location';
-import { fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords, AutocompleteSuggestion, getCurrentLocationCoords } from '../utils/distance';
+import { fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, isValidServiceCoord, reverseGeocodeCoords, AutocompleteSuggestion, getCurrentLocationCoords } from '../utils/distance';
 import { useCoachStore } from '../store/coachStore';
 import { isAreaServedByAnyTrainer } from '../utils/serviceArea';
 import { digitsOnly } from '../utils/inputSafety';
@@ -120,6 +120,9 @@ export default function AddressManagementScreen() {
     setSuggestions([]);
     try {
       const details = await fetchGooglePlaceDetails(suggestion.placeId);
+      if (!isValidServiceCoord(details.latitude, details.longitude)) {
+        throw new Error('Is address ke sahi coordinates nahi mile. Dobara try karein.');
+      }
       setLat(details.latitude);
       setLng(details.longitude);
       setPlaceId(suggestion.placeId);

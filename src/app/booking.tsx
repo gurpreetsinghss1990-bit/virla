@@ -8,7 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
 import { useMembershipStore } from '../store/membershipStore';
-import { calculateDistanceKm, trainerServiceRadiusKm, fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords, AutocompleteSuggestion, getCurrentLocationCoords, searchNearbyPlaces } from '../utils/distance';
+import { calculateDistanceKm, trainerServiceRadiusKm, fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, isValidServiceCoord, reverseGeocodeCoords, AutocompleteSuggestion, getCurrentLocationCoords, searchNearbyPlaces } from '../utils/distance';
 import { normalizeDate, canonicalizeTimeRange, formatToDDMMYYYY } from '../utils/date';
 import * as Location from 'expo-location';
 import { useAddressStore } from '../store/addressStore';
@@ -1432,6 +1432,9 @@ export default function BookingScreen() {
     setShowSearchDropdown(false);
     try {
       const details = await fetchGooglePlaceDetails(suggestion.placeId);
+      if (!isValidServiceCoord(details.latitude, details.longitude)) {
+        throw new Error('Is address ke sahi coordinates nahi mile. Map se pin karein.');
+      }
       
       // Increment request counter and clear timers to prevent map pan geocodes from overwriting
       geocodeRequestCounterRef.current++;

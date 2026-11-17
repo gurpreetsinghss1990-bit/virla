@@ -40,6 +40,25 @@ export function trainerServiceRadiusKm(radiusKm?: number | null): number {
   return Math.min(value, SERVICE_AREA_MAX_KM);
 }
 
+const INDIA_BOUNDS = { minLat: 6, maxLat: 38, minLng: 68, maxLng: 98 };
+
+/**
+ * Guard for coordinates that reach the DB. A stale/hardcoded city centre or a
+ * failed geocode must never be stored, because the 5 km service-area check and
+ * trainer matching silently break on wrong coordinates.
+ */
+export function isValidServiceCoord(lat: unknown, lng: unknown): boolean {
+  if (typeof lat !== 'number' || typeof lng !== 'number') return false;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  if (lat === 0 && lng === 0) return false;
+  return (
+    lat >= INDIA_BOUNDS.minLat &&
+    lat <= INDIA_BOUNDS.maxLat &&
+    lng >= INDIA_BOUNDS.minLng &&
+    lng <= INDIA_BOUNDS.maxLng
+  );
+}
+
 export interface AutocompleteSuggestion {
   placeId: string;
   description: string;

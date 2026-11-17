@@ -17,7 +17,7 @@ import { useWalletStore } from '../../store/walletStore';
 import { useUserProfileStore } from '../../store/userProfileStore';
 import { Database, TrainerApplication } from '../../database/Database';
 import { syncAllDomainStores } from '../../store/syncAllStores';
-import { AutocompleteSuggestion, fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, reverseGeocodeCoords, trainerServiceRadiusKm } from '../../utils/distance';
+import { AutocompleteSuggestion, fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, isValidServiceCoord, reverseGeocodeCoords, trainerServiceRadiusKm } from '../../utils/distance';
 import { LuxuryCard } from '../../components/LuxuryCard';
 import { SignOutConfirmationModal } from '../../components/SignOutConfirmationModal';
 import * as Location from 'expo-location';
@@ -783,6 +783,9 @@ export default function ProfileScreen() {
     setIsSearchingLocation(true);
     try {
       const details = await fetchGooglePlaceDetails(item.placeId);
+      if (!isValidServiceCoord(details.latitude, details.longitude)) {
+        throw new Error('Is address ke sahi coordinates nahi mile. Dobara try karein.');
+      }
       setSelectedLocation({
         address: details.address || item.description,
         lat: details.latitude,
