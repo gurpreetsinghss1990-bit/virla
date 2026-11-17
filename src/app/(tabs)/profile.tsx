@@ -166,8 +166,7 @@ export default function ProfileScreen() {
     const userPhone = profile.mobile;
     if (userPhone) {
       try {
-        const apps = await Database.fetchAllTrainerApplications();
-        const userApp = apps.find(a => a.phone === userPhone);
+        const userApp = await Database.fetchTrainerApplicationByPhone(userPhone);
         if (userApp) {
           setHasApplied(true);
           setUserApplication(userApp);
@@ -667,6 +666,8 @@ export default function ProfileScreen() {
   const [isSubmittingKit, setIsSubmittingKit] = useState(false);
   const [showAllKits, setShowAllKits] = useState(false);
 
+  const profileSyncInFlightRef = useRef(false);
+
   // Reload disputes and kit requests on user load
   const reloadDynamicLists = async () => {
     if (!coach) return;
@@ -701,6 +702,8 @@ export default function ProfileScreen() {
           }
 
           if (!Database.getIsLoaded()) {
+            if (profileSyncInFlightRef.current) return;
+            profileSyncInFlightRef.current = true;
             Database.load().then(async () => {
               const currentUid = storedUser?.id || Database.getCurrentUserId();
               if (currentUid) {
@@ -718,6 +721,8 @@ export default function ProfileScreen() {
               }
             }).catch((err) => {
               console.warn('[Profile Tab] Background database sync warning:', err);
+            }).finally(() => {
+              profileSyncInFlightRef.current = false;
             });
           }
         }, 0);
