@@ -4,7 +4,7 @@ import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Animated, Image, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AddPartnerModal } from '../components/AddPartnerModal';
 import { PostSessionHealthReportModal } from '../components/PostSessionHealthReportModal';
@@ -24,7 +24,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { useUserProfileStore } from '../store/userProfileStore';
 import { useUserStore } from '../store/userStore';
 import { formatToDDMMYYYY, getBookingISTDateRange, getDisplayWorkoutTitle } from '../utils/date';
-import { resolveAvatarSource } from '../components/AvatarImage';
+import { AvatarImage } from '../components/AvatarImage';
 import { parseBookingAddress } from '../utils/LocationParser';
 import { calculateDistanceKm } from '../utils/distance';
 import { cleanOtp } from '../utils/inputSafety';
@@ -1850,7 +1850,7 @@ export default function SessionDetailScreen() {
                 }}
               >
                 <View className="flex-row gap-4 items-start">
-                  <Image source={resolveAvatarSource(booking.trainerPhoto)} className="w-14 h-14 rounded-full border border-zinc-200" />
+                  <AvatarImage uri={booking.trainerPhoto} className="w-14 h-14 rounded-full border border-zinc-200" />
                   <View className="flex-1">
                     <View className="flex-row items-center gap-1.5 flex-wrap">
                       <Text className="text-zinc-950 text-base font-extrabold">Coach {booking.trainerName}</Text>

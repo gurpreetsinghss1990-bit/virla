@@ -1,7 +1,8 @@
 import { Loading } from '../components/Loading';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Platform, Image, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Platform, TextInput } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -14,16 +15,8 @@ import { assertUploadableFile } from '../utils/fileType';
 import { trainerServiceRadiusKm } from '../utils/distance';
 import { useBookingStore } from '../store/bookingStore';
 import { SupportChatModal } from '../components/SupportChatModal';
-import { resolveAvatarSource } from '../components/AvatarImage';
+import { AvatarImage } from '../components/AvatarImage';
 import { NativeSheet } from '../components/NativeSheet';
-
-const DEFAULT_FALLBACK_AVATAR = '';
-const getSafeAvatarUri = (uri?: string | null) => {
-  if (typeof uri === 'string' && uri.trim().length > 0) {
-    return uri.trim();
-  }
-  return DEFAULT_FALLBACK_AVATAR;
-};
 
 export default function AdminPanelScreen() {
   const router = useRouter();
@@ -748,7 +741,7 @@ export default function AdminPanelScreen() {
                         <LuxuryCard key={app.id} className="p-5 gap-4" interactive={false}>
                           <View className="flex-row justify-between items-start">
                             <View className="flex-row items-center gap-3 flex-1 pr-3">
-                              <Image source={{ uri: getSafeAvatarUri(app.avatar) }} className="w-10 h-10 rounded-full border border-zinc-200" />
+                              <AvatarImage uri={app.avatar} className="w-10 h-10 rounded-full border border-zinc-200" />
                               <View className="flex-1">
                                 <Text className="text-zinc-950 text-xs font-black leading-tight">{app.fullName}</Text>
                                 <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{app.phone} • {app.email}</Text>
@@ -1203,9 +1196,10 @@ export default function AdminPanelScreen() {
                         {/* Header Row: Trainer Info & Status Badge */}
                         <View className="flex-row justify-between items-start">
                           <View className="flex-row items-center gap-3 flex-1 pr-3">
-                            <Image 
-                              source={resolveAvatarSource(coach.photo, coach.gender)} 
-                              className="w-11 h-11 rounded-full border border-zinc-200" 
+                            <AvatarImage
+                              uri={coach.photo}
+                              gender={coach.gender}
+                              className="w-11 h-11 rounded-full border border-zinc-200"
                             />
                             <View className="flex-1">
                               <Text className="text-zinc-950 text-sm font-black tracking-tight leading-tight">{coach.name}</Text>
@@ -1747,7 +1741,7 @@ export default function AdminPanelScreen() {
                         {liveSessions.slice(0, sectionLimits.liveOngoing || 7).map((b) => (
                           <LuxuryCard key={b.id} className="p-4 gap-3.5" interactive={false}>
                             <View className="flex-row items-center gap-3">
-                              <Image source={{ uri: getSafeAvatarUri(b.trainerPhoto) }} className="w-10 h-10 rounded-full" />
+                              <AvatarImage uri={b.trainerPhoto} className="w-10 h-10 rounded-full" />
                               <View className="flex-1">
                                 <Text className="text-zinc-950 text-xs font-black">Coach {b.trainerName} ↔ {b.clientName || 'Client'}</Text>
                                 <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{b.workoutTitle} • {formatToDDMMYYYY(b.date)} ({b.time})</Text>
@@ -1839,7 +1833,7 @@ export default function AdminPanelScreen() {
                         {missedOrEndedSessions.slice(0, sectionLimits.historyAudit || 7).map((b) => (
                           <LuxuryCard key={b.id} className="p-4 gap-3.5" interactive={false}>
                             <View className="flex-row items-center gap-3">
-                              <Image source={{ uri: getSafeAvatarUri(b.trainerPhoto) }} className="w-10 h-10 rounded-full" />
+                              <AvatarImage uri={b.trainerPhoto} className="w-10 h-10 rounded-full" />
                               <View className="flex-1">
                                 <Text className="text-zinc-950 text-xs font-black">Coach {b.trainerName} ↔ {b.clientName || 'Client'}</Text>
                                 <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{b.workoutTitle} • {formatToDDMMYYYY(b.date)} ({b.time})</Text>
@@ -2736,10 +2730,11 @@ export default function AdminPanelScreen() {
                       </View>
                     ) : interviewIdDocUri ? (
                       <View className="items-center gap-2">
-                        <Image
+                        <ExpoImage
                           source={{ uri: interviewIdDocUri }}
                           style={{ width: '100%', height: 140, borderRadius: 12, backgroundColor: '#E4E4E7' }}
-                          resizeMode="cover"
+                          contentFit="cover"
+                          cachePolicy="memory-disk"
                         />
                         <Text className="text-emerald-700 text-[10px] font-black uppercase">✓ Document Captured</Text>
                       </View>
@@ -2779,10 +2774,9 @@ export default function AdminPanelScreen() {
                   <View className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-xl gap-2.5">
                     {interviewProfilePicUri ? (
                       <View className="items-center gap-2">
-                        <Image
-                          source={{ uri: interviewProfilePicUri }}
+                        <AvatarImage
+                          uri={interviewProfilePicUri}
                           style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: '#E4E4E7' }}
-                          resizeMode="cover"
                         />
                         <Text className="text-emerald-700 text-[10px] font-black uppercase">✓ Photo Captured</Text>
                       </View>

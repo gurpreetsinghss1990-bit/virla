@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { Workout } from '../types';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -25,10 +26,12 @@ export function WorkoutDetailCard({ workout }: WorkoutDetailCardProps) {
     <ScrollView showsVerticalScrollIndicator={false} className="flex-1 bg-white">
       {/* 1. Large Hero Image with Accent Badges */}
       <View className="relative w-full aspect-[16/11]">
-        <Image
+        <ExpoImage
           source={{ uri: workout.heroImage || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80' }}
           className="w-full h-full"
-          resizeMode="cover"
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={150}
         />
         
         {/* Soft dark vignette gradient overlay */}

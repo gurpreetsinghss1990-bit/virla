@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Alert, Animated, KeyboardAvoidingView, Platform, Keyboard, Share, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Animated, KeyboardAvoidingView, Platform, Keyboard, Share, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
-import { resolveAvatarSource } from '../components/AvatarImage';
+import { AvatarImage } from '../components/AvatarImage';
 import { useNotificationStore } from '../store/notificationStore';
 import { useWalletStore } from '../store/walletStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -441,8 +441,8 @@ export default function CommunicationScreen() {
 
             {/* Avatar & Title (no presence dot — Live is text-gated, not faked) */}
             <View className="flex-row items-center gap-2.5 flex-1">
-              <Image
-                source={resolveAvatarSource(coachAvatar)}
+              <AvatarImage
+                uri={coachAvatar}
                 style={{ width: 38, height: 38, borderRadius: 19 }}
                 className="bg-[#EFECE6] border border-[#E5E0D8]"
               />

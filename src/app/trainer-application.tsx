@@ -1,6 +1,7 @@
 import { NativeSwitch } from '../components/NativeSwitch';
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, StyleSheet, Platform, KeyboardAvoidingView, NativeModules, Image } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, StyleSheet, Platform, KeyboardAvoidingView, NativeModules } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -2761,7 +2762,7 @@ export default function TrainerApplicationScreen() {
             
             <View className="h-[250px] bg-zinc-50 border border-zinc-200 rounded-xl overflow-hidden justify-center items-center">
               {previewType === 'image' ? (
-                <Image source={{ uri: previewUri }} style={{ width: '100%', height: '100%', resizeMode: 'contain' }} />
+                <ExpoImage source={{ uri: previewUri }} style={{ width: '100%', height: '100%' }} contentFit="contain" cachePolicy="memory-disk" />
               ) : (
                 <View className="items-center justify-center gap-2">
                   <Feather name="file-text" size={48} color="#E11D48" />

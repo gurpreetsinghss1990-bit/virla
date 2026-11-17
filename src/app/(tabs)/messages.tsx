@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, TextInput, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBookingStore } from '../../store/bookingStore';
-import { resolveAvatarSource } from '../../components/AvatarImage';
+import { AvatarImage } from '../../components/AvatarImage';
 import { useUserStore } from '../../store/userStore';
 import { useChatStore } from '../../store/chatStore';
 import { Database } from '../../database/Database';
@@ -354,8 +354,8 @@ export default function MessagesScreen() {
                       </View>
                     ) : (
                       <>
-                        <Image
-                          source={resolveAvatarSource(chat.avatar)}
+                        <AvatarImage
+                          uri={chat.avatar}
                           className="rounded-full bg-zinc-100"
                           style={{ width: 50, height: 50 }}
                         />

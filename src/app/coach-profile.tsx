@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCoachStore } from '../store/coachStore';
 import { Ionicons } from '@expo/vector-icons';
-import { resolveAvatarSource } from '../components/AvatarImage';
+import { AvatarImage } from '../components/AvatarImage';
 
 export default function CoachProfileScreen() {
   const router = useRouter();
@@ -65,10 +65,13 @@ export default function CoachProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
         {/* Large Profile Image */}
         <View className="w-full aspect-[16/12] relative bg-zinc-100">
-          <Image
-            source={resolveAvatarSource(coach.photo, coach.gender)}
+          <AvatarImage
+            uri={coach.photo}
+            gender={coach.gender}
             className="w-full h-full"
-            resizeMode="cover"
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={0}
           />
           {coach.verifiedBadge && (
             <View className="absolute top-4 right-4 bg-indigo-600 px-3.5 py-1.5 rounded-full flex-row items-center gap-1 shadow-sm">

@@ -1,7 +1,8 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { Loading } from '../components/Loading';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Image, Animated, Modal, KeyboardAvoidingView, Platform, Share, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Animated, Modal, KeyboardAvoidingView, Platform, Share, StyleSheet, Dimensions } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -22,7 +23,7 @@ import Svg, { Circle, Line, Defs, LinearGradient, Stop, Rect } from 'react-nativ
 import { AssignmentEngine } from '../services/AssignmentEngine';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
 import { WORKOUT_CATEGORY_MAPPING, getCategoryFromTitle } from '../config/WorkoutMapping';
-import { resolveAvatarSource } from '../components/AvatarImage';
+import { AvatarImage } from '../components/AvatarImage';
 import { NativeSheet } from '../components/NativeSheet';
 
 // Error boundary to prevent MapView crash if native Google Maps API Key is uninitialized on older client builds
@@ -2582,7 +2583,6 @@ export default function BookingScreen() {
                             {favoriteCoaches.map((coach) => {
                               const isSelected = selectedTrainerId === coach.id;
                               // Image source matching trainer's own profile page (handles master trainer profile image correctly)
-                              const imageSource = resolveAvatarSource(coach.photo, coach.gender);
 
                               return (
                                 <TouchableOpacity
@@ -2611,10 +2611,12 @@ export default function BookingScreen() {
                                       elevation: isSelected ? 3 : 1,
                                     }}
                                   >
-                                    <Image 
-                                      source={imageSource} 
-                                      className="w-14 h-14 rounded-full" 
-                                      resizeMode="cover"
+                                    <AvatarImage
+                                      uri={coach.photo}
+                                      gender={coach.gender}
+                                      className="w-14 h-14 rounded-full"
+                                      contentFit="cover"
+                                      cachePolicy="memory-disk"
                                     />
                                     {isSelected && (
                                       <View className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-[#E11D48] items-center justify-center border-2 border-white">
@@ -4680,9 +4682,11 @@ export default function BookingScreen() {
 
                     {/* Workout Info: Thumbnail, Title, Solo Badge */}
                     <View className="flex-row gap-4 items-center mt-1">
-                      <Image 
-                        source={{ uri: getWorkoutImage(selectedExperience?.id || 'exp-strength') }} 
-                        className="w-20 h-20 rounded-[20px] bg-zinc-50 border border-zinc-100" 
+                      <ExpoImage
+                        source={{ uri: getWorkoutImage(selectedExperience?.id || 'exp-strength') }}
+                        className="w-20 h-20 rounded-[20px] bg-zinc-50 border border-zinc-100"
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
                       />
                       <View className="flex-1 gap-1.5">
                         <Text className="text-[#101828] text-base font-bold tracking-tight">{selectedExperience?.title || 'Workout Session'}</Text>
