@@ -1975,7 +1975,11 @@ class DatabaseClient {
           console.warn(`[MassAssignmentGuard] Ignoring non-writable user column: ${snakeKey}`);
           continue;
         }
-        updateFields[snakeKey] = pgUser[snakeKey];
+        let val = pgUser[snakeKey];
+        if (typeof val === 'string') {
+          val = val.replace(/\0/g, '').trim();
+        }
+        updateFields[snakeKey] = val;
       }
       if (Object.keys(updateFields).length === 0) {
         this.save();
@@ -2010,7 +2014,11 @@ class DatabaseClient {
           console.warn(`[MassAssignmentGuard] Ignoring non-writable profile column: ${snakeKey}`);
           continue;
         }
-        updateFields[snakeKey] = pgProfile[snakeKey];
+        let val = pgProfile[snakeKey];
+        if (typeof val === 'string') {
+          val = val.replace(/\0/g, '').trim();
+        }
+        updateFields[snakeKey] = val;
       }
       if (Object.keys(updateFields).length === 0) {
         this.save();

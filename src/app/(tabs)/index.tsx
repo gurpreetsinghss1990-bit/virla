@@ -28,6 +28,7 @@ import { useToastStore } from '../../store/toastStore';
 import { supabase } from '../../database/supabaseClient';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { NativeProgressBar } from '../../components/NativeProgressBar';
+import { NativeOverviewCard } from '../../components/NativeOverviewCard';
 import { resolveAvatarSource } from '../../components/AvatarImage';
 import { useAIWellnessStore } from '../../store/aiWellnessStore';
 import { SessionEngine } from '../../services/SessionEngine';
@@ -1842,16 +1843,9 @@ export default function HomeScreen() {
 
                 <View className="flex-row flex-wrap justify-between gap-y-4">
                   {/* Calories Widget */}
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <NativeOverviewCard
+                    backgroundColor="#FFF5F5"
                     onPress={handleLogCalories}
-                    className="w-[47%] h-[142px] p-4 rounded-2xl justify-between"
-                    style={{
-                      backgroundColor: '#FFF5F5',
-                      borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
-                      borderColor: 'rgba(60, 60, 67, 0.12)',
-                      elevation: Platform.OS === 'android' ? 1 : 0,
-                    }}
                   >
                     <View className="flex-row items-center justify-between">
                       <View className="flex-row items-center gap-2">
@@ -1871,19 +1865,12 @@ export default function HomeScreen() {
                       trackColor="#FFE4E6"
                       height={8}
                     />
-                  </TouchableOpacity>
+                  </NativeOverviewCard>
 
                   {/* Hydration Widget */}
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <NativeOverviewCard
+                    backgroundColor="#ECFEFF"
                     onPress={handleLogWater}
-                    className="w-[47%] h-[142px] p-4 rounded-2xl justify-between"
-                    style={{
-                      backgroundColor: '#ECFEFF',
-                      borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
-                      borderColor: 'rgba(60, 60, 67, 0.12)',
-                      elevation: Platform.OS === 'android' ? 1 : 0,
-                    }}
                   >
                     <View className="flex-row items-center justify-between">
                       <View className="flex-row items-center gap-2">
@@ -1903,19 +1890,12 @@ export default function HomeScreen() {
                       trackColor="#CFFAFE"
                       height={8}
                     />
-                  </TouchableOpacity>
+                  </NativeOverviewCard>
 
                   {/* Wallet Credits Widget */}
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <NativeOverviewCard
+                    backgroundColor="#F5F3FF"
                     onPress={() => navigateSafely('/membership')}
-                    className="w-[47%] h-[142px] p-4 rounded-2xl justify-between"
-                    style={{
-                      backgroundColor: '#F5F3FF',
-                      borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
-                      borderColor: 'rgba(60, 60, 67, 0.12)',
-                      elevation: Platform.OS === 'android' ? 1 : 0,
-                    }}
                   >
                     <View className="flex-row items-center gap-2">
                       <Text className="text-base">💳</Text>
@@ -1932,26 +1912,19 @@ export default function HomeScreen() {
                       trackColor="#EDE9FE"
                       height={8}
                     />
-                  </TouchableOpacity>
+                  </NativeOverviewCard>
 
                   {/* Workout Streak Widget */}
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <NativeOverviewCard
+                    backgroundColor="#FFFBEB"
                     onPress={() => navigateSafely('/(tabs)/progress')}
-                    className="w-[47%] h-[142px] p-4 rounded-2xl justify-between"
-                    style={{
-                      backgroundColor: '#FFF1F2',
-                      borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
-                      borderColor: 'rgba(60, 60, 67, 0.12)',
-                      elevation: Platform.OS === 'android' ? 1 : 0,
-                    }}
                   >
                     <View className="flex-row items-center justify-between">
                       <View className="flex-row items-center gap-2">
                         <Text className="text-base">⚡</Text>
                         <Text className="text-zinc-500 text-[11px] font-semibold uppercase tracking-wider">Workout Streak</Text>
                       </View>
-                      <Feather name="chevron-right" size={13} color="#FDA4AF" />
+                      <Feather name="chevron-right" size={13} color="#F59E0B" />
                     </View>
                     <View>
                       <Text className="text-[#101828] text-[32px] font-bold tracking-tighter">{streak}</Text>
@@ -1960,11 +1933,11 @@ export default function HomeScreen() {
                     {/* Progress Bar */}
                     <NativeProgressBar
                       progress={(streak / Math.max(weeklyStreakGoal, 1))}
-                      color="#EC4899"
-                      trackColor="#FFE4E6"
+                      color="#F59E0B"
+                      trackColor="#FEF3C7"
                       height={8}
                     />
-                  </TouchableOpacity>
+                  </NativeOverviewCard>
                 </View>
               </View>
 

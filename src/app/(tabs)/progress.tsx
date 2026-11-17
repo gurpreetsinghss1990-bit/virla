@@ -16,6 +16,7 @@ import { useAIWellnessStore } from '../../store/aiWellnessStore';
 import { useBookingStore } from '../../store/bookingStore';
 import { Database } from '../../database/Database';
 import { CalculatedTargetsCard } from '../../components/CalculatedTargetsCard';
+import { NativeSegmentedRangeControl } from '../../components/NativeSegmentedRangeControl';
 
 export default function ProgressScreen() {
   const router = useRouter();
@@ -447,36 +448,10 @@ export default function ProgressScreen() {
           ) : role === 'trainer' ? (
             <>
               {/* Trainer timeframe indicator */}
-              <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1.5 rounded-2xl">
-                {(['weekly', 'monthly', 'yearly'] as const).map((r) => {
-                  const isActive = activeRange === r;
-                  return (
-                    <TouchableOpacity
-                      key={r}
-                      activeOpacity={0.7}
-                      onPress={() => setActiveRange(r)}
-                      className="flex-1 py-3 rounded-xl items-center justify-center"
-                      style={{
-                        backgroundColor: isActive ? '#101828' : 'transparent',
-                        shadowColor: '#101828',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: isActive ? 0.15 : 0,
-                        shadowRadius: 4,
-                        elevation: isActive ? 2 : 0,
-                      }}
-                    >
-                      <Text
-                        className="text-[11px] font-bold uppercase tracking-wider"
-                        style={{
-                          color: isActive ? '#FFFFFF' : '#6B7280',
-                        }}
-                      >
-                        {r}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <NativeSegmentedRangeControl
+                activeRange={activeRange}
+                onChangeRange={setActiveRange}
+              />
 
               {/* Performance indicators - Seamless on canvas */}
               <Animated.View style={{ opacity: fadeAnim }} className="gap-4">
@@ -692,36 +667,10 @@ export default function ProgressScreen() {
           ) : (
             <>
               {/* Timeframe Selector (Weekly, Monthly, Yearly) */}
-              <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1.5 rounded-2xl">
-                {(['weekly', 'monthly', 'yearly'] as const).map((r) => {
-                  const isActive = activeRange === r;
-                  return (
-                    <TouchableOpacity
-                      key={r}
-                      activeOpacity={0.7}
-                      onPress={() => setActiveRange(r)}
-                      className="flex-1 py-3 rounded-xl items-center justify-center"
-                      style={{
-                        backgroundColor: isActive ? '#101828' : 'transparent',
-                        shadowColor: '#101828',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: isActive ? 0.15 : 0,
-                        shadowRadius: 4,
-                        elevation: isActive ? 2 : 0,
-                      }}
-                    >
-                      <Text
-                        className="text-[11px] font-bold uppercase tracking-wider"
-                        style={{
-                          color: isActive ? '#FFFFFF' : '#6B7280',
-                        }}
-                      >
-                        {r}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <NativeSegmentedRangeControl
+                activeRange={activeRange}
+                onChangeRange={setActiveRange}
+              />
 
               {/* Calculated Targets Hero Card */}
               <Animated.View style={{ opacity: fadeAnim }}>

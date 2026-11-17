@@ -68,27 +68,7 @@ export const LogMetricsModal: React.FC<LogMetricsModalProps> = ({
             {/* Header with Title and Top-Right Dismiss ✕ Icon */}
             <View className="flex-row items-start justify-between mb-3">
               <View className="flex-1 pr-2">
-                {/* Personalized Motivation Pill */}
-                <View
-                  className={`flex-row items-center gap-1.5 self-start px-2.5 py-1 rounded-full mb-2 ${
-                    isHydration
-                      ? 'bg-cyan-50 border border-cyan-100'
-                      : 'bg-rose-50 border border-rose-100'
-                  }`}
-                >
-                  <Text className="text-xs">{isHydration ? '💧' : '🔥'}</Text>
-                  <Text
-                    className={`text-[11px] font-bold ${
-                      isHydration ? 'text-cyan-700' : 'text-[#A82B50]'
-                    }`}
-                  >
-                    {isHydration
-                      ? `Stay hydrated, ${firstName}!`
-                      : `Looking strong, ${firstName}!`}
-                  </Text>
-                </View>
-
-                <Text className="text-zinc-950 text-xl font-bold tracking-tight">
+                <Text className="text-zinc-950 text-lg font-bold tracking-tight">
                   {isHydration ? 'Log Hydration' : 'Log Active Burn'}
                 </Text>
                 <Text className="text-zinc-500 text-xs mt-0.5 leading-relaxed font-medium">
@@ -233,21 +213,16 @@ export const LogMetricsModal: React.FC<LogMetricsModalProps> = ({
             )}
 
             {/* Brand-Cohesive Actions */}
-            <View className="gap-2">
+            <View className="gap-1 mt-2">
               <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={handleSave}
-                className="w-full h-[50px] rounded-2xl items-center justify-center shadow-md active:opacity-90"
+                className="w-full h-[40px] rounded-xl items-center justify-center active:opacity-90"
                 style={{
                   backgroundColor: isHydration ? '#0891B2' : '#A82B50',
-                  shadowColor: isHydration ? '#0891B2' : '#A82B50',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.25,
-                  shadowRadius: 8,
-                  elevation: 4,
                 }}
               >
-                <Text className="text-white text-sm font-bold tracking-wide">
+                <Text className="text-white text-xs font-bold tracking-wide">
                   {isHydration ? 'Save Hydration' : 'Save Active Burn'}
                 </Text>
               </TouchableOpacity>
@@ -255,9 +230,9 @@ export const LogMetricsModal: React.FC<LogMetricsModalProps> = ({
               <TouchableOpacity
                 activeOpacity={0.6}
                 onPress={onClose}
-                className="py-2.5 w-full items-center justify-center active:opacity-60"
+                className="py-1.5 w-full items-center justify-center active:opacity-60"
               >
-                <Text className="text-zinc-400 text-xs font-bold uppercase tracking-wider">
+                <Text className="text-zinc-400 text-[11px] font-bold uppercase tracking-wider">
                   Cancel
                 </Text>
               </TouchableOpacity>

@@ -170,7 +170,7 @@ export class PushNotificationService {
         await Notifications.setNotificationChannelAsync(NOTIFICATION_CHANNELS.VIRLA_GENERAL, {
           name: 'VIRLA General Alerts',
           importance: Notifications.AndroidImportance.DEFAULT,
-          sound: 'default',
+          sound: null,
         });
       }
     } catch (e: any) {

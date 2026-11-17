@@ -73,9 +73,34 @@ export default function GetStartedScreen() {
   const [isOtpSuccessAnimating, setIsOtpSuccessAnimating] = useState(false);
   const [authenticatedUserName, setAuthenticatedUserName] = useState('');
   const [isAppActive, setIsAppActive] = useState(AppState.currentState === 'active');
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const otpShiftAnim = useRef(new Animated.Value(0)).current;
   const spinAnim = useRef(new Animated.Value(0)).current;
   const bgAuraAnim = useRef(new Animated.Value(0)).current;
   const otpInputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+
+  useEffect(() => {
+    Animated.timing(otpShiftAnim, {
+      toValue: otpSent ? -70 : 0,
+      duration: 350,
+      useNativeDriver: true,
+    }).start();
+  }, [otpSent]);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setIsKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setIsKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   // New user onboarding setup states
   const [newUserIdToRegister, setNewUserIdToRegister] = useState<string | null>(null);
@@ -637,8 +662,8 @@ export default function GetStartedScreen() {
     <TouchableWithoutFeedback onPress={Platform.OS === 'web' ? undefined : Keyboard.dismiss}>
       <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 16) }}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          enabled={isAppActive}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          enabled={Platform.OS === 'ios' && isAppActive}
           className="flex-1"
         >
           {/* Background Luxury Glowing Aura (Full Screen Ambient Pulse) */}
@@ -682,7 +707,13 @@ export default function GetStartedScreen() {
           <ScrollView
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between', paddingHorizontal: 24, paddingVertical: 24 }}
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: 'space-between',
+              paddingHorizontal: 24,
+              paddingTop: 24,
+              paddingBottom: 24,
+            }}
             className="flex-1 z-10"
           >
             {/* Top Header Logo */}
@@ -834,7 +865,12 @@ export default function GetStartedScreen() {
               </View>
             ) : (
               /* Mobile Login/Register Form - Reference Exact Implementation */
-              <View className="w-full gap-3.5 my-3 items-center">
+              <Animated.View
+                className="w-full gap-3.5 my-3 items-center"
+                style={{
+                  transform: [{ translateY: otpShiftAnim }],
+                }}
+              >
                 {/* Mobile Number Entry Field */}
                 <View className="gap-1.5 w-full">
                   <Text className="text-xs font-bold uppercase tracking-widest text-[#E11D48]">
@@ -843,16 +879,15 @@ export default function GetStartedScreen() {
                   <View className="flex-row gap-2.5 w-full items-center">
                     {/* Separate +91 Prefix Box */}
                     <View
-                      className="bg-[#1A1A1E] border border-white/10 rounded-2xl px-3.5 items-center justify-center"
-                      style={{ paddingVertical: Platform.OS === 'android' ? 11 : 14 }}
+                      className="bg-[#1A1A1E] border border-white/10 rounded-2xl px-4 items-center justify-center h-[52px]"
                     >
                       <Text className="text-white font-black" style={{ fontSize: 16 }}>+91</Text>
                     </View>
 
                     {/* Separate Curvy Number Input Box */}
                     <View
-                      className="flex-1 bg-[#1A1A1E] border border-white/10 rounded-2xl"
-                      style={{ paddingHorizontal: Platform.OS === 'android' ? 12 : 16 }}
+                      className="flex-1 bg-[#1A1A1E] border border-white/10 rounded-2xl justify-center h-[52px]"
+                      style={{ paddingHorizontal: Platform.OS === 'android' ? 14 : 16 }}
                     >
                       <TextInput
                         maxLength={20}
@@ -867,7 +902,7 @@ export default function GetStartedScreen() {
                         className="text-white font-bold"
                         style={{
                           fontSize: 16,
-                          paddingVertical: Platform.OS === 'android' ? 8 : 14,
+                          paddingVertical: 0,
                           includeFontPadding: false,
                         }}
                       />
@@ -1054,7 +1089,7 @@ export default function GetStartedScreen() {
                     />
                   </View>
                 )}
-              </View>
+              </Animated.View>
             )}
 
 

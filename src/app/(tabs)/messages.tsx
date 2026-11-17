@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, Image, ScrollView, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +10,14 @@ import { useChatStore } from '../../store/chatStore';
 import { Database } from '../../database/Database';
 import { EmptyState } from '../../components/EmptyState';
 import { getBookingISTDateRange } from '../../utils/date';
+
+let useMaterialColorsSafe: any = null;
+if (Platform.OS === 'android') {
+  try {
+    const compose = require('@expo/ui/jetpack-compose');
+    useMaterialColorsSafe = compose.useMaterialColors;
+  } catch {}
+}
 
 interface ChatItem {
   id: string;
@@ -30,6 +38,14 @@ export default function MessagesScreen() {
   const { bookings } = useBookingStore();
   const { role } = useUserStore();
   const [searchQuery, setSearchQuery] = useState('');
+
+  let materialColors: any = null;
+  if (useMaterialColorsSafe) {
+    try {
+      materialColors = useMaterialColorsSafe();
+    } catch {}
+  }
+  const backgroundColor = materialColors?.background || '#FFFFFF';
 
   // ponytail: "live" = upcoming session inside the 60-min window. Same rule as chat/call lock.
   const getMinutesToSession = (b: (typeof bookings)[number]): number => {
@@ -255,9 +271,9 @@ export default function MessagesScreen() {
   }, [chatsList, searchQuery]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFFFFF', paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor, paddingTop: insets.top }}>
       {/* Top Header */}
-      <View className="px-5 pt-3 pb-2 flex-row items-center justify-between bg-white">
+      <View style={{ backgroundColor }} className="px-5 pt-3 pb-2 flex-row items-center justify-between">
         <View>
           <Text className="text-zinc-950 text-2xl font-black tracking-tight">
             Chats

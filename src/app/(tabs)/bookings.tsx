@@ -17,6 +17,7 @@ import { Booking } from '../../types';
 import { RaiseSupportTicketModal } from '../../components/RaiseSupportTicketModal';
 import { SupportChatModal } from '../../components/SupportChatModal';
 import { UserTicketsModal } from '../../components/UserTicketsModal';
+import { NativeSegmentedControl } from '../../components/NativeSegmentedControl';
 
 type FilterType = 'upcoming' | 'completed' | 'cancelled' | 'today' | 'past';
 type TrainerTabType = 'today' | 'tomorrow' | 'weekly' | 'history';
@@ -1085,29 +1086,17 @@ export default function BookingsScreen() {
                 Visits Feed Overview
               </Text>
               
-              <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1 rounded-2xl">
-                {(['today', 'tomorrow', 'weekly', 'history'] as const).map((tab) => {
-                  const isActive = trainerTab === tab;
-                  return (
-                    <TouchableOpacity
-                      key={tab}
-                      activeOpacity={0.8}
-                      onPress={() => setTrainerTab(tab)}
-                      className={`flex-1 py-3 rounded-xl items-center justify-center ${
-                        isActive ? 'bg-[#101828]' : ''
-                      }`}
-                    >
-                      <Text 
-                        className={`text-[9px] font-black uppercase tracking-wider ${
-                          isActive ? 'text-white' : 'text-[#6B7280]'
-                        }`}
-                      >
-                        {tab}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <NativeSegmentedControl
+                items={[
+                  { key: 'today', label: 'Today' },
+                  { key: 'tomorrow', label: 'Tomorrow' },
+                  { key: 'weekly', label: 'Weekly' },
+                  { key: 'history', label: 'History' },
+                ]}
+                activeKey={trainerTab}
+                onChangeKey={(tab) => setTrainerTab(tab)}
+                marginVertical={0}
+              />
             </View>
 
             {/* List rendered by trainerTab */}
@@ -1318,14 +1307,14 @@ export default function BookingsScreen() {
             </View>
 
             {/* Filter Capsule Selector Tabs */}
-            <View className="flex-row bg-[#E5E7EB]/50 p-1 rounded-full mb-4">
-          {filterOptions.map((opt) => {
-            const isActive = activeFilter === opt;
-            return (
-              <TouchableOpacity
-                key={opt}
-                activeOpacity={0.8}
-                onPress={() => {
+            <View className="mb-4">
+              <NativeSegmentedControl
+                items={filterOptions.map((opt) => ({
+                  key: opt,
+                  label: getFilterLabel(opt),
+                }))}
+                activeKey={activeFilter}
+                onChangeKey={(opt) => {
                   if (activeFilter === opt) return;
                   setActiveFilter(opt);
                   setClientDateFilter('all');
@@ -1333,28 +1322,9 @@ export default function BookingsScreen() {
                   setCursorHistory([]);
                   setRenderedFilter(opt);
                 }}
-                className={`flex-1 py-2.5 rounded-full items-center justify-center ${
-                  isActive ? 'bg-[#101828]' : ''
-                }`}
-                style={isActive ? {
-                  shadowColor: '#101828',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.12,
-                  shadowRadius: 4,
-                  elevation: 2,
-                } : undefined}
-              >
-                <Text 
-                  className={`text-xs font-bold ${
-                    isActive ? 'text-white' : 'text-[#6B7280]'
-                  }`}
-                >
-                  {getFilterLabel(opt)}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                marginVertical={0}
+              />
+            </View>
 
         {/* Date Filter Pills (All / Today / This Week / This Month) — hidden when the tab is empty */}
         {activeTabCount > 0 && (

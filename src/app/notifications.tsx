@@ -8,6 +8,14 @@ import Svg, { Line } from 'react-native-svg';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { EmptyState } from '../components/EmptyState';
 import { NotificationItem } from '../types';
+
+let useMaterialColorsSafe: any = null;
+if (Platform.OS === 'android') {
+  try {
+    const compose = require('@expo/ui/jetpack-compose');
+    useMaterialColorsSafe = compose.useMaterialColors;
+  } catch {}
+}
 const INITIAL_PAGE_SIZE = 20;
 
 interface TimelineGroup {
@@ -232,8 +240,22 @@ export default function NotificationsScreen() {
     }
   };
 
+  let materialColors: any = null;
+  if (Platform.OS === 'android' && useMaterialColorsSafe) {
+    try {
+      materialColors = useMaterialColorsSafe();
+    } catch {}
+  }
+
+  const backgroundColor = useMemo(() => {
+    if (Platform.OS === 'android' && materialColors?.background) {
+      return materialColors.background;
+    }
+    return '#FAF1F1';
+  }, [materialColors]);
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#FAF1F1', position: 'relative' }}>
+    <View style={{ flex: 1, backgroundColor, position: 'relative' }}>
       {/* Subtle Scratchy / Raw Noise Texture Overlay */}
       <View 
         pointerEvents="none" 

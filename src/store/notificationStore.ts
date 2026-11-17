@@ -72,7 +72,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
                 deepLink: '/notifications',
                 type: n.type || 'info',
               },
-              sound: 'default',
+              sound: true,
             },
             trigger: null, // deliver immediately
           }).catch((pushErr: any) => {

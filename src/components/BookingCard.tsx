@@ -16,6 +16,14 @@ import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Data
 import { getDisplayWorkoutTitle, getBookingISTDateRange, formatToDDMMYYYY, formatToDayMonthYear } from '../utils/date';
 import { getBookingDisplayAddress } from '../utils/LocationParser';
 
+let useMaterialColorsSafe: any = null;
+if (Platform.OS === 'android') {
+  try {
+    const compose = require('@expo/ui/jetpack-compose');
+    useMaterialColorsSafe = compose.useMaterialColors;
+  } catch {}
+}
+
 interface BookingCardProps {
   booking: Booking;
   onOpenSupport?: (booking: Booking) => void;
@@ -323,12 +331,23 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
     // self-contained cards than as full-width rows split by a hairline.
     const isHistoryRow = isCompletedStatus || isCancelledOrMissed;
 
+    let historyBgColor = '#FFFFFF';
+    if (isHistoryRow && useMaterialColorsSafe) {
+      try {
+        const mc = useMaterialColorsSafe();
+        if (mc?.background) {
+          historyBgColor = mc.background;
+        }
+      } catch {}
+    }
+
     return (
       <View
         className={isHistoryRow
-          ? 'mb-3 rounded-2xl border border-zinc-200/80 bg-white px-4 py-4'
+          ? 'mb-3 rounded-2xl border border-zinc-200/80 px-4 py-4'
           : 'py-4 border-b border-zinc-200/80'}
         style={isHistoryRow ? {
+          backgroundColor: historyBgColor,
           shadowColor: '#101828',
           shadowOpacity: 0.04,
           shadowRadius: 8,

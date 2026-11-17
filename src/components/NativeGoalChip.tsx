@@ -42,11 +42,11 @@ export const NativeGoalChip = React.memo(({ label, selected, onPress, color, siz
 
 const styles = StyleSheet.create({
   capsule: {
-    borderRadius: 16,
+    borderRadius: 9999,
     overflow: 'hidden',
     borderWidth: 1,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,

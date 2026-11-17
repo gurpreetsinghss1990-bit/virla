@@ -1,5 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { InteractionManager } from '../utils/interactionManager';
 import { NativeGoalChip } from '../components/NativeGoalChip';
 import { NativePrimaryButton } from '../components/NativePrimaryButton';
@@ -9,6 +9,16 @@ import { useUserProfileStore } from '../store/userProfileStore';
 import { Database } from '../database/Database';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+
+const FALLBACK_BACKGROUND_COLOR = '#FCF5F5';
+
+let useMaterialColorsSafe: any = null;
+if (Platform.OS === 'android') {
+  try {
+    const compose = require('@expo/ui/jetpack-compose');
+    useMaterialColorsSafe = compose.useMaterialColors;
+  } catch {}
+}
 
 const allGoals = [
   'Weight Loss',
@@ -103,8 +113,23 @@ export default function FitnessGoalsScreen() {
     }
   }, [persistGoals, router]);
 
+  let materialColors: any = null;
+  if (Platform.OS === 'android' && useMaterialColorsSafe) {
+    try {
+      materialColors = useMaterialColorsSafe();
+    } catch {}
+  }
+
+  // Use Android system dynamic color if available, else gracefully fallback to '#FCF5F5'
+  const backgroundColor = useMemo(() => {
+    if (Platform.OS === 'android' && materialColors?.background) {
+      return materialColors.background;
+    }
+    return FALLBACK_BACKGROUND_COLOR;
+  }, [materialColors]);
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
+    <View style={{ flex: 1, backgroundColor }}>
       <ScrollView 
         showsVerticalScrollIndicator={false} 
         className="flex-1 px-6" 
@@ -173,10 +198,10 @@ export default function FitnessGoalsScreen() {
             <Svg width="100%" height="100%" preserveAspectRatio="none">
               <Defs>
                 <LinearGradient id="backBtnPillScrim" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <Stop offset="0%" stopColor="#FCF5F5" stopOpacity="0.95" />
-                  <Stop offset="65%" stopColor="#FCF5F5" stopOpacity="0.85" />
-                  <Stop offset="85%" stopColor="#FCF5F5" stopOpacity="0.4" />
-                  <Stop offset="100%" stopColor="#FCF5F5" stopOpacity="0" />
+                  <Stop offset="0%" stopColor={backgroundColor} stopOpacity="0.95" />
+                  <Stop offset="65%" stopColor={backgroundColor} stopOpacity="0.85" />
+                  <Stop offset="85%" stopColor={backgroundColor} stopOpacity="0.4" />
+                  <Stop offset="100%" stopColor={backgroundColor} stopOpacity="0" />
                 </LinearGradient>
               </Defs>
               <Rect x="0" y="0" width="100%" height="100%" rx={25} ry={25} fill="url(#backBtnPillScrim)" />

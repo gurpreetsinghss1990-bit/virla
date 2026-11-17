@@ -1,6 +1,7 @@
 import { Loading } from '../../components/Loading';
 import { NativePressable } from '../../components/NativePressable';
 import { NativeGoalChip } from '../../components/NativeGoalChip';
+import { FitnessGoalsModal } from '../../components/FitnessGoalsModal';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, BackHandler, Modal, LayoutAnimation, UIManager, Pressable, TouchableWithoutFeedback, StyleSheet, Easing, Dimensions } from 'react-native';
 import { InteractionManager } from '../../utils/interactionManager';
@@ -32,6 +33,22 @@ import { digitsOnly, cleanEmail, cleanIfsc, cleanUpi, isValidPhone, isValidEmail
 const DEFAULT_AVATARS = [
   { id: 'avatar_male', label: 'Men', gender: 'male', uri: '' },
   { id: 'avatar_female', label: 'Women', gender: 'female', uri: '' },
+];
+
+const ALL_FITNESS_GOALS = [
+  'Weight Loss',
+  'Fat Loss',
+  'Muscle Gain',
+  'Body Recomposition',
+  'Strength',
+  'Flexibility',
+  'Mobility',
+  'Sports Training',
+  'Senior Fitness',
+  'Post Pregnancy',
+  'Rehabilitation',
+  'General Fitness',
+  'Maintain Weight',
 ];
 
 export const getDefaultAvatarForGender = (gender?: string) => {
@@ -335,6 +352,7 @@ export default function ProfileScreen() {
   const [editAvatar, setEditAvatar] = useState(profile.avatar || user?.avatar || DEFAULT_AVATARS[0].uri);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isGoalsModalVisible, setIsGoalsModalVisible] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -1448,7 +1466,7 @@ export default function ProfileScreen() {
                   <Text className="text-[#101828] text-sm font-black tracking-tight">Fitness Goals</Text>
                   <TouchableOpacity
                     activeOpacity={0.7}
-                    onPress={() => navigateThrottled('/fitness-goals')}
+                    onPress={() => setIsGoalsModalVisible(true)}
                     className="flex-row items-center gap-1.5"
                   >
                     <Feather name="edit-2" size={12} color="#475569" />
@@ -1457,42 +1475,37 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Goal Chips */}
-                {Array.isArray(profile.selectedGoals) && profile.selectedGoals.length > 0 ? (
-                  <View className="flex-row flex-wrap gap-2.5 mb-3.5">
-                    {profile.selectedGoals
-                      .filter((goal) => {
-                        if (goal === 'Post Pregnancy') {
-                          return (profile.gender || '').trim().toLowerCase() === 'female';
-                        }
-                        return true;
-                      })
-                      .map((goal, idx) => (
-                        <NativeGoalChip
-                          key={`${goal}-${idx}`}
-                          label={goal}
-                          selected={idx < 2}
-                          onPress={() => navigateThrottled('/fitness-goals')}
-                        />
-                    ))}
-                  </View>
-                ) : (
-                  <View className="rounded-2xl overflow-hidden mb-3.5 border border-dashed border-zinc-250 bg-zinc-50/80">
-                    <NativePressable
-                      rippleColor="rgba(79, 70, 229, 0.15)"
-                      onPress={() => navigateThrottled('/fitness-goals')}
-                      className="p-4 items-center justify-center flex-row gap-2"
-                    >
-                      <Feather name="plus-circle" size={15} color="#64748B" />
-                      <Text className="text-zinc-600 text-xs font-bold">No fitness goals set yet. Tap to add</Text>
-                    </NativePressable>
-                  </View>
-                )}
+                {(() => {
+                  const isFemale = (profile.gender || '').trim().toLowerCase() === 'female';
+                  const availableGoals = ALL_FITNESS_GOALS.filter((g) => g !== 'Post Pregnancy' || isFemale);
+                  const userSelectedGoals = Array.isArray(profile.selectedGoals) ? profile.selectedGoals : [];
+
+                  // Show user selected goals first, then remaining available goals up to 6 total chips
+                  const unselectedGoals = availableGoals.filter((g) => !userSelectedGoals.includes(g));
+                  const displayGoals = [...userSelectedGoals, ...unselectedGoals].slice(0, 6);
+
+                  return (
+                    <View className="flex-row flex-wrap gap-x-2 gap-y-1.5 mb-3.5">
+                      {displayGoals.map((goal, idx) => {
+                        const isSelected = userSelectedGoals.includes(goal);
+                        return (
+                          <NativeGoalChip
+                            key={`${goal}-${idx}`}
+                            label={goal}
+                            selected={isSelected}
+                            onPress={() => setIsGoalsModalVisible(true)}
+                          />
+                        );
+                      })}
+                    </View>
+                  );
+                })()}
 
                 {/* Motivational Banner */}
                 <View className="rounded-2xl overflow-hidden bg-emerald-500/10 border border-emerald-500/20">
                   <NativePressable
                     rippleColor="rgba(16, 185, 129, 0.2)"
-                    onPress={() => navigateThrottled('/fitness-goals')}
+                    onPress={() => setIsGoalsModalVisible(true)}
                     className="p-3.5 flex-row items-center justify-between"
                   >
                     <View className="flex-row items-center gap-3 flex-1 pr-2">
@@ -3039,6 +3052,11 @@ export default function ProfileScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* Fitness Goals Native Bottom Sheet Modal */}
+      <FitnessGoalsModal
+        visible={isGoalsModalVisible}
+        onClose={() => setIsGoalsModalVisible(false)}
+      />
 
     </SafeAreaViewWrapper>
   );
