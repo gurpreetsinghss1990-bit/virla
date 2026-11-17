@@ -250,8 +250,7 @@ export default function TrainerApplicationScreen() {
       const searchPhone = mobile || phone;
       if (searchPhone) {
         try {
-          await Database.fetchAllTrainerApplications();
-          const app = Database.getTrainerApplication(searchPhone);
+          const app = await Database.fetchTrainerApplicationByPhone(searchPhone);
           if (app) {
             setAppId(app.id);
             setAppStatus(app.status);

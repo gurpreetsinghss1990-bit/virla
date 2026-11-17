@@ -4088,6 +4088,37 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     return this.schema.trainer_applications.find(a => a.phone === phone) || null;
   }
 
+  /**
+   * Server-filtered lookup of a single user's application. Avoids pulling every
+   * applicant's row (and their documents) down to the client.
+   */
+  async fetchTrainerApplicationByPhone(phone: string): Promise<TrainerApplication | null> {
+    const digits = (phone || '').replace(/\D/g, '');
+    const candidates = Array.from(
+      new Set([phone, digits, digits ? `+91${digits}` : '', digits ? `91${digits}` : ''].filter(Boolean))
+    );
+    if (!candidates.length) return null;
+
+    const { data, error } = await supabase
+      .from('trainer_applications')
+      .select('*')
+      .in('phone', candidates);
+    if (error) {
+      throw new Error(`Failed to fetch application: ${error.message}`);
+    }
+
+    const mapped = (data || []).map(mapTrainerApplication);
+    const match =
+      mapped.find(a => (a.phone || '').replace(/\D/g, '') === digits) || mapped[0] || null;
+
+    if (match) {
+      const existing = this.schema.trainer_applications.findIndex((a: any) => a.id === match.id);
+      if (existing >= 0) this.schema.trainer_applications[existing] = match;
+      else this.schema.trainer_applications.push(match);
+    }
+    return match;
+  }
+
   async fetchAllTrainerApplications(): Promise<TrainerApplication[]> {
     const { data, error } = await supabase.from('trainer_applications').select('*');
     if (error) {

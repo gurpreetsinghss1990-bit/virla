@@ -166,8 +166,7 @@ export default function ProfileScreen() {
     const userPhone = profile.mobile;
     if (userPhone) {
       try {
-        const apps = await Database.fetchAllTrainerApplications();
-        const userApp = apps.find(a => a.phone === userPhone);
+        const userApp = await Database.fetchTrainerApplicationByPhone(userPhone);
         if (userApp) {
           setHasApplied(true);
           setUserApplication(userApp);
