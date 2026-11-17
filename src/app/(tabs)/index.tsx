@@ -189,6 +189,12 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
   const [timeLeft, setTimeLeft] = useState(600);
   const isTimeoutTriggeredRef = useRef(false);
   const lastBeepedCountdown = useRef<number | null>(null);
+  // Latest-ref: the countdown effect must not restart (or lose its beep/timeout
+  // bookkeeping) every time the parent re-creates the handler.
+  const onTimeoutRef = useRef(onTimeout);
+  useEffect(() => {
+    onTimeoutRef.current = onTimeout;
+  }, [onTimeout]);
 
   useEffect(() => {
     isTimeoutTriggeredRef.current = false;
@@ -234,7 +240,7 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
 
       if (expired && !isTimeoutTriggeredRef.current) {
         isTimeoutTriggeredRef.current = true;
-        onTimeout(booking.id);
+        onTimeoutRef.current(booking.id);
       }
     };
 
