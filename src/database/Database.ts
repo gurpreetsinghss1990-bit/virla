@@ -1050,6 +1050,10 @@ export function mapTrainerApplicationToPostgres(app: TrainerApplication): any {
 const STORAGE_KEY = 'virla_production_database';
 
 class DatabaseClient {
+  // Ids already removed locally whose Supabase delete may still be in flight.
+  // Filtered out of load() so a concurrent refresh cannot resurrect them.
+  private pendingNotificationDeletes = new Set<string>();
+
   public schema: {
     users: DBUser[];
     profiles: UserProfile[];
@@ -1232,7 +1236,10 @@ class DatabaseClient {
       this.schema.credit_transactions = (resTransactions.data || []).map(mapInvoice);
       this.schema.hydration = (resHydration.data || []).map(mapHydrationLog);
       this.schema.calories = (resCalories.data || []).map(mapCalorieLog);
-      this.schema.notifications = (resNotifications.data || []).map(mapNotificationItem);
+      const loadedNotifications = (resNotifications.data || []).map(mapNotificationItem);
+      this.schema.notifications = this.pendingNotificationDeletes.size > 0
+        ? loadedNotifications.filter((n: NotificationItem) => !this.pendingNotificationDeletes.has(n.id))
+        : loadedNotifications;
       this.schema.messages = (resMessages.data || []).map(mapChatMessage);
       this.schema.addresses = (resAddresses.data || []).map(mapSavedAddress);
       this.schema.earnings = (resEarnings.data || []).map(mapTrainerEarning);
@@ -3713,8 +3720,13 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
   }
 
   clearAllNotifications(userId: string): void {
+    const clearedIds = this.schema.notifications.map(n => n.id);
+    clearedIds.forEach(id => this.pendingNotificationDeletes.add(id));
     this.schema.notifications = [];
-    supabase.from('notifications').delete().eq('user_id', userId).then();
+    void supabase.from('notifications').delete().eq('user_id', userId).then(({ error }) => {
+      clearedIds.forEach(id => this.pendingNotificationDeletes.delete(id));
+      if (error) console.warn('[DB] clearAllNotifications failed:', error.message);
+    });
     this.save();
   }
 
@@ -3726,6 +3738,7 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
   deleteNotifications(userId: string, ids: string[]): void {
     if (!ids || ids.length === 0) return;
     const idSet = new Set(ids);
+    ids.forEach(id => this.pendingNotificationDeletes.add(id));
     this.schema.notifications = this.schema.notifications.filter(n => !idSet.has(n.id));
     this.save();
     void this.deleteNotificationRows(ids);
@@ -3737,6 +3750,8 @@ requested assignment: Reassignment attempt via ${trainer?.action || 'timeout'}`)
     for (let i = 0; i < ids.length; i += BATCH_SIZE) {
       const batch = ids.slice(i, i + BATCH_SIZE);
       const { error } = await supabase.from('notifications').delete().in('id', batch);
+      // Once the server has answered, the server is the source of truth again.
+      batch.forEach(id => this.pendingNotificationDeletes.delete(id));
       if (error) {
         console.warn('[DB] deleteNotifications failed:', error.message);
         return;
