@@ -1,4 +1,4 @@
-import { Stack, router } from 'expo-router';
+import { Stack, router, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
 import * as Font from 'expo-font';
@@ -10,6 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PushNotificationService } from '../services/PushNotificationService';
 import { useUserStore } from '../store/userStore';
 import { TopToastNotification } from '../components/TopToastNotification';
+import { AppErrorBoundary, AppErrorFallback } from '../components/AppErrorBoundary';
 import { configureGlobalTextInputCursor } from '../utils/configureTextInputCursor';
 import { useEngagementNudges } from '../hooks/useEngagementNudges';
 import { useToastStore } from '../store/toastStore';
@@ -197,10 +198,17 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }} />
-      <TopToastNotification />
-    </SafeAreaProvider>
+    <AppErrorBoundary>
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <Stack screenOptions={{ headerShown: false }} />
+        <TopToastNotification />
+      </SafeAreaProvider>
+    </AppErrorBoundary>
   );
+}
+
+// Catches errors thrown by the layout body itself (above AppErrorBoundary).
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return <AppErrorFallback error={error} onRetry={retry} onReload={retry} />;
 }
