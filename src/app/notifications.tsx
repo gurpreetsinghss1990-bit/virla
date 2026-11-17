@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, TextInput, Platform, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, TextInput, Platform, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useNotificationStore } from '../store/notificationStore';
@@ -7,6 +7,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import Svg, { Line } from 'react-native-svg';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { EmptyState } from '../components/EmptyState';
+import { FlashList } from '@shopify/flash-list';
 import { NotificationItem } from '../types';
 
 let useMaterialColorsSafe: any = null;
@@ -22,6 +23,10 @@ interface TimelineGroup {
   title: string;
   items: NotificationItem[];
 }
+
+type NotificationRow =
+  | { kind: 'header'; key: string; title: string; count: number }
+  | { kind: 'item'; key: string; item: NotificationItem };
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -148,6 +153,16 @@ export default function NotificationsScreen() {
 
     return groups;
   }, [paginated]);
+
+  const notificationRows = useMemo((): NotificationRow[] => {
+    const rows: NotificationRow[] = [];
+    groupedNotifications.forEach(g => {
+      if (g.items.length === 0) return;
+      rows.push({ kind: 'header', key: `header-${g.title}`, title: g.title, count: g.items.length });
+      g.items.forEach(i => rows.push({ kind: 'item', key: i.id, item: i }));
+    });
+    return rows;
+  }, [groupedNotifications]);
 
   const resolveNotificationCategory = (item: NotificationItem): string | null => {
     if (item.type && item.type !== 'System') {
@@ -363,37 +378,37 @@ export default function NotificationsScreen() {
       )}
 
       {/* Notifications List - Completely borderless, no horizontal lines */}
-      <ScrollView 
-        showsVerticalScrollIndicator={false}
-        className="flex-1"
-        contentContainerStyle={{ 
-          paddingHorizontal: 20, 
-          paddingTop: 8, 
-          paddingBottom: Math.max(insets.bottom + (isSelectionMode ? 88 : 32), 64), 
-          flexGrow: 1 
-        }}
-      >
+      <View className="flex-1">
         {filteredNotifications.length > 0 ? (
-          <View className="gap-6">
-            {groupedNotifications.map((group) => {
-              if (group.items.length === 0) return null;
-              return (
-                <View key={group.title} className="gap-1">
-                  {/* Group Header (borderless, no horizontal line) */}
+          <FlashList
+            data={notificationRows}
+            keyExtractor={(row) => row.key}
+            getItemType={(row) => row.kind}
+            extraData={`${isSelectionMode ? 1 : 0}|${selectedIds.size}`}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: 20,
+              paddingTop: 8,
+              paddingBottom: Math.max(insets.bottom + (isSelectionMode ? 88 : 32), 64),
+            }}
+            renderItem={({ item: row }) => {
+              if (row.kind === 'header') {
+                return (
                   <View className="flex-row items-center justify-between pt-3 pb-2">
+                    {/* Group Header (borderless, no horizontal line) */}
                     <Text className="text-zinc-900 text-sm font-black uppercase tracking-wider">
-                      {group.title}
+                      {row.title}
                     </Text>
                     <View className="bg-rose-100/60 px-2.5 py-0.5 rounded-full">
                       <Text className="text-rose-900 text-xs font-bold">
-                        {group.items.length} {group.items.length === 1 ? 'alert' : 'alerts'}
+                        {row.count} {row.count === 1 ? 'alert' : 'alerts'}
                       </Text>
                     </View>
                   </View>
-                  
-                  {/* Notification Items - Clean list rows without cards or horizontal lines */}
-                  <View className="gap-1.5">
-                    {group.items.map((item) => {
+                );
+              }
+
+              const item = row.item;
                       const category = resolveNotificationCategory(item);
                       const theme = getCategoryTheme(category || undefined);
                       const isUnread = !item.read;
@@ -489,25 +504,21 @@ export default function NotificationsScreen() {
                           </View>
                         </TouchableOpacity>
                       );
-                    })}
-                  </View>
-                </View>
-              );
-            })}
-
-            {/* Pagination Load More */}
-            {hasMore && (
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => setPageSize(prev => prev + 15)}
-                className="w-full py-4 items-center justify-center mt-2 mb-4"
-              >
-                <Text className="text-zinc-600 text-xs font-extrabold uppercase tracking-wider">
-                  Load More Notifications
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+            }}
+            ListFooterComponent={
+              hasMore ? (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => setPageSize(prev => prev + 15)}
+                  className="w-full py-4 items-center justify-center mt-2 mb-4"
+                >
+                  <Text className="text-zinc-600 text-xs font-extrabold uppercase tracking-wider">
+                    Load More Notifications
+                  </Text>
+                </TouchableOpacity>
+              ) : null
+            }
+          />
         ) : searchQuery.trim().length > 0 ? (
           <View className="flex-1 justify-center items-center py-16 gap-3">
             <View className="w-14 h-14 rounded-full bg-zinc-100 items-center justify-center">
@@ -533,7 +544,7 @@ export default function NotificationsScreen() {
             />
           </View>
         )}
-      </ScrollView>
+      </View>
 
       {/* Floating Bottom Selection Actions Bar */}
       {isSelectionMode && (
