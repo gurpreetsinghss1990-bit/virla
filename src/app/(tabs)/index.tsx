@@ -144,7 +144,7 @@ function getClientGender(booking: Booking): string {
   const rawGender = profile?.gender || 'N/A';
   let displayGender = 'Not specified';
   if (profile && profile.gender) {
-    const g = profile.gender.toLowerCase().trim();
+    const g = String(profile.gender).toLowerCase().trim();
     if (g === 'male') displayGender = 'Male';
     else if (g === 'female') displayGender = 'Female';
   }
@@ -979,7 +979,7 @@ export default function HomeScreen() {
 
   const waterGoal = useMemo(() => {
     if (savedPlan?.hydrationGoal) {
-      const match = savedPlan.hydrationGoal.match(/([\d.]+)/);
+      const match = String(savedPlan.hydrationGoal).match(/([\d.]+)/);
       if (match) {
         const parsedLiters = parseFloat(match[1]);
         if (!isNaN(parsedLiters) && parsedLiters > 0) {
@@ -1000,7 +1000,7 @@ export default function HomeScreen() {
 
   const weeklyStreakGoal = useMemo(() => {
     if (savedPlan?.workoutFrequency) {
-      const freq = savedPlan.workoutFrequency.toLowerCase();
+      const freq = String(savedPlan.workoutFrequency).toLowerCase();
       if (freq.includes('daily') || freq.includes('7')) return 7;
       if (freq.includes('6')) return 6;
       if (freq.includes('5')) return 5;
@@ -2023,7 +2023,7 @@ export default function HomeScreen() {
                           <View className="w-[48%] gap-0.5">
                             <Text className="text-white/50 text-[10px] font-bold uppercase">Water Goal</Text>
                             <Text className="text-white text-xs font-bold" numberOfLines={1}>
-                              {savedPlan.hydrationGoal ? savedPlan.hydrationGoal.split(' ')[0] : '2'} L
+                              {savedPlan?.hydrationGoal ? String(savedPlan.hydrationGoal).split(' ')[0] : '2'} L
                             </Text>
                           </View>
                           <View className="w-[48%] gap-0.5">
@@ -2252,7 +2252,7 @@ export default function HomeScreen() {
                       {getGreeting()}
                     </Text>
                     <Text className="text-[#101828] text-2xl font-bold tracking-tight mt-1">
-                      {user.name.split(' ')[0]} 👋
+                      {user?.name ? String(user.name).split(' ')[0] : 'Trainer'} 👋
                     </Text>
                   </View>
                   
