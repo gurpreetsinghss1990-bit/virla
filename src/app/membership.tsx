@@ -398,6 +398,11 @@ export default function MembershipScreen() {
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
+        decelerationRate="fast"
+        bounces={true}
+        alwaysBounceVertical={true}
+        overScrollMode="always"
+        nestedScrollEnabled={true}
         className="flex-1"
         contentContainerStyle={{
           paddingHorizontal: 16,

@@ -1511,7 +1511,12 @@ export default function HomeScreen() {
                   horizontal
                   nestedScrollEnabled={true}
                   showsHorizontalScrollIndicator={false}
-                  overScrollMode="never"
+                  decelerationRate="fast"
+                  snapToInterval={152}
+                  snapToAlignment="start"
+                  overScrollMode="always"
+                  bounces={true}
+                  alwaysBounceHorizontal={true}
                   style={{ marginHorizontal: -24 }}
                   contentContainerStyle={{ paddingHorizontal: 24, gap: 12 }}
                 >
