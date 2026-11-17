@@ -18,6 +18,7 @@ import { RaiseSupportTicketModal } from '../../components/RaiseSupportTicketModa
 import { SupportChatModal } from '../../components/SupportChatModal';
 import { UserTicketsModal } from '../../components/UserTicketsModal';
 import { NativeSegmentedControl } from '../../components/NativeSegmentedControl';
+import { NativeDivider } from '../../components/NativeDivider';
 
 type FilterType = 'upcoming' | 'completed' | 'cancelled' | 'today' | 'past';
 type TrainerTabType = 'today' | 'tomorrow' | 'weekly' | 'history';
@@ -1083,7 +1084,7 @@ export default function BookingsScreen() {
             </View>
 
             {/* divider line */}
-            <View className="h-[1px] bg-zinc-200 my-4" />
+            <NativeDivider color="#E4E4E7" className="my-4" />
 
             {/* VISITS OVERVIEW TAB LIST */}
             <View className="mb-4">

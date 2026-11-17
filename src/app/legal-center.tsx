@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { NativeDivider } from '../components/NativeDivider';
 
 interface LegalDoc {
   id: string;
@@ -115,7 +116,8 @@ export default function LegalCenterScreen() {
                   </View>
                   
                   {isOpen && (
-                    <View className="mt-2 pt-3 border-t border-zinc-100 gap-3">
+                    <View className="mt-2 pt-3 gap-3">
+                      <NativeDivider color="#F4F4F5" />
                       <Text className="text-zinc-600 text-xs font-normal leading-relaxed">
                         {doc.content}
                       </Text>
@@ -127,7 +129,8 @@ export default function LegalCenterScreen() {
           </View>
 
           {/* App Credits and Version */}
-          <View className="items-center justify-center py-6 gap-1 border-t border-zinc-200 mt-2">
+          <View className="items-center justify-center py-6 gap-1 mt-2">
+            <NativeDivider color="#E4E4E7" className="mb-4" />
             <Text className="text-zinc-400 text-xs font-medium">Version 3.0.0 (Build 57)</Text>
             <Text className="text-zinc-400 text-xs text-center mt-1 leading-relaxed max-w-[85%]">
               All rights reserved. Dedicated to safety, security, and certified training excellence.

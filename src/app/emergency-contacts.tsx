@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { useUserProfileStore, EmergencyContact } from '../store/userProfileStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { NativeDivider } from '../components/NativeDivider';
 import { digitsOnly, isValidPhone } from '../utils/inputSafety';
 
 export default function EmergencyContactsScreen() {
@@ -226,7 +227,7 @@ export default function EmergencyContactsScreen() {
                     {contact.medicalNotes && <Text className="text-zinc-500 text-[10px] italic">⚠️ Medical notes: {contact.medicalNotes}</Text>}
                   </View>
 
-                  <View className="h-[1px] bg-zinc-50" />
+                  <NativeDivider color="#F4F4F5" />
 
                   <View className="flex-row gap-3">
                     <TouchableOpacity

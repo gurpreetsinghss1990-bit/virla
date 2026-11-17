@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, LayoutAnimation, Platform, UI
 import { Image as ExpoImage } from 'expo-image';
 import { Workout } from '../types';
 import { Ionicons } from '@expo/vector-icons';
+import { NativeDivider } from './NativeDivider';
 
 if (Platform.OS === 'android') {
   if (UIManager.setLayoutAnimationEnabledExperimental) {
@@ -67,12 +68,12 @@ export function WorkoutDetailCard({ workout }: WorkoutDetailCardProps) {
             <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">Duration</Text>
             <Text className="text-primary text-sm font-black mt-1">⏱️ {workout.duration} mins</Text>
           </View>
-          <View className="w-[1px] bg-zinc-200" />
+          <NativeDivider orientation="vertical" color="#E4E4E7" />
           <View className="items-center">
             <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">Avg Burn</Text>
             <Text className="text-primary text-sm font-black mt-1">🔥 {workout.calories} kcal</Text>
           </View>
-          <View className="w-[1px] bg-zinc-200" />
+          <NativeDivider orientation="vertical" color="#E4E4E7" />
           <View className="items-center">
             <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">Difficulty</Text>
             <Text className="text-primary text-sm font-black mt-1">💪 {workout.difficulty || 'Medium'}</Text>

@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { useUserProfileStore, SavedAddress } from '../store/userProfileStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { NativeDivider } from '../components/NativeDivider';
 import * as Location from 'expo-location';
 import { fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, isValidServiceCoord, reverseGeocodeCoords, AutocompleteSuggestion, getCurrentLocationCoords } from '../utils/distance';
 import { useCoachStore } from '../store/coachStore';
@@ -469,7 +470,7 @@ export default function AddressManagementScreen() {
                       </Text>
                     </View>
 
-                    <View className="h-[1px] bg-zinc-50" />
+                    <NativeDivider color="#F4F4F5" />
 
                     <View className="flex-row gap-3">
                       <TouchableOpacity

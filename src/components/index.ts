@@ -37,3 +37,4 @@ export * from './FoodPreferenceSelectionView';
 export * from './SelectableTagCard';
 export * from './ContinueButton';
 export * from './CalculatedTargetsCard';
+export * from './NativeDivider';

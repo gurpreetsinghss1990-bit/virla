@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useWalletStore } from '../store/walletStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { NativeDivider } from '../components/NativeDivider';
 import { formatToDDMMYYYY } from '../utils/date';
 
 export default function InvoiceScreen() {
@@ -96,7 +97,7 @@ export default function InvoiceScreen() {
                 <Text className="text-zinc-500 text-[9px] font-bold">Integrated GST (18%)</Text>
                 <Text className="text-zinc-900 text-[9px] font-black">{payment.gst}</Text>
               </View>
-              <View className="h-[1px] bg-zinc-100 my-1" />
+              <NativeDivider className="my-1" color="#F4F4F5" />
               <View className="flex-row justify-between">
                 <Text className="text-zinc-950 text-xs font-black">Total Paid</Text>
                 <Text className="text-[#4F46E5] text-xs font-black">{payment.total}</Text>

@@ -6,6 +6,7 @@ import { Database } from '../database/Database';
 import { useUserStore } from '../store/userStore';
 import { useRouter } from 'expo-router';
 import { NativeSheet } from './NativeSheet';
+import { NativeDivider } from './NativeDivider';
 import { digitsOnly, isValidPhone } from '../utils/inputSafety';
 
 interface AddPartnerModalProps {
@@ -78,7 +79,7 @@ export const AddPartnerModal: React.FC<AddPartnerModalProps> = ({
               <Text className="text-zinc-500 text-xs font-semibold">Upgraded Session (2 People)</Text>
               <Text className="text-zinc-900 text-xs font-extrabold">2 Credits</Text>
             </View>
-            <View className="h-[1px] bg-zinc-150 my-0.5" />
+            <NativeDivider color="#E4E4E7" className="my-0.5" />
             <View className="flex-row justify-between items-center">
               <Text className="text-zinc-950 text-xs font-black">Additional Cost</Text>
               <Text className="text-[#E11D48] text-xs font-black">1 Credit</Text>

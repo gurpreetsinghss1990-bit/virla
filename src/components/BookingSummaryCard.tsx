@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
+import { NativeDivider } from './NativeDivider';
 
 interface BookingSummaryCardProps {
   workoutTitle: string;
@@ -76,7 +77,7 @@ export function BookingSummaryCard({
           <Text className="text-[#4F46E5] text-xs font-extrabold">{creditsUsed} Credit</Text>
         </View>
         
-        <View className="h-[1px] bg-[#E5E7EB] my-1" />
+        <NativeDivider color="#E5E7EB" className="my-1" />
         
         <View className="flex-row justify-between items-center">
           <Text className="text-[#111827] text-sm font-black">Final Amount</Text>

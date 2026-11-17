@@ -28,6 +28,7 @@ import { useToastStore } from '../../store/toastStore';
 import { supabase } from '../../database/supabaseClient';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { NativeProgressBar } from '../../components/NativeProgressBar';
+import { NativeDivider } from '../../components/NativeDivider';
 import { NativeOverviewCard } from '../../components/NativeOverviewCard';
 import { resolveAvatarSource } from '../../components/AvatarImage';
 import { useAIWellnessStore } from '../../store/aiWellnessStore';
@@ -1685,7 +1686,7 @@ export default function HomeScreen() {
                         </View>
                       </View>
 
-                      <View className="h-[1px] bg-zinc-100" />
+                      <NativeDivider color="#F4F4F5" />
 
                       {/* Track Coach Live CTA Button */}
                       <TouchableOpacity
@@ -2165,7 +2166,7 @@ export default function HomeScreen() {
 
                       {bookingData.sessionType === 'SINGLE' && bookingData.timelineStatus !== 'otp_verified' && bookingData.timelineStatus !== 'workout_started' && bookingData.timelineStatus !== 'workout_completed' && bookingData.timelineStatus !== 'session_closed' && bookingData.status === 'upcoming' && (
                         <>
-                          <View className="h-[1px] bg-zinc-150 mt-3 mb-1" />
+                          <NativeDivider color="#E4E4E7" className="mt-3 mb-1" />
                           <TouchableOpacity
                             activeOpacity={0.8}
                             onPress={() => {
@@ -2182,7 +2183,7 @@ export default function HomeScreen() {
 
                       {bookingData.sessionType === 'COUPLE' && bookingData.partnerName && (
                         <>
-                          <View className="h-[1px] bg-zinc-150 mt-3 mb-1.5" />
+                          <NativeDivider color="#E4E4E7" className="mt-3 mb-1.5" />
                           <View className="flex-row items-center justify-center gap-1.5 py-0.5">
                             <Feather name="users" size={12} color="#10B981" />
                             <Text className="text-zinc-500 text-[10px] font-semibold">
@@ -2483,7 +2484,7 @@ export default function HomeScreen() {
                         </View>
                       )}
 
-                      <View className="h-[1px] bg-zinc-800" />
+                      <NativeDivider color="#27272A" />
 
                       {nextSession.timelineStatus === 'trainer_accepted' ? (
                         <View className="gap-2 w-full">
