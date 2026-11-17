@@ -36,7 +36,7 @@ export default function OnboardingScreen() {
   useEffect(() => {
     // 0. Modern Android Edge-to-Edge System Bar
     // Subtle swipe hint pulse animation
-    Animated.loop(
+    const swipeHintLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(swipeHintPulse, {
           toValue: 6,
@@ -49,7 +49,9 @@ export default function OnboardingScreen() {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    swipeHintLoop.start();
+    return () => swipeHintLoop.stop();
   }, [swipeHintPulse]);
 
   // Animate button entry when landing on 3rd slide

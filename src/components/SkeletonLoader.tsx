@@ -12,7 +12,7 @@ export function SkeletonLoader({ layout = 'home' }: SkeletonLoaderProps) {
 
   useEffect(() => {
     // Shimmering pulse effect (repeating loop)
-    Animated.loop(
+    const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(shimmerAnim, {
           toValue: 0.7,
@@ -25,7 +25,9 @@ export function SkeletonLoader({ layout = 'home' }: SkeletonLoaderProps) {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    loop.start();
+    return () => loop.stop();
   }, [shimmerAnim]);
 
   const animatedStyle = {

@@ -175,12 +175,14 @@ export default function ProfileScreen() {
 
   const shimmerAnim = useMemo(() => new Animated.Value(0.3), []);
   useEffect(() => {
-    Animated.loop(
+    const shimmerLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(shimmerAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
         Animated.timing(shimmerAnim, { toValue: 0.3, duration: 1500, useNativeDriver: true })
       ])
-    ).start();
+    );
+    shimmerLoop.start();
+    return () => shimmerLoop.stop();
   }, [shimmerAnim]);
 
   // Subtle sparkle intro pulse (1-2 gentle twinkles on screen load and on tap)

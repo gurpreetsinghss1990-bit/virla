@@ -32,7 +32,7 @@ export default function SplashScreen() {
     ]).start();
 
     // 2. Pulse the spark icon continuously
-    Animated.loop(
+    const dotLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(dotScale, {
           toValue: 1.22,
@@ -45,7 +45,8 @@ export default function SplashScreen() {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    dotLoop.start();
 
     // 3. Run bootstrap and control navigation timing
     let hasNavigated = false;
@@ -110,6 +111,7 @@ export default function SplashScreen() {
 
     return () => {
       clearTimeout(safetyTimeout);
+      dotLoop.stop();
     };
   }, [router]);
 
