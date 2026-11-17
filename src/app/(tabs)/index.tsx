@@ -440,6 +440,7 @@ export default function HomeScreen() {
     }
     try {
       const { data, error } = await supabase.from('users').select('role').eq('id', userId).single();
+      if (!isAliveRef.current) return;
       if (error) {
         console.error('Admin role check failed:', error.message);
         Alert.alert('Error', 'Unable to verify administrative authorization.');
@@ -876,6 +877,7 @@ export default function HomeScreen() {
   const [isHolding, setIsHolding] = useState(false);
   const [holdProgress] = useState(() => new Animated.Value(0));
   const holdTimeoutRef = useRef<any>(null);
+  const isAliveRef = useRef(true);
 
   const handlePressIn = () => {
     setIsHolding(true);
@@ -905,6 +907,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     return () => {
+      isAliveRef.current = false;
       if (holdTimeoutRef.current) {
         clearTimeout(holdTimeoutRef.current);
       }
@@ -1205,7 +1208,7 @@ export default function HomeScreen() {
       Alert.alert('Job Accepted', 'You accepted this session. Ready to begin travel at the scheduled time!');
     } else {
       navigateSafely({
-        pathname: '/session-detail' as any,
+        pathname: '/session-detail',
         params: { id: bookingId },
       });
     }
