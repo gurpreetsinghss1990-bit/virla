@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { Booking } from '../types';
 import { useBookingStore } from '../store/bookingStore';
-import { resolveAvatarSource } from './AvatarImage';
+import { AvatarImage } from './AvatarImage';
 import { getDisplayWorkoutTitle, formatToDDMMYYYY } from '../utils/date';
 
 interface SessionCardProps {
@@ -63,9 +63,12 @@ export function SessionCard({ booking }: SessionCardProps) {
       {/* Header Info */}
       <View className="flex-row items-center justify-between mb-4 border-b border-zinc-50 pb-4">
         <View className="flex-row items-center gap-3">
-          <Image
-            source={resolveAvatarSource(booking.trainerPhoto)}
+          <AvatarImage
+            uri={booking.trainerPhoto}
             className="w-12 h-12 rounded-full border border-zinc-50"
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={150}
           />
           <View>
             <Text className="text-primary text-base font-extrabold tracking-tight">

@@ -35,7 +35,15 @@ type AvatarImageProps = Omit<ImageProps, 'source'> & {
  * (expired bucket URL, stale local file, garbage string) falls back to the
  * gender default.
  */
-export function AvatarImage({ uri, gender, onError, ...rest }: AvatarImageProps) {
+export function AvatarImage({
+  uri,
+  gender,
+  onError,
+  contentFit = 'cover',
+  cachePolicy = 'memory-disk',
+  transition = 150,
+  ...rest
+}: AvatarImageProps) {
   const [failedUri, setFailedUri] = useState<string | null>(null);
   const failed = failedUri !== null && failedUri === (uri ?? '');
 
@@ -45,6 +53,9 @@ export function AvatarImage({ uri, gender, onError, ...rest }: AvatarImageProps)
     <Image
       {...rest}
       source={source}
+      contentFit={contentFit}
+      cachePolicy={cachePolicy}
+      transition={transition}
       onError={(event) => {
         setFailedUri(uri ?? '');
         onError?.(event);

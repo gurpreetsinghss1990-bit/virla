@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Coach } from '../types';
-import { resolveAvatarSource } from './AvatarImage';
+import { AvatarImage } from './AvatarImage';
 
 interface CoachCardProps {
   coach: Coach;
@@ -16,9 +16,13 @@ export function CoachCard({ coach, onPress }: CoachCardProps) {
       className="bg-white border border-zinc-100 p-4 rounded-[20px] shadow-sm flex-row items-center w-72 mr-4"
     >
       {/* Coach Image */}
-      <Image
-        source={resolveAvatarSource(coach.photo, coach.gender)}
+      <AvatarImage
+        uri={coach.photo}
+        gender={coach.gender}
         className="w-16 h-16 rounded-2xl border border-zinc-50 mr-4"
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        transition={150}
       />
 
       {/* Profile Details */}

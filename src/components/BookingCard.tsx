@@ -1,12 +1,12 @@
 import { Loading } from './Loading';
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, Alert, Modal, ScrollView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, Modal, ScrollView, Platform } from 'react-native';
 import { Booking } from '../types';
 import { BookingStatusBadge } from './BookingStatusBadge';
 import { useBookingStore } from '../store/bookingStore';
 import { useRouter } from 'expo-router';
 import { LuxuryCard } from './LuxuryCard';
-import { resolveAvatarSource } from './AvatarImage';
+import { AvatarImage } from './AvatarImage';
 import { Feather } from '@expo/vector-icons';
 import { useUserStore } from '../store/userStore';
 import { SessionEngine } from '../services/SessionEngine';
@@ -442,9 +442,12 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
             className="flex-row items-center justify-between mt-3.5 pt-3 border-t border-zinc-100/80 pl-1"
           >
             <View className="flex-row items-center gap-3 flex-1 pr-2">
-              <Image
-                source={resolveAvatarSource(booking.trainerPhoto)}
+              <AvatarImage
+                uri={booking.trainerPhoto}
                 className="w-10 h-10 rounded-full border border-zinc-200"
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={150}
               />
               <View className="flex-1">
                 <Text className="text-[#101828] text-xs font-bold">
@@ -742,9 +745,12 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
               <Text className="text-lg">🧘</Text>
             </View>
           ) : (
-            <Image
-              source={resolveAvatarSource(booking.trainerPhoto)}
+            <AvatarImage
+              uri={booking.trainerPhoto}
               className="w-12 h-12 rounded-full border border-zinc-150"
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={150}
             />
           )}
           <View className="flex-1">
