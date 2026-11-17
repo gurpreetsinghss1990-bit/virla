@@ -657,6 +657,7 @@ export default function ProfileScreen() {
   const [disputeBookingId, setDisputeBookingId] = useState('');
   const [disputesList, setDisputesList] = useState<any[]>([]);
   const [isSubmittingDispute, setIsSubmittingDispute] = useState(false);
+  const [showAllDisputes, setShowAllDisputes] = useState(false);
 
   // Kit Request States
   const [showKitForm, setShowKitForm] = useState(false);
@@ -664,6 +665,7 @@ export default function ProfileScreen() {
   const [kitQuantities, setKitQuantities] = useState<{ [item: string]: number }>({ 'T-shirt': 0, 'Towel': 0, 'Duffel Bag': 0, 'Water Bottle': 0 });
   const [kitRequestsList, setKitRequestsList] = useState<any[]>([]);
   const [isSubmittingKit, setIsSubmittingKit] = useState(false);
+  const [showAllKits, setShowAllKits] = useState(false);
 
   // Reload disputes and kit requests on user load
   const reloadDynamicLists = async () => {
@@ -2495,23 +2497,19 @@ export default function ProfileScreen() {
                       <Text className="text-zinc-500 text-xs font-semibold uppercase tracking-wider mb-2.5">Your Disputes history</Text>
                       {disputesList.length > 0 ? (
                         <View className="gap-2.5 bg-white p-3.5 border border-zinc-200/80 rounded-2xl">
-                          {disputesList.map((d) => (
-                            <View key={d.id} className="py-2.5 border-b border-zinc-100 last:border-b-0 gap-1.5">
-                              <View className="flex-row justify-between items-center">
-                                <Text className="text-zinc-900 text-xs font-semibold capitalize">Case: {d.category.replace('_', ' ')}</Text>
-                                <View className={`px-2 py-0.5 rounded-full ${
-                                  d.status === 'resolved' ? 'bg-emerald-50 border border-emerald-200' : 'bg-amber-50 border border-amber-200'
-                                }`}>
-                                  <Text className={`text-[10px] font-bold uppercase ${d.status === 'resolved' ? 'text-emerald-700' : 'text-amber-700'}`}>
-                                    {d.status}
-                                  </Text>
-                                </View>
-                              </View>
-                              {d.bookingId ? <Text className="text-zinc-400 text-[11px] font-medium">Booking ID: {d.bookingId}</Text> : null}
-                              <Text className="text-zinc-700 text-xs leading-relaxed mt-0.5">{d.description}</Text>
-                              <Text className="text-zinc-400 text-[10px] font-medium mt-0.5">Submitted: {formatToDDMMYYYY(d.date)}</Text>
-                            </View>
+                          {(showAllDisputes ? disputesList : disputesList.slice(0, DISPUTES_PAGE_SIZE)).map((d) => (
+                            <DisputeHistoryRow key={d.id} dispute={d} />
                           ))}
+                          {disputesList.length > DISPUTES_PAGE_SIZE && (
+                            <TouchableOpacity
+                              onPress={() => setShowAllDisputes(prev => !prev)}
+                              className="py-2 items-center"
+                            >
+                              <Text className="text-zinc-500 text-[11px] font-semibold">
+                                {showAllDisputes ? 'Show less' : `Show all ${disputesList.length} cases`}
+                              </Text>
+                            </TouchableOpacity>
+                          )}
                         </View>
                       ) : (
                         <Text className="text-zinc-400 text-xs text-center py-4 bg-white border border-zinc-200/80 rounded-2xl">No open dispute cases logged.</Text>
@@ -2654,41 +2652,19 @@ export default function ProfileScreen() {
                       <Text className="text-zinc-500 text-xs font-semibold uppercase tracking-wider mb-2.5">Partner Kits History</Text>
                       {kitRequestsList.length > 0 ? (
                         <View className="gap-3">
-                          {kitRequestsList.map((item) => (
-                            <View key={item.id} className="bg-white border border-zinc-200/80 p-3.5 rounded-2xl gap-2">
-                              <View className="flex-row justify-between items-center">
-                                <Text className="text-zinc-900 text-xs font-bold uppercase">Order ID: {item.order_id || item.id}</Text>
-                                <View className={`px-2 py-0.5 rounded-full ${
-                                  item.status === 'SUBMITTED' ? 'bg-rose-50 border border-rose-200' :
-                                  item.status === 'UNDER REVIEW' ? 'bg-amber-50 border border-amber-200' :
-                                  item.status === 'APPROVED' || item.status === 'DELIVERED' ? 'bg-emerald-50 border border-emerald-200' :
-                                  'bg-zinc-100 border border-zinc-200'
-                                }`}>
-                                  <Text className={`text-[10px] font-bold uppercase ${
-                                    item.status === 'SUBMITTED' ? 'text-rose-700' :
-                                    item.status === 'UNDER REVIEW' ? 'text-amber-700' :
-                                    item.status === 'APPROVED' || item.status === 'DELIVERED' ? 'text-emerald-700' :
-                                    'text-zinc-600'
-                                  }`}>
-                                    {item.status}
-                                  </Text>
-                                </View>
-                              </View>
-                              <View className="border-t border-zinc-100 pt-2 mt-0.5">
-                                <Text className="text-zinc-400 text-[10px] font-medium uppercase mb-1">Items & Quantities</Text>
-                                <Text className="text-zinc-800 text-xs font-medium leading-relaxed">
-                                  {typeof item.items === 'object' && item.items !== null
-                                    ? Object.keys(item.items).map(k => `${k} × ${item.items[k]}`).join(', ')
-                                    : Array.isArray(item.items) ? item.items.join(', ') : JSON.stringify(item.items)}
-                                  {item.tshirt_size ? ` (Size: ${item.tshirt_size})` : ''}
-                                </Text>
-                              </View>
-                              <View className="flex-row justify-between items-center mt-1">
-                                <Text className="text-zinc-400 text-[10px] font-medium uppercase">Requested Date</Text>
-                                <Text className="text-zinc-800 text-xs font-semibold">{formatToDDMMYYYY(item.created_at)}</Text>
-                              </View>
-                            </View>
+                          {(showAllKits ? kitRequestsList : kitRequestsList.slice(0, KITS_PAGE_SIZE)).map((item) => (
+                            <KitRequestRow key={item.id} item={item} />
                           ))}
+                          {kitRequestsList.length > KITS_PAGE_SIZE && (
+                            <TouchableOpacity
+                              onPress={() => setShowAllKits(prev => !prev)}
+                              className="py-2 items-center"
+                            >
+                              <Text className="text-zinc-500 text-[11px] font-semibold">
+                                {showAllKits ? 'Show less' : `Show all ${kitRequestsList.length} requests`}
+                              </Text>
+                            </TouchableOpacity>
+                          )}
                         </View>
                       ) : (
                         <Text className="text-zinc-400 text-xs text-center py-4 bg-white border border-zinc-200/80 rounded-2xl">No partner brand kit requests logged.</Text>
@@ -3115,6 +3091,67 @@ interface AccordionCardProps {
   children: React.ReactNode;
   rightText?: string;
 }
+
+const DISPUTES_PAGE_SIZE = 5;
+const KITS_PAGE_SIZE = 4;
+
+const DisputeHistoryRow = React.memo(function DisputeHistoryRow({ dispute }: { dispute: any }) {
+  return (
+    <View className="py-2.5 border-b border-zinc-100 last:border-b-0 gap-1.5">
+      <View className="flex-row justify-between items-center">
+        <Text className="text-zinc-900 text-xs font-semibold capitalize">Case: {dispute.category.replace('_', ' ')}</Text>
+        <View className={`px-2 py-0.5 rounded-full ${
+          dispute.status === 'resolved' ? 'bg-emerald-50 border border-emerald-200' : 'bg-amber-50 border border-amber-200'
+        }`}>
+          <Text className={`text-[10px] font-bold uppercase ${dispute.status === 'resolved' ? 'text-emerald-700' : 'text-amber-700'}`}>
+            {dispute.status}
+          </Text>
+        </View>
+      </View>
+      {dispute.bookingId ? <Text className="text-zinc-400 text-[11px] font-medium">Booking ID: {dispute.bookingId}</Text> : null}
+      <Text className="text-zinc-700 text-xs leading-relaxed mt-0.5">{dispute.description}</Text>
+      <Text className="text-zinc-400 text-[10px] font-medium mt-0.5">Submitted: {formatToDDMMYYYY(dispute.date)}</Text>
+    </View>
+  );
+});
+
+const KitRequestRow = React.memo(function KitRequestRow({ item }: { item: any }) {
+  return (
+    <View className="bg-white border border-zinc-200/80 p-3.5 rounded-2xl gap-2">
+      <View className="flex-row justify-between items-center">
+        <Text className="text-zinc-900 text-xs font-bold uppercase">Order ID: {item.order_id || item.id}</Text>
+        <View className={`px-2 py-0.5 rounded-full ${
+          item.status === 'SUBMITTED' ? 'bg-rose-50 border border-rose-200' :
+          item.status === 'UNDER REVIEW' ? 'bg-amber-50 border border-amber-200' :
+          item.status === 'APPROVED' || item.status === 'DELIVERED' ? 'bg-emerald-50 border border-emerald-200' :
+          'bg-zinc-100 border border-zinc-200'
+        }`}>
+          <Text className={`text-[10px] font-bold uppercase ${
+            item.status === 'SUBMITTED' ? 'text-rose-700' :
+            item.status === 'UNDER REVIEW' ? 'text-amber-700' :
+            item.status === 'APPROVED' || item.status === 'DELIVERED' ? 'text-emerald-700' :
+            'text-zinc-600'
+          }`}>
+            {item.status}
+          </Text>
+        </View>
+      </View>
+      <View className="border-t border-zinc-100 pt-2 mt-0.5">
+        <Text className="text-zinc-400 text-[10px] font-medium uppercase mb-1">Items & Quantities</Text>
+        <Text className="text-zinc-800 text-xs font-medium leading-relaxed">
+          {typeof item.items === 'object' && item.items !== null
+            ? Object.keys(item.items).map(k => `${k} × ${item.items[k]}`).join(', ')
+            : Array.isArray(item.items) ? item.items.join(', ') : JSON.stringify(item.items)}
+          {item.tshirt_size ? ` (Size: ${item.tshirt_size})` : ''}
+        </Text>
+      </View>
+      <View className="flex-row justify-between items-center mt-1">
+        <Text className="text-zinc-400 text-[10px] font-medium uppercase">Requested Date</Text>
+        <Text className="text-zinc-800 text-xs font-semibold">{formatToDDMMYYYY(item.created_at)}</Text>
+      </View>
+    </View>
+  );
+});
 
 function AccordionCard({ title, icon, expanded, onToggle, children, rightText }: AccordionCardProps) {
   return (
