@@ -654,12 +654,13 @@ export default function ProfileScreen() {
 
   // Reload disputes and kit requests on user load
   const reloadDynamicLists = async () => {
-    if (coach) {
-      const disputes = await Database.fetchClientDisputes(coach.id);
-      setDisputesList(disputes);
-      const kits = await Database.fetchKitRequests(coach.id);
-      setKitRequestsList(kits);
-    }
+    if (!coach) return;
+    const [disputes, kits] = await Promise.all([
+      Database.fetchClientDisputes(coach.id),
+      Database.fetchKitRequests(coach.id),
+    ]);
+    setDisputesList(disputes);
+    setKitRequestsList(kits);
   };
 
   useFocusEffect(
@@ -692,7 +693,7 @@ export default function ProfileScreen() {
               syncAllDomainStores();
               useUserStore.getState().syncFromDB();
               useMembershipStore.getState().syncFromDB();
-              reloadDynamicLists();
+              await reloadDynamicLists();
               const latestCoach = Database.schema?.coaches?.find((c: any) => c.name === user.name || c.id === user.id);
               if (latestCoach) {
                 setTrainerName(latestCoach.name || '');
@@ -714,7 +715,9 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     if (coach?.id) {
-      reloadDynamicLists();
+      reloadDynamicLists().catch((err) => {
+        console.warn('[Profile] Initial dispute/kit load failed:', err);
+      });
     }
   }, []);
 
