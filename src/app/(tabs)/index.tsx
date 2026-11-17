@@ -1116,14 +1116,23 @@ export default function HomeScreen() {
   const profileObj = user.id ? Database.getProfile(user.id) : null;
 
   // Trainer metric summary calculations
-  const completedJobs = bookings.filter(b => b.status === 'completed');
-  const upcomingJobs = bookings.filter(b => b.status === 'upcoming');
-  const cancelledJobs = bookings.filter(b => b.status === 'cancelled');
+  const { completedJobs, upcomingJobs, cancelledJobs } = useMemo(() => ({
+    completedJobs: bookings.filter(b => b.status === 'completed'),
+    upcomingJobs: bookings.filter(b => b.status === 'upcoming'),
+    cancelledJobs: bookings.filter(b => b.status === 'cancelled'),
+  }), [bookings]);
   const totalCompleted = completedJobs.length;
   const totalUpcoming = upcomingJobs.length;
 
-  const trainerEarningsList = user.id ? Database.getEarnings(user.id) : [];
-  const monthlyEarnings = trainerEarningsList.reduce((acc, earn) => acc + (earn.amount > 0 ? earn.amount : 0), 0);
+  // Schema identity changes on every Database.load(), so this re-reads after a real sync.
+  const dbSchema = Database.schema;
+  const { trainerEarningsList, monthlyEarnings } = useMemo(() => {
+    const list = user.id ? Database.getEarnings(user.id) : [];
+    return {
+      trainerEarningsList: list,
+      monthlyEarnings: list.reduce((acc, earn) => acc + (earn.amount > 0 ? earn.amount : 0), 0),
+    };
+  }, [dbSchema, user.id, bookings]);
 
   const getRecoveryStatus = (score: number | null) => {
     if (score === null) {
