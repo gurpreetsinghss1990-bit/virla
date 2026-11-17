@@ -1047,6 +1047,20 @@ export function mapTrainerApplicationToPostgres(app: TrainerApplication): any {
   };
 }
 
+// `expires_at` arrives from Postgres as an ISO timestamp, while locally created
+// holds store epoch ms. Every consumer compares it numerically, so it is
+// normalised to epoch ms once, at load.
+export interface SlotReservationRow {
+  id: string;
+  slot_time: string;
+  slot_date: string;
+  trainer_id: string;
+  client_id: string;
+  expires_at: number;
+  scheduled_start_at?: string;
+  scheduled_end_at?: string;
+}
+
 const STORAGE_KEY = 'virla_production_database';
 
 class DatabaseClient {
@@ -1071,7 +1085,7 @@ class DatabaseClient {
     schedules: ScheduleSlot[];
     trainer_applications: any[];
     assignment_logs: AssignmentLog[];
-    slot_reservations: any[];
+    slot_reservations: SlotReservationRow[];
     trainer_workout_assignments: TrainerWorkoutAssignment[];
     client_disputes: any[];
     kit_requests: any[];
@@ -1257,7 +1271,14 @@ class DatabaseClient {
       try {
         const { data: resReservations, error: resResError } = await supabase.from('slot_reservations').select('*');
         if (resReservations && !resResError) {
-          this.schema.slot_reservations = resReservations;
+          this.schema.slot_reservations = resReservations.map((r) => {
+            const raw = r.expires_at as string | number | null;
+            const ms = typeof raw === 'string' ? Date.parse(raw) : Number(raw);
+            return {
+              ...r,
+              expires_at: Number.isFinite(ms) ? ms : 0,
+            } as SlotReservationRow;
+          });
         }
       } catch (resErr) {
         console.log('[DEBUG-DB] slot_reservations table not yet configured:', resErr);
@@ -2502,7 +2523,7 @@ class DatabaseClient {
       slot_date: date,
       trainer_id: trainerId,
       client_id: clientId,
-      expires_at: Date.now() + 5 * 60 * 1000 as any
+      expires_at: Date.now() + 5 * 60 * 1000
     });
 
     try {

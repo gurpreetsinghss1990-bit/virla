@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Alert, Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet, AppState, AppStateStatus, Vibration, Linking } from 'react-native';
 import Svg, { Rect, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
@@ -162,10 +162,14 @@ interface RequestCardProps {
   onPress: (id: string) => void;
 }
 
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : '';
+}
+
 function playNotificationBeep() {
   try {
     if (typeof window !== 'undefined') {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioContext = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof window.AudioContext }).webkitAudioContext;
       if (AudioContext) {
         const ctx = new AudioContext();
         const osc = ctx.createOscillator();
@@ -413,7 +417,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const isNavigatingRef = useRef(false);
 
-  const navigateSafely = useCallback((route: any) => {
+  const navigateSafely = useCallback((route: Href) => {
     if (isNavigatingRef.current) return;
     isNavigatingRef.current = true;
     router.push(route);
@@ -457,7 +461,7 @@ export default function HomeScreen() {
       } else {
         Alert.alert('Access Denied', 'You do not have administrative authorization.');
       }
-    } catch (err: any) {
+    } catch (err) {
       Alert.alert('Error', 'Unable to verify administrative authorization.');
     }
   };
@@ -504,15 +508,15 @@ export default function HomeScreen() {
       } else {
         Alert.alert('Booking Accepted', 'You have accepted the session request.');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("[TRAINER-ACCEPT-TRACE] RPC RESULT: ERROR");
       console.error("[TRAINER-ACCEPT-TRACE] RPC error details:", err);
       console.log("[TRAINER-ACCEPT-TRACE] ---------------------------------");
       
       if (Platform.OS === 'web') {
-        window.alert(err.message || 'Could not accept booking.');
+        window.alert(errorMessage(err) || 'Could not accept booking.');
       } else {
-        Alert.alert('Accept Failed', err.message || 'Could not accept booking.');
+        Alert.alert('Accept Failed', errorMessage(err) || 'Could not accept booking.');
       }
     }
   };
@@ -556,11 +560,11 @@ export default function HomeScreen() {
       } else {
         Alert.alert('Success', 'You have acknowledged the auto-accepted session.');
       }
-    } catch (e: any) {
+    } catch (e) {
       if (Platform.OS === 'web') {
-        window.alert(e.message || 'Acknowledgement failed.');
+        window.alert(errorMessage(e) || 'Acknowledgement failed.');
       } else {
-        Alert.alert('Error', e.message || 'Acknowledgement failed.');
+        Alert.alert('Error', errorMessage(e) || 'Acknowledgement failed.');
       }
     }
   };
@@ -681,10 +685,10 @@ export default function HomeScreen() {
   const getIsTomorrowScheduleEnabled = () => {
     if (!currentCoach) return false;
     const allTomorrowSlots = generateMonthlySlots(new Date(serverNow.getTime() + 24 * 60 * 60 * 1000).getMonth(), new Date(serverNow.getTime() + 24 * 60 * 60 * 1000).getFullYear());
-    const tomorrowSlotsData = allTomorrowSlots.find((d: any) => d.date === tomorrowDateStr)?.slots || [];
+    const tomorrowSlotsData = allTomorrowSlots.find((d) => d.date === tomorrowDateStr)?.slots || [];
     const availabilityOverrides = currentCoach.preferences?.availabilityOverrides || [];
-    const tomorrowActiveSlots = tomorrowSlotsData.filter((slot: any) => {
-      const override = availabilityOverrides.find((o: any) => 
+    const tomorrowActiveSlots = tomorrowSlotsData.filter((slot) => {
+      const override = availabilityOverrides.find((o) => 
         normalizeDate(o.date) === tomorrowDateStr && 
         canonicalizeTimeRange(o.time) === canonicalizeTimeRange(slot.time)
       );
@@ -699,27 +703,27 @@ export default function HomeScreen() {
     if (!currentCoach) return { booked: 0, available: 0 };
     const todayDateStr = normalizeDate(new Date());
     const allDaysSlots = generateMonthlySlots(new Date().getMonth(), new Date().getFullYear());
-    const todaySlotsData = allDaysSlots.find((d: any) => d.date === todayDateStr)?.slots || [];
+    const todaySlotsData = allDaysSlots.find((d) => d.date === todayDateStr)?.slots || [];
     const availabilityOverrides = currentCoach.preferences?.availabilityOverrides || [];
     const reservations = Database.schema.slot_reservations || [];
     
     let bookedSlotsToday = 0;
     let availableSlotsToday = 0;
 
-    todaySlotsData.forEach((slot: any) => {
-      const isBooked = bookings.some((b: any) => 
+    todaySlotsData.forEach((slot) => {
+      const isBooked = bookings.some((b) => 
         b.trainerId === currentCoach.id && 
         normalizeDate(b.date) === normalizeDate(todayDateStr) && 
         canonicalizeTimeRange(b.time) === canonicalizeTimeRange(slot.time) && 
         b.status === 'upcoming'
       );
-      const isReserved = reservations.some((r: any) =>
+      const isReserved = reservations.some((r) =>
         r.trainer_id === currentCoach.id &&
         normalizeDate(r.slot_date) === normalizeDate(todayDateStr) &&
         canonicalizeTimeRange(r.slot_time) === canonicalizeTimeRange(slot.time) &&
         r.expires_at > Date.now()
       );
-      const override = availabilityOverrides.find((o: any) => 
+      const override = availabilityOverrides.find((o) => 
         normalizeDate(o.date) === normalizeDate(todayDateStr) && 
         canonicalizeTimeRange(o.time) === canonicalizeTimeRange(slot.time)
       );
@@ -823,7 +827,7 @@ export default function HomeScreen() {
 
   const [isHolding, setIsHolding] = useState(false);
   const [holdProgress] = useState(() => new Animated.Value(0));
-  const holdTimeoutRef = useRef<any>(null);
+  const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isAliveRef = useRef(true);
 
   const handlePressIn = () => {
@@ -1255,7 +1259,7 @@ export default function HomeScreen() {
           >
             <AvatarImage
               uri={profile?.avatar || user?.avatar}
-              gender={((user as any)?.gender || profile?.gender || (role === 'trainer' ? 'male' : '')) as string}
+              gender={user?.gender || profile?.gender || (role === 'trainer' ? 'male' : '')}
               style={{ width: '100%', height: '100%', borderRadius: 999 }}
               contentFit="cover"
               cachePolicy="memory-disk"
@@ -2362,7 +2366,7 @@ export default function HomeScreen() {
                     </View>
 
                     <View className="gap-1.5">
-                      {(activeSession.isFavouriteTrainer || (activeSession as any)?.ratingDetails?.isFavouriteTrainer) && (
+                      {(activeSession.isFavouriteTrainer || activeSession?.ratingDetails?.isFavouriteTrainer) && (
                         <View className="flex-row items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1.5 rounded-xl self-start mb-1">
                           <Ionicons name="star" size={13} color="#D97706" />
                           <Text className="text-amber-700 text-[11px] font-bold">
@@ -2433,7 +2437,7 @@ export default function HomeScreen() {
                       </View>
 
                       <View className="gap-1">
-                        {(nextSession.isFavouriteTrainer || (nextSession as any)?.ratingDetails?.isFavouriteTrainer) && (
+                        {(nextSession.isFavouriteTrainer || nextSession?.ratingDetails?.isFavouriteTrainer) && (
                           <View className="flex-row items-center gap-1.5 bg-amber-500/15 border border-amber-500/35 px-2.5 py-1.5 rounded-xl self-start mb-1">
                             <Ionicons name="star" size={13} color="#FBBF24" />
                             <Text className="text-amber-300 text-[11px] font-bold">
@@ -2518,8 +2522,8 @@ export default function HomeScreen() {
                                     icon: 'user-check'
                                   });
                                   router.push({ pathname: '/session-detail', params: { id: nextSession.id, openMap: 'true' } });
-                                } catch (err: any) {
-                                  Alert.alert('Error', err.message || 'Could not start travel.');
+                                } catch (err) {
+                                  Alert.alert('Error', errorMessage(err) || 'Could not start travel.');
                                 }
                               }}
                               className="w-full bg-indigo-600 py-3.5 rounded-xl items-center justify-center"
@@ -2552,8 +2556,8 @@ export default function HomeScreen() {
                                 body: 'Coach has arrived at your location.',
                                 icon: 'lock'
                               });
-                            } catch (err: any) {
-                              Alert.alert('Error', err.message || 'Could not update status.');
+                            } catch (err) {
+                              Alert.alert('Error', errorMessage(err) || 'Could not update status.');
                             }
                           }}
                           className="w-full bg-emerald-600 py-3.5 rounded-xl items-center justify-center"

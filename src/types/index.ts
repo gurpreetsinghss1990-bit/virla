@@ -90,6 +90,8 @@ export interface Booking {
     difficulty: string;
     energy: string;
     comments?: string;
+    // Set when the booking is pinned to the user's favourite trainer.
+    isFavouriteTrainer?: boolean;
     cancelledAtStage?: string;
     cancelledAt?: number;
     cancellationReason?: string;
