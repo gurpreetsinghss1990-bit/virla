@@ -366,6 +366,8 @@ export default function ProfileScreen() {
   const [isGoalsModalVisible, setIsGoalsModalVisible] = useState(false);
 
   useEffect(() => {
+    // Never overwrite in-progress edits when the store refreshes underneath the open form.
+    if (isEditingProfile) return;
     const timer = setTimeout(() => {
       setEditName(profile.name || '');
       setEditMobile(profile.mobile || '');
@@ -394,7 +396,8 @@ export default function ProfileScreen() {
     profile.preferredLanguage,
     profile.city,
     profile.avatar,
-    user?.avatar
+    user?.avatar,
+    isEditingProfile
   ]);
 
   const handleAvatarPicked = async (localUri: string) => {

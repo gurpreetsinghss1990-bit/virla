@@ -221,36 +221,37 @@ export const useUserProfileStore = create<UserProfileState>((set, get) => ({
 
   updateCoreProfile: async (fields) => {
     const userId = Database.getCurrentUserId();
-    if (userId) {
-      const userFields: any = {};
-      const profileFields: any = { ...fields };
-
-      if ('name' in fields) {
-        userFields.name = fields.name;
-        delete profileFields.name;
-      }
-      if ('email' in fields) {
-        userFields.email = fields.email;
-        delete profileFields.email;
-      }
-      if ('mobile' in fields) {
-        userFields.phone = fields.mobile;
-        delete profileFields.mobile;
-      }
-      if ('avatar' in fields) {
-        userFields.avatar = fields.avatar;
-        delete profileFields.avatar;
-      }
-
-      if (Object.keys(userFields).length > 0) {
-        await Database.updateUser(userId, userFields);
-      }
-      if (Object.keys(profileFields).length > 0) {
-        await Database.updateProfile(userId, profileFields);
-      }
-
-      get().syncFromDB();
+    if (!userId) {
+      throw new Error('Session expired. Please sign in again to save your profile.');
     }
+    const userFields: any = {};
+    const profileFields: any = { ...fields };
+
+    if ('name' in fields) {
+      userFields.name = fields.name;
+      delete profileFields.name;
+    }
+    if ('email' in fields) {
+      userFields.email = fields.email;
+      delete profileFields.email;
+    }
+    if ('mobile' in fields) {
+      userFields.phone = fields.mobile;
+      delete profileFields.mobile;
+    }
+    if ('avatar' in fields) {
+      userFields.avatar = fields.avatar;
+      delete profileFields.avatar;
+    }
+
+    if (Object.keys(userFields).length > 0) {
+      await Database.updateUser(userId, userFields);
+    }
+    if (Object.keys(profileFields).length > 0) {
+      await Database.updateProfile(userId, profileFields);
+    }
+
+    get().syncFromDB();
   },
 
   updateHealthProfile: (fields) => {

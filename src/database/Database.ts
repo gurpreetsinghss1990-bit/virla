@@ -14,6 +14,20 @@ const USER_WRITABLE_COLUMNS = new Set([
   'notification_prefs', 'registration_status', 'role',
 ]);
 
+// Store field names that differ from their UserProfile/Database name.
+const PROFILE_FIELD_ALIASES: Record<string, string> = {
+  targetGoal: 'fitnessGoal',
+};
+
+// Columns mapUserProfileToPostgres actually produces.
+const USER_PROFILE_MAPPED_COLUMNS = new Set([
+  'id', 'user_id', 'age', 'gender', 'height', 'weight', 'fitness_goal',
+  'preferred_workout', 'emergency_contact', 'medical_notes', 'membership_status',
+  'credits_balance', 'trainer_preference', 'dob', 'fitness_level',
+  'preferred_language', 'city', 'member_since', 'selected_goals',
+  'home_address', 'home_latitude', 'home_longitude', 'home_place_id',
+]);
+
 const USER_PROFILE_WRITABLE_COLUMNS = new Set([
   'age', 'gender', 'height', 'weight', 'fitness_goal', 'preferred_workout',
   'emergency_contact', 'medical_notes', 'membership_status', 'trainer_preference',
@@ -2032,11 +2046,28 @@ class DatabaseClient {
   async updateProfile(userId: string, fields: Partial<UserProfile>): Promise<void> {
     const profile = this.getProfile(userId);
     if (profile) {
-      Object.assign(profile, fields);
+      const normalized: any = {};
+      const unknown: string[] = [];
+      for (const [k, v] of Object.entries(fields)) {
+        const canonical = PROFILE_FIELD_ALIASES[k] || k;
+        const snakeKey = canonical.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+        if (!USER_PROFILE_MAPPED_COLUMNS.has(snakeKey)) {
+          unknown.push(k);
+          continue;
+        }
+        normalized[canonical] = v;
+      }
+      // An unmapped name is a client bug, not a protected column: fail loudly
+      // instead of reporting a save that wrote nothing.
+      if (unknown.length > 0) {
+        throw new Error(`Unknown profile field(s): ${unknown.join(', ')}`);
+      }
+
+      Object.assign(profile, normalized);
 
       const pgProfile = mapUserProfileToPostgres(profile);
       const updateFields: any = {};
-      for (const k of Object.keys(fields)) {
+      for (const k of Object.keys(normalized)) {
         const snakeKey = k.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
         if (!USER_PROFILE_WRITABLE_COLUMNS.has(snakeKey)) {
           console.warn(`[MassAssignmentGuard] Ignoring non-writable profile column: ${snakeKey}`);
@@ -2050,6 +2081,7 @@ class DatabaseClient {
       }
       if (Object.keys(updateFields).length === 0) {
         this.save();
+        console.warn('[UpdateProfile] No writable fields in request; nothing persisted.');
         return;
       }
 
