@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeSheet } from './NativeSheet';
@@ -18,116 +18,264 @@ export const TrainerStatusModal: React.FC<TrainerStatusModalProps> = ({
   onConfirm,
 }) => {
   const insets = useSafeAreaInsets();
-  // Safe clearance above Android 3-button navigation bar (~48-56dp) or iOS gesture bar (~34dp)
-  const safeBottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 56 : 24) + 20;
+  const bottomInset = Math.max(insets.bottom, 16);
   const isGoingOffline = targetStatus === 'offline';
 
   const handleDismiss = () => onClose();
 
   return (
     <NativeSheet visible={visible} onClose={handleDismiss}>
-      <View style={{ paddingBottom: safeBottomPadding }} className="w-full px-6 pt-3 pb-4 gap-5">
-            {/* Subtle Pull Indicator Bar */}
-            <View className="w-12 h-1.5 rounded-full bg-zinc-200 self-center mb-1" />
+      <View style={[styles.container, { paddingBottom: bottomInset + 16 }]}>
+        {/* Subtle Pull Indicator Bar */}
+        <View style={styles.dragHandle} />
 
-            {/* Modal Header */}
-            <View className="flex-row justify-between items-center pb-3 border-b border-zinc-100">
-              <View>
-                <Text className="text-[#E11D48] text-[10px] font-black uppercase tracking-widest">
-                  Trainer Availability
-                </Text>
-                <Text className="text-zinc-950 text-xl font-black mt-0.5">
-                  {isGoingOffline ? 'Go Offline?' : 'Go Online?'}
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={handleDismiss}
-                activeOpacity={0.7}
-                className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center border border-zinc-200"
-              >
-                <Feather name="x" size={15} color="#101828" />
-              </TouchableOpacity>
-            </View>
+        {/* Modal Header */}
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.headerSubtitle}>
+              TRAINER AVAILABILITY
+            </Text>
+            <Text style={styles.headerTitle}>
+              {isGoingOffline ? 'Go Offline?' : 'Go Online?'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={handleDismiss}
+            activeOpacity={0.7}
+            style={styles.closeButton}
+          >
+            <Feather name="x" size={15} color="#101828" />
+          </TouchableOpacity>
+        </View>
 
-            {/* Information & Impact Card */}
-            <View
-              className={`p-4 rounded-2xl border ${
-                isGoingOffline
-                  ? 'bg-rose-50/60 border-rose-200'
-                  : 'bg-emerald-50/60 border-emerald-200'
-              } flex-row items-start gap-3.5`}
-            >
+        {/* Information & Impact Card */}
+        <View
+          style={[
+            styles.noticeCard,
+            {
+              backgroundColor: isGoingOffline ? '#FFF1F2' : '#ECFDF5',
+              borderColor: isGoingOffline ? '#FECDD3' : '#A7F3D0',
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.iconBox,
+              {
+                backgroundColor: isGoingOffline ? '#FFE4E6' : '#D1FAE5',
+                borderColor: isGoingOffline ? '#FDA4AF' : '#6EE7B7',
+              },
+            ]}
+          >
+            <Feather
+              name={isGoingOffline ? 'power' : 'zap'}
+              size={22}
+              color={isGoingOffline ? '#E11D48' : '#059669'}
+            />
+          </View>
+
+          <View style={styles.noticeTextContainer}>
+            <View style={styles.noticeTitleRow}>
+              <Text numberOfLines={1} style={styles.noticeTitle}>
+                {isGoingOffline ? 'New Requests Paused' : 'Ready for Clients'}
+              </Text>
               <View
-                className={`w-11 h-11 rounded-2xl items-center justify-center border ${
-                  isGoingOffline
-                    ? 'bg-rose-100/80 border-rose-300'
-                    : 'bg-emerald-100/80 border-emerald-300'
-                }`}
+                style={[
+                  styles.statusBadge,
+                  { backgroundColor: isGoingOffline ? '#FECDD3' : '#A7F3D0' },
+                ]}
               >
-                <Feather
-                  name={isGoingOffline ? 'power' : 'zap'}
-                  size={22}
-                  color={isGoingOffline ? '#E11D48' : '#059669'}
-                />
-              </View>
-
-              <View className="flex-1">
-                <View className="flex-row items-center gap-2 mb-1">
-                  <Text className="text-zinc-950 text-sm font-black">
-                    {isGoingOffline
-                      ? 'New Requests Paused'
-                      : 'Ready for Clients'}
-                  </Text>
-                  <View
-                    className={`px-2 py-0.5 rounded-full ${
-                      isGoingOffline ? 'bg-rose-200' : 'bg-emerald-200'
-                    }`}
-                  >
-                    <Text
-                      className={`text-[9px] font-black uppercase tracking-wider ${
-                        isGoingOffline ? 'text-rose-900' : 'text-emerald-900'
-                      }`}
-                    >
-                      {isGoingOffline ? 'OFFLINE' : 'ACTIVE'}
-                    </Text>
-                  </View>
-                </View>
-
-                <Text className="text-zinc-600 text-xs font-medium leading-relaxed">
-                  {isGoingOffline
-                    ? 'Going offline may prevent you from receiving new session requests.\n\nYour already confirmed bookings will remain subject to VIRLA\'s existing booking rules.'
-                    : 'You will become visible for new incoming client workout requests within your selected coverage radius.'}
+                <Text
+                  style={[
+                    styles.statusBadgeText,
+                    { color: isGoingOffline ? '#881337' : '#064E3B' },
+                  ]}
+                >
+                  {isGoingOffline ? 'OFFLINE' : 'ACTIVE'}
                 </Text>
               </View>
             </View>
 
-            {/* Action Buttons */}
-            <View className="gap-2.5 mt-1">
-              {/* Primary Action */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={onConfirm}
-                className={`w-full py-4 rounded-2xl items-center justify-center shadow-sm ${
-                  isGoingOffline ? 'bg-[#E11D48]' : 'bg-emerald-600'
-                }`}
-              >
-                <Text className="text-white text-xs font-black uppercase tracking-wider">
-                  {isGoingOffline ? 'Confirm & Go Offline' : 'Confirm & Go Online'}
-                </Text>
-              </TouchableOpacity>
+            <Text style={styles.noticeDescription}>
+              {isGoingOffline
+                ? "Going offline may prevent you from receiving new session requests.\n\nYour already confirmed bookings will remain scheduled."
+                : "You will become visible for new incoming client workout requests within your selected coverage radius."}
+            </Text>
+          </View>
+        </View>
 
-              {/* Cancel / Dismiss Button */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={handleDismiss}
-                className="w-full py-3.5 bg-zinc-100 rounded-2xl items-center justify-center border border-zinc-200"
-              >
-                <Text className="text-zinc-700 text-xs font-black uppercase tracking-wider">
-                  {isGoingOffline ? 'Keep Online' : 'Stay Offline'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+        {/* Action Buttons */}
+        <View style={styles.actionsContainer}>
+          {/* Primary Action Button */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={onConfirm}
+            style={[
+              styles.primaryButton,
+              { backgroundColor: isGoingOffline ? '#E11D48' : '#059669' },
+            ]}
+          >
+            <Text style={styles.primaryButtonText}>
+              {isGoingOffline ? 'Confirm & Go Offline' : 'Confirm & Go Online'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Secondary Dismiss Button */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleDismiss}
+            style={styles.secondaryButton}
+          >
+            <Text style={styles.secondaryButtonText}>
+              {isGoingOffline ? 'Keep Online' : 'Stay Offline'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </NativeSheet>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    gap: 16,
+  },
+  dragHandle: {
+    width: 44,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#E4E4E7',
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F4F4F5',
+    paddingBottom: 12,
+  },
+  headerSubtitle: {
+    color: '#E11D48',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+  },
+  headerTitle: {
+    color: '#09090B',
+    fontSize: 20,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F4F4F5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E4E4E7',
+  },
+  noticeCard: {
+    width: '100%',
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    overflow: 'hidden',
+  },
+  iconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    flexShrink: 0,
+  },
+  noticeTextContainer: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  noticeTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 4,
+  },
+  noticeTitle: {
+    color: '#09090B',
+    fontSize: 13.5,
+    fontWeight: '900',
+    flexShrink: 1,
+  },
+  statusBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 1.5,
+    borderRadius: 9999,
+  },
+  statusBadgeText: {
+    fontSize: 8.5,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  noticeDescription: {
+    color: '#52525B',
+    fontSize: 11.5,
+    fontWeight: '500',
+    lineHeight: 17,
+    flexShrink: 1,
+  },
+  actionsContainer: {
+    width: '100%',
+    gap: 10,
+    marginTop: 2,
+  },
+  primaryButton: {
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  secondaryButton: {
+    width: '100%',
+    paddingVertical: 14,
+    backgroundColor: '#F4F4F5',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E4E4E7',
+  },
+  secondaryButtonText: {
+    color: '#3F3F46',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+});
+
+export default TrainerStatusModal;

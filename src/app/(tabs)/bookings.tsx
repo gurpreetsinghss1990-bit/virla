@@ -724,40 +724,97 @@ export default function BookingsScreen() {
               className="flex-1 bg-[#FCF5F5]"
               contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 180 }}
             >
-              {/* Calendar Card Visual Grid */}
-              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4 mb-6">
-              <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
-                <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">
+              {/* Calendar Card Visual Grid with native styles */}
+              <View style={{
+                backgroundColor: "#FFFFFF",
+                borderWidth: 1,
+                borderColor: "#E5E7EB",
+                padding: 20,
+                borderRadius: 28,
+                gap: 16,
+                marginBottom: 24,
+              }}>
+              <View style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                borderBottomWidth: 1,
+                borderBottomColor: "#F4F4F5",
+                paddingBottom: 12,
+              }}>
+                <Text style={{
+                  color: "#18181B",
+                  fontSize: 12,
+                  fontWeight: "900",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                }}>
                   Availability Calendar
                 </Text>
                 
                 {/* Month Navigation Control */}
-                <View className="flex-row items-center gap-4 bg-zinc-950 px-3 py-1.5 rounded-full">
+                <View style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 16,
+                  backgroundColor: "#09090B",
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 9999,
+                }}>
                   <TouchableOpacity 
                     onPress={handlePrevMonth} 
                     disabled={!prevMonthAvailable}
-                    className={`w-6 h-6 items-center justify-center bg-zinc-800 rounded-full ${!prevMonthAvailable ? 'opacity-30' : ''}`}
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: 12,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: "#27272A",
+                      opacity: !prevMonthAvailable ? 0.3 : 1,
+                    }}
                   >
-                    <Feather name="chevron-left" size={12} color="white" />
+                    <Feather name="chevron-left" size={12} color="#FFFFFF" />
                   </TouchableOpacity>
-                  <Text className="text-white text-[10px] font-black uppercase tracking-wider">
+                  <Text style={{
+                    color: "#FFFFFF",
+                    fontSize: 10,
+                    fontWeight: "900",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                  }}>
                     {monthsNames[selectedMonth]} {selectedYear}
                   </Text>
                   <TouchableOpacity 
                     onPress={handleNextMonth} 
                     disabled={!nextMonthAvailable}
-                    className={`w-6 h-6 items-center justify-center bg-zinc-800 rounded-full ${!nextMonthAvailable ? 'opacity-30' : ''}`}
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: 12,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: "#27272A",
+                      opacity: !nextMonthAvailable ? 0.3 : 1,
+                    }}
                   >
-                    <Feather name="chevron-right" size={12} color="white" />
+                    <Feather name="chevron-right" size={12} color="#FFFFFF" />
                   </TouchableOpacity>
                 </View>
               </View>
 
               {/* Weekday Names Header */}
-              <View className="flex-row justify-between border-b border-zinc-150/40 pb-2">
+              <View style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                borderBottomWidth: 1,
+                borderBottomColor: "#F4F4F5",
+                paddingBottom: 8,
+              }}>
                 {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((dayInitial, i) => (
-                  <View key={i} className="flex-1 items-center">
-                    <Text className="text-zinc-400 text-[9px] font-black">{dayInitial}</Text>
+                  <View key={i} style={{ flex: 1, alignItems: "center" }}>
+                    <Text style={{ color: "#A1A1AA", fontSize: 9, fontWeight: "900" }}>{dayInitial}</Text>
                   </View>
                 ))}
               </View>
@@ -803,13 +860,16 @@ export default function BookingsScreen() {
                             className="flex-1 items-center justify-center py-1.5"
                             style={{ aspectRatio: 1 }}
                           >
-                            <View className={`w-8 h-8 rounded-full items-center justify-center ${
-                              isSelected 
-                                ? 'bg-zinc-950' 
-                                : isToday 
-                                ? 'border border-zinc-900 bg-zinc-50' 
-                                : 'bg-transparent'
-                            }`}>
+                            <View 
+                              style={{ width: 32, height: 32, borderRadius: 16 }}
+                              className={`items-center justify-center ${
+                                isSelected 
+                                  ? 'bg-zinc-950' 
+                                  : isToday 
+                                  ? 'border border-zinc-900 bg-zinc-50' 
+                                  : 'bg-transparent'
+                              }`}
+                            >
                               <Text className={`text-[10px] font-black ${
                                 isSelected 
                                   ? 'text-white' 
@@ -845,11 +905,32 @@ export default function BookingsScreen() {
             </View>
 
             {/* Redesigned Day Availability Summary & Collapsible Slot Manager */}
-            <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4 mb-6">
+            <View style={{
+              backgroundColor: "#FFFFFF",
+              borderWidth: 1,
+              borderColor: "#E5E7EB",
+              padding: 20,
+              borderRadius: 28,
+              gap: 16,
+              marginBottom: 24,
+            }}>
               {/* Day info and status */}
-              <View className="flex-row justify-between items-start border-b border-zinc-100 pb-3">
-                <View className="gap-1 flex-1">
-                  <Text className="text-zinc-950 text-[18px] font-black uppercase tracking-tight">
+              <View style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                borderBottomWidth: 1,
+                borderBottomColor: "#F4F4F5",
+                paddingBottom: 12,
+              }}>
+                <View style={{ gap: 4, flex: 1 }}>
+                  <Text style={{
+                    color: "#09090B",
+                    fontSize: 18,
+                    fontWeight: "900",
+                    textTransform: "uppercase",
+                    letterSpacing: -0.5,
+                  }}>
                     {getSelectedDateLongString()}
                   </Text>
                   
@@ -863,16 +944,31 @@ export default function BookingsScreen() {
                     const isAvailable = activeCount > 0 || bookedCount > 0;
                     
                     return (
-                      <View className="gap-1 mt-1">
-                        <View className="flex-row items-center gap-1.5">
-                          <View className={`w-2 h-2 rounded-full ${isAvailable ? 'bg-[#16C784]' : 'bg-red-500'}`} />
-                          <Text className={`text-xs font-black uppercase tracking-wider ${isAvailable ? 'text-[#16C784]' : 'text-red-500'}`}>
-                            {isAvailable ? 'AVAILABLE' : 'NOT AVAILABLE'}
+                      <View style={{ gap: 4, marginTop: 4 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                          <View style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: 4,
+                            backgroundColor: isAvailable ? "#16C784" : "#EF4444",
+                          }} />
+                          <Text style={{
+                            fontSize: 12,
+                            fontWeight: "900",
+                            textTransform: "uppercase",
+                            letterSpacing: 0.5,
+                            color: isAvailable ? "#16C784" : "#EF4444",
+                          }}>
+                            {isAvailable ? "AVAILABLE" : "NOT AVAILABLE"}
                           </Text>
                         </View>
                         {isAvailable && (
-                          <Text className="text-zinc-500 text-[11px] font-semibold">
-                            {activeCount} hours available · {bookedCount} {bookedCount === 1 ? 'session' : 'sessions'} booked
+                          <Text style={{
+                            color: "#71717A",
+                            fontSize: 11,
+                            fontWeight: "600",
+                          }}>
+                            {activeCount} hours available · {bookedCount} {bookedCount === 1 ? "session" : "sessions"} booked
                           </Text>
                         )}
                       </View>
@@ -892,7 +988,9 @@ export default function BookingsScreen() {
                       onPress={() => {
                         if (Platform.OS === 'web') {
                           const confirmMsg = isAvailable 
-                            ? `Disable Schedule for ${dateStr}?\n\nThis will make all eligible availability slots unavailable.`
+                            ? `Disable Schedule for ${dateStr}?
+
+This will make all eligible availability slots unavailable.`
                             : `Enable Schedule for ${dateStr}?`;
                           if (window.confirm(confirmMsg)) {
                             if (isAvailable) {
@@ -910,7 +1008,13 @@ export default function BookingsScreen() {
                             setNativeAlertState({
                               visible: true,
                               title: `Disable ${dayName}'s Schedule?`,
-                              message: `This will make all eligible availability slots on:\n\n${getSelectedDateLongString()}\n\nunavailable for new bookings.\n\nAny existing confirmed bookings will NOT be cancelled automatically.`,
+                              message: `This will make all eligible availability slots on:
+
+${getSelectedDateLongString()}
+
+unavailable for new bookings.
+
+Any existing confirmed bookings will NOT be cancelled automatically.`,
                               cancelText: 'Cancel',
                               confirmText: 'Disable Day',
                               onConfirm: () => {
@@ -930,7 +1034,9 @@ export default function BookingsScreen() {
                             setNativeAlertState({
                               visible: true,
                               title: 'Existing Sessions on This Day',
-                              message: `You already have ${bookedCount} confirmed ${bookedCount === 1 ? 'session' : 'sessions'}.\n\nDisabling availability will only affect future/unbooked slots. Your confirmed sessions remain scheduled.`,
+                              message: `You already have ${bookedCount} confirmed ${bookedCount === 1 ? 'session' : 'sessions'}.
+
+Disabling availability will only affect future/unbooked slots. Your confirmed sessions remain scheduled.`,
                               cancelText: 'Cancel',
                               confirmText: 'Continue',
                               onConfirm: proceedToDisable,
@@ -949,16 +1055,23 @@ export default function BookingsScreen() {
                           });
                         }
                       }}
-                      className={`px-4 py-2 rounded-xl border ${
-                        isAvailable 
-                          ? 'border-[#E5E7EB] bg-zinc-50' 
-                          : 'border-indigo-600 bg-indigo-600'
-                      }`}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        backgroundColor: isAvailable ? "#FAFAFA" : "#4F46E5",
+                        borderColor: isAvailable ? "#E5E7EB" : "#4F46E5",
+                      }}
                     >
-                      <Text className={`text-[10px] font-black uppercase tracking-wider ${
-                        isAvailable ? 'text-zinc-600' : 'text-white'
-                      }`}>
-                        {isAvailable ? 'Disable Day' : 'Enable Day'}
+                      <Text style={{
+                        fontSize: 10,
+                        fontWeight: "900",
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
+                        color: isAvailable ? "#52525B" : "#FFFFFF",
+                      }}>
+                        {isAvailable ? "Disable Day" : "Enable Day"}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -967,32 +1080,35 @@ export default function BookingsScreen() {
 
               {/* Manage slots collapsible toggle */}
               {!isSelectedDateOutOfRange && coach && (
-                <View className="gap-3">
+                <View style={{ gap: 12 }}>
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={() => {
                       console.log('[AVAILABILITY-CLICK-TRACE] MANAGE SLOTS PRESSED');
-                      console.log('[AVAILABILITY-CLICK-TRACE]', {
-                        selectedDate: dateStr,
-                        trainerId: coach.id,
-                        isLoading: loading,
-                        isHydrated: useUserStore.persist.hasHydrated(),
-                        isSelectedDateOutOfRange,
-                        currentAvailability: dailySlots.filter(s => s.isAvailable && !s.isBooked).length > 0 ? 'AVAILABLE' : 'UNAVAILABLE',
-                        disabled: false,
-                        handlerExists: true
-                      });
                       setIsSlotsExpanded(!isSlotsExpanded);
                     }}
-                    className="flex-row items-center justify-between py-2 border-b border-zinc-50"
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      paddingVertical: 8,
+                      borderBottomWidth: 1,
+                      borderBottomColor: "#FAFAFA",
+                    }}
                   >
-                    <Text className="text-indigo-600 text-xs font-black uppercase tracking-wider">
-                      {isSlotsExpanded ? 'Manage Slots ▴' : 'Manage Slots ▾'}
+                    <Text style={{
+                      color: "#4F46E5",
+                      fontSize: 12,
+                      fontWeight: "900",
+                      textTransform: "uppercase",
+                      letterSpacing: 0.5,
+                    }}>
+                      {isSlotsExpanded ? "Manage Slots ▴" : "Manage Slots ▾"}
                     </Text>
                   </TouchableOpacity>
 
                    {isSlotsExpanded && (
-                     <View className="gap-2.5 mt-1">
+                     <View style={{ gap: 10, marginTop: 4 }}>
                        {dailySlots
                          .filter((s) =>
                            isSlotVisibleForTrainer(
@@ -1006,15 +1122,22 @@ export default function BookingsScreen() {
                          .map((slot) => (
                            <View 
                              key={slot.id}
-                             className={`p-3 rounded-2xl border flex-row justify-between items-center ${
-                               slot.isAvailable ? 'bg-white border-zinc-200' : 'bg-zinc-50 border-zinc-150'
-                             }`}
+                             style={{
+                               padding: 12,
+                               borderRadius: 16,
+                               borderWidth: 1,
+                               flexDirection: "row",
+                               justifyContent: "space-between",
+                               alignItems: "center",
+                               backgroundColor: slot.isAvailable ? "#FFFFFF" : "#FAFAFA",
+                               borderColor: slot.isAvailable ? "#E4E4E7" : "#F4F4F5",
+                             }}
                            >
                              <TouchableOpacity
                                activeOpacity={slot.isBooked || isSelectedDateOutOfRange ? 1 : 0.8}
                                disabled={slot.isBooked || isSelectedDateOutOfRange}
                                onPress={() => {
-                                 if (Platform.OS === 'web') {
+                                 if (Platform.OS === "web") {
                                    if (slot.isAvailable) {
                                      if (window.confirm(`Disable availability slot: ${slot.time}?`)) {
                                        toggleMonthlySlotAvailability(coach.id, dateStr, slot.time);
@@ -1028,10 +1151,10 @@ export default function BookingsScreen() {
                                  if (slot.isAvailable) {
                                    setNativeAlertState({
                                      visible: true,
-                                     title: 'Disable slot?',
-                                     message: 'Are you sure you want to disable this availability slot?',
-                                     cancelText: 'Cancel',
-                                     confirmText: 'Disable Slot',
+                                     title: "Disable slot?",
+                                     message: "Are you sure you want to disable this availability slot?",
+                                     cancelText: "Cancel",
+                                     confirmText: "Disable Slot",
                                      onConfirm: () => {
                                        toggleMonthlySlotAvailability(coach.id, dateStr, slot.time);
                                        setNativeAlertState(prev => ({ ...prev, visible: false }));
@@ -1041,61 +1164,107 @@ export default function BookingsScreen() {
                                    toggleMonthlySlotAvailability(coach.id, dateStr, slot.time);
                                  }
                                }}
-                               className="flex-row items-center gap-3 flex-1 pr-4"
+                               style={{
+                                 flexDirection: "row",
+                                 alignItems: "center",
+                                 gap: 12,
+                                 flex: 1,
+                                 paddingRight: 16,
+                               }}
                              >
-                            {/* Checkbox / Booked indicator */}
-                            <View className={`w-4 h-4 rounded-md border justify-center items-center ${
-                              slot.isBooked 
-                                ? 'bg-zinc-150 border-zinc-250'
+                            {/* Checkbox / Booked indicator with exact native styles */}
+                            <View style={{
+                              width: 16,
+                              height: 16,
+                              borderRadius: 4,
+                              borderWidth: 1,
+                              justifyContent: "center",
+                              alignItems: "center",
+                              backgroundColor: slot.isBooked 
+                                ? "#E4E4E7" 
                                 : slot.isAvailable 
-                                ? 'bg-indigo-600 border-indigo-600' 
-                                : 'border-zinc-300 bg-white'
-                            }`}>
+                                ? "#4F46E5" 
+                                : "#FFFFFF",
+                              borderColor: slot.isBooked
+                                ? "#D4D4D8"
+                                : slot.isAvailable
+                                ? "#4F46E5"
+                                : "#D4D4D8",
+                            }}>
                               {slot.isBooked ? (
                                 <Feather name="lock" size={9} color="#6B7280" />
                               ) : slot.isAvailable ? (
-                                <Feather name="check" size={9} color="white" />
+                                <Feather name="check" size={9} color="#FFFFFF" />
                               ) : null}
                             </View>
 
-                            <View className="gap-0.5 flex-1">
-                              <Text className={`text-xs font-black ${
-                                slot.isBooked 
-                                  ? 'text-zinc-400' 
-                                  : slot.isAvailable 
-                                  ? 'text-zinc-950' 
-                                  : 'text-zinc-500 font-bold line-through'
-                              }`}>
+                            <View style={{ flex: 1, gap: 2 }}>
+                              <Text style={{
+                                fontSize: 12,
+                                fontWeight: "900",
+                                color: slot.isBooked
+                                  ? "#A1A1AA"
+                                  : slot.isAvailable
+                                  ? "#09090B"
+                                  : "#71717A",
+                                textDecorationLine: !slot.isAvailable && !slot.isBooked ? "line-through" : "none",
+                              }}>
                                 {slot.time}
                               </Text>
-                              <View className="flex-row items-center gap-1.5 mt-0.5">
-                                <Text className={`text-[8px] font-black uppercase ${slot.isAvailable ? 'text-[#4F46E5]' : 'text-zinc-400'}`}>
-                                  {slot.isAvailable ? 'Available' : 'Unavailable'}
+                              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+                                <Text style={{
+                                  fontSize: 8,
+                                  fontWeight: "900",
+                                  textTransform: "uppercase",
+                                  color: slot.isAvailable ? "#4F46E5" : "#A1A1AA",
+                                }}>
+                                  {slot.isAvailable ? "Available" : "Unavailable"}
                                 </Text>
                                 {!!slot.category && (
                                   <>
-                                    <Text className="text-zinc-300 text-[8px]">•</Text>
-                                    <Text className="text-zinc-500 text-[8px] font-black uppercase">
+                                    <Text style={{ color: "#D4D4D8", fontSize: 8 }}>•</Text>
+                                    <Text style={{
+                                      color: "#71717A",
+                                      fontSize: 8,
+                                      fontWeight: "900",
+                                      textTransform: "uppercase",
+                                    }}>
                                       {slot.category}
                                     </Text>
                                   </>
                                 )}
                                 {slot.isBooked && (
                                   <>
-                                    <Text className="text-zinc-300 text-[8px]">•</Text>
-                                    <Text className="text-red-500 text-[8px] font-black uppercase">Booked Session</Text>
+                                    <Text style={{ color: "#D4D4D8", fontSize: 8 }}>•</Text>
+                                    <Text style={{
+                                      color: "#EF4444",
+                                      fontSize: 8,
+                                      fontWeight: "900",
+                                      textTransform: "uppercase",
+                                    }}>
+                                      Booked Session
+                                    </Text>
                                   </>
                                 )}
                               </View>
                             </View>
                           </TouchableOpacity>
 
-                          {/* Configure category trigger */}
+                          {/* Configure category trigger with exact native styles */}
                           {!slot.isBooked && slot.isAvailable && !isSelectedDateOutOfRange && (
                             <TouchableOpacity
                               activeOpacity={0.8}
                               onPress={() => handleEditTimeSlot(slot.time, slot.category)}
-                              className="bg-zinc-50 border border-zinc-150 w-8 h-8 rounded-full items-center justify-center"
+                              style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: 16,
+                                backgroundColor: "#FAFAFA",
+                                borderWidth: 1,
+                                borderColor: "#F4F4F5",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
                             >
                               <Feather name="edit-2" size={11} color="#6B7280" />
                             </TouchableOpacity>

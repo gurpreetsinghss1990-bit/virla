@@ -667,13 +667,16 @@ export default function TrainerAvailabilityScreen() {
                           className="flex-1 items-center justify-center py-2.5"
                           style={{ aspectRatio: 1 }}
                         >
-                          <View className={`w-8 h-8 rounded-full items-center justify-center ${
-                            isSelected 
-                              ? 'bg-zinc-950' 
-                              : isToday 
-                              ? 'border border-zinc-900 bg-zinc-50' 
-                              : 'bg-transparent'
-                          }`}>
+                          <View 
+                            style={{ width: 32, height: 32, borderRadius: 16 }}
+                            className={`items-center justify-center ${
+                              isSelected 
+                                ? 'bg-zinc-950' 
+                                : isToday 
+                                ? 'border border-zinc-900 bg-zinc-50' 
+                                : 'bg-transparent'
+                            }`}
+                          >
                             <Text className={`text-[11px] font-black ${
                               isSelected 
                                 ? 'text-white' 

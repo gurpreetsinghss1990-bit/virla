@@ -61,22 +61,24 @@ export default function MessagesScreen() {
   // Build dynamic chats list from bookings + concierge support
   const chatsList = useMemo((): ChatItem[] => {
     const list: ChatItem[] = [];
+    const isTrainer = role === 'trainer';
 
-    // Dedicated Concierge Support Line (no fake Live/dot — shows presence only when a session is live)
-    list.push({
-      id: 'concierge-support',
-      name: 'VIRLA 24/7 Concierge',
-      subtitle: 'Priority Concierge & Safety',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-      lastMessage: 'Welcome to Virla Private Concierge. How can we assist with your schedule today?',
-      time: '',
-      unread: false,
-      isOnline: false,
-      type: 'concierge',
-    });
+    // Dedicated Concierge Support Line (only for users, not trainers)
+    if (!isTrainer) {
+      list.push({
+        id: 'concierge-support',
+        name: 'VIRLA 24/7 Concierge',
+        subtitle: 'Priority Concierge & Safety',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+        lastMessage: 'Welcome to Virla Private Concierge. How can we assist with your schedule today?',
+        time: '',
+        unread: false,
+        isOnline: false,
+        type: 'concierge',
+      });
+    }
 
     // Group bookings by person so each coach/client appears exactly once
-    const isTrainer = role === 'trainer';
     const personMap = new Map<string, typeof bookings>();
 
     const getCoachKey = (trainerId?: string, trainerName?: string) => {

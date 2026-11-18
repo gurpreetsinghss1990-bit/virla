@@ -102,7 +102,7 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
   const currentRouteName = state.routes[state.index]?.name;
 
   // Height of the edge-to-edge white scrim: covers the floating bar + system nav area + fade-up zone
-  const scrimHeight = bottomOffset + 56 + 40;
+  const scrimHeight = bottomOffset + 56 + (isTrainer ? 50 : 40);
 
   // Resolve native dynamic background color for the scrim fade
   let materialColors: any = null;
@@ -113,12 +113,16 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
   }
 
   const dynamicScrimColor = useMemo(() => {
+    if (isTrainer) {
+      // Distinct, visible cool slate grey scrim for trainer mode
+      return '#94A3B8';
+    }
     if (materialColors?.background || materialColors?.surface) {
       const raw = materialColors.background || materialColors.surface;
       return raw.startsWith('#') ? raw.slice(0, 7) : raw;
     }
     return '#FFFFFF';
-  }, [materialColors]);
+  }, [isTrainer, materialColors]);
 
   return (
     <View pointerEvents="box-none" style={styles.screenBottomLayer}>
@@ -128,16 +132,29 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
           <Defs>
             <LinearGradient id="bottomWhiteScrim" x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0" stopColor={dynamicScrimColor} stopOpacity="0" />
-              <Stop offset="0.35" stopColor={dynamicScrimColor} stopOpacity="0.25" />
-              <Stop offset="0.7" stopColor={dynamicScrimColor} stopOpacity="0.5" />
-              <Stop offset="1" stopColor={dynamicScrimColor} stopOpacity="0.7" />
+              <Stop offset="0.3" stopColor={dynamicScrimColor} stopOpacity={isTrainer ? "0.2" : "0.25"} />
+              <Stop offset="0.65" stopColor={dynamicScrimColor} stopOpacity={isTrainer ? "0.55" : "0.5"} />
+              <Stop offset="1" stopColor={dynamicScrimColor} stopOpacity={isTrainer ? "0.85" : "0.7"} />
             </LinearGradient>
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#bottomWhiteScrim)" />
         </Svg>
       </View>
 
-      <View style={[styles.shadowWrapper, { bottom: bottomOffset }]}>
+      <View
+        style={[
+          styles.shadowWrapper,
+          { bottom: bottomOffset },
+          isTrainer && {
+            backgroundColor: 'rgba(255, 255, 255, 0.88)',
+            borderColor: 'rgba(226, 232, 240, 0.9)',
+            shadowColor: '#334155',
+            shadowOpacity: 0.15,
+            shadowRadius: 14,
+            elevation: 6,
+          },
+        ]}
+      >
       <View style={styles.navContainer}>
         {visibleRoutes.map((route: any, index: number) => {
           const isFocused = currentRouteName === route.name;

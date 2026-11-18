@@ -1118,7 +1118,7 @@ export default function ProfileScreen() {
               if (collapsed !== isHeaderCollapsed) setIsHeaderCollapsed(collapsed);
             }}
             className="flex-1 bg-[#F7F8FC]"
-            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 62, paddingBottom: 140 }}
+            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: insets.top + 62, paddingBottom: 140 }}
           >
             {/* =============================================================== */}
             {/* ======================= CLIENT PROFILE ======================== */}
@@ -2863,12 +2863,28 @@ export default function ProfileScreen() {
 
         </ScrollView>
 
+        {/* Semi-transparent white status bar strip for smooth frosted glass / translucent edge-to-edge feel */}
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: insets.top,
+            backgroundColor: 'rgba(255, 255, 255, 0.75)',
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+            zIndex: 35,
+          }}
+        />
+
         {/* Top Header: Clean inline title with soft white sunlight-rays radial scrim */}
         <View 
           pointerEvents="none" 
           style={{ 
             position: 'absolute', 
-            top: 12, 
+            top: insets.top + 12, 
             left: 24, 
             zIndex: 40,
             alignSelf: 'flex-start',
@@ -3358,9 +3374,8 @@ function AccordionCard({ title, icon, expanded, onToggle, children, rightText, r
 }
 
 function SafeAreaViewWrapper({ children }: { children: React.ReactNode }) {
-  const insets = useSafeAreaInsets();
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
       {children}
     </View>
   );

@@ -30,6 +30,7 @@ import { SkeletonLoader } from '../../components/SkeletonLoader';
 import { NativeProgressBar } from '../../components/NativeProgressBar';
 import { NativeDivider } from '../../components/NativeDivider';
 import { NativeOverviewCard } from '../../components/NativeOverviewCard';
+import { NativeAlertDialog } from '../../components/NativeAlertDialog';
 import { resolveAvatarSource } from '../../components/AvatarImage';
 import { useAIWellnessStore } from '../../store/aiWellnessStore';
 import { SessionEngine } from '../../services/SessionEngine';
@@ -450,6 +451,20 @@ export default function HomeScreen() {
   const [pendingStatusTarget, setPendingStatusTarget] = useState<'online' | 'offline'>('offline');
   const [logMetricsModalVisible, setLogMetricsModalVisible] = useState(false);
   const [logMetricsType, setLogMetricsType] = useState<'hydration' | 'calories'>('hydration');
+  const [nativeAlertState, setNativeAlertState] = useState<{
+    visible: boolean;
+    title: string;
+    message?: string;
+    confirmText?: string;
+    cancelText?: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    confirmText: 'OK',
+    onConfirm: () => {},
+  });
 
   const handleHiddenAdminAccess = async () => {
     const userId = Database.getCurrentUserId();
@@ -512,49 +527,52 @@ export default function HomeScreen() {
       console.log("[TRAINER-ACCEPT-TRACE] ADMIN STATE: synchronized");
       console.log("[TRAINER-ACCEPT-TRACE] ---------------------------------");
       
-      if (Platform.OS === 'web') {
-        window.alert('You have accepted the session request.');
-      } else {
-        Alert.alert('Booking Accepted', 'You have accepted the session request.');
-      }
+      setNativeAlertState({
+        visible: true,
+        title: 'Booking Accepted',
+        message: 'You have accepted the session request.',
+        confirmText: 'OK',
+        onConfirm: () => setNativeAlertState(prev => ({ ...prev, visible: false })),
+      });
     } catch (err) {
       console.error("[TRAINER-ACCEPT-TRACE] RPC RESULT: ERROR");
       console.error("[TRAINER-ACCEPT-TRACE] RPC error details:", err);
       console.log("[TRAINER-ACCEPT-TRACE] ---------------------------------");
       
-      if (Platform.OS === 'web') {
-        window.alert(errorMessage(err) || 'Could not accept booking.');
-      } else {
-        Alert.alert('Accept Failed', errorMessage(err) || 'Could not accept booking.');
-      }
+      setNativeAlertState({
+        visible: true,
+        title: 'Accept Failed',
+        message: errorMessage(err) || 'Could not accept booking.',
+        confirmText: 'OK',
+        onConfirm: () => setNativeAlertState(prev => ({ ...prev, visible: false })),
+      });
     }
   };
 
   const handleAcceptRequest = (id: string) => {
     const confirmMsg = 'Accept Booking?\n\nBy accepting this booking you agree to complete the session. Once accepted it cannot be cancelled except through VIRLA Support.';
-    if (Platform.OS === 'web') {
-      const ok = window.confirm(confirmMsg);
-      if (ok) {
+    setNativeAlertState({
+      visible: true,
+      title: 'Accept Booking?',
+      message: 'By accepting this booking you agree to complete the session. Once accepted it cannot be cancelled except through VIRLA Support.',
+      cancelText: 'Cancel',
+      confirmText: 'Accept',
+      onConfirm: () => {
+        setNativeAlertState(prev => ({ ...prev, visible: false }));
         executeAcceptRequest(id);
-      }
-    } else {
-      Alert.alert(
-        'Accept Booking?',
-        'By accepting this booking you agree to complete the session. Once accepted it cannot be cancelled except through VIRLA Support.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Accept',
-            onPress: () => executeAcceptRequest(id)
-          }
-        ]
-      );
-    }
+      },
+    });
   };
 
   const handleDeclineRequest = (id: string) => {
     reassignTrainer(id, 'declined');
-    Alert.alert('Request Declined', 'The request has been reassigned to another available trainer.');
+    setNativeAlertState({
+      visible: true,
+      title: 'Request Declined',
+      message: 'The request has been reassigned to another available trainer.',
+      confirmText: 'OK',
+      onConfirm: () => setNativeAlertState(prev => ({ ...prev, visible: false })),
+    });
   };
 
   const handleTimeoutRequest = (id: string) => {
@@ -564,17 +582,21 @@ export default function HomeScreen() {
   const handleAcknowledgeRequest = async (id: string) => {
     try {
       await useBookingStore.getState().acknowledgeSession(id);
-      if (Platform.OS === 'web') {
-        window.alert('You have acknowledged the auto-accepted session.');
-      } else {
-        Alert.alert('Success', 'You have acknowledged the auto-accepted session.');
-      }
+      setNativeAlertState({
+        visible: true,
+        title: 'Success',
+        message: 'You have acknowledged the auto-accepted session.',
+        confirmText: 'OK',
+        onConfirm: () => setNativeAlertState(prev => ({ ...prev, visible: false })),
+      });
     } catch (e) {
-      if (Platform.OS === 'web') {
-        window.alert(errorMessage(e) || 'Acknowledgement failed.');
-      } else {
-        Alert.alert('Error', errorMessage(e) || 'Acknowledgement failed.');
-      }
+      setNativeAlertState({
+        visible: true,
+        title: 'Error',
+        message: errorMessage(e) || 'Acknowledgement failed.',
+        confirmText: 'OK',
+        onConfirm: () => setNativeAlertState(prev => ({ ...prev, visible: false })),
+      });
     }
   };
 
@@ -2448,10 +2470,13 @@ export default function HomeScreen() {
                               if (SessionEngine.isTravelWindowOpen(nextSession)) {
                                 navigateSafely({ pathname: '/session-detail', params: { id: nextSession.id, openMap: 'true' } });
                               } else {
-                                Alert.alert(
-                                  'Travel Window Locked ⚠️',
-                                  'You can start travel and view the navigation map 30 minutes before the scheduled session.'
-                                );
+                                setNativeAlertState({
+                                  visible: true,
+                                  title: 'Travel Window Locked ⚠️',
+                                  message: 'You can start travel and view the navigation map 30 minutes before the scheduled session.',
+                                  confirmText: 'OK',
+                                  onConfirm: () => setNativeAlertState(prev => ({ ...prev, visible: false })),
+                                });
                               }
                             }}
                             className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-800 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
@@ -2463,9 +2488,21 @@ export default function HomeScreen() {
                           <TouchableOpacity
                             onPress={() => {
                               if (getMinutesToSession(nextSession) <= 60) {
-                                Alert.alert('Secure Call', 'Connecting call to customer using masked calling...');
+                                setNativeAlertState({
+                                  visible: true,
+                                  title: 'Secure Call',
+                                  message: 'Connecting call to customer using masked calling...',
+                                  confirmText: 'OK',
+                                  onConfirm: () => setNativeAlertState(prev => ({ ...prev, visible: false })),
+                                });
                               } else {
-                                Alert.alert('Call Locked', 'Calling will be available 60 minutes before the session.');
+                                setNativeAlertState({
+                                  visible: true,
+                                  title: 'Call Locked',
+                                  message: 'Calling will be available 60 minutes before the session.',
+                                  confirmText: 'OK',
+                                  onConfirm: () => setNativeAlertState(prev => ({ ...prev, visible: false })),
+                                });
                               }
                             }}
                             className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-800 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
@@ -2507,7 +2544,13 @@ export default function HomeScreen() {
                                   });
                                   router.push({ pathname: '/session-detail', params: { id: nextSession.id, openMap: 'true' } });
                                 } catch (err) {
-                                  Alert.alert('Error', errorMessage(err) || 'Could not start travel.');
+                                  setNativeAlertState({
+                                    visible: true,
+                                    title: 'Error',
+                                    message: errorMessage(err) || 'Could not start travel.',
+                                    confirmText: 'OK',
+                                    onConfirm: () => setNativeAlertState(prev => ({ ...prev, visible: false })),
+                                  });
                                 }
                               }}
                               className="w-full bg-indigo-600 py-3.5 rounded-xl items-center justify-center"
@@ -2518,10 +2561,13 @@ export default function HomeScreen() {
                             <TouchableOpacity
                               activeOpacity={0.8}
                               onPress={() => {
-                                Alert.alert(
-                                  'Travel Window Locked ⚠️',
-                                  'You can start travel 30 minutes before the scheduled session.'
-                                );
+                                setNativeAlertState({
+                                  visible: true,
+                                  title: 'Travel Window Locked ⚠️',
+                                  message: 'You can start travel 30 minutes before the scheduled session.',
+                                  confirmText: 'OK',
+                                  onConfirm: () => setNativeAlertState(prev => ({ ...prev, visible: false })),
+                                });
                               }}
                               className="w-full bg-zinc-800/70 border border-zinc-700/50 py-3.5 rounded-xl items-center justify-center"
                             >
@@ -2541,7 +2587,13 @@ export default function HomeScreen() {
                                 icon: 'lock'
                               });
                             } catch (err) {
-                              Alert.alert('Error', errorMessage(err) || 'Could not update status.');
+                              setNativeAlertState({
+                                visible: true,
+                                title: 'Error',
+                                message: errorMessage(err) || 'Could not update status.',
+                                confirmText: 'OK',
+                                onConfirm: () => setNativeAlertState(prev => ({ ...prev, visible: false })),
+                              });
                             }
                           }}
                           className="w-full bg-emerald-600 py-3.5 rounded-xl items-center justify-center"
@@ -2803,6 +2855,17 @@ export default function HomeScreen() {
             logCaloriesAmount(amount);
           }
         }}
+      />
+
+      {/* Native Alert Dialog for Trainer Mode */}
+      <NativeAlertDialog
+        visible={nativeAlertState.visible}
+        title={nativeAlertState.title}
+        message={nativeAlertState.message}
+        confirmText={nativeAlertState.confirmText || 'OK'}
+        cancelText={nativeAlertState.cancelText}
+        onConfirm={nativeAlertState.onConfirm}
+        onDismiss={() => setNativeAlertState(prev => ({ ...prev, visible: false }))}
       />
     </SafeAreaViewWrapper>
   );

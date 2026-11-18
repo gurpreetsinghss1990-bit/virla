@@ -395,6 +395,22 @@ export default function MembershipScreen() {
     <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <StatusBar style="dark" />
 
+      {/* Semi-transparent white status bar strip for smooth frosted glass / translucent edge-to-edge feel */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: insets.top,
+          backgroundColor: 'rgba(255, 255, 255, 0.75)',
+          borderBottomWidth: 0.5,
+          borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+          zIndex: 35,
+        }}
+      />
+
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}

@@ -9,6 +9,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { EmptyState } from '../components/EmptyState';
 import { FlashList } from '@shopify/flash-list';
 import { NotificationItem } from '../types';
+import { NativeAlertDialog } from '../components/NativeAlertDialog';
 
 let useMaterialColorsSafe: any = null;
 if (Platform.OS === 'android') {
@@ -34,6 +35,20 @@ export default function NotificationsScreen() {
   const { notifications, markAsRead, deleteNotification, deleteNotifications, unreadCount, syncFromDB } = useNotificationStore();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [nativeAlertState, setNativeAlertState] = useState<{
+    visible: boolean;
+    title: string;
+    message?: string;
+    confirmText?: string;
+    cancelText?: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    confirmText: 'OK',
+    onConfirm: () => {},
+  });
   const [pageSize, setPageSize] = useState(INITIAL_PAGE_SIZE);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -55,7 +70,13 @@ export default function NotificationsScreen() {
       try {
         router.push(item.deepLink as any);
       } catch {
-        Alert.alert('Notice', 'Could not open the linked page.');
+        setNativeAlertState({
+          visible: true,
+          title: 'Notice',
+          message: 'Could not open the linked page.',
+          confirmText: 'OK',
+          onConfirm: () => setNativeAlertState(prev => ({ ...prev, visible: false })),
+        });
       }
     }
   };
@@ -84,23 +105,20 @@ export default function NotificationsScreen() {
     if (selectedIds.size === 0) return;
     const ids = Array.from(selectedIds);
     const count = ids.length;
-    Alert.alert(
-      'Delete Notifications',
-      `Are you sure you want to delete ${count} selected ${count === 1 ? 'notification' : 'notifications'}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: `Delete (${count})`, 
-          style: 'destructive', 
-          onPress: () => {
-            deleteNotifications(ids);
-            setSelectedIds(new Set());
-            setIsSelectionMode(false);
-            setPageSize(INITIAL_PAGE_SIZE);
-          }
-        }
-      ]
-    );
+    setNativeAlertState({
+      visible: true,
+      title: 'Delete Notifications',
+      message: `Are you sure you want to delete ${count} selected ${count === 1 ? 'notification' : 'notifications'}?`,
+      cancelText: 'Cancel',
+      confirmText: `Delete (${count})`,
+      onConfirm: () => {
+        deleteNotifications(ids);
+        setSelectedIds(new Set());
+        setIsSelectionMode(false);
+        setPageSize(INITIAL_PAGE_SIZE);
+        setNativeAlertState(prev => ({ ...prev, visible: false }));
+      },
+    });
   };
 
   // Filter logic (search only)
@@ -579,6 +597,17 @@ export default function NotificationsScreen() {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Native Alert Dialog */}
+      <NativeAlertDialog
+        visible={nativeAlertState.visible}
+        title={nativeAlertState.title}
+        message={nativeAlertState.message}
+        confirmText={nativeAlertState.confirmText || 'OK'}
+        cancelText={nativeAlertState.cancelText}
+        onConfirm={nativeAlertState.onConfirm}
+        onDismiss={() => setNativeAlertState(prev => ({ ...prev, visible: false }))}
+      />
     </View>
   );
 }
