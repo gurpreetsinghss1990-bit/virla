@@ -464,11 +464,19 @@ export default function ProfileScreen() {
       Alert.alert('Upload Pending', 'Profile picture abhi upload ho rahi hai. Thodi der baad save karein.');
       return;
     }
-    if (editMobile.trim() && !isValidPhone(editMobile)) {
+    // Only validate what the user actually edited: a legacy value already stored
+    // (e.g. a short number) must never block saving the rest of the form.
+    const normalizeMobile = (v: string) => v.replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '');
+    const storedMobile = (profile.mobile || '').trim();
+    const mobileChanged = normalizeMobile(editMobile) !== normalizeMobile(storedMobile);
+    const storedEmail = (profile.email || '').trim();
+    const emailChanged = editEmail.trim().toLowerCase() !== storedEmail.toLowerCase();
+
+    if (mobileChanged && editMobile.trim() && !isValidPhone(editMobile)) {
       Alert.alert('Invalid Number', 'Please enter a valid 10-digit mobile number.');
       return;
     }
-    if (editEmail.trim() && !isValidEmail(editEmail)) {
+    if (emailChanged && editEmail.trim() && !isValidEmail(editEmail)) {
       Alert.alert('Invalid Email', 'Please enter a valid email address.');
       return;
     }
@@ -476,8 +484,8 @@ export default function ProfileScreen() {
       setIsSavingProfile(true);
       await profile.updateCoreProfile({
         name: editName,
-        mobile: editMobile,
-        email: editEmail,
+        mobile: mobileChanged ? editMobile.trim() : storedMobile,
+        email: emailChanged ? editEmail.trim() : storedEmail,
         gender: editGender,
         dob: editDob,
         height: editHeight,
