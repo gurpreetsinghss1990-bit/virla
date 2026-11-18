@@ -61,7 +61,7 @@ export const getDefaultAvatarForGender = (gender?: string) => {
   return DEFAULT_AVATARS[0].uri;
 };
 
-type TrainerSectionType = 'profile' | 'workout' | 'operating' | 'availability' | 'banking' | 'support' | 'safety' | 'kit' | 'wallet' | 'location_disclosure';
+type TrainerSectionType = 'profile' | 'workout' | 'operating' | 'availability' | 'banking' | 'support' | 'safety' | 'kit' | 'wallet';
 
 const CATEGORY_DISPLAY_MAP: Record<string, string> = {
   'Strength': 'Strength Training',
@@ -132,21 +132,6 @@ export default function ProfileScreen() {
   const [isSignOutModalVisible, setIsSignOutModalVisible] = useState(false);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
   const [profileSavedAlertVisible, setProfileSavedAlertVisible] = useState(false);
-  const [bgLocationDisclosureVisible, setBgLocationDisclosureVisible] = useState(false);
-
-  const handleAcknowledgeBackgroundLocation = useCallback(async () => {
-    setBgLocationDisclosureVisible(false);
-    try {
-      if (Platform.OS === "android" || Platform.OS === "ios") {
-        const fg = await Location.requestForegroundPermissionsAsync();
-        if (fg.status === "granted") {
-          await Location.requestBackgroundPermissionsAsync();
-        }
-      }
-    } catch (e) {
-      console.warn("[BackgroundLocationDisclosure] Permission request error:", e);
-    }
-  }, []);
 
   const handleLogout = () => {
     setIsSignOutModalVisible(true);
@@ -2225,56 +2210,6 @@ export default function ProfileScreen() {
                   </View>
                 </AccordionCard>
 
-                {/* 10. Background Location & Travel Tracking Disclosure (Google Play Review Compliant) */}
-                <AccordionCard
-                  title="Background Location & Travel"
-                  icon="navigation"
-                  rightText="Disclosure"
-                  rightTextColor="#E11D48"
-                  badgeBgColor="bg-rose-50"
-                  badgeBorderColor="border-rose-200"
-                  expanded={expandedSection === 'location_disclosure'}
-                  onToggle={() => setExpandedSection(expandedSection === 'location_disclosure' ? null : 'location_disclosure')}
-                >
-                  <View className="gap-3">
-                    <View className="bg-rose-50 border border-rose-200 p-3.5 rounded-2xl flex-row items-center gap-3">
-                      <View className="w-8 h-8 rounded-xl bg-rose-500/10 items-center justify-center">
-                        <Feather name="map-pin" size={15} color="#E11D48" />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-rose-700 text-xs font-bold uppercase tracking-wider">Google Play Policy Disclosure</Text>
-                        <Text className="text-zinc-700 text-xs font-normal leading-relaxed mt-0.5">
-                          Virla requires background location permission solely during active trainer travel.
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View className="bg-white p-3.5 border border-zinc-200/80 rounded-2xl gap-2.5">
-                      <Text className="text-zinc-900 text-xs font-bold">How Virla Uses Background Location:</Text>
-                      <Text className="text-zinc-600 text-xs leading-relaxed">
-                        • <Text className="font-semibold text-zinc-800">When active:</Text> Only when you tap &quot;Start Travel&quot; for an accepted booking until you arrive at the client&apos;s location.
-                      </Text>
-                      <Text className="text-zinc-600 text-xs leading-relaxed">
-                        • <Text className="font-semibold text-zinc-800">Purpose:</Text> Shares your live route and estimated arrival time with the client, even when Virla is closed or running in the background.
-                      </Text>
-                      <Text className="text-zinc-600 text-xs leading-relaxed">
-                        • <Text className="font-semibold text-zinc-800">Auto-stop:</Text> Location tracking immediately terminates when you tap &quot;Reached Location&quot; or start the workout session.
-                      </Text>
-                    </View>
-
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => setBgLocationDisclosureVisible(true)}
-                      className="bg-[#E11D48] py-3 rounded-xl items-center justify-center flex-row gap-2 mt-1 shadow-2xs"
-                    >
-                      <Feather name="shield" size={14} color="#FFFFFF" />
-                      <Text className="text-white text-xs font-bold uppercase tracking-wider">
-                        View Prominent In-App Disclosure
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </AccordionCard>
-
               </View>
             </>
 
@@ -2680,16 +2615,6 @@ export default function ProfileScreen() {
         onConfirm={() => setProfileSavedAlertVisible(false)}
       />
 
-      {/* Prominent In-App Background Location Disclosure (Google Play Review) */}
-      <NativeAlertDialog
-        visible={bgLocationDisclosureVisible}
-        title="Background Location Disclosure 📍"
-        message="Virla collects location data during active trainer travel to enable real-time arrival tracking and live navigation for clients, even when the app is closed or running in the background.\n\nTracking starts only after tapping 'Start Travel' for a confirmed session and terminates immediately upon arrival. Your location is never tracked outside of active travel windows."
-        confirmText="Acknowledge & Continue"
-        cancelText="Close"
-        onConfirm={handleAcknowledgeBackgroundLocation}
-        onDismiss={() => setBgLocationDisclosureVisible(false)}
-      />
 
     </SafeAreaViewWrapper>
   );
