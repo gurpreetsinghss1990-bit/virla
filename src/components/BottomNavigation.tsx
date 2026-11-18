@@ -1,7 +1,7 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import Svg, { Defs, LinearGradient, RadialGradient, Stop, Rect, Line } from 'react-native-svg';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +10,14 @@ import { useBookingStore } from '../store/bookingStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useUserStore } from '../store/userStore';
 import { useChatStore } from '../store/chatStore';
+
+let useMaterialColorsSafe: any = null;
+if (Platform.OS === 'android') {
+  try {
+    const compose = require('@expo/ui/jetpack-compose');
+    useMaterialColorsSafe = compose.useMaterialColors;
+  } catch {}
+}
 
 export function BottomNavigation({ state, descriptors, navigation }: any) {
   const router = useRouter();
@@ -96,17 +104,33 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
   // Height of the edge-to-edge white scrim: covers the floating bar + system nav area + fade-up zone
   const scrimHeight = bottomOffset + 56 + 40;
 
+  // Resolve native dynamic background color for the scrim fade
+  let materialColors: any = null;
+  if (useMaterialColorsSafe) {
+    try {
+      materialColors = useMaterialColorsSafe();
+    } catch {}
+  }
+
+  const dynamicScrimColor = useMemo(() => {
+    if (materialColors?.background || materialColors?.surface) {
+      const raw = materialColors.background || materialColors.surface;
+      return raw.startsWith('#') ? raw.slice(0, 7) : raw;
+    }
+    return '#FFFFFF';
+  }, [materialColors]);
+
   return (
     <View pointerEvents="box-none" style={styles.screenBottomLayer}>
-      {/* Twitter-style edge-to-edge white scrim: transparent at top -> solid white at the very bottom */}
+      {/* Twitter-style edge-to-edge scrim: transparent at top -> system dynamic color at the bottom */}
       <View pointerEvents="none" style={[styles.bottomScrim, { height: scrimHeight }]}>
         <Svg width="100%" height="100%" preserveAspectRatio="none">
           <Defs>
             <LinearGradient id="bottomWhiteScrim" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor="#FFFFFF" stopOpacity="0" />
-              <Stop offset="0.35" stopColor="#FFFFFF" stopOpacity="0.25" />
-              <Stop offset="0.7" stopColor="#FFFFFF" stopOpacity="0.5" />
-              <Stop offset="1" stopColor="#FFFFFF" stopOpacity="0.7" />
+              <Stop offset="0" stopColor={dynamicScrimColor} stopOpacity="0" />
+              <Stop offset="0.35" stopColor={dynamicScrimColor} stopOpacity="0.25" />
+              <Stop offset="0.7" stopColor={dynamicScrimColor} stopOpacity="0.5" />
+              <Stop offset="1" stopColor={dynamicScrimColor} stopOpacity="0.7" />
             </LinearGradient>
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#bottomWhiteScrim)" />

@@ -908,11 +908,11 @@ export default function GetStartedScreen() {
                       />
                     </View>
 
-                    {/* Native Blue Send OTP Button (appears after entering 10-digit number) */}
+                    {/* Native Send OTP Button (appears after entering 10-digit number) */}
                     {(phone.replace(/\D/g, '').length >= 10 || otpSent) && (
                       <NativePrimaryButton
                         compact
-                        color={isLoading || resendCountdown > 0 ? '#3F3F46' : '#2563EB'}
+                        color={isLoading || resendCountdown > 0 ? '#3F3F46' : '#E11D48'}
                         label={otpSent ? (resendCountdown > 0 ? `${resendCountdown}s` : 'Resend') : 'Send OTP'}
                         onPress={isLoading || resendCountdown > 0 ? () => {} : handleSendOtp}
                       />

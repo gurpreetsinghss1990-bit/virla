@@ -18,8 +18,17 @@ import { Database } from '../../database/Database';
 import { CalculatedTargetsCard } from '../../components/CalculatedTargetsCard';
 import { NativeSegmentedRangeControl } from '../../components/NativeSegmentedRangeControl';
 
+let useMaterialColorsSafe: any = null;
+if (Platform.OS === 'android') {
+  try {
+    const compose = require('@expo/ui/jetpack-compose');
+    useMaterialColorsSafe = compose.useMaterialColors;
+  } catch {}
+}
+
 export default function ProgressScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [activeRange, setActiveRange] = useState<RangeType>('weekly');
   const [simulateEmpty, setSimulateEmpty] = useState(false);
   const [forceShowDemo, setForceShowDemo] = useState(false);
@@ -41,6 +50,14 @@ export default function ProgressScreen() {
   const { user, role } = useUserStore();
   const { savedPlan } = useAIWellnessStore();
   const { bookings: storeBookings } = useBookingStore();
+
+  let materialColors: any = null;
+  if (useMaterialColorsSafe) {
+    try {
+      materialColors = useMaterialColorsSafe();
+    } catch {}
+  }
+  const systemBgColor = materialColors?.background || materialColors?.surface || '#FCF5F5';
 
   const { bookings, completedJobs, upcomingJobs, cancelledJobs, totalCompleted, totalUpcoming, rawEffectiveSessions, effectiveSessions, streak, monthlyEarnings } = useMemo(() => {
     const bk = user.id
@@ -383,8 +400,8 @@ export default function ProgressScreen() {
   const userName = userProfile.name || user?.name || (role === 'trainer' ? 'Trainer' : 'User');
 
   return (
-    <SafeAreaViewWrapper>
-      <View className="flex-1 relative">
+    <View style={{ flex: 1, backgroundColor: systemBgColor, paddingTop: insets.top }}>
+      <View className="flex-1 relative" style={{ backgroundColor: systemBgColor }}>
         <ScrollView 
           showsVerticalScrollIndicator={false} 
           scrollEventThrottle={16}
@@ -393,7 +410,7 @@ export default function ProgressScreen() {
             setScrollY(y);
           }}
           contentContainerStyle={{ paddingTop: 62, paddingBottom: 140 }}
-          className="bg-[#FCF5F5]"
+          style={{ backgroundColor: systemBgColor }}
         >
           <View className="px-6 pt-2 pb-4 gap-6">
             <View className="flex-row justify-between items-start">
@@ -1040,10 +1057,10 @@ export default function ProgressScreen() {
             <Svg width="100%" height="100%" preserveAspectRatio="none">
               <Defs>
                 <LinearGradient id="progressSideScrim" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <Stop offset="0%" stopColor="#FCF5F5" stopOpacity="0.95" />
-                  <Stop offset="65%" stopColor="#FCF5F5" stopOpacity="0.85" />
-                  <Stop offset="85%" stopColor="#FCF5F5" stopOpacity="0.4" />
-                  <Stop offset="100%" stopColor="#FCF5F5" stopOpacity="0" />
+                  <Stop offset="0%" stopColor={systemBgColor} stopOpacity="0.95" />
+                  <Stop offset="65%" stopColor={systemBgColor} stopOpacity="0.85" />
+                  <Stop offset="85%" stopColor={systemBgColor} stopOpacity="0.4" />
+                  <Stop offset="100%" stopColor={systemBgColor} stopOpacity="0" />
                 </LinearGradient>
               </Defs>
               <Rect x="0" y="0" width="100%" height="100%" rx={20} ry={20} fill="url(#progressSideScrim)" />
@@ -1059,15 +1076,6 @@ export default function ProgressScreen() {
         </View>
       </View>
     </View>
-  </SafeAreaViewWrapper>
+  </View>
 );
-}
-
-function SafeAreaViewWrapper({ children }: { children: React.ReactNode }) {
-  const insets = useSafeAreaInsets();
-  return (
-    <View style={{ flex: 1, backgroundColor: '#FCF5F5', paddingTop: insets.top }}>
-      {children}
-    </View>
-  );
 }

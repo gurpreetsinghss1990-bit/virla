@@ -21,9 +21,9 @@ export function AppErrorFallback({
         <View style={styles.badge}>
           <Text style={styles.badgeText}>!</Text>
         </View>
-        <Text style={styles.title}>Kuch gadbad ho gayi</Text>
+        <Text style={styles.title}>Something went wrong</Text>
         <Text style={styles.body}>
-          App ko ek unexpected problem aayi. Neeche wale button se dobara try karein — aapka data safe hai.
+          The app encountered an unexpected error. Please try again using the button below — your data is safe.
         </Text>
 
         {__DEV__ && error?.message ? (

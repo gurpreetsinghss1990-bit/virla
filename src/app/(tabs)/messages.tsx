@@ -10,6 +10,8 @@ import { useChatStore } from '../../store/chatStore';
 import { Database } from '../../database/Database';
 import { EmptyState } from '../../components/EmptyState';
 import { getBookingISTDateRange } from '../../utils/date';
+import { NativePressable } from '../../components/NativePressable';
+import { NativeDivider } from '../../components/NativeDivider';
 
 let useMaterialColorsSafe: any = null;
 if (Platform.OS === 'android') {
@@ -324,88 +326,94 @@ export default function MessagesScreen() {
               const isLast = idx === filteredChats.length - 1;
 
               return (
-                <TouchableOpacity
-                  key={chat.id}
-                  activeOpacity={0.65}
-                  onPress={() => {
-                    if (isConcierge) {
+                <React.Fragment key={chat.id}>
+                  <NativePressable
+                    rippleColor="rgba(0, 0, 0, 0.08)"
+                    onPress={() => {
+                      if (isConcierge) {
+                        router.push({
+                          pathname: '/(tabs)/bookings' as any,
+                          params: { filter: 'completed' }
+                        });
+                        return;
+                      }
+                      const targetId = chat.bookingId || chat.id;
+                      useChatStore.getState().markAsRead([targetId, chat.id]);
                       router.push({
-                        pathname: '/(tabs)/bookings' as any,
-                        params: { filter: 'completed' }
+                        pathname: '/communication' as any,
+                        params: { id: targetId, name: chat.name }
                       });
-                      return;
-                    }
-                    const targetId = chat.bookingId || chat.id;
-                    useChatStore.getState().markAsRead([targetId, chat.id]);
-                    router.push({
-                      pathname: '/communication' as any,
-                      params: { id: targetId, name: chat.name }
-                    });
-                  }}
-                  className={`flex-row items-center px-4 py-3 ${
-                    isConcierge ? 'bg-rose-50/40' : 'bg-white'
-                  }`}
-                >
-                  {/* Avatar */}
-                  <View className="relative mr-3.5">
-                    {isConcierge ? (
-                      <View className="w-13 h-13 rounded-full bg-rose-100 border border-rose-200 items-center justify-center" style={{ width: 50, height: 50 }}>
-                        <Ionicons name="sparkles" size={22} color="#E11D48" />
-                      </View>
-                    ) : (
-                      <>
-                        <AvatarImage
-                          uri={chat.avatar}
-                          className="rounded-full bg-zinc-100"
-                          style={{ width: 50, height: 50 }}
-                        />
-                        {chat.isOnline && (
-                          <View className="absolute right-0 bottom-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white" />
-                        )}
-                      </>
-                    )}
-                  </View>
-
-                  {/* Chat Content & WhatsApp-style bottom border */}
-                  <View className={`flex-1 flex-row items-center justify-between py-0.5 ${!isLast ? 'border-b border-zinc-100' : ''}`}>
-                    <View className="flex-1 pr-2">
-                      <View className="flex-row items-center justify-between mb-1">
-                        <Text 
-                          numberOfLines={1} 
-                          className={`text-[16px] flex-1 pr-2 ${
-                            chat.unread ? 'font-bold text-zinc-950' : 'font-semibold text-zinc-900'
-                          }`}
-                        >
-                          {chat.name}
-                        </Text>
-                        {chat.time ? (
-                          <Text className={`text-xs ${chat.unread ? 'font-bold text-[#E11D48]' : 'text-zinc-400'}`}>
-                            {chat.time}
-                          </Text>
-                        ) : null}
-                      </View>
-
-                      <View className="flex-row items-center justify-between">
-                        <Text
-                          numberOfLines={1}
-                          className={`text-[14px] flex-1 pr-2 ${
-                            chat.unread ? 'font-semibold text-zinc-800' : 'text-zinc-500'
-                          }`}
-                        >
-                          {chat.lastMessage}
-                        </Text>
-                        {chat.unread && (
-                          <View className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#E11D48] items-center justify-center ml-2">
-                            <Text className="text-[10px] font-bold text-white">1</Text>
-                          </View>
-                        )}
-                      </View>
+                    }}
+                    className={`flex-row items-center px-4 py-3 ${
+                      isConcierge ? 'bg-rose-50/40' : 'bg-white'
+                    }`}
+                  >
+                    {/* Avatar */}
+                    <View className="relative mr-3.5">
+                      {isConcierge ? (
+                        <View className="rounded-full bg-rose-100 border border-rose-200 items-center justify-center overflow-hidden" style={{ width: 50, height: 50, borderRadius: 25 }}>
+                          <Ionicons name="sparkles" size={22} color="#E11D48" />
+                        </View>
+                      ) : (
+                        <View className="rounded-full overflow-hidden bg-zinc-100" style={{ width: 50, height: 50, borderRadius: 25 }}>
+                          <AvatarImage
+                            uri={chat.avatar}
+                            style={{ width: 50, height: 50, borderRadius: 25 }}
+                          />
+                          {chat.isOnline && (
+                            <View className="absolute right-0 bottom-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white" />
+                          )}
+                        </View>
+                      )}
                     </View>
 
-                    {/* Right end subtle chevron icon */}
-                    <Feather name="chevron-right" size={17} color="#D1D5DB" />
-                  </View>
-                </TouchableOpacity>
+                    {/* Chat Content */}
+                    <View className="flex-1 flex-row items-center justify-between py-0.5">
+                      <View className="flex-1 pr-2">
+                        <View className="flex-row items-center justify-between mb-1">
+                          <Text 
+                            numberOfLines={1} 
+                            className={`text-[16px] flex-1 pr-2 ${
+                              chat.unread ? 'font-bold text-zinc-950' : 'font-semibold text-zinc-900'
+                            }`}
+                          >
+                            {chat.name}
+                          </Text>
+                          {chat.time ? (
+                            <Text className={`text-xs ${chat.unread ? 'font-bold text-[#E11D48]' : 'text-zinc-400'}`}>
+                              {chat.time}
+                            </Text>
+                          ) : null}
+                        </View>
+
+                        <View className="flex-row items-center justify-between">
+                          <Text
+                            numberOfLines={1}
+                            className={`text-[14px] flex-1 pr-2 ${
+                              chat.unread ? 'font-semibold text-zinc-800' : 'text-zinc-500'
+                            }`}
+                          >
+                            {chat.lastMessage}
+                          </Text>
+                          {chat.unread && (
+                            <View className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#E11D48] items-center justify-center ml-2">
+                              <Text className="text-[10px] font-bold text-white">1</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+
+                      {/* Right end subtle chevron icon */}
+                      <Feather name="chevron-right" size={17} color="#D1D5DB" />
+                    </View>
+                  </NativePressable>
+
+                  {!isLast && (
+                    <View className="pl-[76px] bg-white">
+                      <NativeDivider color="#F4F4F5" />
+                    </View>
+                  )}
+                </React.Fragment>
               );
             })}
           </View>

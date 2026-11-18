@@ -19,6 +19,8 @@ import { SupportChatModal } from '../../components/SupportChatModal';
 import { UserTicketsModal } from '../../components/UserTicketsModal';
 import { NativeSegmentedControl } from '../../components/NativeSegmentedControl';
 import { NativeDivider } from '../../components/NativeDivider';
+import { NativeAlertDialog } from '../../components/NativeAlertDialog';
+import { NativeSingleChoiceDialog } from '../../components/NativeSingleChoiceDialog';
 
 type FilterType = 'upcoming' | 'completed' | 'cancelled' | 'today' | 'past';
 type TrainerTabType = 'today' | 'tomorrow' | 'weekly' | 'history';
@@ -138,6 +140,32 @@ export default function BookingsScreen() {
   // Only the "collapsed" threshold matters, so we keep a boolean instead of the raw
   // offset: the raw value re-rendered this whole screen on every scroll frame.
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+
+  // Native AlertDialog state for Trainer Mode actions
+  const [nativeAlertState, setNativeAlertState] = useState<{
+    visible: boolean;
+    title: string;
+    message?: string;
+    confirmText?: string;
+    cancelText?: string;
+    onConfirm: () => void;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    confirmText: 'OK',
+    onConfirm: () => {},
+  });
+
+  const [categoryDialogState, setCategoryDialogState] = useState<{
+    visible: boolean;
+    time: string;
+    currentCategory?: string;
+  }>({
+    visible: false,
+    time: '',
+    currentCategory: '',
+  });
 
   const handleOpenSupport = React.useCallback(async (b: Booking) => {
     setSupportBooking(b);
@@ -366,23 +394,13 @@ export default function BookingsScreen() {
   const nextMonthYearVal = getNextMonthYear(selectedMonth, selectedYear);
   const nextMonthAvailable = isMonthInAllowedRange(nextMonthYearVal.year, nextMonthYearVal.month, today);
 
-  const handleEditTimeSlot = (time: string) => {
+  const handleEditTimeSlot = (time: string, currentCategory?: string) => {
     if (!coach) return;
-    const availableCategories = ['Strength', 'Mind & Body', 'Cardio', 'Conditioning', 'Boxing', 'Aerial Yoga', 'Pilates', 'Any Workout'];
-    Alert.alert(
-      'Select Category Restriction',
-      'Set the allowed workout category for this slot:',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        ...availableCategories.map(cat => ({
-          text: cat,
-          onPress: () => {
-            updateMonthlySlotCategory(coach.id, dateStr, time, cat === 'Any Workout' ? '' : cat);
-            Alert.alert('Category Updated', `Slot category preference set to ${cat}.`);
-          }
-        }))
-      ]
-    );
+    setCategoryDialogState({
+      visible: true,
+      time,
+      currentCategory: currentCategory || '',
+    });
   };
 
   // Generate slots for selected day (only in trainer mode)
@@ -889,38 +907,46 @@ export default function BookingsScreen() {
                         if (isAvailable) {
                           const proceedToDisable = () => {
                             const dayName = getSelectedDateLongString().split(',')[0];
-                            Alert.alert(
-                              `Disable ${dayName}'s Schedule?`,
-                              `This will make all eligible availability slots on:\n\n${getSelectedDateLongString()}\n\nunavailable for new bookings.\n\nAny existing confirmed bookings will NOT be cancelled automatically.`,
-                              [
-                                { text: 'CANCEL', style: 'cancel' },
-                                {
-                                  text: 'DISABLE DAY',
-                                  style: 'destructive',
-                                  onPress: () => {
-                                    disableAllSlotsForDay(coach.id, dateStr);
-                                    Alert.alert('Day Disabled', 'All slots for this day have been disabled.');
-                                  }
-                                }
-                              ]
-                            );
+                            setNativeAlertState({
+                              visible: true,
+                              title: `Disable ${dayName}'s Schedule?`,
+                              message: `This will make all eligible availability slots on:\n\n${getSelectedDateLongString()}\n\nunavailable for new bookings.\n\nAny existing confirmed bookings will NOT be cancelled automatically.`,
+                              cancelText: 'Cancel',
+                              confirmText: 'Disable Day',
+                              onConfirm: () => {
+                                disableAllSlotsForDay(coach.id, dateStr);
+                                setNativeAlertState({
+                                  visible: true,
+                                  title: 'Day Disabled',
+                                  message: 'All slots for this day have been disabled.',
+                                  confirmText: 'OK',
+                                  onConfirm: () => setNativeAlertState(prev => ({ ...prev, visible: false })),
+                                });
+                              },
+                            });
                           };
 
                           if (bookedCount > 0) {
-                            Alert.alert(
-                              'Existing Sessions on This Day',
-                              `You already have ${bookedCount} confirmed ${bookedCount === 1 ? 'session' : 'sessions'}.\n\nDisabling availability will only affect future/unbooked slots. Your confirmed sessions remain scheduled.`,
-                              [
-                                { text: 'CANCEL', style: 'cancel' },
-                                { text: 'CONTINUE', onPress: proceedToDisable }
-                              ]
-                            );
+                            setNativeAlertState({
+                              visible: true,
+                              title: 'Existing Sessions on This Day',
+                              message: `You already have ${bookedCount} confirmed ${bookedCount === 1 ? 'session' : 'sessions'}.\n\nDisabling availability will only affect future/unbooked slots. Your confirmed sessions remain scheduled.`,
+                              cancelText: 'Cancel',
+                              confirmText: 'Continue',
+                              onConfirm: proceedToDisable,
+                            });
                           } else {
                             proceedToDisable();
                           }
                         } else {
                           enableAllSlotsForDay(coach.id, dateStr);
-                          Alert.alert('Day Enabled', 'All slots for this day have been re-enabled.');
+                          setNativeAlertState({
+                            visible: true,
+                            title: 'Day Enabled',
+                            message: 'All slots for this day have been re-enabled.',
+                            confirmText: 'OK',
+                            onConfirm: () => setNativeAlertState(prev => ({ ...prev, visible: false })),
+                          });
                         }
                       }}
                       className={`px-4 py-2 rounded-xl border ${
@@ -1000,18 +1026,17 @@ export default function BookingsScreen() {
                                  }
 
                                  if (slot.isAvailable) {
-                                   Alert.alert(
-                                     'Disable slot?',
-                                     'Are you sure you want to disable this availability slot?',
-                                     [
-                                       { text: 'CANCEL', style: 'cancel' },
-                                       { 
-                                         text: 'DISABLE SLOT', 
-                                         style: 'destructive', 
-                                         onPress: () => toggleMonthlySlotAvailability(coach.id, dateStr, slot.time) 
-                                       }
-                                     ]
-                                   );
+                                   setNativeAlertState({
+                                     visible: true,
+                                     title: 'Disable slot?',
+                                     message: 'Are you sure you want to disable this availability slot?',
+                                     cancelText: 'Cancel',
+                                     confirmText: 'Disable Slot',
+                                     onConfirm: () => {
+                                       toggleMonthlySlotAvailability(coach.id, dateStr, slot.time);
+                                       setNativeAlertState(prev => ({ ...prev, visible: false }));
+                                     },
+                                   });
                                  } else {
                                    toggleMonthlySlotAvailability(coach.id, dateStr, slot.time);
                                  }
@@ -1069,7 +1094,7 @@ export default function BookingsScreen() {
                           {!slot.isBooked && slot.isAvailable && !isSelectedDateOutOfRange && (
                             <TouchableOpacity
                               activeOpacity={0.8}
-                              onPress={() => handleEditTimeSlot(slot.time)}
+                              onPress={() => handleEditTimeSlot(slot.time, slot.category)}
                               className="bg-zinc-50 border border-zinc-150 w-8 h-8 rounded-full items-center justify-center"
                             >
                               <Feather name="edit-2" size={11} color="#6B7280" />
@@ -1277,6 +1302,39 @@ export default function BookingsScreen() {
           </ScrollView>
           </View>
         )}
+
+        {/* Native Alert Dialog for Trainer Actions */}
+        <NativeAlertDialog
+          visible={nativeAlertState.visible}
+          title={nativeAlertState.title}
+          message={nativeAlertState.message}
+          confirmText={nativeAlertState.confirmText || 'OK'}
+          cancelText={nativeAlertState.cancelText}
+          onConfirm={nativeAlertState.onConfirm}
+          onDismiss={() => setNativeAlertState(prev => ({ ...prev, visible: false }))}
+        />
+
+        {/* Native Single Choice Dialog for Category Restriction */}
+        <NativeSingleChoiceDialog
+          visible={categoryDialogState.visible}
+          title="Select Category Restriction"
+          message="Set the allowed workout category for this slot:"
+          options={['Strength', 'Mind & Body', 'Cardio', 'Conditioning', 'Boxing', 'Aerial Yoga', 'Pilates', 'Any Workout']}
+          selectedOption={categoryDialogState.currentCategory || 'Any Workout'}
+          onSelect={(cat) => {
+            if (coach) {
+              updateMonthlySlotCategory(coach.id, dateStr, categoryDialogState.time, cat === 'Any Workout' ? '' : cat);
+              setNativeAlertState({
+                visible: true,
+                title: 'Category Updated',
+                message: `Slot category preference set to ${cat}.`,
+                confirmText: 'OK',
+                onConfirm: () => setNativeAlertState(prev => ({ ...prev, visible: false })),
+              });
+            }
+          }}
+          onDismiss={() => setCategoryDialogState(prev => ({ ...prev, visible: false }))}
+        />
       </SafeAreaViewWrapper>
     );
   }
@@ -1636,6 +1694,17 @@ export default function BookingsScreen() {
           setShowSupportChatModal(false);
           setActiveChatTicket(null);
         }}
+      />
+
+      {/* Native Alert Dialog for Trainer Actions */}
+      <NativeAlertDialog
+        visible={nativeAlertState.visible}
+        title={nativeAlertState.title}
+        message={nativeAlertState.message}
+        confirmText={nativeAlertState.confirmText || 'OK'}
+        cancelText={nativeAlertState.cancelText}
+        onConfirm={nativeAlertState.onConfirm}
+        onDismiss={() => setNativeAlertState(prev => ({ ...prev, visible: false }))}
       />
     </View>
   );

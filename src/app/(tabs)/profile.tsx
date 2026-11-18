@@ -2,6 +2,7 @@ import { Loading } from '../../components/Loading';
 import { NativePressable } from '../../components/NativePressable';
 import { NativeGoalChip } from '../../components/NativeGoalChip';
 import { FitnessGoalsModal } from '../../components/FitnessGoalsModal';
+import { NativeAlertDialog } from '../../components/NativeAlertDialog';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, BackHandler, Modal, LayoutAnimation, UIManager, Pressable, TouchableWithoutFeedback, StyleSheet, Easing, Dimensions } from 'react-native';
 import { InteractionManager } from '../../utils/interactionManager';
@@ -59,7 +60,7 @@ export const getDefaultAvatarForGender = (gender?: string) => {
   return DEFAULT_AVATARS[0].uri;
 };
 
-type TrainerSectionType = 'profile' | 'workout' | 'operating' | 'availability' | 'banking' | 'support' | 'safety' | 'kit' | 'wallet';
+type TrainerSectionType = 'profile' | 'workout' | 'operating' | 'availability' | 'banking' | 'support' | 'safety' | 'kit' | 'wallet' | 'location_disclosure';
 
 const CATEGORY_DISPLAY_MAP: Record<string, string> = {
   'Strength': 'Strength Training',
@@ -129,6 +130,22 @@ export default function ProfileScreen() {
   const profile = useUserProfileStore();
   const [isSignOutModalVisible, setIsSignOutModalVisible] = useState(false);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+  const [profileSavedAlertVisible, setProfileSavedAlertVisible] = useState(false);
+  const [bgLocationDisclosureVisible, setBgLocationDisclosureVisible] = useState(false);
+
+  const handleAcknowledgeBackgroundLocation = useCallback(async () => {
+    setBgLocationDisclosureVisible(false);
+    try {
+      if (Platform.OS === "android" || Platform.OS === "ios") {
+        const fg = await Location.requestForegroundPermissionsAsync();
+        if (fg.status === "granted") {
+          await Location.requestBackgroundPermissionsAsync();
+        }
+      }
+    } catch (e) {
+      console.warn("[BackgroundLocationDisclosure] Permission request error:", e);
+    }
+  }, []);
 
   const handleLogout = () => {
     setIsSignOutModalVisible(true);
@@ -311,6 +328,10 @@ export default function ProfileScreen() {
   }, [profileModalBackdropAnim, profileModalSheetAnim]);
 
   const closeEditProfileModal = useCallback(() => {
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
     Animated.parallel([
       Animated.timing(profileModalBackdropAnim, {
         toValue: 0,
@@ -326,6 +347,7 @@ export default function ProfileScreen() {
       }),
     ]).start(() => {
       setIsEditingProfile(false);
+      setEditProfileError(null);
     });
   }, [profileModalBackdropAnim, profileModalSheetAnim]);
 
@@ -364,6 +386,8 @@ export default function ProfileScreen() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isGoalsModalVisible, setIsGoalsModalVisible] = useState(false);
+  const [editProfileError, setEditProfileError] = useState<string | null>(null);
+  const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Never overwrite in-progress edits when the store refreshes underneath the open form.
@@ -460,17 +484,63 @@ export default function ProfileScreen() {
 
   const handleSaveProfile = async () => {
     if (isSavingProfile || isUploadingAvatar) return;
+    setEditProfileError(null);
+
+    // Check if any field was actually modified
+    const normalizeMobile = (v: string) => v.replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '');
+    const storedMobile = (profile.mobile || '').trim();
+    const storedEmail = (profile.email || '').trim();
+    const storedName = (profile.name || '').trim();
+    const storedGender = (profile.gender || '').trim();
+    const storedDob = (profile.dob || '').trim();
+    const storedHeight = (profile.height || '').trim();
+    const storedWeight = (profile.weight || '').trim();
+    const storedFitnessLevel = (profile.fitnessLevel || '').trim();
+    const storedTargetGoal = (profile.targetGoal || '').trim();
+    const storedLanguage = (profile.preferredLanguage || '').trim();
+    const storedCity = (profile.city || '').trim();
+    const storedAvatar = (profile.avatar || user?.avatar || '').trim();
+
+    const mobileChanged = normalizeMobile(editMobile) !== normalizeMobile(storedMobile);
+    const emailChanged = editEmail.trim().toLowerCase() !== storedEmail.toLowerCase();
+    const nameChanged = editName.trim() !== storedName;
+    const genderChanged = editGender.trim() !== storedGender;
+    const dobChanged = editDob.trim() !== storedDob;
+    const heightChanged = editHeight.trim() !== storedHeight;
+    const weightChanged = editWeight.trim() !== storedWeight;
+    const fitnessLevelChanged = editFitnessLevel.trim() !== storedFitnessLevel;
+    const targetGoalChanged = editTargetGoal.trim() !== storedTargetGoal;
+    const languageChanged = editLanguage.trim() !== storedLanguage;
+    const cityChanged = editCity.trim() !== storedCity;
+    const avatarChanged = (editAvatar || '').trim() !== storedAvatar;
+
+    const hasAnyChange =
+      mobileChanged ||
+      emailChanged ||
+      nameChanged ||
+      genderChanged ||
+      dobChanged ||
+      heightChanged ||
+      weightChanged ||
+      fitnessLevelChanged ||
+      targetGoalChanged ||
+      languageChanged ||
+      cityChanged ||
+      avatarChanged;
+
+    if (!hasAnyChange) {
+      setEditProfileError('No changes to save');
+      if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = setTimeout(() => {
+        closeEditProfileModal();
+      }, 3000);
+      return;
+    }
+
     if (typeof editAvatar === 'string' && editAvatar.startsWith('file://')) {
       Alert.alert('Upload Pending', 'Profile picture abhi upload ho rahi hai. Thodi der baad save karein.');
       return;
     }
-    // Only validate what the user actually edited: a legacy value already stored
-    // (e.g. a short number) must never block saving the rest of the form.
-    const normalizeMobile = (v: string) => v.replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '');
-    const storedMobile = (profile.mobile || '').trim();
-    const mobileChanged = normalizeMobile(editMobile) !== normalizeMobile(storedMobile);
-    const storedEmail = (profile.email || '').trim();
-    const emailChanged = editEmail.trim().toLowerCase() !== storedEmail.toLowerCase();
 
     if (mobileChanged && editMobile.trim() && !isValidPhone(editMobile)) {
       Alert.alert('Invalid Number', 'Please enter a valid 10-digit mobile number.');
@@ -498,7 +568,7 @@ export default function ProfileScreen() {
       });
       useUserStore.getState().syncFromDB();
       closeEditProfileModal();
-      Alert.alert('Profile Saved', 'Your personal details have been updated.');
+      setProfileSavedAlertVisible(true);
     } catch (err: any) {
       console.error('[Profile Update Error]', err);
       Alert.alert('Save Error', err.message || 'Failed to save profile changes. Please try again.');
@@ -2727,6 +2797,56 @@ export default function ProfileScreen() {
                   </View>
                 </AccordionCard>
 
+                {/* 10. Background Location & Travel Tracking Disclosure (Google Play Review Compliant) */}
+                <AccordionCard
+                  title="Background Location & Travel"
+                  icon="navigation"
+                  rightText="Disclosure"
+                  rightTextColor="#E11D48"
+                  badgeBgColor="bg-rose-50"
+                  badgeBorderColor="border-rose-200"
+                  expanded={expandedSection === 'location_disclosure'}
+                  onToggle={() => setExpandedSection(expandedSection === 'location_disclosure' ? null : 'location_disclosure')}
+                >
+                  <View className="gap-3">
+                    <View className="bg-rose-50 border border-rose-200 p-3.5 rounded-2xl flex-row items-center gap-3">
+                      <View className="w-8 h-8 rounded-xl bg-rose-500/10 items-center justify-center">
+                        <Feather name="map-pin" size={15} color="#E11D48" />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-rose-700 text-xs font-bold uppercase tracking-wider">Google Play Policy Disclosure</Text>
+                        <Text className="text-zinc-700 text-xs font-normal leading-relaxed mt-0.5">
+                          Virla requires background location permission solely during active trainer travel.
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View className="bg-white p-3.5 border border-zinc-200/80 rounded-2xl gap-2.5">
+                      <Text className="text-zinc-900 text-xs font-bold">How Virla Uses Background Location:</Text>
+                      <Text className="text-zinc-600 text-xs leading-relaxed">
+                        • <Text className="font-semibold text-zinc-800">When active:</Text> Only when you tap &quot;Start Travel&quot; for an accepted booking until you arrive at the client&apos;s location.
+                      </Text>
+                      <Text className="text-zinc-600 text-xs leading-relaxed">
+                        • <Text className="font-semibold text-zinc-800">Purpose:</Text> Shares your live route and estimated arrival time with the client, even when Virla is closed or running in the background.
+                      </Text>
+                      <Text className="text-zinc-600 text-xs leading-relaxed">
+                        • <Text className="font-semibold text-zinc-800">Auto-stop:</Text> Location tracking immediately terminates when you tap &quot;Reached Location&quot; or start the workout session.
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => setBgLocationDisclosureVisible(true)}
+                      className="bg-[#E11D48] py-3 rounded-xl items-center justify-center flex-row gap-2 mt-1 shadow-2xs"
+                    >
+                      <Feather name="shield" size={14} color="#FFFFFF" />
+                      <Text className="text-white text-xs font-bold uppercase tracking-wider">
+                        View Prominent In-App Disclosure
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </AccordionCard>
+
               </View>
             </>
           )}
@@ -2735,7 +2855,7 @@ export default function ProfileScreen() {
           <TouchableOpacity
             onPress={handleLogout}
             activeOpacity={0.8}
-            className="bg-rose-50 border border-rose-200/70 px-8 py-3.5 rounded-2xl flex-row justify-center items-center self-center mt-6 mb-24 gap-2 shadow-2xs"
+            className="bg-rose-50 border border-rose-200/70 px-8 py-3.5 rounded-full flex-row justify-center items-center self-center mt-6 mb-24 gap-2 shadow-2xs"
           >
             <Feather name="log-out" size={15} color="#E11D48" style={{ transform: [{ rotate: '-90deg' }] }} />
             <Text className="text-rose-600 text-xs font-bold uppercase tracking-wider">Sign Out</Text>
@@ -3058,6 +3178,14 @@ export default function ProfileScreen() {
               </View>
             </ScrollView>
 
+            {Boolean(editProfileError) && (
+              <View className="py-2.5 items-center justify-center">
+                <Text className="text-rose-600 text-[15px] font-black text-center tracking-wide uppercase">
+                  No changes to save
+                </Text>
+              </View>
+            )}
+
             <View className="flex-row gap-3 pt-3 border-t border-zinc-100">
               <TouchableOpacity
                 onPress={closeEditProfileModal}
@@ -3095,6 +3223,26 @@ export default function ProfileScreen() {
         onClose={() => setIsGoalsModalVisible(false)}
       />
 
+      {/* Native AlertDialog for Profile Saved */}
+      <NativeAlertDialog
+        visible={profileSavedAlertVisible}
+        title="Profile Saved"
+        message="Your personal details have been updated."
+        confirmText="OK"
+        onConfirm={() => setProfileSavedAlertVisible(false)}
+      />
+
+      {/* Prominent In-App Background Location Disclosure (Google Play Review) */}
+      <NativeAlertDialog
+        visible={bgLocationDisclosureVisible}
+        title="Background Location Disclosure 📍"
+        message="Virla collects location data during active trainer travel to enable real-time arrival tracking and live navigation for clients, even when the app is closed or running in the background.\n\nTracking starts only after tapping 'Start Travel' for a confirmed session and terminates immediately upon arrival. Your location is never tracked outside of active travel windows."
+        confirmText="Acknowledge & Continue"
+        cancelText="Close"
+        onConfirm={handleAcknowledgeBackgroundLocation}
+        onDismiss={() => setBgLocationDisclosureVisible(false)}
+      />
+
     </SafeAreaViewWrapper>
   );
 }
@@ -3106,6 +3254,9 @@ interface AccordionCardProps {
   onToggle: () => void;
   children: React.ReactNode;
   rightText?: string;
+  rightTextColor?: string;
+  badgeBgColor?: string;
+  badgeBorderColor?: string;
 }
 
 const DISPUTES_PAGE_SIZE = 5;
@@ -3169,7 +3320,7 @@ const KitRequestRow = React.memo(function KitRequestRow({ item }: { item: any })
   );
 });
 
-function AccordionCard({ title, icon, expanded, onToggle, children, rightText }: AccordionCardProps) {
+function AccordionCard({ title, icon, expanded, onToggle, children, rightText, rightTextColor, badgeBgColor, badgeBorderColor }: AccordionCardProps) {
   return (
     <View
       className="bg-white border border-zinc-200/90 rounded-[24px] overflow-hidden shadow-xs"
@@ -3180,14 +3331,16 @@ function AccordionCard({ title, icon, expanded, onToggle, children, rightText }:
         className={`p-4 flex-row justify-between items-center w-full bg-white ${expanded ? 'border-b border-zinc-100' : ''}`}
       >
         <View className="flex-row items-center gap-3.5 flex-1 pr-2">
-          <View className={`w-9 h-9 rounded-xl justify-center items-center ${expanded ? 'bg-zinc-900' : 'bg-zinc-100'}`}>
-            <Feather name={icon as any} size={15} color={expanded ? '#FFFFFF' : '#18181B'} />
+          <View className={`w-9 h-9 rounded-xl justify-center items-center ${badgeBgColor ? badgeBgColor : expanded ? 'bg-zinc-900' : 'bg-zinc-100'}`}>
+            <Feather name={icon as any} size={15} color={rightTextColor ? '#E11D48' : expanded ? '#FFFFFF' : '#18181B'} />
           </View>
           <Text className="text-zinc-900 text-[13px] font-bold tracking-tight">{title}</Text>
         </View>
         <View className="flex-row items-center gap-2">
           {rightText && (
-            <Text className="text-zinc-500 text-xs font-semibold">{rightText}</Text>
+            <View className={badgeBgColor ? `px-2 py-0.5 rounded-full border ${badgeBgColor} ${badgeBorderColor || 'border-rose-200'}` : undefined}>
+              <Text style={rightTextColor ? { color: rightTextColor } : undefined} className={rightTextColor ? "text-[11px] font-bold uppercase tracking-wider" : "text-zinc-500 text-xs font-semibold"}>{rightText}</Text>
+            </View>
           )}
           <View className="w-7 h-7 rounded-full bg-zinc-50 items-center justify-center border border-zinc-100">
             <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={15} color="#52525B" />

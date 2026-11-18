@@ -38,3 +38,4 @@ export * from './SelectableTagCard';
 export * from './ContinueButton';
 export * from './CalculatedTargetsCard';
 export * from './NativeDivider';
+export * from './NativeAlertDialog';
