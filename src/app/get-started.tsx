@@ -18,6 +18,7 @@ import { useWalletStore } from '../store/walletStore';
 import Constants from 'expo-constants';
 import { LegalWebViewModal } from '../components/LegalWebViewModal';
 import { NativePrimaryButton } from '../components/NativePrimaryButton';
+import { NativeAlertDialog } from '../components/NativeAlertDialog';
 import { cleanOtp, clampInt } from '../utils/inputSafety';
 
 export default function GetStartedScreen() {
@@ -25,6 +26,7 @@ export default function GetStartedScreen() {
   const { setLoggedIn, setCompletedOnboarding, setRole, updateProfile } = useUserStore();
 
   const [legalModalVisible, setLegalModalVisible] = useState(false);
+  const [authErrorMessage, setAuthErrorMessage] = useState<string | null>(null);
   const [legalModalTab, setLegalModalTab] = useState<'terms' | 'privacy'>('terms');
 
   const handleOpenTerms = () => {
@@ -228,7 +230,7 @@ export default function GetStartedScreen() {
     if (!(typeof __DEV__ !== 'undefined' && __DEV__ && phone === 'demo.trainer')) {
       if (!phone || phone.length !== 10) {
         console.log('[DEBUG] Mobile Submit Validation Failed: Invalid phone length');
-        Alert.alert('Required Fields', 'Please enter a valid 10-digit Indian mobile number.');
+        setOtpStatusMessage('Please enter a valid 10-digit Indian mobile number.');
         return;
       }
     }
@@ -326,7 +328,7 @@ export default function GetStartedScreen() {
         throw new Error(failMsg);
       }
     } catch (err: any) {
-      console.error('[DEBUG ERROR] Mobile submit authentication failure:', err);
+      console.log('[DEBUG] Mobile submit authentication failure:', err?.message || err);
 
       let friendlyMsg = 'Something went wrong while signing you in. Please try again.';
       if (err.message) {
@@ -341,7 +343,8 @@ export default function GetStartedScreen() {
           friendlyMsg = err.message;
         }
       }
-      Alert.alert('Authentication Error', friendlyMsg);
+      Keyboard.dismiss();
+      setAuthErrorMessage(friendlyMsg);
     } finally {
       setIsLoading(false);
     }
@@ -1128,6 +1131,13 @@ export default function GetStartedScreen() {
           visible={legalModalVisible}
           initialTab={legalModalTab}
           onClose={() => setLegalModalVisible(false)}
+        />
+        <NativeAlertDialog
+          visible={!!authErrorMessage}
+          title="Authentication Error"
+          message={authErrorMessage || ''}
+          confirmText="OK"
+          onClose={() => setAuthErrorMessage(null)}
         />
       </View>
     </TouchableWithoutFeedback>

@@ -1,15 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, LayoutAnimation, Platform } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Workout } from '../types';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeDivider } from './NativeDivider';
-
-if (Platform.OS === 'android') {
-  if (UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-  }
-}
 
 interface WorkoutDetailCardProps {
   workout: Workout;
