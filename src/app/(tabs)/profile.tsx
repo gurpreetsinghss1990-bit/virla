@@ -4,6 +4,7 @@ import { NativeGoalChip } from '../../components/NativeGoalChip';
 import { ClientProfileView } from '../../components/ClientProfileView';
 import { FitnessGoalsModal } from '../../components/FitnessGoalsModal';
 import { NativeAlertDialog } from '../../components/NativeAlertDialog';
+import { NativeSingleChoiceDialog } from '../../components/NativeSingleChoiceDialog';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, FlatList, TouchableOpacity, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, BackHandler, Modal, LayoutAnimation, UIManager, Pressable, TouchableWithoutFeedback, StyleSheet, Easing, Dimensions } from 'react-native';
 import { InteractionManager } from '../../utils/interactionManager';
@@ -564,57 +565,54 @@ export default function ProfileScreen() {
   };
 
   const [isUploadingTrainerPhoto, setIsUploadingTrainerPhoto] = useState(false);
+  const [showTrainerPhotoDialog, setShowTrainerPhotoDialog] = useState(false);
 
-  const handlePickTrainerAvatar = async () => {
+  const handlePickTrainerAvatar = () => {
     if (!coach?.id || isUploadingTrainerPhoto) return;
-    try {
-      Alert.alert(
-        'Upload Profile Photo',
-        'Choose an option to update your trainer profile picture:',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Take Photo',
-            onPress: async () => {
-              const { status } = await ImagePicker.requestCameraPermissionsAsync();
-              if (status !== 'granted') {
-                Alert.alert('Permission Required', 'Camera access is needed to capture your profile photo.');
-                return;
-              }
-              const res = await ImagePicker.launchCameraAsync({
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.5,
-              });
-              if (!res.canceled && res.assets?.[0]?.uri) {
-                await saveTrainerPhoto(res.assets[0].uri);
-              }
-            }
-          },
-          {
-            text: 'Choose from Gallery',
-            onPress: async () => {
-              const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-              if (status !== 'granted') {
-                Alert.alert('Permission Required', 'Gallery access is needed to select your profile photo.');
-                return;
-              }
-              const res = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.5,
-              });
-              if (!res.canceled && res.assets?.[0]?.uri) {
-                await saveTrainerPhoto(res.assets[0].uri);
-              }
-            }
-          }
-        ]
-      );
-    } catch (e: any) {
-      console.warn('[TrainerPhotoPicker] Error:', e);
-      Alert.alert('Picker Error', 'Unable to pick photo. Please try again.');
+    setShowTrainerPhotoDialog(true);
+  };
+
+  const executeTrainerPhotoOption = async (option: string) => {
+    setShowTrainerPhotoDialog(false);
+    if (option === 'Take Photo') {
+      try {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Required', 'Camera access is needed to capture your profile photo.');
+          return;
+        }
+        const res = await ImagePicker.launchCameraAsync({
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.5,
+        });
+        if (!res.canceled && res.assets?.[0]?.uri) {
+          await saveTrainerPhoto(res.assets[0].uri);
+        }
+      } catch (e: any) {
+        console.warn('[TrainerPhotoPicker] Camera Error:', e);
+        Alert.alert('Picker Error', 'Unable to capture photo. Please try again.');
+      }
+    } else if (option === 'Choose from Gallery') {
+      try {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Required', 'Gallery access is needed to select your profile photo.');
+          return;
+        }
+        const res = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.5,
+        });
+        if (!res.canceled && res.assets?.[0]?.uri) {
+          await saveTrainerPhoto(res.assets[0].uri);
+        }
+      } catch (e: any) {
+        console.warn('[TrainerPhotoPicker] Gallery Error:', e);
+        Alert.alert('Picker Error', 'Unable to pick photo. Please try again.');
+      }
     }
   };
 
@@ -2613,6 +2611,16 @@ export default function ProfileScreen() {
         message="Your personal details have been updated."
         confirmText="OK"
         onConfirm={() => setProfileSavedAlertVisible(false)}
+      />
+
+      {/* Native Single Choice Dialog for Trainer Photo Source */}
+      <NativeSingleChoiceDialog
+        visible={showTrainerPhotoDialog}
+        title="Upload Profile Photo"
+        message="Choose an option to update your trainer profile picture:"
+        options={['Take Photo', 'Choose from Gallery']}
+        onSelect={executeTrainerPhotoOption}
+        onDismiss={() => setShowTrainerPhotoDialog(false)}
       />
 
 
