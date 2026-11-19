@@ -978,16 +978,36 @@ export default function SessionDetailScreen() {
     const customerGender = getClientGender(booking);
 
     return (
-      <View style={{ flex: 1, backgroundColor, paddingTop: insets.top }}>
+      <View style={{ flex: 1, backgroundColor }}>
+        <StatusBar style="dark" />
+
+        {/* Semi-transparent white status bar strip for smooth frosted glass / translucent edge-to-edge feel */}
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: insets.top,
+            backgroundColor: 'rgba(255, 255, 255, 0.75)',
+            borderBottomWidth: 0.5,
+            borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+            zIndex: 35,
+          }}
+        />
+
         {/* Header */}
-        <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
-          <TouchableOpacity onPress={handleSafeBack} className="w-8 h-8 items-center justify-center">
-            <Ionicons name="arrow-back" size={20} color="#101828" />
-          </TouchableOpacity>
-          <Text className="text-[#101828] text-xs font-black uppercase tracking-widest">
-            Booking Details
-          </Text>
-          <View className="w-8" />
+        <View style={{ paddingTop: insets.top }} className="border-b border-[#E5E7EB] bg-white">
+          <View className="h-14 flex-row items-center px-6 justify-between">
+            <TouchableOpacity onPress={handleSafeBack} className="w-8 h-8 items-center justify-center">
+              <Ionicons name="arrow-back" size={20} color="#101828" />
+            </TouchableOpacity>
+            <Text className="text-[#101828] text-xs font-black uppercase tracking-widest">
+              Booking Details
+            </Text>
+            <View className="w-8" />
+          </View>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 24, paddingBottom: 140 }}>
@@ -1324,10 +1344,25 @@ export default function SessionDetailScreen() {
   return (
     <View style={{ flex: 1, backgroundColor }}>
       <StatusBar style="dark" />
-      {/* Header extending to the very top */}
+
+      {/* Header extending over status bar */}
       <View
-        style={{ paddingTop: insets.top }}
-        className="bg-white border-b border-zinc-100 shadow-xs"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 40,
+          paddingTop: insets.top,
+          backgroundColor: 'rgba(255, 255, 255, 0.92)',
+          borderBottomWidth: 0.5,
+          borderBottomColor: 'rgba(0, 0, 0, 0.08)',
+          shadowColor: '#101828',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.03,
+          shadowRadius: 6,
+          elevation: 2,
+        }}
       >
         <View className="h-14 flex-row items-center px-5 justify-between">
           <TouchableOpacity
@@ -1364,98 +1399,104 @@ export default function SessionDetailScreen() {
         </View>
       </View>
 
-      {/* Developer Push Simulator (Only for trainer during development) */}
-      {__DEV__ && role === 'trainer' && !isMissed && !isCancelled && (
-        <View className="bg-zinc-950 p-3.5 border-b border-zinc-800 gap-2">
-          <Text className="text-amber-400 text-xs font-bold uppercase tracking-wider pl-2">Developer Push Simulator</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 8, gap: 8 }}>
-            {currentStatus === 'trainer_assigned' && role === 'trainer' && (
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={async () => {
-                  try {
-                    markSelfUpdate();
-                    setCurrentStatus('trainer_accepted');
-                    await updateTimelineStatus(booking.id, 'trainer_accepted');
-                  } catch (e: any) {
-                    Alert.alert('Simulation Error', e.message);
-                  }
-                }}
-                className="px-3.5 py-2 bg-indigo-600 rounded-xl items-center justify-center"
-              >
-                <Text className="text-white text-xs font-semibold">Simulate Accept</Text>
-              </TouchableOpacity>
-            )}
-
-            {currentStatus === 'trainer_accepted' && role === 'trainer' && (
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={async () => {
-                  try {
-                    markSelfUpdate();
-                    setCurrentStatus('trainer_preparing');
-                    await updateTimelineStatus(booking.id, 'trainer_preparing');
-                  } catch (e: any) {
-                    Alert.alert('Simulation Error', e.message);
-                  }
-                }}
-                className="px-3.5 py-2 bg-indigo-600 rounded-xl items-center justify-center"
-              >
-                <Text className="text-white text-xs font-semibold">Simulate Prep Gear</Text>
-              </TouchableOpacity>
-            )}
-
-            {currentStatus === 'trainer_preparing' && role === 'trainer' && (
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={startTravelSimulation}
-                className="px-3.5 py-2 bg-emerald-600 rounded-xl items-center justify-center"
-              >
-                <Text className="text-white text-xs font-semibold">Simulate Start Journey</Text>
-              </TouchableOpacity>
-            )}
-
-            {currentStatus === 'trainer_travelling' && (
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={async () => {
-                  if (simIntervalId) clearInterval(simIntervalId);
-                  setJourneyProgress(1.0);
-                  try {
-                    markSelfUpdate();
-                    setCurrentStatus('trainer_arrived');
-                    await updateTimelineStatus(booking.id, 'trainer_arrived');
-                  } catch (e: any) {
-                    Alert.alert('Simulation Error', e.message);
-                  }
-                }}
-                className="px-3.5 py-2 bg-emerald-600 rounded-xl items-center justify-center"
-              >
-                <Text className="text-white text-xs font-semibold">Skip to Arrived</Text>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => triggerClientNoShow(booking.id)}
-              className="px-3.5 py-2 bg-rose-600 rounded-xl items-center justify-center"
-            >
-              <Text className="text-white text-xs font-semibold">Client No-Show</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => triggerTrainerNoShow(booking.id)}
-              className="px-3.5 py-2 bg-rose-600 rounded-xl items-center justify-center"
-            >
-              <Text className="text-white text-xs font-semibold">Trainer No-Show</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      )}
-
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-        <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-5" contentContainerStyle={{ paddingBottom: 100 }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          className="flex-1 px-5"
+          contentContainerStyle={{
+            paddingTop: insets.top + 64,
+            paddingBottom: 100,
+          }}
+        >
+          {/* Developer Push Simulator (Only for trainer during development) */}
+          {__DEV__ && role === 'trainer' && !isMissed && !isCancelled && (
+            <View className="bg-zinc-950 p-3.5 rounded-2xl mb-4 border border-zinc-800 gap-2">
+              <Text className="text-amber-400 text-xs font-bold uppercase tracking-wider pl-2">Developer Push Simulator</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 8, gap: 8 }}>
+                {currentStatus === 'trainer_assigned' && role === 'trainer' && (
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={async () => {
+                      try {
+                        markSelfUpdate();
+                        setCurrentStatus('trainer_accepted');
+                        await updateTimelineStatus(booking.id, 'trainer_accepted');
+                      } catch (e: any) {
+                        Alert.alert('Simulation Error', e.message);
+                      }
+                    }}
+                    className="px-3.5 py-2 bg-indigo-600 rounded-xl items-center justify-center"
+                  >
+                    <Text className="text-white text-xs font-semibold">Simulate Accept</Text>
+                  </TouchableOpacity>
+                )}
+
+                {currentStatus === 'trainer_accepted' && role === 'trainer' && (
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={async () => {
+                      try {
+                        markSelfUpdate();
+                        setCurrentStatus('trainer_preparing');
+                        await updateTimelineStatus(booking.id, 'trainer_preparing');
+                      } catch (e: any) {
+                        Alert.alert('Simulation Error', e.message);
+                      }
+                    }}
+                    className="px-3.5 py-2 bg-indigo-600 rounded-xl items-center justify-center"
+                  >
+                    <Text className="text-white text-xs font-semibold">Simulate Prep Gear</Text>
+                  </TouchableOpacity>
+                )}
+
+                {currentStatus === 'trainer_preparing' && role === 'trainer' && (
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={startTravelSimulation}
+                    className="px-3.5 py-2 bg-emerald-600 rounded-xl items-center justify-center"
+                  >
+                    <Text className="text-white text-xs font-semibold">Simulate Start Journey</Text>
+                  </TouchableOpacity>
+                )}
+
+                {currentStatus === 'trainer_travelling' && (
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={async () => {
+                      if (simIntervalId) clearInterval(simIntervalId);
+                      setJourneyProgress(1.0);
+                      try {
+                        markSelfUpdate();
+                        setCurrentStatus('trainer_arrived');
+                        await updateTimelineStatus(booking.id, 'trainer_arrived');
+                      } catch (e: any) {
+                        Alert.alert('Simulation Error', e.message);
+                      }
+                    }}
+                    className="px-3.5 py-2 bg-emerald-600 rounded-xl items-center justify-center"
+                  >
+                    <Text className="text-white text-xs font-semibold">Skip to Arrived</Text>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => triggerClientNoShow(booking.id)}
+                  className="px-3.5 py-2 bg-rose-600 rounded-xl items-center justify-center"
+                >
+                  <Text className="text-white text-xs font-semibold">Client No-Show</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => triggerTrainerNoShow(booking.id)}
+                  className="px-3.5 py-2 bg-rose-600 rounded-xl items-center justify-center"
+                >
+                  <Text className="text-white text-xs font-semibold">Trainer No-Show</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          )}
           <View className="gap-5">
 
             {/* Status Content (Clean, lightweight presentation without heavy dark background box) */}

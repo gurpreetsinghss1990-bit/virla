@@ -665,56 +665,7 @@ export default function BookingsScreen() {
           <SkeletonLoader layout="bookings" />
         ) : (
           <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
-            {/* Scrim Header with separate Action Bar & Title Block */}
-            <View
-              className="px-6 pb-4 bg-[#FCF5F5]/95 border-b border-zinc-200/60 z-10"
-              style={{
-                paddingTop: insets.top + 8,
-                shadowColor: '#101828',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.03,
-                shadowRadius: 6,
-                elevation: 2,
-              }}
-            >
-              {/* Distinct Top Navigation / Action Section */}
-              <View className="flex-row items-center justify-between pb-2.5">
-                <TouchableOpacity
-                  activeOpacity={0.6}
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                  onPress={() => {
-                    if (router.canGoBack()) {
-                      router.back();
-                    } else {
-                      router.replace('/(tabs)');
-                    }
-                  }}
-                  className="w-9 h-9 items-center justify-center -ml-1 rounded-full bg-white/80 border border-zinc-200/70"
-                  accessibilityRole="button"
-                  accessibilityLabel="Back"
-                >
-                  <Ionicons name="chevron-back" size={24} color="#101828" />
-                </TouchableOpacity>
-
-                <View className="px-3 py-1 rounded-full bg-zinc-900/5 border border-zinc-900/10">
-                  <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">
-                    PRO CONSOLE
-                  </Text>
-                </View>
-              </View>
-
-              {/* Title & Subtitle Section inside Scrim Header */}
-              <View className="pt-1">
-                <Text className="text-[#101828] text-2xl font-black tracking-tight">
-                  My Schedule
-                </Text>
-                <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed mt-0.5">
-                  Manage your slots, availability limits, and client visits.
-                </Text>
-              </View>
-            </View>
-
-            {/* Content flows underneath header scrim */}
+            {/* Scrollable Content flowing underneath floating compact header */}
             <ScrollView 
               showsVerticalScrollIndicator={false}
               decelerationRate={0.96}
@@ -723,7 +674,11 @@ export default function BookingsScreen() {
               overScrollMode="always"
               nestedScrollEnabled={true}
               className="flex-1 bg-[#FCF5F5]"
-              contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 180 }}
+              contentContainerStyle={{
+                paddingHorizontal: 24,
+                paddingTop: insets.top + 70,
+                paddingBottom: 180,
+              }}
             >
               {/* Calendar Card Visual Grid with native styles */}
               <View style={{
@@ -1470,6 +1425,60 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
             </View>
 
           </ScrollView>
+
+          {/* Floating Compact Header with integrated Back, Title & Pro Console Tag */}
+          <View
+            className="px-5 pb-3 bg-[#FCF5F5]/92 border-b border-zinc-200/60"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              zIndex: 30,
+              paddingTop: insets.top + 6,
+              shadowColor: '#101828',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.03,
+              shadowRadius: 6,
+              elevation: 2,
+            }}
+          >
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center gap-2.5 flex-1 pr-2">
+                <TouchableOpacity
+                  activeOpacity={0.6}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  onPress={() => {
+                    if (router.canGoBack()) {
+                      router.back();
+                    } else {
+                      router.replace('/(tabs)');
+                    }
+                  }}
+                  className="w-9 h-9 items-center justify-center rounded-full bg-white/80 border border-zinc-200/70"
+                  accessibilityRole="button"
+                  accessibilityLabel="Back"
+                >
+                  <Ionicons name="chevron-back" size={22} color="#101828" />
+                </TouchableOpacity>
+
+                <View className="flex-1">
+                  <Text className="text-[#101828] text-xl font-black tracking-tight" numberOfLines={1}>
+                    My Schedule
+                  </Text>
+                  <Text className="text-[#6B7280] text-[10.5px] font-semibold tracking-tight" numberOfLines={1}>
+                    Manage slots & availability limits
+                  </Text>
+                </View>
+              </View>
+
+              <View className="px-2.5 py-1 rounded-full bg-zinc-900/5 border border-zinc-900/10">
+                <Text className="text-[#6B7280] text-[9.5px] font-black uppercase tracking-widest">
+                  PRO CONSOLE
+                </Text>
+              </View>
+            </View>
+          </View>
           </View>
         )}
 
@@ -1485,7 +1494,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
             backgroundColor: 'rgba(255, 255, 255, 0.75)',
             borderBottomWidth: 0.5,
             borderBottomColor: 'rgba(0, 0, 0, 0.05)',
-            zIndex: 35,
+            zIndex: 40,
           }}
         />
 
