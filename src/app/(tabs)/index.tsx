@@ -2535,7 +2535,11 @@ export default function HomeScreen() {
                             <TouchableOpacity
                               onPress={async () => {
                                 try {
-                                  await locationTrackerService.startTracking(nextSession.id, true);
+                                  const started = await locationTrackerService.startTracking(nextSession.id, true);
+                                  if (!started) {
+                                    // User dismissed or denied location permission disclosure
+                                    return;
+                                  }
                                   await updateTimelineStatus(nextSession.id, 'trainer_travelling');
                                   useNotificationStore.getState().addNotification({
                                     title: 'Coach On The Way 🚗',
@@ -2546,8 +2550,8 @@ export default function HomeScreen() {
                                 } catch (err) {
                                   setNativeAlertState({
                                     visible: true,
-                                    title: 'Error',
-                                    message: errorMessage(err) || 'Could not start travel.',
+                                    title: 'Location Permission',
+                                    message: errorMessage(err) || 'Please grant location permissions to start travel.',
                                     confirmText: 'OK',
                                     onConfirm: () => setNativeAlertState(prev => ({ ...prev, visible: false })),
                                   });

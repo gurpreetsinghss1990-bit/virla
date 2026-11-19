@@ -1491,7 +1491,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
             left: 0,
             right: 0,
             height: insets.top,
-            backgroundColor: 'rgba(255, 255, 255, 0.75)',
+            backgroundColor: 'rgba(255, 255, 255, 0.55)',
             borderBottomWidth: 0.5,
             borderBottomColor: 'rgba(0, 0, 0, 0.05)',
             zIndex: 40,

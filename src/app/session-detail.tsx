@@ -1,6 +1,7 @@
 import { Loading } from '../components/Loading';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { requestForegroundLocationWithDisclosure } from '../utils/locationDisclosure';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -256,7 +257,9 @@ export default function SessionDetailScreen() {
 
     const trackLocation = async () => {
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
+        const { status } = await requestForegroundLocationWithDisclosure(
+          'VIRLA uses your location while the app is in use to verify your arrival at the training venue.'
+        );
         if (status !== 'granted') return;
 
         // Get initial position
@@ -2120,13 +2123,17 @@ export default function SessionDetailScreen() {
                           <TouchableOpacity
                             onPress={async () => {
                               try {
+                                const started = await locationTrackerService.startTracking(booking.id, true);
+                                if (!started) {
+                                  // User declined or dismissed disclosure
+                                  return;
+                                }
                                 markSelfUpdate();
                                 setCurrentStatus('trainer_travelling');
-                                await locationTrackerService.startTracking(booking.id, true);
                                 await updateTimelineStatus(booking.id, 'trainer_travelling');
                                 handleNavigateAddress();
                               } catch (err: any) {
-                                Alert.alert('Error', err.message || 'Could not start travel.');
+                                Alert.alert('Location Permission', err.message || 'Please grant location permissions to start navigation.');
                               }
                             }}
                             className="w-full bg-[#E11D48] py-3.5 rounded-[18px] items-center justify-center flex-row gap-2 shadow-sm"

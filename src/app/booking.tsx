@@ -11,6 +11,7 @@ import { useMembershipStore } from '../store/membershipStore';
 import { calculateDistanceKm, trainerServiceRadiusKm, fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, isValidServiceCoord, reverseGeocodeCoords, AutocompleteSuggestion, getCurrentLocationCoords, searchNearbyPlaces } from '../utils/distance';
 import { normalizeDate, canonicalizeTimeRange, formatToDDMMYYYY } from '../utils/date';
 import * as Location from 'expo-location';
+import { requestForegroundLocationWithDisclosure, showNativeAlert } from '../utils/locationDisclosure';
 import { useAddressStore } from '../store/addressStore';
 import { useCoachStore, generateMonthlySlots } from '../store/coachStore';
 import { isAreaServedByAnyTrainer } from '../utils/serviceArea';
@@ -616,12 +617,13 @@ export default function BookingScreen() {
   const openAddressModal = async () => {
     // Prominently request permission FIRST before opening the map page
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await requestForegroundLocationWithDisclosure(
+        'VIRLA uses your location while the app is in use to detect your training address and match nearby trainers.'
+      );
       if (status !== 'granted') {
-        Alert.alert(
+        showNativeAlert(
           'Location Permission Required 📍',
-          'Virla requires location access to pinpoint your doorstep workout address and check service availability. Please allow location access to proceed.',
-          [{ text: 'OK' }]
+          'Virla requires location access to pinpoint your doorstep workout address and check service availability. Please allow location access to proceed.'
         );
         return;
       }
@@ -1485,7 +1487,9 @@ export default function BookingScreen() {
   const handleUseCurrentGps = async () => {
     setIsSearchingLocation(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await requestForegroundLocationWithDisclosure(
+        'VIRLA uses your location while the app is in use to detect your training address and match nearby trainers.'
+      );
       if (status !== 'granted') {
         throw new Error('Location permission was denied. Please allow location access in settings or enter your address manually.');
       }

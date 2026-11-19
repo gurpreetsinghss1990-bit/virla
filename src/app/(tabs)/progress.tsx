@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Animated, Platform, BackHandler } from 'react-native';
+import { View, Text, TouchableOpacity, Animated, Platform, BackHandler } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProgressRing } from '../../components/ProgressRing';
@@ -17,6 +18,7 @@ import { useBookingStore } from '../../store/bookingStore';
 import { Database } from '../../database/Database';
 import { CalculatedTargetsCard } from '../../components/CalculatedTargetsCard';
 import { NativeSegmentedRangeControl } from '../../components/NativeSegmentedRangeControl';
+import { TrainerPerformanceView } from '../../components/TrainerPerformanceView';
 
 let useMaterialColorsSafe: any = null;
 if (Platform.OS === 'android') {
@@ -402,16 +404,19 @@ export default function ProgressScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: systemBgColor }}>
       <View className="flex-1 relative" style={{ backgroundColor: systemBgColor }}>
-        <ScrollView 
-          showsVerticalScrollIndicator={false} 
-          scrollEventThrottle={16}
+        <FlashList
+          data={[1]}
+          keyExtractor={() => 'progress-root'}
+          showsVerticalScrollIndicator={false}
+          overScrollMode="never"
+          scrollEventThrottle={32}
           onScroll={(e) => {
             const y = e.nativeEvent.contentOffset.y;
             setScrollY(y);
           }}
           contentContainerStyle={{ paddingTop: insets.top + 62, paddingBottom: 140 }}
           style={{ backgroundColor: systemBgColor }}
-        >
+          renderItem={() => (
           <View className="px-6 pt-2 pb-4 gap-6">
             <View className="flex-row justify-between items-start">
               <View className="flex-1 pr-3">
@@ -463,224 +468,12 @@ export default function ProgressScreen() {
           {isEmpty ? (
             <EmptyState type="no-progress" showCard={false} />
           ) : role === 'trainer' ? (
-            <>
-              {/* Trainer timeframe indicator */}
-              <NativeSegmentedRangeControl
-                activeRange={activeRange}
-                onChangeRange={setActiveRange}
-              />
-
-              {/* Performance indicators - Seamless on canvas */}
-              <Animated.View style={{ opacity: fadeAnim }} className="gap-4">
-                <View className="flex-row justify-between items-center px-1">
-                  <Text className="text-[#101828] text-xs font-bold uppercase tracking-wider">
-                    Performance Indicators
-                  </Text>
-                </View>
-
-                <View className="flex-row flex-wrap justify-between gap-y-6 pt-1">
-                  {/* Ring 1: Rating */}
-                  <View className="items-center" style={{ width: '48%', paddingVertical: 8 }}>
-                    <ProgressRing progress={currentStats.trainerRatingProgress} size={84} strokeWidth={10} activeColor="#F59E0B" enable3D={true}>
-                      <Text className="text-[#101828] text-sm font-extrabold">{currentStats.trainerRating}</Text>
-                    </ProgressRing>
-                    <Text className="text-[#101828] text-xs font-bold mt-2.5">Rating</Text>
-                    <View className="mt-1 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200/80">
-                      <Text className="text-amber-700 text-[9px] font-bold uppercase">{currentStats.trainerRatingSub}</Text>
-                    </View>
-                  </View>
-
-                  {/* Ring 2: Completion Rate */}
-                  <View className="items-center" style={{ width: '48%', paddingVertical: 8 }}>
-                    <ProgressRing progress={currentStats.trainerCompletionProgress} size={84} strokeWidth={10} activeColor="#10B981" enable3D={true}>
-                      <Text className="text-[#101828] text-sm font-extrabold">{currentStats.trainerCompletion}</Text>
-                    </ProgressRing>
-                    <Text className="text-[#101828] text-xs font-bold mt-2.5">Completion</Text>
-                    <View className="mt-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80">
-                      <Text className="text-emerald-700 text-[9px] font-bold uppercase">{currentStats.trainerCompletionSub}</Text>
-                    </View>
-                  </View>
-
-                  {/* Ring 3: Active Jobs / Visits */}
-                  <View className="items-center" style={{ width: '48%', paddingVertical: 8 }}>
-                    <ProgressRing progress={currentStats.trainerVisitsProgress} size={84} strokeWidth={10} activeColor="#6366F1" enable3D={true}>
-                      <Text className="text-[#101828] text-sm font-extrabold">{currentStats.trainerVisits}</Text>
-                    </ProgressRing>
-                    <Text className="text-[#101828] text-xs font-bold mt-2.5">Visits</Text>
-                    <View className="mt-1 px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/80">
-                      <Text className="text-indigo-700 text-[9px] font-bold uppercase">{currentStats.trainerVisitsSub}</Text>
-                    </View>
-                  </View>
-
-                  {/* Ring 4: Earnings Goal */}
-                  <View className="items-center" style={{ width: '48%', paddingVertical: 8 }}>
-                    <ProgressRing progress={currentStats.trainerPayoutProgress} size={84} strokeWidth={10} activeColor="#8B5CF6" enable3D={true}>
-                      <Text className="text-[#101828] text-sm font-extrabold">{currentStats.trainerPayoutVal}</Text>
-                    </ProgressRing>
-                    <Text className="text-[#101828] text-xs font-bold mt-2.5">Payout Target</Text>
-                    <View className="mt-1 px-2.5 py-0.5 rounded-full bg-purple-50 border border-purple-200/80">
-                      <Text className="text-purple-700 text-[9px] font-bold uppercase">{currentStats.trainerPayoutSub}</Text>
-                    </View>
-                  </View>
-                </View>
-              </Animated.View>
-
-              {/* Weekly/Monthly Earnings chart - Seamless on canvas */}
-              <Animated.View style={{ opacity: fadeAnim }} className="gap-4">
-                <View className="flex-row justify-between items-center px-1">
-                  <View>
-                    <Text className="text-[#101828] text-xs font-bold uppercase tracking-wider">
-                      Sessions History Chart
-                    </Text>
-                    <Text className="text-zinc-500 text-[10px] font-medium mt-0.5">
-                      {activeRange === 'weekly' ? 'Daily session breakdown' : activeRange === 'monthly' ? '4-Week progression' : 'Quarterly trend'}
-                    </Text>
-                  </View>
-                  <View className="px-2.5 py-1 bg-[#101828]/5 rounded-full border border-[#101828]/10">
-                    <Text className="text-[#6B7280] text-[9px] font-bold uppercase tracking-wider">
-                      {activeRange === 'weekly' ? 'Daily Breakdown' : activeRange === 'monthly' ? '4-Week View' : 'Quarterly Trend'}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={{ height: 152, justifyContent: 'flex-end', paddingTop: 8 }}>
-                  <View className="flex-row items-end justify-between">
-                    {currentStats.chartData.map((d, index) => {
-                      const isPeak = d.val > 0 && d.val === Math.max(...currentStats.chartData.map(c => c.val));
-                      const heightPercent = d.val ? `${d.val}%` : '6%';
-                      const barWidth = currentStats.chartData.length > 5 ? 24 : 30;
-                      const shadowWidth = currentStats.chartData.length > 5 ? 20 : 24;
-                      return (
-                        <View key={index} className="items-center flex-1">
-                          {/* 3D Floating Peak Indicator */}
-                          <View style={{ height: 20, justifyContent: 'center', marginBottom: 6 }}>
-                            {isPeak ? (
-                              <View 
-                                style={{
-                                  backgroundColor: '#E11D48',
-                                  paddingHorizontal: 6,
-                                  paddingVertical: 1.5,
-                                  borderRadius: 5,
-                                  shadowColor: '#E11D48',
-                                  shadowOffset: { width: 0, height: 2 },
-                                  shadowOpacity: 0.3,
-                                  shadowRadius: 3,
-                                  elevation: 3,
-                                }}
-                              >
-                                <Text style={{ color: '#FFFFFF', fontSize: 8.5, fontWeight: '800' }}>
-                                  {d.val}%
-                                </Text>
-                              </View>
-                            ) : (
-                              <Text style={{ color: '#94A3B8', fontSize: 8.5, fontWeight: '600' }}>
-                                {d.val > 0 ? `${d.val}%` : ''}
-                              </Text>
-                            )}
-                          </View>
-
-                          {/* 3D Recessed Pillar Groove (Track) */}
-                          <View 
-                            style={{
-                              width: barWidth,
-                              height: 88,
-                              borderRadius: barWidth / 2,
-                              backgroundColor: '#EAEFF5',
-                              justifyContent: 'flex-end',
-                              overflow: 'hidden',
-                              borderTopWidth: 2,
-                              borderLeftWidth: 1.5,
-                              borderTopColor: '#CBD5E1',
-                              borderLeftColor: '#CBD5E1',
-                              borderBottomWidth: 1,
-                              borderRightWidth: 1,
-                              borderBottomColor: '#FFFFFF',
-                              borderRightColor: '#FFFFFF',
-                            }}
-                          >
-                            {/* 3D Cylindrical Pillar Bar */}
-                            <View 
-                              style={{ 
-                                height: heightPercent as any,
-                                width: '100%',
-                                borderRadius: (barWidth - 2) / 2,
-                                backgroundColor: d.val === 0 
-                                  ? '#E2E8F0' 
-                                  : index % 2 === 0 ? '#E11D48' : '#BE123C',
-                                borderLeftWidth: 1.5,
-                                borderLeftColor: 'rgba(255, 255, 255, 0.45)',
-                                borderRightWidth: 1.5,
-                                borderRightColor: 'rgba(0, 0, 0, 0.22)',
-                              }} 
-                            >
-                              {/* 3D Glowing Oval Top Cap */}
-                              {d.val > 0 && (
-                                <View 
-                                  style={{
-                                    width: '100%',
-                                    height: 5,
-                                    borderRadius: 2.5,
-                                    backgroundColor: '#FFFFFF',
-                                    opacity: 0.65,
-                                  }}
-                                />
-                              )}
-                            </View>
-                          </View>
-
-                          {/* 3D Pillar Base Ground Shadow */}
-                          <View 
-                            style={{
-                              width: shadowWidth,
-                              height: 4,
-                              borderRadius: 2,
-                              backgroundColor: d.val > 0 ? 'rgba(15, 23, 42, 0.16)' : 'rgba(15, 23, 42, 0.05)',
-                              marginTop: 4,
-                            }}
-                          />
-
-                          <Text 
-                            style={{
-                              color: isPeak ? '#101828' : '#64748B',
-                              fontSize: 10,
-                              fontWeight: isPeak ? '800' : '600',
-                              marginTop: 4,
-                            }}
-                          >
-                            {d.label}
-                          </Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-                </View>
-              </Animated.View>
-
-              {/* Client Review Feed Wall */}
-              <View className="gap-3">
-                <Text className="text-[#101828] text-xs font-bold uppercase tracking-wider pl-1">Client Review Wall</Text>
-                <View className="py-2 gap-3">
-                  {[
-                    { id: 'r-1', clientName: 'Viral S.', rating: 5, comment: 'Excellent strength coaching session! Focus on form was perfect.', date: 'Today', workout: 'PowerForge' },
-                    { id: 'r-2', clientName: 'Amit M.', rating: 5, comment: 'Punctual, friendly and adjusted intensity perfectly for my shoulder recovery.', date: '2 days ago', workout: 'Zen Yoga Flow' },
-                    { id: 'r-3', clientName: 'Pooja K.', rating: 4, comment: 'Very intense HIIT session! Loved the energy and playlist recommendation.', date: 'Last week', workout: 'Apex HIIT' }
-                  ].map((rev) => (
-                    <View key={rev.id} className="py-3 border-b border-zinc-200/60 last:border-b-0 gap-1.5">
-                      <View className="flex-row justify-between items-center">
-                        <Text className="text-[#101828] text-xs font-bold">{rev.clientName} • {rev.workout}</Text>
-                        <Text className="text-zinc-400 text-[9px] font-semibold">{rev.date}</Text>
-                      </View>
-                      <Text className="text-[#6B7280] text-xs italic">&ldquo;{rev.comment}&rdquo;</Text>
-                      <View className="flex-row gap-0.5 mt-0.5">
-                        {Array.from({ length: rev.rating }).map((_, i) => (
-                          <Feather key={i} name="star" size={10} color="#F5B942" style={{ marginRight: 2 }} />
-                        ))}
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            </>
+            <TrainerPerformanceView
+              activeRange={activeRange}
+              setActiveRange={setActiveRange}
+              fadeAnim={fadeAnim}
+              currentStats={currentStats}
+            />
           ) : (
             <>
               {/* Timeframe Selector (Weekly, Monthly, Yearly) */}
@@ -1028,7 +821,8 @@ export default function ProgressScreen() {
             </>
           )}
         </View>
-      </ScrollView>
+          )}
+        />
 
       {/* Semi-transparent white status bar strip for smooth frosted glass / translucent edge-to-edge feel */}
       <View
@@ -1039,7 +833,7 @@ export default function ProgressScreen() {
           left: 0,
           right: 0,
           height: insets.top,
-          backgroundColor: 'rgba(255, 255, 255, 0.75)',
+          backgroundColor: 'rgba(255, 255, 255, 0.55)',
           borderBottomWidth: 0.5,
           borderBottomColor: 'rgba(0, 0, 0, 0.05)',
           zIndex: 35,

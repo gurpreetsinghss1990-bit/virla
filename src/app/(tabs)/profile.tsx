@@ -1,4 +1,5 @@
 import { Loading } from '../../components/Loading';
+import { FlashList } from '@shopify/flash-list';
 import { NativePressable } from '../../components/NativePressable';
 import { NativeGoalChip } from '../../components/NativeGoalChip';
 import { ClientProfileView } from '../../components/ClientProfileView';
@@ -24,6 +25,7 @@ import { AutocompleteSuggestion, fetchGooglePlacesAutocomplete, fetchGooglePlace
 import { LuxuryCard } from '../../components/LuxuryCard';
 import { SignOutConfirmationModal } from '../../components/SignOutConfirmationModal';
 import * as Location from 'expo-location';
+import { requestForegroundLocationWithDisclosure } from '../../utils/locationDisclosure';
 import * as ImagePicker from 'expo-image-picker';
 import { formatToDDMMYYYY } from '../../utils/date';
 import { Image as ExpoImage } from 'expo-image';
@@ -851,7 +853,9 @@ export default function ProfileScreen() {
   const handleUseCurrentLocation = async () => {
     setIsSearchingLocation(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await requestForegroundLocationWithDisclosure(
+        'VIRLA uses your location while the app is in use to set your service area and address.'
+      );
       if (status !== 'granted') {
         Alert.alert('Permission Denied', 'Location permission is required.');
         setIsSearchingLocation(false);
@@ -1148,20 +1152,20 @@ export default function ProfileScreen() {
               userApplication={userApplication}
             />
           ) : (
-            <ScrollView
+            <FlashList
+              data={[1]}
+              keyExtractor={() => 'trainer-profile'}
               showsVerticalScrollIndicator={false}
-              scrollEventThrottle={16}
+              overScrollMode="never"
+              scrollEventThrottle={32}
               onScroll={(e) => {
                 const collapsed = e.nativeEvent.contentOffset.y > 60;
                 if (collapsed !== isHeaderCollapsed) setIsHeaderCollapsed(collapsed);
               }}
               className="flex-1 bg-transparent"
               contentContainerStyle={{ paddingHorizontal: 24, paddingTop: insets.top + 62, paddingBottom: 140 }}
-            >
-              {/* =============================================================== */}
-              {/* ======================= TRAINER PROFILE ======================= */}
-              {/* =============================================================== */}
-              <>
+              renderItem={() => (
+                <>
               {/* Trainer Profile Header Summary Card */}
               <View className="items-center mb-6">
                 <View className="relative">
@@ -1204,7 +1208,7 @@ export default function ProfileScreen() {
                   <TouchableOpacity
                     activeOpacity={0.85}
                     onPress={() => handleRoleChange('customer')}
-                    className="mt-3.5 bg-zinc-900 border border-zinc-700 px-4 py-2 rounded-xl flex-row items-center gap-2 shadow-sm"
+                    className="mt-3.5 bg-zinc-900 border border-zinc-700 px-4 py-2 rounded-xl flex-row items-center gap-2"
                   >
                     <Feather name="repeat" size={12} color="#E11D48" />
                     <Text className="text-white text-xs font-black uppercase tracking-wider">
@@ -1232,7 +1236,7 @@ export default function ProfileScreen() {
                     <TouchableOpacity
                       activeOpacity={0.8}
                       onPress={() => { if (isEditingTrainer) { handleSaveTrainer(); } else { setIsEditingTrainer(true); } }}
-                      className="px-3.5 py-1.5 bg-zinc-900 rounded-lg shadow-2xs flex-row items-center gap-1.5"
+                      className="px-3.5 py-1.5 bg-zinc-900 rounded-lg flex-row items-center gap-1.5"
                     >
                       <Feather name={isEditingTrainer ? "check" : "edit-2"} size={11} color="#FFFFFF" />
                       <Text className="text-white text-xs font-bold">{isEditingTrainer ? 'Save' : 'Edit'}</Text>
@@ -1428,7 +1432,7 @@ export default function ProfileScreen() {
                         )}
 
                         {showSpecialtyForm && (
-                          <View className="bg-white border border-zinc-200 p-4 rounded-2xl gap-3.5 mt-1 shadow-2xs">
+                          <View className="bg-white border border-zinc-200 p-4 rounded-2xl gap-3.5 mt-1">
                             <Text className="text-zinc-900 text-xs font-bold uppercase tracking-wide">Select workout categories to request</Text>
                             <View className="flex-row flex-wrap gap-2">
                               {DB_CATEGORIES.map((cat, idx) => {
@@ -1559,7 +1563,7 @@ export default function ProfileScreen() {
                     )}
 
                     {showAddressForm && (
-                      <View className="bg-white border border-zinc-200 p-4 rounded-2xl gap-3.5 mt-1 shadow-2xs">
+                      <View className="bg-white border border-zinc-200 p-4 rounded-2xl gap-3.5 mt-1">
                         <Text className="text-zinc-900 text-xs font-bold uppercase tracking-wide">Configure Base address</Text>
 
                         <TouchableOpacity
@@ -1792,7 +1796,7 @@ export default function ProfileScreen() {
                       </View>
 
                       {isEditingTrainer ? (
-                        <View className="gap-3 bg-white p-4 border border-zinc-200 rounded-2xl shadow-2xs">
+                        <View className="gap-3 bg-white p-4 border border-zinc-200 rounded-2xl">
                           <View className="gap-1.5">
                             <Text className="text-zinc-600 text-xs font-semibold">Account Name</Text>
                             <TextInput
@@ -1924,7 +1928,7 @@ export default function ProfileScreen() {
                     </View>
 
                     {showDisputeForm && (
-                      <View className="bg-white border border-zinc-200 p-4 rounded-2xl gap-3.5 mt-1 shadow-2xs">
+                      <View className="bg-white border border-zinc-200 p-4 rounded-2xl gap-3.5 mt-1">
                         <Text className="text-zinc-900 text-xs font-bold uppercase tracking-wide">Submit new issue ticket</Text>
                         <View className="gap-1.5">
                           <Text className="text-zinc-600 text-xs font-semibold">Category</Text>
@@ -2073,7 +2077,7 @@ export default function ProfileScreen() {
                       )}
                     </View>
                     {showKitForm && (
-                      <View className="bg-white border border-zinc-200 p-4 rounded-2xl gap-3.5 mt-1 shadow-2xs">
+                      <View className="bg-white border border-zinc-200 p-4 rounded-2xl gap-3.5 mt-1">
                         <Text className="text-zinc-900 text-xs font-bold uppercase tracking-wide">Select quantities</Text>
 
                         <View className="gap-3">
@@ -2209,19 +2213,20 @@ export default function ProfileScreen() {
                 </AccordionCard>
 
               </View>
-            </>
 
           {/* Sign Out button */}
           <TouchableOpacity
             onPress={handleLogout}
             activeOpacity={0.8}
-            className="bg-rose-50 border border-rose-200/70 px-8 py-3.5 rounded-full flex-row justify-center items-center self-center mt-6 mb-24 gap-2 shadow-2xs"
+            className="bg-rose-50 border border-rose-200/70 px-8 py-3.5 rounded-full flex-row justify-center items-center self-center mt-6 mb-24 gap-2"
           >
             <Feather name="log-out" size={15} color="#E11D48" style={{ transform: [{ rotate: '-90deg' }] }} />
             <Text className="text-rose-600 text-xs font-bold uppercase tracking-wider">Sign Out</Text>
           </TouchableOpacity>
 
-        </ScrollView>
+        </>
+              )}
+            />
           )}
 
         {/* Semi-transparent white status bar strip for smooth frosted glass / translucent edge-to-edge feel */}
@@ -2233,7 +2238,7 @@ export default function ProfileScreen() {
             left: 0,
             right: 0,
             height: insets.top,
-            backgroundColor: 'rgba(255, 255, 255, 0.75)',
+            backgroundColor: 'rgba(255, 255, 255, 0.55)',
             borderBottomWidth: StyleSheet.hairlineWidth,
             borderBottomColor: 'rgba(0, 0, 0, 0.05)',
             zIndex: 35,
@@ -2276,11 +2281,7 @@ export default function ProfileScreen() {
               </Svg>
             </View>
 
-            <Text className="text-[#101828] text-2xl font-black tracking-tight" numberOfLines={1}>
-              {isHeaderCollapsed 
-                ? (profile.name || user?.name || (activeRole === 'trainer' ? 'Trainer' : 'User'))
-                : (activeRole === 'trainer' ? 'Trainer Profile' : 'Profile')}
-            </Text>
+            {/* Title text removed */}
           </View>
         </View>
       </View>
@@ -2364,7 +2365,7 @@ export default function ProfileScreen() {
 
                   <View className="flex-row items-center gap-4">
                     {/* Current Selected Avatar */}
-                    <View className="w-16 h-16 rounded-full border-2 border-rose-500 p-0.5 bg-white shadow-sm">
+                    <View className="w-16 h-16 rounded-full border-2 border-rose-500 p-0.5 bg-white">
                       <AvatarImage
                         uri={editAvatar || profile.avatar || user?.avatar}
                         gender={(editGender || profile.gender || (user as any)?.gender) as string}
@@ -2385,7 +2386,7 @@ export default function ProfileScreen() {
                       <TouchableOpacity
                         activeOpacity={0.8}
                         onPress={() => pickAvatarImage('camera')}
-                        className="flex-1 py-2 px-2.5 rounded-xl bg-white border border-zinc-200 items-center justify-center flex-row gap-1.5 shadow-2xs"
+                        className="flex-1 py-2 px-2.5 rounded-xl bg-white border border-zinc-200 items-center justify-center flex-row gap-1.5"
                       >
                         <Feather name="camera" size={13} color="#101828" />
                         <Text className="text-[11px] font-bold text-zinc-800">Camera</Text>
@@ -2393,7 +2394,7 @@ export default function ProfileScreen() {
                       <TouchableOpacity
                         activeOpacity={0.8}
                         onPress={() => pickAvatarImage('library')}
-                        className="flex-1 py-2 px-2.5 rounded-xl bg-white border border-zinc-200 items-center justify-center flex-row gap-1.5 shadow-2xs"
+                        className="flex-1 py-2 px-2.5 rounded-xl bg-white border border-zinc-200 items-center justify-center flex-row gap-1.5"
                       >
                         <Feather name="image" size={13} color="#101828" />
                         <Text className="text-[11px] font-bold text-zinc-800">Gallery</Text>
@@ -2580,7 +2581,7 @@ export default function ProfileScreen() {
                 onPress={handleSaveProfile}
                 disabled={isSavingProfile}
                 rippleColor="rgba(255,255,255,0.2)"
-                className={`flex-1 py-3.5 rounded-xl items-center justify-center shadow-sm flex-row gap-2 ${
+                className={`flex-1 py-3.5 rounded-xl items-center justify-center flex-row gap-2 ${
                   isSavingProfile ? 'bg-zinc-700 opacity-90' : 'bg-[#101828]'
                 }`}
               >
@@ -2704,7 +2705,7 @@ const KitRequestRow = React.memo(function KitRequestRow({ item }: { item: any })
 function AccordionCard({ title, icon, expanded, onToggle, children, rightText, rightTextColor, badgeBgColor, badgeBorderColor }: AccordionCardProps) {
   return (
     <View
-      className="bg-white border border-zinc-200/90 rounded-[24px] overflow-hidden shadow-xs"
+      className="bg-white border border-zinc-200/90 rounded-[24px] overflow-hidden"
     >
       <TouchableOpacity
         activeOpacity={0.75}

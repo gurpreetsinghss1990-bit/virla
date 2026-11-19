@@ -8,6 +8,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { useWalletStore } from '../store/walletStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { requestForegroundLocationWithDisclosure } from '../utils/locationDisclosure';
 import { ScreenHeader, ConfirmationDialog } from '../components';
 
 import { Database } from '../database/Database';
@@ -314,7 +315,9 @@ export default function CommunicationScreen() {
     const sender = role === 'trainer' ? 'trainer' : 'customer';
     setIsSharingLocation(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await requestForegroundLocationWithDisclosure(
+        'VIRLA uses your location while the app is in use to share your current location in chat.'
+      );
       if (status !== 'granted') {
         setIsSharingLocation(false);
         setIsLocationConfirmVisible(false);
