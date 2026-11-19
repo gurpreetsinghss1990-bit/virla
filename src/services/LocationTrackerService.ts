@@ -1,7 +1,8 @@
-import { Platform, AppState, AppStateStatus, Alert } from 'react-native';
+import { Platform, AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { supabase } from '../database/supabaseClient';
+import { requestBackgroundLocationDisclosure } from '../store/locationDisclosureStore';
 
 export const VIRLA_TRAINER_BG_LOCATION_TASK = 'VIRLA_TRAINER_BG_LOCATION_TASK';
 const ACTIVE_BOOKING_STORAGE_KEY = '@virla_active_tracked_booking_id';
@@ -68,29 +69,16 @@ class LocationTrackerService {
       }
 
       if (promptBackgroundIfNeeded && !this.hasPromptedBackgroundPermission) {
-        this.hasPromptedBackgroundPermission = true;
-
-        // Explain to trainer before opening OS "Allow all the time" permission prompt
-        await new Promise<void>((resolve) => {
-          Alert.alert(
-            'Enable Live Travel Tracking 📍',
-            Platform.OS === 'android'
-              ? 'To share your live route with the client until you reach their location (even when your phone is locked or using Google Maps), please select "Allow all the time" on the next screen.\n\nTracking stops automatically as soon as you arrive.'
-              : 'To share your live route with the client until you reach their location, please allow Background Location ("Always Allow").\n\nTracking stops automatically as soon as you arrive.',
-            [
-              {
-                text: 'Continue',
-                onPress: () => resolve(),
-              },
-            ],
-            { cancelable: false }
-          );
-        });
-
-        try {
-          bg = await Location.requestBackgroundPermissionsAsync();
-        } catch (bgErr) {
-          console.warn('[LocationTracker] Background permission request warning:', bgErr);
+        // Google Play policy: prominent in-app disclosure with an explicit opt-in
+        // must be shown before the OS background-location prompt is triggered.
+        const disclosed = await requestBackgroundLocationDisclosure();
+        if (disclosed) {
+          this.hasPromptedBackgroundPermission = true;
+          try {
+            bg = await Location.requestBackgroundPermissionsAsync();
+          } catch (bgErr) {
+            console.warn('[LocationTracker] Background permission request warning:', bgErr);
+          }
         }
       }
 

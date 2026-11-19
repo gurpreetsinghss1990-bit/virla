@@ -10,6 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PushNotificationService } from '../services/PushNotificationService';
 import { useUserStore } from '../store/userStore';
 import { TopToastNotification } from '../components/TopToastNotification';
+import { BackgroundLocationDisclosureModal } from '../components/BackgroundLocationDisclosureModal';
 import { AppErrorBoundary, AppErrorFallback } from '../components/AppErrorBoundary';
 import { configureGlobalTextInputCursor } from '../utils/configureTextInputCursor';
 import { useEngagementNudges } from '../hooks/useEngagementNudges';
@@ -204,6 +205,7 @@ export default function RootLayout() {
         <StatusBar style="dark" />
         <Stack screenOptions={{ headerShown: false }} />
         <TopToastNotification />
+        <BackgroundLocationDisclosureModal />
       </SafeAreaProvider>
     </AppErrorBoundary>
   );
