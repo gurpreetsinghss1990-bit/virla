@@ -49,6 +49,31 @@ export default function TabsLayout() {
       tabBar={(props) => <BottomNavigation {...props} />}
       screenOptions={{
         headerShown: false,
+        animation: 'fade',
+        transitionSpec: {
+          animation: 'timing',
+          config: {
+            duration: 180,
+          },
+        },
+        sceneStyleInterpolator: ({ current }: any) => {
+          return {
+            sceneStyle: {
+              opacity: current.progress.interpolate({
+                inputRange: [-1, 0, 1],
+                outputRange: [0, 1, 0],
+              }),
+              transform: [
+                {
+                  scale: current.progress.interpolate({
+                    inputRange: [-1, 0, 1],
+                    outputRange: [0.97, 1, 0.97],
+                  }),
+                },
+              ],
+            },
+          };
+        },
         sceneStyle: { backgroundColor: '#FCF5F5' },
         tabBarStyle: {
           borderTopWidth: 0,

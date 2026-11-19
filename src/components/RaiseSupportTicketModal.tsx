@@ -1,11 +1,12 @@
 import { Loading } from './Loading';
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Database, SupportTicket } from '../database/Database';
 import { Booking } from '../types';
 import { formatToDDMMYYYY } from '../utils/date';
+import { NativeSheet } from './NativeSheet';
 
 interface RaiseSupportTicketModalProps {
   visible: boolean;
@@ -80,13 +81,8 @@ export function RaiseSupportTicketModal({
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
-      <View style={{ flex: 1, backgroundColor: '#FFFFFF', paddingTop: insets.top }}>
+    <NativeSheet visible={visible} onClose={onClose}>
+      <View style={{ backgroundColor: '#FFFFFF', maxHeight: 600 }}>
         <View className="px-5 py-3.5 border-b border-zinc-100 flex-row items-center justify-between">
           <View>
             <Text className="text-zinc-400 text-[10px] font-medium mb-0.5">
@@ -107,8 +103,8 @@ export function RaiseSupportTicketModal({
 
         <ScrollView
           showsVerticalScrollIndicator={false}
-          className="flex-1 px-5"
-          contentContainerStyle={{ paddingTop: 16, paddingBottom: 48 }}
+          className="px-5"
+          contentContainerStyle={{ paddingTop: 16, paddingBottom: Math.max(insets.bottom, 24) + 16 }}
           keyboardShouldPersistTaps="handled"
         >
           {booking && (
@@ -191,6 +187,6 @@ export function RaiseSupportTicketModal({
           </TouchableOpacity>
         </ScrollView>
       </View>
-    </Modal>
+    </NativeSheet>
   );
 }
