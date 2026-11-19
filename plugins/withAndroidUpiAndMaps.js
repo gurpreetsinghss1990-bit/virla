@@ -40,7 +40,7 @@ module.exports = function withAndroidUpiAndMaps(config) {
     if (app) {
       if (!app.$) app.$ = {};
       app.$['android:usesCleartextTraffic'] = 'true';
-      app.$['tools:replace'] = 'android:allowBackup,android:usesCleartextTraffic';
+      app.$['tools:replace'] = 'android:allowBackup,android:usesCleartextTraffic,android:enableOnBackInvokedCallback';
 
       if (!app['meta-data']) {
         app['meta-data'] = [];

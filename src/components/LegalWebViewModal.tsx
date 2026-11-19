@@ -95,8 +95,8 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
             activeOpacity={0.8}
             onPress={() => setActiveTab('terms')}
             className={`flex-1 py-2 rounded-xl items-center justify-center flex-row gap-1.5 border ${activeTab === 'terms'
-                ? 'bg-rose-50 border-rose-200'
-                : 'bg-zinc-50 border-zinc-100'
+              ? 'bg-rose-50 border-rose-200'
+              : 'bg-zinc-50 border-zinc-100'
               }`}
           >
             <Feather
@@ -116,8 +116,8 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
             activeOpacity={0.8}
             onPress={() => setActiveTab('privacy')}
             className={`flex-1 py-2 rounded-xl items-center justify-center flex-row gap-1.5 border ${activeTab === 'privacy'
-                ? 'bg-rose-50 border-rose-200'
-                : 'bg-zinc-50 border-zinc-100'
+              ? 'bg-rose-50 border-rose-200'
+              : 'bg-zinc-50 border-zinc-100'
               }`}
           >
             <Feather
