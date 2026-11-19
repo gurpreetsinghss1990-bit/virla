@@ -818,7 +818,7 @@ export default function VirlaAIScreen() {
                         <View
                           style={{
                             backgroundColor: '#FFFFFF',
-                            borderColor: '#F1F5F9',
+                            borderColor: 'transparent',
                             borderWidth: 1.4,
                             borderRadius: 22,
                             padding: 14,
@@ -1001,7 +1001,7 @@ export default function VirlaAIScreen() {
                                   height: 52,
                                   borderRadius: 18,
                                   backgroundColor: isSel ? '#E11D48' : '#FFFFFF',
-                                  borderColor: isSel ? '#E11D48' : '#F1F5F9',
+                                  borderColor: isSel ? '#E11D48' : 'transparent',
                                   borderWidth: isSel ? 2 : 1.4,
                                   alignItems: 'center',
                                   justifyContent: 'center',
@@ -1062,7 +1062,7 @@ export default function VirlaAIScreen() {
                                 paddingVertical: 12,
                                 borderRadius: 16,
                                 backgroundColor: isSel ? '#FFF5F6' : '#FFFFFF',
-                                borderColor: isSel ? '#E11D48' : '#F1F5F9',
+                                borderColor: isSel ? '#E11D48' : 'transparent',
                                 borderWidth: isSel ? 1.8 : 1.2,
                                 ...softShadow({ color: isSel ? '#E11D48' : '#0F172A', opacity: isSel ? 0.16 : 0.03, radius: isSel ? 8 : 4, offsetY: isSel ? 3 : 1 }),
                               }}
@@ -1428,7 +1428,7 @@ export default function VirlaAIScreen() {
                         <View
                           style={{
                             backgroundColor: '#FFFFFF',
-                            borderColor: '#E2E8F0',
+                            borderColor: 'transparent',
                             borderWidth: 1.5,
                             borderRadius: 20,
                             paddingHorizontal: 16,
@@ -1599,7 +1599,7 @@ export default function VirlaAIScreen() {
                         <View
                           style={{
                             backgroundColor: '#FFFFFF',
-                            borderColor: '#E2E8F0',
+                            borderColor: 'transparent',
                             borderWidth: 1.5,
                             borderRadius: 20,
                             paddingHorizontal: 16,

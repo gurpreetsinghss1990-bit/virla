@@ -287,7 +287,7 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
           borderRadius: 12,
           backgroundColor: shouldPlay ? '#101828' : '#FFFFFF',
           borderWidth: 1.5,
-          borderColor: '#E5E7EB',
+          borderColor: 'transparent',
           alignItems: 'center',
           justifyContent: 'center',
           ...softShadow({ color: '#101828', opacity: 0.1, radius: 4, offsetY: 2 }),

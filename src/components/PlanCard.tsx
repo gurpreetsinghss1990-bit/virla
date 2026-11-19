@@ -67,7 +67,7 @@ function PlanCardBase({ plan, isExpanded, buddyNotice, hasCredits, onPress, onBl
               : '#FFFFFF'),
           borderRadius: 22,
           borderWidth: is8SessionPack ? 1.2 : (isBuddyDisabled ? 1 : 0),
-          borderColor: is8SessionPack ? '#FDE68A' : (isBuddyDisabled ? '#E4E4E7' : 'transparent'),
+          borderColor: is8SessionPack ? '#FDE68A' : (isBuddyDisabled ? 'transparent' : 'transparent'),
           ...softShadow({ color: is8SessionPack ? '#D97706' : '#000000', opacity: isExpanded ? 0.12 : (isBuddyDisabled ? 0.02 : (is8SessionPack ? 0.10 : 0.08)), radius: isExpanded ? 12 : (isBuddyDisabled ? 4 : (is8SessionPack ? 10 : 9)), offsetY: 7 }),
           position: 'relative',
           opacity: isBuddyDisabled ? 0.72 : 1,

@@ -3108,7 +3108,7 @@ export default function BookingScreen() {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 borderWidth: 1,
-                                borderColor: '#E5E7EB',
+                                borderColor: 'transparent',
                                 ...softShadow({ color: '#101828', opacity: 0.1, radius: 8, offsetY: 4 }),
                                 zIndex: 30,
                               }}
@@ -4820,7 +4820,7 @@ export default function BookingScreen() {
                     {/* 2x2 Highlights Grid */}
                     <View className="bg-zinc-50/80 border border-zinc-100 rounded-2xl p-3 gap-2.5">
                       <View className="flex-row gap-2.5">
-                        <View className="flex-1 bg-white border border-zinc-200/80 p-2.5 rounded-xl flex-row items-center gap-2.5">
+                        <View className="flex-1 bg-white p-2.5 rounded-xl flex-row items-center gap-2.5">
                           <View className="w-7 h-7 rounded-lg bg-indigo-50 items-center justify-center">
                             <Feather name="clock" size={13} color="#4F46E5" />
                           </View>
@@ -4830,7 +4830,7 @@ export default function BookingScreen() {
                           </View>
                         </View>
 
-                        <View className="flex-1 bg-white border border-zinc-200/80 p-2.5 rounded-xl flex-row items-center gap-2.5">
+                        <View className="flex-1 bg-white p-2.5 rounded-xl flex-row items-center gap-2.5">
                           <View className="w-7 h-7 rounded-lg bg-emerald-50 items-center justify-center">
                             <Feather name="activity" size={13} color="#059669" />
                           </View>
@@ -4842,7 +4842,7 @@ export default function BookingScreen() {
                       </View>
 
                       <View className="flex-row gap-2.5">
-                        <View className="flex-1 bg-white border border-zinc-200/80 p-2.5 rounded-xl flex-row items-center gap-2.5">
+                        <View className="flex-1 bg-white p-2.5 rounded-xl flex-row items-center gap-2.5">
                           <View className="w-7 h-7 rounded-lg bg-rose-50 items-center justify-center">
                             <Feather name="shield" size={13} color="#E11D48" />
                           </View>
@@ -4852,7 +4852,7 @@ export default function BookingScreen() {
                           </View>
                         </View>
 
-                        <View className="flex-1 bg-white border border-zinc-200/80 p-2.5 rounded-xl flex-row items-center gap-2.5">
+                        <View className="flex-1 bg-white p-2.5 rounded-xl flex-row items-center gap-2.5">
                           <View className="w-7 h-7 rounded-lg bg-purple-50 items-center justify-center">
                             <Feather name="lock" size={13} color="#7C3AED" />
                           </View>
@@ -5103,7 +5103,7 @@ export default function BookingScreen() {
               }
             }}
             style={{ zIndex: 51 }}
-            className="w-10 h-10 rounded-full bg-white/90 border border-zinc-200/80 shadow-xs items-center justify-center"
+            className="w-10 h-10 rounded-full bg-white/90 shadow-xs items-center justify-center"
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
@@ -5155,7 +5155,7 @@ export default function BookingScreen() {
             onPress={handleShareBooking}
             activeOpacity={0.8}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            className="w-10 h-10 items-center justify-center rounded-full bg-white/90 border border-zinc-200/80 shadow-xs"
+            className="w-10 h-10 items-center justify-center rounded-full bg-white/90 shadow-xs"
           >
             <Feather name="share-2" size={16} color="#09090B" />
           </TouchableOpacity>

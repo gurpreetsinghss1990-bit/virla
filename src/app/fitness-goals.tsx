@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   },
   capsuleUnselected: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#E4E4E7',
+    borderColor: 'transparent',
     ...softShadow({ color: '#000000', opacity: 0.04, radius: 2, offsetY: 1 }),
   },
   capsuleText: {

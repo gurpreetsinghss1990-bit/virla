@@ -195,7 +195,7 @@ export function GoalCard({ goal, isSelected, onSelect, index = 0 }: GoalCardProp
         onPress={handlePress}
         style={{
           backgroundColor: '#FFFFFF',
-          borderColor: isSelected ? '#E11D48' : '#F1F5F9',
+          borderColor: isSelected ? '#E11D48' : 'transparent',
           borderWidth: isSelected ? 2 : 1.4,
           borderRadius: 22,
           minHeight: 124,

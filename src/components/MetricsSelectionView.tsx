@@ -297,7 +297,7 @@ export function MetricsSelectionView({
                 }}
                 style={{
                   backgroundColor: '#FFFFFF',
-                  borderColor: gender === 'Male' ? '#C0003C' : '#E2E8F0',
+                  borderColor: gender === 'Male' ? '#C0003C' : 'transparent',
                   borderWidth: gender === 'Male' ? 1.5 : 1,
                   borderRadius: 18,
                   paddingVertical: 14,
@@ -359,7 +359,7 @@ export function MetricsSelectionView({
                 }}
                 style={{
                   backgroundColor: '#FFFFFF',
-                  borderColor: gender === 'Female' ? '#C0003C' : '#E2E8F0',
+                  borderColor: gender === 'Female' ? '#C0003C' : 'transparent',
                   borderWidth: gender === 'Female' ? 1.5 : 1,
                   borderRadius: 18,
                   paddingVertical: 14,
@@ -420,7 +420,7 @@ export function MetricsSelectionView({
                 }}
                 style={{
                   backgroundColor: '#FFFFFF',
-                  borderColor: gender === 'Other' ? '#C0003C' : '#E2E8F0',
+                  borderColor: gender === 'Other' ? '#C0003C' : 'transparent',
                   borderWidth: gender === 'Other' ? 1.5 : 1,
                   borderRadius: 18,
                   paddingVertical: 14,
@@ -612,7 +612,7 @@ export function MetricsSelectionView({
                 backgroundColor: '#FFFFFF',
                 borderRadius: 20,
                 borderWidth: 1,
-                borderColor: '#E2E8F0',
+                borderColor: 'transparent',
                 padding: 13,
                 ...softShadow({ color: '#64748B', opacity: 0.05, radius: 5, offsetY: 2 }),
               }}
@@ -777,7 +777,7 @@ export function MetricsSelectionView({
                 backgroundColor: '#FFFFFF',
                 borderRadius: 20,
                 borderWidth: 1,
-                borderColor: '#E2E8F0',
+                borderColor: 'transparent',
                 padding: 13,
                 ...softShadow({ color: '#64748B', opacity: 0.05, radius: 5, offsetY: 2 }),
               }}

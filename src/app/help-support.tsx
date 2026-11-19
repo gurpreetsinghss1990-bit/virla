@@ -161,7 +161,7 @@ export default function HelpSupportScreen() {
                 borderRadius: 20,
                 padding: 16,
                 borderWidth: 1,
-                borderColor: '#E4E4E7',
+                borderColor: 'transparent',
                 ...softShadow({ color: '#000', opacity: 0.03, radius: 6, offsetY: 2 }),
               }}
             >
@@ -189,7 +189,7 @@ export default function HelpSupportScreen() {
                 borderRadius: 20,
                 padding: 16,
                 borderWidth: 1,
-                borderColor: '#E4E4E7',
+                borderColor: 'transparent',
                 ...softShadow({ color: '#000', opacity: 0.03, radius: 6, offsetY: 2 }),
               }}
             >
@@ -250,7 +250,7 @@ export default function HelpSupportScreen() {
                   padding: 18,
                   marginTop: 10,
                   borderWidth: 1,
-                  borderColor: '#E4E4E7',
+                  borderColor: 'transparent',
                   ...softShadow({ color: '#000', opacity: 0.04, radius: 10, offsetY: 4 }),
                   gap: 14,
                 }}
@@ -377,7 +377,7 @@ export default function HelpSupportScreen() {
               borderRadius: 22,
               padding: 18,
               borderWidth: 1,
-              borderColor: '#E4E4E7',
+              borderColor: 'transparent',
               ...softShadow({ color: '#000', opacity: 0.03, radius: 6, offsetY: 2 }),
               marginBottom: 20,
             }}
