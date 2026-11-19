@@ -7,8 +7,9 @@ export interface NativeAlertDialogProps {
   message?: string;
   confirmText?: string;
   cancelText?: string;
-  onConfirm: () => void;
+  onConfirm?: () => void;
   onDismiss?: () => void;
+  onClose?: () => void;
 }
 
 let JetpackCompose: any = null;
@@ -18,31 +19,32 @@ if (Platform.OS === 'android') {
   } catch {}
 }
 
-/**
- * Native AlertDialog matching exactly SignOutConfirmationModal:
- * Clean, borderless Material 3 TextButton with Red text color.
- */
-export const NativeAlertDialog: React.FC<NativeAlertDialogProps> = React.memo(({
+export const NativeAlertDialog: React.FC<NativeAlertDialogProps> = ({
   visible,
   title,
-  message,
+  message = '',
   confirmText = 'OK',
   cancelText,
   onConfirm,
   onDismiss,
+  onClose,
 }) => {
   const isShowingRef = useRef(false);
 
   const handleClose = () => {
     isShowingRef.current = false;
-    if (onDismiss) {
-      onDismiss();
-    } else {
-      onConfirm();
-    }
+    onDismiss?.();
+    onClose?.();
+  };
+
+  const handleConfirm = () => {
+    isShowingRef.current = false;
+    onConfirm?.();
+    onClose?.();
   };
 
   useEffect(() => {
+    // If running on Android and JetpackCompose AlertDialog is available, do not fire Alert.alert
     if (Platform.OS === 'android' && JetpackCompose?.AlertDialog) {
       return;
     }
@@ -50,40 +52,27 @@ export const NativeAlertDialog: React.FC<NativeAlertDialogProps> = React.memo(({
     if (visible && !isShowingRef.current) {
       isShowingRef.current = true;
       const buttons: any[] = [];
-
       if (cancelText) {
         buttons.push({
           text: cancelText,
           style: 'cancel',
-          onPress: () => {
-            isShowingRef.current = false;
-            onDismiss?.();
-          },
+          onPress: handleClose,
         });
       }
-
       buttons.push({
         text: confirmText,
         style: 'destructive',
-        onPress: () => {
-          isShowingRef.current = false;
-          onConfirm();
-        },
+        onPress: handleConfirm,
       });
 
-      Alert.alert(
-        title,
-        message,
-        buttons,
-        {
-          cancelable: true,
-          onDismiss: handleClose,
-        }
-      );
+      Alert.alert(title, message, buttons, {
+        cancelable: true,
+        onDismiss: handleClose,
+      });
     } else if (!visible) {
       isShowingRef.current = false;
     }
-  }, [visible, title, message, confirmText, cancelText, onConfirm, onDismiss]);
+  }, [visible, title, message, confirmText, cancelText, onConfirm, onDismiss, onClose]);
 
   if (Platform.OS === 'android' && JetpackCompose?.AlertDialog) {
     if (!visible) return null;
@@ -102,11 +91,10 @@ export const NativeAlertDialog: React.FC<NativeAlertDialogProps> = React.memo(({
                 {title}
               </Text>
             </AlertDialog.Title>
-
             {Boolean(message) && (
               <AlertDialog.Text>
                 <Text 
-                  fontWeight="normal" 
+                  fontWeight="bold" 
                   color="#27272A"
                   style={{ fontSize: 15 }}
                 >
@@ -114,29 +102,21 @@ export const NativeAlertDialog: React.FC<NativeAlertDialogProps> = React.memo(({
                 </Text>
               </AlertDialog.Text>
             )}
-
             <AlertDialog.ConfirmButton>
               <TextButton
-                onClick={() => {
-                  onConfirm();
-                }}
+                onClick={handleConfirm}
                 colors={{ contentColor: '#E11D48' }}
               >
-                <Text fontWeight="bold" color="#E11D48">
-                  {confirmText}
-                </Text>
+                <Text fontWeight="bold" color="#E11D48">{confirmText}</Text>
               </TextButton>
             </AlertDialog.ConfirmButton>
-
             {Boolean(cancelText) && (
               <AlertDialog.DismissButton>
                 <TextButton 
                   onClick={handleClose}
                   colors={{ contentColor: '#71717A' }}
                 >
-                  <Text fontWeight="medium" color="#71717A">
-                    {cancelText}
-                  </Text>
+                  <Text fontWeight="medium" color="#71717A">{cancelText}</Text>
                 </TextButton>
               </AlertDialog.DismissButton>
             )}
@@ -147,6 +127,4 @@ export const NativeAlertDialog: React.FC<NativeAlertDialogProps> = React.memo(({
   }
 
   return null;
-});
-
-export default NativeAlertDialog;
+};

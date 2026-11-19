@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { NativePressable } from './NativePressable';
 
@@ -15,42 +15,49 @@ export const NativeGoalChip = React.memo(({ label, selected, onPress, color, siz
   const isSmall = size === 'small';
 
   return (
-    <NativePressable
-      rippleColor={selected ? 'rgba(5, 150, 105, 0.2)' : 'rgba(100, 116, 139, 0.15)'}
-      onPress={onPress}
+    <View
       style={[
-        styles.capsule,
-        isSmall && { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-        selected
-          ? styles.capsuleSelected
-          : styles.capsuleUnselected,
+        styles.capsuleWrapper,
+        isSmall && { borderRadius: 20 },
+        selected ? styles.capsuleSelected : styles.capsuleUnselected,
       ]}
     >
-      <Text
+      <NativePressable
+        rippleColor={selected ? 'rgba(5, 150, 105, 0.2)' : 'rgba(100, 116, 139, 0.15)'}
+        onPress={onPress}
         style={[
-          styles.capsuleText,
-          isSmall && { fontSize: 11 },
-          selected ? styles.capsuleTextSelected : styles.capsuleTextUnselected,
+          styles.capsule,
+          isSmall && { paddingHorizontal: 12, paddingVertical: 6 },
         ]}
       >
-        {label}
-      </Text>
-      {selected && <Feather name="check" size={isSmall ? 10 : 13} color="#059669" />}
-    </NativePressable>
+        <Text
+          style={[
+            styles.capsuleText,
+            isSmall && { fontSize: 11 },
+            selected ? styles.capsuleTextSelected : styles.capsuleTextUnselected,
+          ]}
+        >
+          {label}
+        </Text>
+        {selected && <Feather name="check" size={isSmall ? 10 : 13} color="#059669" />}
+      </NativePressable>
+    </View>
   );
 });
 
 const styles = StyleSheet.create({
-  capsule: {
+  capsuleWrapper: {
     borderRadius: 9999,
     overflow: 'hidden',
     borderWidth: 1,
+    flexShrink: 0,
+  },
+  capsule: {
     paddingHorizontal: 16,
     paddingVertical: 9,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    flexShrink: 0,
   },
   capsuleSelected: {
     backgroundColor: '#ECFDF5', // subtle soft light green

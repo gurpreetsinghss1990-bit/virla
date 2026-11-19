@@ -117,12 +117,8 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
       // Distinct, visible cool slate grey scrim for trainer mode
       return '#94A3B8';
     }
-    if (materialColors?.background || materialColors?.surface) {
-      const raw = materialColors.background || materialColors.surface;
-      return raw.startsWith('#') ? raw.slice(0, 7) : raw;
-    }
     return '#FFFFFF';
-  }, [isTrainer, materialColors]);
+  }, [isTrainer]);
 
   return (
     <View pointerEvents="box-none" style={styles.screenBottomLayer}>

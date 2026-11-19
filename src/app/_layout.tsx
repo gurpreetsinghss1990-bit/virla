@@ -10,6 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PushNotificationService } from '../services/PushNotificationService';
 import { useUserStore } from '../store/userStore';
 import { TopToastNotification } from '../components/TopToastNotification';
+import { BackgroundLocationDisclosureModal } from '../components/BackgroundLocationDisclosureModal';
 import { AppErrorBoundary, AppErrorFallback } from '../components/AppErrorBoundary';
 import { configureGlobalTextInputCursor } from '../utils/configureTextInputCursor';
 import { useEngagementNudges } from '../hooks/useEngagementNudges';
@@ -26,6 +27,7 @@ configureGlobalTextInputCursor();
 LogBox.ignoreLogs([
   "Can't perform a React state update on a component that hasn't mounted yet",
   "setLayoutAnimationEnabledExperimental is currently a no-op in the New Architecture",
+  "ImageBackground is deprecated",
 ]);
 
 // Keep the splash screen visible while we fetch resources
@@ -203,6 +205,7 @@ export default function RootLayout() {
         <StatusBar style="dark" />
         <Stack screenOptions={{ headerShown: false }} />
         <TopToastNotification />
+        <BackgroundLocationDisclosureModal />
       </SafeAreaProvider>
     </AppErrorBoundary>
   );
