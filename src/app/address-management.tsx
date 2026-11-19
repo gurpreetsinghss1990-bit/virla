@@ -263,7 +263,7 @@ export default function AddressManagementScreen() {
 
             {showForm ? (
               /* Add/Edit Form Panel */
-              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+              <View className="bg-white p-5 rounded-[28px] shadow-sm gap-4">
                 <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider border-b border-zinc-50 pb-2">
                   {editingId ? 'Modify Address Details' : 'New Address Details'}
                 </Text>
