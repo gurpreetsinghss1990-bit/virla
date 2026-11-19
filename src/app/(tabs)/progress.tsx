@@ -400,7 +400,7 @@ export default function ProgressScreen() {
   const userName = userProfile.name || user?.name || (role === 'trainer' ? 'Trainer' : 'User');
 
   return (
-    <View style={{ flex: 1, backgroundColor: systemBgColor, paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: systemBgColor }}>
       <View className="flex-1 relative" style={{ backgroundColor: systemBgColor }}>
         <ScrollView 
           showsVerticalScrollIndicator={false} 
@@ -409,7 +409,7 @@ export default function ProgressScreen() {
             const y = e.nativeEvent.contentOffset.y;
             setScrollY(y);
           }}
-          contentContainerStyle={{ paddingTop: 62, paddingBottom: 140 }}
+          contentContainerStyle={{ paddingTop: insets.top + 62, paddingBottom: 140 }}
           style={{ backgroundColor: systemBgColor }}
         >
           <View className="px-6 pt-2 pb-4 gap-6">
@@ -1030,12 +1030,28 @@ export default function ProgressScreen() {
         </View>
       </ScrollView>
 
+      {/* Semi-transparent white status bar strip for smooth frosted glass / translucent edge-to-edge feel */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: insets.top,
+          backgroundColor: 'rgba(255, 255, 255, 0.75)',
+          borderBottomWidth: 0.5,
+          borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+          zIndex: 35,
+        }}
+      />
+
       {/* Floating Top Header: Inline title with subtle scrim right next to the element */}
       <View 
         pointerEvents="box-none" 
         style={{ 
           position: 'absolute', 
-          top: 10, 
+          top: insets.top + 10, 
           left: 20, 
           zIndex: 40,
           flexDirection: 'row',

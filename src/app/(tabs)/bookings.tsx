@@ -660,15 +660,16 @@ export default function BookingsScreen() {
 
   if (role === 'trainer') {
     return (
-      <SafeAreaViewWrapper>
+      <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
         {loading ? (
           <SkeletonLoader layout="bookings" />
         ) : (
           <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
             {/* Scrim Header with separate Action Bar & Title Block */}
             <View
-              className="px-6 pt-2 pb-4 bg-[#FCF5F5]/95 border-b border-zinc-200/60 z-10"
+              className="px-6 pb-4 bg-[#FCF5F5]/95 border-b border-zinc-200/60 z-10"
               style={{
+                paddingTop: insets.top + 8,
                 shadowColor: '#101828',
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.03,
@@ -1472,6 +1473,22 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
           </View>
         )}
 
+        {/* Semi-transparent white status bar strip for smooth frosted glass / translucent edge-to-edge feel */}
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: insets.top,
+            backgroundColor: 'rgba(255, 255, 255, 0.75)',
+            borderBottomWidth: 0.5,
+            borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+            zIndex: 35,
+          }}
+        />
+
         {/* Native Alert Dialog for Trainer Actions */}
         <NativeAlertDialog
           visible={nativeAlertState.visible}
@@ -1504,7 +1521,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
           }}
           onDismiss={() => setCategoryDialogState(prev => ({ ...prev, visible: false }))}
         />
-      </SafeAreaViewWrapper>
+      </View>
     );
   }
 
