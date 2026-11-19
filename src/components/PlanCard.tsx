@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
+import { softShadow } from '../utils/shadows';
 export interface Plan {
   id: string;
   name: string;
@@ -67,11 +68,7 @@ function PlanCardBase({ plan, isExpanded, buddyNotice, hasCredits, onPress, onBl
           borderRadius: 22,
           borderWidth: is8SessionPack ? 1.2 : (isBuddyDisabled ? 1 : 0),
           borderColor: is8SessionPack ? '#FDE68A' : (isBuddyDisabled ? '#E4E4E7' : 'transparent'),
-          shadowColor: is8SessionPack ? '#D97706' : '#000000',
-          shadowOffset: { width: 0, height: 7 },
-          shadowOpacity: isExpanded ? 0.12 : (isBuddyDisabled ? 0.02 : (is8SessionPack ? 0.10 : 0.08)),
-          shadowRadius: isExpanded ? 12 : (isBuddyDisabled ? 4 : (is8SessionPack ? 10 : 9)),
-          elevation: isExpanded ? 5 : (isBuddyDisabled ? 1 : (is8SessionPack ? 4 : 3)),
+          ...softShadow({ color: is8SessionPack ? '#D97706' : '#000000', opacity: isExpanded ? 0.12 : (isBuddyDisabled ? 0.02 : (is8SessionPack ? 0.10 : 0.08)), radius: isExpanded ? 12 : (isBuddyDisabled ? 4 : (is8SessionPack ? 10 : 9)), offsetY: 7 }),
           position: 'relative',
           opacity: isBuddyDisabled ? 0.72 : 1,
           marginBottom: 16, // Clean increased spacing between cards
@@ -93,11 +90,7 @@ function PlanCardBase({ plan, isExpanded, buddyNotice, hasCredits, onPress, onBl
               paddingHorizontal: 10,
               paddingVertical: 3,
               borderRadius: 6,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.15,
-              shadowRadius: 4,
-              elevation: 3,
+              ...softShadow({ color: '#000', opacity: 0.15, radius: 4, offsetY: 2 }),
             }}
           >
             <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.6, textTransform: 'uppercase' }}>

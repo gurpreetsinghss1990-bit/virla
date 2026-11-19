@@ -18,6 +18,7 @@ import { useUserStore } from '../store/userStore';
 import { Database } from '../database/Database';
 import { supabase } from '../database/supabaseClient';
 
+import { softShadow } from '../utils/shadows';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 type GenderType = 'Male' | 'Female' | 'Other';
@@ -388,11 +389,7 @@ export default function UserMetricsLandingScreen() {
                       setGender('Male');
                     }}
                     style={{
-                      shadowColor: gender === 'Male' ? '#E11D48' : '#000',
-                      shadowOffset: { width: 0, height: gender === 'Male' ? 6 : 2 },
-                      shadowOpacity: gender === 'Male' ? 0.18 : 0.04,
-                      shadowRadius: gender === 'Male' ? 14 : 8,
-                      elevation: gender === 'Male' ? 6 : 1,
+                      ...softShadow({ color: gender === 'Male' ? '#E11D48' : '#000', opacity: gender === 'Male' ? 0.18 : 0.04, radius: gender === 'Male' ? 14 : 8, offsetY: gender === 'Male' ? 6 : 2 }),
                     }}
                     className={`flex-1 rounded-[28px] p-4 items-center justify-between min-h-[290px] border-2 transition-all ${
                       gender === 'Male'
@@ -434,11 +431,7 @@ export default function UserMetricsLandingScreen() {
                       setGender('Female');
                     }}
                     style={{
-                      shadowColor: gender === 'Female' ? '#E11D48' : '#000',
-                      shadowOffset: { width: 0, height: gender === 'Female' ? 6 : 2 },
-                      shadowOpacity: gender === 'Female' ? 0.18 : 0.04,
-                      shadowRadius: gender === 'Female' ? 14 : 8,
-                      elevation: gender === 'Female' ? 6 : 1,
+                      ...softShadow({ color: gender === 'Female' ? '#E11D48' : '#000', opacity: gender === 'Female' ? 0.18 : 0.04, radius: gender === 'Female' ? 14 : 8, offsetY: gender === 'Female' ? 6 : 2 }),
                     }}
                     className={`flex-1 rounded-[28px] p-4 items-center justify-between min-h-[290px] border-2 transition-all ${
                       gender === 'Female'
@@ -704,11 +697,7 @@ export default function UserMetricsLandingScreen() {
                         onPress={() => toggleInterest(item.id)}
                         style={{
                           width: (SCREEN_WIDTH - 40 - 24) / 3, // 3 columns with padding
-                          shadowColor: isSelected ? '#E11D48' : '#000',
-                          shadowOffset: { width: 0, height: isSelected ? 4 : 1 },
-                          shadowOpacity: isSelected ? 0.16 : 0.03,
-                          shadowRadius: isSelected ? 10 : 6,
-                          elevation: isSelected ? 4 : 1,
+                          ...softShadow({ color: isSelected ? '#E11D48' : '#000', opacity: isSelected ? 0.16 : 0.03, radius: isSelected ? 10 : 6, offsetY: isSelected ? 4 : 1 }),
                         }}
                         className={`aspect-square rounded-[24px] items-center justify-center p-2 relative border-2 transition-all ${
                           isSelected
@@ -756,11 +745,7 @@ export default function UserMetricsLandingScreen() {
               onPress={isSubmitting ? undefined : handleNext}
               disabled={isSubmitting}
               style={{
-                shadowColor: '#E11D48',
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.35,
-                shadowRadius: 14,
-                elevation: 6,
+                ...softShadow({ color: '#E11D48', opacity: 0.35, radius: 14, offsetY: 6 }),
                 backgroundColor: '#E11D48',
               }}
               className="w-full py-4 rounded-full items-center justify-center flex-row gap-2"

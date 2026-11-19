@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeSheet } from './NativeSheet';
 
+import { softShadow } from '../utils/shadows';
 interface TrainerStatusModalProps {
   visible: boolean;
   targetStatus: 'online' | 'offline';
@@ -246,11 +247,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    ...softShadow({ color: '#000', opacity: 0.1, radius: 4, offsetY: 2 }),
   },
   primaryButtonText: {
     color: '#FFFFFF',

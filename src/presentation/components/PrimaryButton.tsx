@@ -3,6 +3,7 @@ import React, { useRef, useState } from 'react';
 import { Animated, TouchableOpacity, Text, View, StyleSheet } from 'react-native';
 import Svg, { Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 
+import { softShadow } from '../../utils/shadows';
 interface PrimaryButtonProps {
   onPress: () => void;
   title: string;
@@ -52,11 +53,7 @@ export function PrimaryButton({
           disabled ? 'opacity-50' : ''
         } ${className}`}
         style={{
-          elevation: 6,
-          shadowColor: '#4F46E5',
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.25,
-          shadowRadius: 12,
+          ...softShadow({ color: '#4F46E5', opacity: 0.25, radius: 12, offsetY: 6 }),
         }}
       >
         {/* SVG Gradient Background */}

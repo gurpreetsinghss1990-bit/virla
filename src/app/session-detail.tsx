@@ -30,6 +30,7 @@ import { parseBookingAddress } from '../utils/LocationParser';
 import { calculateDistanceKm } from '../utils/distance';
 import { cleanOtp } from '../utils/inputSafety';
 
+import { softShadow } from '../utils/shadows';
 let useMaterialColorsSafe: any = null;
 if (Platform.OS === 'android') {
   try {
@@ -1020,11 +1021,7 @@ export default function SessionDetailScreen() {
             <View
               className="bg-rose-50 border border-rose-100 p-5 rounded-[28px] flex-row justify-between items-center"
               style={{
-                shadowColor: '#E11D48',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.02,
-                shadowRadius: 8,
-                elevation: 1,
+                ...softShadow({ color: '#E11D48', opacity: 0.02, radius: 8, offsetY: 4 }),
               }}
             >
               <View className="gap-1 flex-1 pr-3">
@@ -1041,11 +1038,7 @@ export default function SessionDetailScreen() {
             <View
               className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-4"
               style={{
-                shadowColor: '#101828',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.02,
-                shadowRadius: 8,
-                elevation: 1,
+                ...softShadow({ color: '#101828', opacity: 0.02, radius: 8, offsetY: 4 }),
               }}
             >
               <View className="flex-row items-center gap-2.5 border-b border-zinc-100 pb-3.5">
@@ -1099,11 +1092,7 @@ export default function SessionDetailScreen() {
             <View
               className="bg-white border border-[#E5E7EB] p-5 rounded-[28px]"
               style={{
-                shadowColor: '#101828',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.02,
-                shadowRadius: 8,
-                elevation: 1,
+                ...softShadow({ color: '#101828', opacity: 0.02, radius: 8, offsetY: 4 }),
               }}
             >
               <View className="flex-row items-center gap-2.5 mb-3">
@@ -1121,11 +1110,7 @@ export default function SessionDetailScreen() {
             <View
               className="bg-white border border-[#E5E7EB] p-5 rounded-[28px]"
               style={{
-                shadowColor: '#101828',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.02,
-                shadowRadius: 8,
-                elevation: 1,
+                ...softShadow({ color: '#101828', opacity: 0.02, radius: 8, offsetY: 4 }),
               }}
             >
               <View className="flex-row items-center justify-between mb-3">
@@ -1252,11 +1237,7 @@ export default function SessionDetailScreen() {
           className="absolute bottom-0 left-0 right-0 bg-white border-t border-zinc-100 p-6"
           style={{
             zIndex: 99,
-            shadowColor: '#101828',
-            shadowOffset: { width: 0, height: -4 },
-            shadowOpacity: 0.05,
-            shadowRadius: 12,
-            elevation: 10,
+            ...softShadow({ color: '#101828', opacity: 0.05, radius: 12, offsetY: -4 }),
           }}
         >
           <TouchableOpacity
@@ -1321,11 +1302,7 @@ export default function SessionDetailScreen() {
             className="w-full bg-[#E11D48] py-4.5 rounded-[20px] items-center justify-center"
             style={{
               opacity: (isAccepting || isConfirmed) ? 0.6 : 1,
-              shadowColor: '#E11D48',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
-              elevation: 2,
+              ...softShadow({ color: '#E11D48', opacity: 0.1, radius: 8, offsetY: 4 }),
             }}
           >
             {isConfirmed ? (
@@ -1360,11 +1337,7 @@ export default function SessionDetailScreen() {
           backgroundColor: 'rgba(255, 255, 255, 0.92)',
           borderBottomWidth: 0.5,
           borderBottomColor: 'rgba(0, 0, 0, 0.08)',
-          shadowColor: '#101828',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.03,
-          shadowRadius: 6,
-          elevation: 2,
+          ...softShadow({ color: '#101828', opacity: 0.03, radius: 6, offsetY: 2 }),
         }}
       >
         <View className="h-14 flex-row items-center px-5 justify-between">
@@ -1652,11 +1625,7 @@ export default function SessionDetailScreen() {
               <View
                 className="bg-white border border-zinc-200/80 p-5 rounded-[28px] shadow-sm"
                 style={{
-                  shadowColor: '#101828',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 6,
-                  elevation: 1,
+                  ...softShadow({ color: '#101828', opacity: 0.04, radius: 6, offsetY: 2 }),
                 }}
               >
                 <View className="flex-row items-center gap-2.5 mb-3">
@@ -1676,11 +1645,7 @@ export default function SessionDetailScreen() {
               <View
                 className="bg-white border border-zinc-200/80 p-5 rounded-[28px] shadow-sm"
                 style={{
-                  shadowColor: '#101828',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 6,
-                  elevation: 1,
+                  ...softShadow({ color: '#101828', opacity: 0.04, radius: 6, offsetY: 2 }),
                 }}
               >
                 <View className="flex-row items-center justify-between mb-3">
@@ -1898,11 +1863,7 @@ export default function SessionDetailScreen() {
               <View
                 className="bg-white border border-zinc-200/80 p-5 rounded-[28px] shadow-sm gap-4"
                 style={{
-                  shadowColor: '#101828',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 8,
-                  elevation: 2,
+                  ...softShadow({ color: '#101828', opacity: 0.04, radius: 8, offsetY: 4 }),
                 }}
               >
                 <View className="flex-row gap-4 items-start">
@@ -2460,11 +2421,7 @@ export default function SessionDetailScreen() {
               <View
                 className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4"
                 style={{
-                  shadowColor: '#101828',
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 12,
-                  elevation: 2,
+                  ...softShadow({ color: '#101828', opacity: 0.04, radius: 12, offsetY: 6 }),
                 }}
               >
                 <View className="items-center gap-2">

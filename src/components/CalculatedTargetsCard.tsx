@@ -6,6 +6,7 @@ import { useAIWellnessStore, AIWellnessPlan } from '../store/aiWellnessStore';
 import { useUserProfileStore } from '../store/userProfileStore';
 import { NativeProgressBar } from './NativeProgressBar';
 
+import { softShadow } from '../utils/shadows';
 interface CalculatedTargetsCardProps {
   plan?: AIWellnessPlan | null;
   onPress?: () => void;
@@ -86,11 +87,7 @@ export const CalculatedTargetsCard: React.FC<CalculatedTargetsCardProps> = ({
         borderWidth: 1,
         borderRadius: 28,
         padding: 24,
-        shadowColor: '#0B0F19',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.24,
-        shadowRadius: 16,
-        elevation: 6,
+        ...softShadow({ color: '#0B0F19', opacity: 0.24, radius: 16, offsetY: 8 }),
       }}
     >
       {/* Top Tag & Goal Header */}

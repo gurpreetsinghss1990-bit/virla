@@ -18,6 +18,7 @@ import * as FileSystem from 'expo-file-system';
 import { File } from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { assertUploadableFile } from '../utils/fileType';
+import { softShadow } from '../utils/shadows';
 const getNativePickerModules = () => {
   const g = globalThis as any;
   const expoModules = g.expo?.modules || g.ExpoModules || {};
@@ -1264,11 +1265,7 @@ export default function TrainerApplicationScreen() {
               position: 'absolute',
               bottom: Platform.OS === 'android' ? Math.max(insets.bottom + 36, 88) : Math.max(insets.bottom, 16) + 24,
               right: 18,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 12,
+              ...softShadow({ color: '#000', opacity: 0.3, radius: 8, offsetY: 4 }),
             }}
             className="flex-row items-center gap-1.5 px-3 py-2 bg-[#101828] border border-zinc-700 rounded-full"
           >
@@ -2687,11 +2684,7 @@ export default function TrainerApplicationScreen() {
                     return selected.some((q: string) => !qualCertMap[q] || !qualCertMap[q].trim());
                   })()}
                   style={{
-                    shadowColor: '#E11D48',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.15,
-                    shadowRadius: 8,
-                    elevation: 4
+                    ...softShadow({ color: '#E11D48', opacity: 0.15, radius: 8, offsetY: 4 }),
                   }}
                   className={`flex-1 py-4 rounded-xl items-center justify-center ${
                     (!documentSelfie || (() => {

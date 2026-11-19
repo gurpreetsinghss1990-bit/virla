@@ -3,6 +3,7 @@ import React, { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
+import { softShadow } from '../utils/shadows';
 interface ApplePayConfirmationProps {
   onConfirm: () => void;
   priceText?: string;
@@ -73,11 +74,7 @@ export function ApplePayConfirmation({ onConfirm, priceText = '₹1,200', credit
             confirmed ? 'bg-emerald-500' : 'bg-[#F5B942]'
           }`}
           style={{
-            shadowColor: confirmed ? '#10B981' : '#F5B942',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.2,
-            shadowRadius: 8,
-            elevation: 4,
+            ...softShadow({ color: confirmed ? '#10B981' : '#F5B942', opacity: 0.2, radius: 8, offsetY: 4 }),
           }}
         >
           {loading ? (

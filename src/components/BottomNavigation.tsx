@@ -11,6 +11,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { useUserStore } from '../store/userStore';
 import { useChatStore } from '../store/chatStore';
 
+import { softShadow } from '../utils/shadows';
 let useMaterialColorsSafe: any = null;
 if (Platform.OS === 'android') {
   try {
@@ -147,7 +148,6 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
             shadowColor: '#334155',
             shadowOpacity: 0.15,
             shadowRadius: 14,
-            elevation: 6,
           },
         ]}
       >
@@ -223,11 +223,7 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
                       backgroundColor: '#E11D48',
                       minHeight: 40,
                       minWidth: 40,
-                      shadowColor: '#E11D48',
-                      shadowOffset: { width: 0, height: 3 },
-                      shadowOpacity: 0.3,
-                      shadowRadius: 6,
-                      elevation: 4,
+                      ...softShadow({ color: '#E11D48', opacity: 0.3, radius: 6, offsetY: 3 }),
                     }}
                   >
                     <Feather name="plus" size={20} color="white" />
@@ -270,11 +266,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.65)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.45)',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    ...softShadow({ color: '#0F172A', opacity: 0.08, radius: 12, offsetY: 4 }),
   },
   navContainer: {
     borderRadius: 26,

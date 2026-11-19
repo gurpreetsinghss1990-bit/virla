@@ -11,6 +11,7 @@ import { Database, getCurrentServerTime } from '../database/Database';
 import { normalizeDate, canonicalizeTimeRange, formatToDDMMYYYY } from '../utils/date';
 import { trainerServiceRadiusKm } from '../utils/distance';
 
+import { softShadow } from '../utils/shadows';
 const getEndLimit = (baseDate: Date) => {
   const endLimit = new Date(baseDate);
   endLimit.setMonth(baseDate.getMonth() + 1);
@@ -236,7 +237,7 @@ export default function TrainerAvailabilityScreen() {
         <TouchableOpacity 
           onPress={() => syncFromDB()} 
           className="mt-6 bg-zinc-950 py-3 px-6 rounded-xl"
-          style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }}
+          style={{ ...softShadow({ color: '#000', opacity: 0.1, radius: 4, offsetY: 2 }) }}
         >
           <Text className="text-white text-xs font-black uppercase tracking-wider">Retry</Text>
         </TouchableOpacity>

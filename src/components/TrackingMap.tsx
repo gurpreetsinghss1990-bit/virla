@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { parseBookingAddress } from '../utils/LocationParser';
 import { calculateDistanceKm } from '../utils/distance';
+import { softShadow } from '../utils/shadows';
 import {
   fetchRoadRouteDirections,
   snapRouteToLiveOrigin,
@@ -416,11 +417,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.28,
-    shadowRadius: 3.5,
-    elevation: 5,
+    ...softShadow({ color: '#000', opacity: 0.28, radius: 3.5, offsetY: 2 }),
   },
   clientBadgeDot: {
     width: 6,
@@ -452,11 +449,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 3,
     borderColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 4,
-    elevation: 6,
+    ...softShadow({ color: '#000', opacity: 0.35, radius: 4, offsetY: 3 }),
   },
   pinStem: {
     width: 4,
@@ -476,11 +469,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     borderWidth: 1.5,
     borderColor: '#10B981',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.32,
-    shadowRadius: 4,
-    elevation: 6,
+    ...softShadow({ color: '#000', opacity: 0.32, radius: 4, offsetY: 2 }),
   },
   trainerBadgeStale: {
     backgroundColor: '#475569',
@@ -527,11 +516,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 3.5,
     borderColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 5,
-    elevation: 8,
+    ...softShadow({ color: '#000', opacity: 0.4, radius: 5, offsetY: 4 }),
   },
   trainerMotaCoreStale: {
     backgroundColor: '#64748B',
@@ -551,11 +536,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(15, 23, 42, 0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 3,
-    elevation: 4,
+    ...softShadow({ color: '#000', opacity: 0.18, radius: 3, offsetY: 2 }),
   },
   staleOverlay: {
     position: 'absolute',
@@ -569,11 +550,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#FCD34D',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 3,
-    elevation: 3,
+    ...softShadow({ color: '#000', opacity: 0.12, radius: 3, offsetY: 2 }),
   },
   staleText: {
     fontSize: 11,

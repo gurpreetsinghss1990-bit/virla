@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text as RNText, TouchableOpacity, View } from 'react-native';
 
+import { softShadow } from '../utils/shadows';
 export interface NativeSingleChoiceDialogProps {
   visible: boolean;
   title: string;
@@ -151,11 +152,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     width: '100%',
     maxWidth: 340,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    ...softShadow({ color: '#000', opacity: 0.15, radius: 12, offsetY: 4 }),
   },
   androidTitle: {
     fontSize: 20,

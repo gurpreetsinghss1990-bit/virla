@@ -27,6 +27,7 @@ import { WORKOUT_CATEGORY_MAPPING, getCategoryFromTitle } from '../config/Workou
 import { AvatarImage } from '../components/AvatarImage';
 import { NativeSheet } from '../components/NativeSheet';
 
+import { softShadow } from '../utils/shadows';
 // Error boundary to prevent MapView crash if native Google Maps API Key is uninitialized on older client builds
 class SafeMapWrapper extends React.Component<{ children: React.ReactNode; fallback?: React.ReactNode }, { hasError: boolean }> {
   constructor(props: any) {
@@ -2432,11 +2433,7 @@ export default function BookingScreen() {
                             expCardStyles.card,
                             isSelected ? expCardStyles.cardSelected : expCardStyles.cardUnselected,
                             {
-                              shadowColor: isSelected ? '#000000' : '#101828',
-                              shadowOffset: { width: 0, height: isSelected ? 4 : 1 },
-                              shadowOpacity: isSelected ? 0.2 : 0.04,
-                              shadowRadius: isSelected ? 8 : 2,
-                              elevation: isSelected ? 4 : 1,
+                              ...softShadow({ color: isSelected ? '#000000' : '#101828', opacity: isSelected ? 0.2 : 0.04, radius: isSelected ? 8 : 2, offsetY: isSelected ? 4 : 1 }),
                             },
                           ]}
                         >
@@ -2611,11 +2608,7 @@ export default function BookingScreen() {
                                       isSelected ? 'border-[#E11D48] bg-rose-50' : 'border-zinc-200 bg-zinc-100'
                                     }`}
                                     style={{
-                                      shadowColor: isSelected ? '#E11D48' : '#101828',
-                                      shadowOffset: { width: 0, height: 2 },
-                                      shadowOpacity: isSelected ? 0.25 : 0.04,
-                                      shadowRadius: 4,
-                                      elevation: isSelected ? 3 : 1,
+                                      ...softShadow({ color: isSelected ? '#E11D48' : '#101828', opacity: isSelected ? 0.25 : 0.04, radius: 4, offsetY: 2 }),
                                     }}
                                   >
                                     <AvatarImage
@@ -2691,11 +2684,7 @@ export default function BookingScreen() {
                               : 'bg-white'
                           }`}
                           style={{
-                            shadowColor: '#101828',
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: isSelected ? 0.05 : 0.03,
-                            shadowRadius: 8,
-                            elevation: isSelected ? 2 : 1,
+                            ...softShadow({ color: '#101828', opacity: isSelected ? 0.05 : 0.03, radius: 8, offsetY: 2 }),
                           }}
                         >
                           <View className="flex-row items-center gap-3.5 flex-1">
@@ -2761,11 +2750,7 @@ export default function BookingScreen() {
                     <View
                       className="p-4 rounded-[22px] bg-white flex-row items-center justify-between"
                       style={{
-                        shadowColor: '#101828',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.03,
-                        shadowRadius: 8,
-                        elevation: 1,
+                        ...softShadow({ color: '#101828', opacity: 0.03, radius: 8, offsetY: 2 }),
                       }}
                     >
                       <View className="flex-1 pr-3">
@@ -2954,11 +2939,7 @@ export default function BookingScreen() {
                                   // 3D bottom shading
                                   borderBottomWidth: 2,
                                   borderBottomColor: isLocationOutsideCoverage ? '#7F1D1D' : '#064E3B',
-                                  shadowColor: isLocationOutsideCoverage ? '#DC2626' : '#059669',
-                                  shadowOffset: { width: 0, height: 2 },
-                                  shadowOpacity: 0.35,
-                                  shadowRadius: 3,
-                                  elevation: 5,
+                                  ...softShadow({ color: isLocationOutsideCoverage ? '#DC2626' : '#059669', opacity: 0.35, radius: 3, offsetY: 2 }),
                                 }}
                               >
                                 {/* Curved white specular highlight texture on top */}
@@ -2997,11 +2978,7 @@ export default function BookingScreen() {
                                   backgroundColor: '#FFFFFF',
                                   borderRadius: 1.5,
                                   marginTop: -0.5,
-                                  shadowColor: '#000000',
-                                  shadowOffset: { width: 0, height: 1.5 },
-                                  shadowOpacity: 0.25,
-                                  shadowRadius: 2,
-                                  elevation: 3,
+                                  ...softShadow({ color: '#000000', opacity: 0.25, radius: 2, offsetY: 1.5 }),
                                 }} 
                               />
 
@@ -3043,11 +3020,7 @@ export default function BookingScreen() {
                                 borderRadius: 24,
                                 padding: 14,
                                 zIndex: 50,
-                                shadowColor: '#000000',
-                                shadowOffset: { width: 0, height: 2 },
-                                shadowOpacity: 0.05,
-                                shadowRadius: 10,
-                                elevation: 3,
+                                ...softShadow({ color: '#000000', opacity: 0.05, radius: 10, offsetY: 2 }),
                               }}
                             >
                               {/* Back button and clean title */}
@@ -3136,11 +3109,7 @@ export default function BookingScreen() {
                                 justifyContent: 'center',
                                 borderWidth: 1,
                                 borderColor: '#E5E7EB',
-                                shadowColor: '#101828',
-                                shadowOffset: { width: 0, height: 4 },
-                                shadowOpacity: 0.1,
-                                shadowRadius: 8,
-                                elevation: 4,
+                                ...softShadow({ color: '#101828', opacity: 0.1, radius: 8, offsetY: 4 }),
                                 zIndex: 30,
                               }}
                             >
@@ -3158,11 +3127,7 @@ export default function BookingScreen() {
                                 borderRadius: 26,
                                 paddingHorizontal: 18,
                                 paddingVertical: 15,
-                                shadowColor: '#000000',
-                                shadowOffset: { width: 0, height: 4 },
-                                shadowOpacity: 0.06,
-                                shadowRadius: 12,
-                                elevation: 4,
+                                ...softShadow({ color: '#000000', opacity: 0.06, radius: 12, offsetY: 4 }),
                                 zIndex: 30,
                               }}
                             >
@@ -3617,11 +3582,7 @@ export default function BookingScreen() {
                                     isAddressFormValid ? 'bg-zinc-950' : 'bg-zinc-900'
                                   }`}
                                   style={isAddressFormValid ? {
-                                    shadowColor: '#000',
-                                    shadowOffset: { width: 0, height: 2 },
-                                    shadowOpacity: 0.15,
-                                    shadowRadius: 4,
-                                    elevation: 3,
+                                    ...softShadow({ color: '#000', opacity: 0.15, radius: 4, offsetY: 2 }),
                                   } : undefined}
                                 >
                                   <Text className="text-xs font-black uppercase tracking-wider text-white">
@@ -3713,11 +3674,7 @@ export default function BookingScreen() {
                             isSelected ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-[#E5E7EB]'
                           }`}
                           style={{
-                            shadowColor: '#101828',
-                            shadowOffset: { width: 0, height: 1 },
-                            shadowOpacity: 0.02,
-                            shadowRadius: 2,
-                            elevation: 1,
+                            ...softShadow({ color: '#101828', opacity: 0.02, radius: 2, offsetY: 1 }),
                           }}
                         >
                           <Text 
@@ -3778,11 +3735,7 @@ export default function BookingScreen() {
                                   isPicked ? 'bg-[#E11D48] border-[#E11D48]' : 'bg-zinc-50 border-[#E5E7EB]'
                                 }`}
                                 style={{
-                                  shadowColor: '#101828',
-                                  shadowOffset: { width: 0, height: 1 },
-                                  shadowOpacity: isPicked ? 0.15 : 0.02,
-                                  shadowRadius: 3,
-                                  elevation: 1,
+                                  ...softShadow({ color: '#101828', opacity: isPicked ? 0.15 : 0.02, radius: 3, offsetY: 1 }),
                                 }}
                               >
                                 <Text className={`text-[8px] font-black uppercase tracking-wider text-center ${
@@ -3850,11 +3803,7 @@ export default function BookingScreen() {
                           <View 
                             className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center justify-center mt-2 shadow-sm"
                             style={{
-                              shadowColor: '#101828',
-                              shadowOffset: { width: 0, height: 2 },
-                              shadowOpacity: 0.02,
-                              shadowRadius: 6,
-                              elevation: 1,
+                              ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                               minHeight: 180
                             }}
                           >
@@ -3874,11 +3823,7 @@ export default function BookingScreen() {
                           <View 
                             className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center gap-6 mt-2 shadow-sm"
                             style={{
-                              shadowColor: '#101828',
-                              shadowOffset: { width: 0, height: 2 },
-                              shadowOpacity: 0.02,
-                              shadowRadius: 6,
-                              elevation: 1
+                              ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                             }}
                           >
                             <View className="w-16 h-16 rounded-full bg-rose-50 items-center justify-center">
@@ -3989,11 +3934,7 @@ export default function BookingScreen() {
                           <View 
                             className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center gap-6 mt-2 shadow-sm"
                             style={{
-                              shadowColor: '#101828',
-                              shadowOffset: { width: 0, height: 2 },
-                              shadowOpacity: 0.02,
-                              shadowRadius: 6,
-                              elevation: 1
+                              ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                             }}
                           >
                             <View className="w-16 h-16 rounded-full bg-amber-50 items-center justify-center">
@@ -4067,11 +4008,7 @@ export default function BookingScreen() {
                                 }}
                                 style={{
                                   height: 80,
-                                  shadowColor: '#101828',
-                                  shadowOffset: { width: 0, height: 2 },
-                                  shadowOpacity: isPicked ? 0.12 : 0.03,
-                                  shadowRadius: 8,
-                                  elevation: 2,
+                                  ...softShadow({ color: '#101828', opacity: isPicked ? 0.12 : 0.03, radius: 8, offsetY: 2 }),
                                 }}
                                 className={`px-5 rounded-2xl border flex-row justify-between items-center ${
                                   isDisabled
@@ -4623,11 +4560,7 @@ export default function BookingScreen() {
                       backgroundColor: '#E11D48',
                       height: 52,
                       borderRadius: 26,
-                      shadowColor: '#E11D48',
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.28,
-                      shadowRadius: 10,
-                      elevation: 4,
+                      ...softShadow({ color: '#E11D48', opacity: 0.28, radius: 10, offsetY: 4 }),
                     }}
                     className="w-full items-center justify-center flex-row gap-2 mt-1"
                   >
@@ -4661,11 +4594,7 @@ export default function BookingScreen() {
                   <View 
                     className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4"
                     style={{
-                      shadowColor: '#101828',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.02,
-                      shadowRadius: 6,
-                      elevation: 1,
+                      ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                     }}
                   >
                     {/* Card Header: Calendar Icon, Title, Edit Button */}
@@ -4765,11 +4694,7 @@ export default function BookingScreen() {
                   <View
                     className="bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-2xs gap-3"
                     style={{
-                      shadowColor: '#101828',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.02,
-                      shadowRadius: 6,
-                      elevation: 1,
+                      ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                     }}
                   >
                     <View className="flex-row items-center justify-between">
@@ -4867,11 +4792,7 @@ export default function BookingScreen() {
                   <View 
                     className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4 mt-1"
                     style={{
-                      shadowColor: '#101828',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.02,
-                      shadowRadius: 6,
-                      elevation: 1,
+                      ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                     }}
                   >
                     {/* Header: Shield Icon, Title & View Details button */}
@@ -4953,11 +4874,7 @@ export default function BookingScreen() {
                     style={{
                       height: 56,
                       borderRadius: 16,
-                      shadowColor: '#E11D48',
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.15,
-                      shadowRadius: 8,
-                      elevation: 3,
+                      ...softShadow({ color: '#E11D48', opacity: 0.15, radius: 8, offsetY: 4 }),
                     }}
                   >
                     {isConfirming ? (
@@ -5120,11 +5037,7 @@ export default function BookingScreen() {
               height: 44,
               borderRadius: 22, // Curvy pill shape
               paddingHorizontal: 32, // Content-hugging natural width
-              shadowColor: '#E11D48',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.32,
-              shadowRadius: 8,
-              elevation: 5,
+              ...softShadow({ color: '#E11D48', opacity: 0.32, radius: 8, offsetY: 4 }),
             }}
             className="items-center justify-center flex-row gap-2"
           >

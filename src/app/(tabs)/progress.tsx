@@ -20,6 +20,7 @@ import { CalculatedTargetsCard } from '../../components/CalculatedTargetsCard';
 import { NativeSegmentedRangeControl } from '../../components/NativeSegmentedRangeControl';
 import { TrainerPerformanceView } from '../../components/TrainerPerformanceView';
 
+import { softShadow } from '../../utils/shadows';
 let useMaterialColorsSafe: any = null;
 if (Platform.OS === 'android') {
   try {
@@ -442,11 +443,7 @@ export default function ProgressScreen() {
                 }}
                 style={{
                   backgroundColor: isEmpty ? '#4F46E5' : '#101828',
-                  shadowColor: isEmpty ? '#4F46E5' : '#101828',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.22,
-                  shadowRadius: 5,
-                  elevation: 3,
+                  ...softShadow({ color: isEmpty ? '#4F46E5' : '#101828', opacity: 0.22, radius: 5, offsetY: 2 }),
                 }}
                 className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full mt-1 border border-white/10"
               >
@@ -574,11 +571,7 @@ export default function ProgressScreen() {
                                   paddingHorizontal: 6,
                                   paddingVertical: 1.5,
                                   borderRadius: 5,
-                                  shadowColor: '#4F46E5',
-                                  shadowOffset: { width: 0, height: 2 },
-                                  shadowOpacity: 0.35,
-                                  shadowRadius: 3,
-                                  elevation: 3,
+                                  ...softShadow({ color: '#4F46E5', opacity: 0.35, radius: 3, offsetY: 2 }),
                                 }}
                               >
                                 <Text style={{ color: '#FFFFFF', fontSize: 8.5, fontWeight: '800' }}>
@@ -628,11 +621,7 @@ export default function ProgressScreen() {
                                 borderLeftColor: 'rgba(255, 255, 255, 0.85)',
                                 borderRightWidth: 1.5,
                                 borderRightColor: 'rgba(0, 0, 0, 0.28)',
-                                shadowColor: '#4F46E5',
-                                shadowOffset: { width: 0, height: 0 },
-                                shadowOpacity: 0.5,
-                                shadowRadius: 8,
-                                elevation: 4,
+                                ...softShadow({ color: '#4F46E5', opacity: 0.5, radius: 8, offsetY: 0 }),
                               }} 
                             >
                               {d.val > 0 && (
@@ -738,11 +727,7 @@ export default function ProgressScreen() {
                             backgroundColor: theme.bg,
                             borderWidth: 2,
                             borderColor: theme.border,
-                            shadowColor: theme.glow,
-                            shadowOffset: { width: 0, height: 0 },
-                            shadowOpacity: b.unlocked ? 0.55 : 0,
-                            shadowRadius: 10,
-                            elevation: b.unlocked ? 6 : 0,
+                            ...softShadow({ color: theme.glow, opacity: b.unlocked ? 0.55 : 0, radius: 10, offsetY: 0 }),
                             alignItems: 'center',
                             justifyContent: 'center',
                             position: 'relative',

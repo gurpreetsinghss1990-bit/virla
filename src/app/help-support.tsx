@@ -9,6 +9,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { Database } from '../database/Database';
 import { useUserStore } from '../store/userStore';
 
+import { softShadow } from '../utils/shadows';
 export default function HelpSupportScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -161,11 +162,7 @@ export default function HelpSupportScreen() {
                 padding: 16,
                 borderWidth: 1,
                 borderColor: '#E4E4E7',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.03,
-                shadowRadius: 6,
-                elevation: 1,
+                ...softShadow({ color: '#000', opacity: 0.03, radius: 6, offsetY: 2 }),
               }}
             >
               <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
@@ -193,11 +190,7 @@ export default function HelpSupportScreen() {
                 padding: 16,
                 borderWidth: 1,
                 borderColor: '#E4E4E7',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.03,
-                shadowRadius: 6,
-                elevation: 1,
+                ...softShadow({ color: '#000', opacity: 0.03, radius: 6, offsetY: 2 }),
               }}
             >
               <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
@@ -227,11 +220,7 @@ export default function HelpSupportScreen() {
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-                elevation: 2,
+                ...softShadow({ color: '#000', opacity: 0.1, radius: 8, offsetY: 4 }),
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -262,11 +251,7 @@ export default function HelpSupportScreen() {
                   marginTop: 10,
                   borderWidth: 1,
                   borderColor: '#E4E4E7',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 10,
-                  elevation: 2,
+                  ...softShadow({ color: '#000', opacity: 0.04, radius: 10, offsetY: 4 }),
                   gap: 14,
                 }}
               >
@@ -393,11 +378,7 @@ export default function HelpSupportScreen() {
               padding: 18,
               borderWidth: 1,
               borderColor: '#E4E4E7',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.03,
-              shadowRadius: 6,
-              elevation: 1,
+              ...softShadow({ color: '#000', opacity: 0.03, radius: 6, offsetY: 2 }),
               marginBottom: 20,
             }}
           >
@@ -504,11 +485,7 @@ export default function HelpSupportScreen() {
                 justifyContent: 'center',
                 flexDirection: 'row',
                 gap: 8,
-                shadowColor: '#E11D48',
-                shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.25,
-                shadowRadius: 6,
-                elevation: 2,
+                ...softShadow({ color: '#E11D48', opacity: 0.25, radius: 6, offsetY: 3 }),
               }}
             >
               <Feather name="phone-forwarded" size={15} color="#FFFFFF" />

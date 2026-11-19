@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
+import { softShadow } from '../utils/shadows';
 export interface ContinueButtonProps {
   onPress: () => void;
   title?: string;
@@ -72,11 +73,7 @@ export function ContinueButton({
             justifyContent: 'center',
             flexDirection: 'row',
             gap: 10,
-            shadowColor: '#E11D48',
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.3,
-            shadowRadius: 12,
-            elevation: 4,
+            ...softShadow({ color: '#E11D48', opacity: 0.3, radius: 12, offsetY: 6 }),
             opacity: disabled ? 0.6 : 1,
           }}
         >

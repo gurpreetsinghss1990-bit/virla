@@ -22,6 +22,7 @@ import { NativeDivider } from '../../components/NativeDivider';
 import { NativeAlertDialog } from '../../components/NativeAlertDialog';
 import { NativeSingleChoiceDialog } from '../../components/NativeSingleChoiceDialog';
 
+import { softShadow } from '../../utils/shadows';
 type FilterType = 'upcoming' | 'completed' | 'cancelled' | 'today' | 'past';
 type TrainerTabType = 'today' | 'tomorrow' | 'weekly' | 'history';
 
@@ -1436,11 +1437,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
               right: 0,
               zIndex: 30,
               paddingTop: insets.top + 6,
-              shadowColor: '#101828',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.03,
-              shadowRadius: 6,
-              elevation: 2,
+              ...softShadow({ color: '#101828', opacity: 0.03, radius: 6, offsetY: 2 }),
             }}
           >
             <View className="flex-row items-center justify-between">

@@ -7,6 +7,7 @@ import Svg, { Circle, Path, Rect, Defs, LinearGradient, RadialGradient, Stop } f
 import { useUserStore } from '../store/userStore';
 import { PageIndicator } from '../presentation/components/PageIndicator';
 
+import { softShadow } from '../utils/shadows';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function OnboardingScreen() {
@@ -513,11 +514,7 @@ export default function OnboardingScreen() {
                 borderRadius: 999,
                 borderWidth: 3,
                 borderColor: '#000000',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.4,
-                shadowRadius: 5,
-                elevation: 5,
+                ...softShadow({ color: '#000', opacity: 0.4, radius: 5, offsetY: 3 }),
               }}
             >
               <Text
@@ -639,11 +636,7 @@ export default function OnboardingScreen() {
                     borderRadius: 999,
                     borderWidth: 3,
                     borderColor: '#000000',
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowOpacity: 0.4,
-                    shadowRadius: 5,
-                    elevation: 5,
+                    ...softShadow({ color: '#000', opacity: 0.4, radius: 5, offsetY: 3 }),
                   }}
                 >
                   <Text
@@ -676,11 +669,7 @@ export default function OnboardingScreen() {
                   borderRadius: 999,
                   borderWidth: 3,
                   borderColor: '#000000',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 3 },
-                  shadowOpacity: 0.4,
-                  shadowRadius: 5,
-                  elevation: 5,
+                  ...softShadow({ color: '#000', opacity: 0.4, radius: 5, offsetY: 3 }),
                 }}
               >
                 <Text

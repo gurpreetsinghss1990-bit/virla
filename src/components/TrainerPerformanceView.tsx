@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { ProgressRing } from './ProgressRing';
 import { NativeSegmentedRangeControl } from './NativeSegmentedRangeControl';
 
+import { softShadow } from '../utils/shadows';
 export interface TrainerPerformanceViewProps {
   activeRange: 'weekly' | 'monthly' | 'yearly';
   setActiveRange: (range: 'weekly' | 'monthly' | 'yearly') => void;
@@ -116,11 +117,7 @@ export const TrainerPerformanceView: React.FC<TrainerPerformanceViewProps> = ({
                           paddingHorizontal: 6,
                           paddingVertical: 1.5,
                           borderRadius: 5,
-                          shadowColor: '#E11D48',
-                          shadowOffset: { width: 0, height: 2 },
-                          shadowOpacity: 0.3,
-                          shadowRadius: 3,
-                          elevation: 3,
+                          ...softShadow({ color: '#E11D48', opacity: 0.3, radius: 3, offsetY: 2 }),
                         }}
                       >
                         <Text style={{ color: '#FFFFFF', fontSize: 8.5, fontWeight: '800' }}>

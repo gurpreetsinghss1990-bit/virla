@@ -16,6 +16,7 @@ import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Data
 import { getDisplayWorkoutTitle, getBookingISTDateRange, formatToDDMMYYYY, formatToDayMonthYear } from '../utils/date';
 import { getBookingDisplayAddress } from '../utils/LocationParser';
 
+import { softShadow } from '../utils/shadows';
 let useMaterialColorsSafe: any = null;
 if (Platform.OS === 'android') {
   try {
@@ -348,11 +349,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
           : 'py-4 border-b border-zinc-200/80'}
         style={isHistoryRow ? {
           backgroundColor: historyBgColor,
-          shadowColor: '#101828',
-          shadowOpacity: 0.04,
-          shadowRadius: 8,
-          shadowOffset: { width: 0, height: 2 },
-          elevation: 2,
+          ...softShadow({ color: '#101828', opacity: 0.04, radius: 8, offsetY: 2 }),
         } : undefined}
       >
         {/* Status indicator row */}

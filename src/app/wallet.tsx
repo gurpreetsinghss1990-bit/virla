@@ -20,6 +20,7 @@ import { t } from '../utils/i18n';
 import { PayPhiService } from '../services/payphiService';
 import { clampInt } from '../utils/inputSafety';
 
+import { softShadow } from '../utils/shadows';
 export default function WalletScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -646,7 +647,7 @@ export default function WalletScreen() {
               backgroundColor: Platform.OS === 'ios' ? 'rgba(255, 255, 255, 0.92)' : '#FFFFFF',
               borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
               borderColor: 'rgba(60, 60, 67, 0.12)',
-              elevation: Platform.OS === 'android' ? 1 : 0,
+              ...softShadow({ color: '#101828', opacity: 0.05, radius: 10, offsetY: 2 }),
             }}
           >
             <View className="flex-1 items-center">

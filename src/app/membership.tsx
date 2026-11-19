@@ -11,6 +11,7 @@ import { useUserStore } from '../store/userStore';
 import { useWalletStore } from '../store/walletStore';
 import { PlanCard, type Plan } from '../components/PlanCard';
 
+import { softShadow } from '../utils/shadows';
 const PLANS: Plan[] = [
   // Individual Plans (1 Person) - Image 1000080404.jpg
   // 8-Session Pack placed at the TOP as requested
@@ -606,11 +607,7 @@ export default function MembershipScreen() {
             borderTopLeftRadius: 22,
             borderTopRightRadius: 22,
             backgroundColor: '#FFFFFF',
-            shadowColor: '#000000',
-            shadowOffset: { width: 0, height: -6 },
-            shadowOpacity: 0.1,
-            shadowRadius: 12,
-            elevation: 12,
+            ...softShadow({ color: '#000000', opacity: 0.1, radius: 12, offsetY: -6 }),
           }}
           className="border-t border-zinc-100 px-5 pt-3 pb-2.5 flex-row items-center justify-between"
         >
@@ -641,11 +638,7 @@ export default function MembershipScreen() {
               flexDirection: 'row',
               alignItems: 'center',
               gap: 6,
-              shadowColor: '#E11D48',
-              shadowOffset: { width: 0, height: 3 },
-              shadowOpacity: 0.25,
-              shadowRadius: 6,
-              elevation: 3,
+              ...softShadow({ color: '#E11D48', opacity: 0.25, radius: 6, offsetY: 3 }),
             }}
           >
             <Text className="text-white text-[12px] font-black tracking-wider uppercase">
@@ -671,11 +664,7 @@ export default function MembershipScreen() {
           <Animated.View
             style={{
               transform: [{ translateY: slideUpAnim }],
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 10 },
-              shadowOpacity: 0.18,
-              shadowRadius: 20,
-              elevation: 16,
+              ...softShadow({ color: '#000', opacity: 0.18, radius: 20, offsetY: 10 }),
             }}
             className="bg-white rounded-[28px] p-5 pt-3.5 pb-5 border border-zinc-100"
           >
@@ -739,11 +728,7 @@ export default function MembershipScreen() {
                         backgroundColor: '#E11D48', // Virla signature primary red
                         height: 42,
                         borderRadius: 21,
-                        shadowColor: '#E11D48',
-                        shadowOffset: { width: 0, height: 3 },
-                        shadowOpacity: 0.25,
-                        shadowRadius: 6,
-                        elevation: 3,
+                        ...softShadow({ color: '#E11D48', opacity: 0.25, radius: 6, offsetY: 3 }),
                       }}
                       className="items-center justify-center mt-2"
                     >
@@ -828,11 +813,7 @@ export default function MembershipScreen() {
                           height: 40,
                           borderRadius: 20, // Curvy pill shape
                           paddingHorizontal: 28, // Content-hugging natural width
-                          shadowColor: '#E11D48',
-                          shadowOffset: { width: 0, height: 4 },
-                          shadowOpacity: 0.28,
-                          shadowRadius: 8,
-                          elevation: 4,
+                          ...softShadow({ color: '#E11D48', opacity: 0.28, radius: 8, offsetY: 4 }),
                         }}
                         className="items-center justify-center flex-row gap-2"
                       >

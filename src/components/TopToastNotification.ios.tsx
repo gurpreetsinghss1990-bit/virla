@@ -12,6 +12,7 @@ import { router } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useToastStore, ToastData } from '../store/toastStore';
 
+import { softShadow } from '../utils/shadows';
 export function TopToastNotification() {
   const insets = useSafeAreaInsets();
   const { currentToast, hideToast } = useToastStore();
@@ -186,11 +187,7 @@ export function TopToastNotification() {
         style={{
           borderRadius: 24,
           backgroundColor: '#111319',
-          shadowColor: '#000000',
-          shadowOffset: { width: 0, height: 10 },
-          shadowOpacity: 0.45,
-          shadowRadius: 20,
-          elevation: 12,
+          ...softShadow({ color: '#000000', opacity: 0.45, radius: 20, offsetY: 10 }),
         }}
       >
         <View className="overflow-hidden rounded-[24px] bg-[#111319] border border-white/10">

@@ -7,6 +7,7 @@ import { AddPartnerModal } from './AddPartnerModal';
 import { normalizeDate } from '../utils/date';
 import { useBookingStore } from '../store/bookingStore';
 
+import { softShadow } from '../utils/shadows';
 interface BookingSuccessAnimationProps {
   workoutTitle: string;
   workoutDuration: number;
@@ -292,11 +293,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
               style={{
                 width: 52,
                 height: 52,
-                shadowColor: '#00C389',
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.35,
-                shadowRadius: 10,
-                elevation: 6,
+                ...softShadow({ color: '#00C389', opacity: 0.35, radius: 10, offsetY: 6 }),
               }}
             >
               <Feather name="check" size={28} color="white" />
@@ -357,11 +354,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
         <View
           className="w-full bg-white border border-slate-200/90 rounded-[26px] overflow-hidden"
           style={{
-            shadowColor: '#0F172A',
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.06,
-            shadowRadius: 16,
-            elevation: 3,
+            ...softShadow({ color: '#0F172A', opacity: 0.06, radius: 16, offsetY: 6 }),
           }}
         >
           {/* Boarding Pass Top Metadata Bar */}
@@ -566,11 +559,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
       <View 
         className="w-full bg-zinc-900 border border-zinc-800 rounded-[24px] overflow-hidden"
         style={{
-          shadowColor: '#000000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.25,
-          shadowRadius: 12,
-          elevation: 5,
+          ...softShadow({ color: '#000000', opacity: 0.25, radius: 12, offsetY: 4 }),
         }}
       >
         {/* Ticket Header */}
@@ -733,11 +722,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
           className="w-full bg-white border border-slate-200/90 rounded-[26px] gap-4"
           style={{
             padding: 20,
-            shadowColor: '#0F172A',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.05,
-            shadowRadius: 12,
-            elevation: 2,
+            ...softShadow({ color: '#0F172A', opacity: 0.05, radius: 12, offsetY: 4 }),
           }}
         >
           <View className="flex-row justify-between items-center">
@@ -914,11 +899,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
           onPress={() => onViewSession(successBookingId)}
           className="flex-[1.8] bg-[#E11D48] py-4 rounded-2xl items-center justify-center shadow-md"
           style={{
-            shadowColor: '#E11D48',
-            shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.28,
-            shadowRadius: 8,
-            elevation: 4,
+            ...softShadow({ color: '#E11D48', opacity: 0.28, radius: 8, offsetY: 3 }),
           }}
         >
           <Text className="text-white text-xs font-black uppercase tracking-wider">

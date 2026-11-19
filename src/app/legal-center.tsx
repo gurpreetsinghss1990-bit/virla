@@ -6,6 +6,7 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { NativeDivider } from '../components/NativeDivider';
 
+import { softShadow } from '../utils/shadows';
 interface LegalDoc {
   id: string;
   title: string;
@@ -93,11 +94,7 @@ export default function LegalCenterScreen() {
                   onPress={() => setExpandedSection(isOpen ? null : doc.id)}
                   className="bg-white border border-[#E5E7EB] p-4 rounded-[22px] shadow-sm gap-2"
                   style={{
-                    shadowColor: '#101828',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.02,
-                    shadowRadius: 6,
-                    elevation: 1,
+                    ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                   }}
                 >
                   <View className="flex-row justify-between items-center">
