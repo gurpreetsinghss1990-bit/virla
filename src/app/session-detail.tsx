@@ -27,6 +27,7 @@ import { useUserStore } from '../store/userStore';
 import { formatToDDMMYYYY, getBookingISTDateRange, getDisplayWorkoutTitle } from '../utils/date';
 import { AvatarImage } from '../components/AvatarImage';
 import { parseBookingAddress } from '../utils/LocationParser';
+import { broadcastBookingUpdate } from '../utils/realtime';
 import { calculateDistanceKm } from '../utils/distance';
 import { cleanOtp } from '../utils/inputSafety';
 
@@ -2015,7 +2016,14 @@ export default function SessionDetailScreen() {
                         style: 'destructive',
                         onPress: async () => {
                           try {
-                            await Database.cancelBooking(user?.id || '', booking!.id);
+                            const store = useBookingStore.getState();
+                            if (store.bookings.some(b => b.id === booking!.id)) {
+                              await store.cancelSession(booking!.id);
+                            } else {
+                              await Database.cancelBooking(user?.id || '', booking!.id);
+                              store.syncFromDB();
+                              broadcastBookingUpdate(booking!.id, 'cancelled');
+                            }
                             router.back();
                           } catch (e: any) {
                             Alert.alert('Error', e.message || 'Could not cancel booking');
