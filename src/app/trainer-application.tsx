@@ -999,7 +999,7 @@ export default function TrainerApplicationScreen() {
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => setHasAcceptedPolicies(true)}
-              className="px-2.5 py-1.5 bg-zinc-100 rounded-lg border border-zinc-200"
+              className="px-2.5 py-1.5 bg-zinc-100 rounded-lg"
             >
               <Text className="text-[10px] text-zinc-700 font-bold uppercase">Status</Text>
             </TouchableOpacity>
@@ -1319,7 +1319,7 @@ export default function TrainerApplicationScreen() {
             <TouchableOpacity 
               activeOpacity={0.8}
               onPress={() => setViewingPoliciesOnly(true)}
-              className="px-2.5 py-1 bg-zinc-100 border border-zinc-200 rounded-lg flex-row items-center gap-1"
+              className="px-2.5 py-1 bg-zinc-100 rounded-lg flex-row items-center gap-1"
             >
               <Feather name="file-text" size={11} color="#E11D48" />
               <Text className="text-[#E11D48] text-[10px] font-black uppercase tracking-wider">View Policies (Steps 1–3)</Text>
@@ -1365,7 +1365,7 @@ export default function TrainerApplicationScreen() {
 
             <TouchableOpacity
               onPress={() => setViewingPoliciesOnly(true)}
-              className="w-full py-3.5 bg-zinc-100 border border-zinc-200 rounded-xl items-center justify-center mt-2 flex-row gap-2"
+              className="w-full py-3.5 bg-zinc-100 rounded-xl items-center justify-center mt-2 flex-row gap-2"
             >
               <Feather name="file-text" size={13} color="#E11D48" />
               <Text className="text-zinc-900 text-xs font-bold">View Partner Policies (61 Rules)</Text>
@@ -1381,7 +1381,7 @@ export default function TrainerApplicationScreen() {
         )}
 
         {appStatus === 'pending' && (
-          <LuxuryCard className="p-6 gap-5 items-center justify-center bg-white border border-zinc-200" interactive={false}>
+          <LuxuryCard className="p-6 gap-5 items-center justify-center bg-white" interactive={false}>
             <Text className="text-4xl text-center">✅</Text>
             <Text className="text-[#101828] text-lg font-extrabold text-center uppercase tracking-wider">Application Submitted</Text>
             <Text className="text-[#E11D48] text-[10px] font-black uppercase tracking-widest text-center mt-1">Step 5 of 5: Review</Text>
@@ -1397,7 +1397,7 @@ export default function TrainerApplicationScreen() {
               • Professional experience
             </Text>
 
-            <View className="bg-zinc-50 border border-zinc-200 p-3 rounded-xl w-full items-center">
+            <View className="bg-zinc-50 p-3 rounded-xl w-full items-center">
               <Text className="text-zinc-400 text-[9px] font-bold uppercase tracking-wider text-center">Average review time</Text>
               <Text className="text-zinc-900 text-sm font-black mt-0.5 text-center">24–48 hours</Text>
             </View>
@@ -1415,7 +1415,7 @@ export default function TrainerApplicationScreen() {
 
             <TouchableOpacity
               onPress={() => setViewingPoliciesOnly(true)}
-              className="w-full py-3.5 bg-zinc-100 border border-zinc-200 rounded-xl items-center justify-center mt-2 flex-row gap-2"
+              className="w-full py-3.5 bg-zinc-100 rounded-xl items-center justify-center mt-2 flex-row gap-2"
             >
               <Feather name="file-text" size={13} color="#E11D48" />
               <Text className="text-zinc-900 text-xs font-bold">View Partner Policies (61 Rules)</Text>
@@ -1624,7 +1624,7 @@ export default function TrainerApplicationScreen() {
 
                       {/* Compact Date Picker dropdown strictly within DOB box width */}
                       {showDobPicker && (
-                        <View className="mt-2 p-2.5 bg-white border border-zinc-200 rounded-xl shadow-sm">
+                        <View className="mt-2 p-2.5 bg-white rounded-xl shadow-sm">
                           {(() => {
                             const parts = (dob || '').split('/');
                             const currentDay = parts[0] ? parseInt(parts[0], 10) : null;
@@ -1995,7 +1995,7 @@ export default function TrainerApplicationScreen() {
 
                     {/* Full Dropdown Options Pills */}
                     {showPrimaryDropdown && (
-                      <View className="mt-2 p-3 bg-zinc-50 border border-zinc-200 rounded-xl gap-2">
+                      <View className="mt-2 p-3 bg-zinc-50 rounded-xl gap-2">
                         <Text className="text-zinc-400 text-[9px] font-bold uppercase tracking-wider">
                           Tap to select or append specializations (comma separated):
                         </Text>
@@ -2155,7 +2155,7 @@ export default function TrainerApplicationScreen() {
 
                     {/* Secondary Skills Dropdown Pills */}
                     {showSecondaryDropdown && (
-                      <View className="mt-2 p-3 bg-zinc-50 border border-zinc-200 rounded-xl gap-2">
+                      <View className="mt-2 p-3 bg-zinc-50 rounded-xl gap-2">
                         <Text className="text-zinc-400 text-[9px] font-bold uppercase tracking-wider">
                           Tap to select or append skills (comma separated):
                         </Text>
@@ -2333,7 +2333,7 @@ export default function TrainerApplicationScreen() {
 
                     {/* Qualifications Dropdown Pills */}
                     {showQualificationsDropdown && (
-                      <View className="mt-2 p-3 bg-zinc-50 border border-zinc-200 rounded-xl gap-2">
+                      <View className="mt-2 p-3 bg-zinc-50 rounded-xl gap-2">
                         <Text className="text-zinc-400 text-[9px] font-bold uppercase tracking-wider">
                           Tap to select or append certifications (comma separated):
                         </Text>
@@ -2752,7 +2752,7 @@ export default function TrainerApplicationScreen() {
           <View className="bg-white rounded-2xl w-full p-5 gap-4">
             <Text className="text-[#101828] text-xs font-black uppercase tracking-widest text-center">Document Preview</Text>
             
-            <View className="h-[250px] bg-zinc-50 border border-zinc-200 rounded-xl overflow-hidden justify-center items-center">
+            <View className="h-[250px] bg-zinc-50 rounded-xl overflow-hidden justify-center items-center">
               {previewType === 'image' ? (
                 <ExpoImage source={{ uri: previewUri }} style={{ width: '100%', height: '100%' }} contentFit="contain" cachePolicy="memory-disk" />
               ) : (

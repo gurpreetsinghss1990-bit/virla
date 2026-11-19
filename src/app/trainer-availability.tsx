@@ -507,7 +507,7 @@ export default function TrainerAvailabilityScreen() {
         <View className="gap-6">
 
           {/* Section: Monthly Summary */}
-          <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4">
+          <View className="bg-white p-5 rounded-[28px] gap-4">
             <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
               <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Commission Model Summary</Text>
               <View className="bg-emerald-50 border border-emerald-150 px-2 py-0.5 rounded-full">
@@ -527,7 +527,7 @@ export default function TrainerAvailabilityScreen() {
           </View>
 
           {/* Section: Trainer Settings */}
-          <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4">
+          <View className="bg-white p-5 rounded-[28px] gap-4">
             <View className="flex-row justify-between items-center border-b border-zinc-100 pb-3">
               <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Operational Settings</Text>
               <View className="bg-indigo-50 border border-indigo-150 px-2 py-0.5 rounded-full">
@@ -618,7 +618,7 @@ export default function TrainerAvailabilityScreen() {
           </View>
 
           {/* Redesigned 7-column Month Grid Calendar */}
-          <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-4">
+          <View className="bg-white p-5 rounded-[28px] gap-4">
             <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider pl-1">Monthly Calendar</Text>
             
             {/* Weekday Names Header */}
@@ -720,7 +720,7 @@ export default function TrainerAvailabilityScreen() {
           </View>
 
           {/* Clean Horizontal Date Selector (Week Strip around Selected Date) */}
-          <View className="bg-white border border-[#E5E7EB] p-4.5 rounded-[28px]">
+          <View className="bg-white p-4.5 rounded-[28px]">
             <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider pl-1 mb-3">Selected Week</Text>
             <ScrollView
               horizontal

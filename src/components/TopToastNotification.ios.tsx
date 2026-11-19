@@ -190,7 +190,7 @@ export function TopToastNotification() {
           ...softShadow({ color: '#000000', opacity: 0.45, radius: 20, offsetY: 10 }),
         }}
       >
-        <View className="overflow-hidden rounded-[24px] bg-[#111319] border border-white/10">
+        <View className="overflow-hidden rounded-[24px] bg-[#111319]">
         <View className="p-4 flex-row items-center gap-3.5">
           {/* Accent icon badge */}
           <View
@@ -242,7 +242,7 @@ export function TopToastNotification() {
               handleDismiss();
             }}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            className="w-7 h-7 rounded-full bg-white/5 items-center justify-center border border-white/10"
+            className="w-7 h-7 rounded-full bg-white/5 items-center justify-center"
           >
             <Ionicons name="close" size={14} color="#A1A1AA" />
           </TouchableOpacity>

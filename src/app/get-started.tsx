@@ -879,14 +879,14 @@ export default function GetStartedScreen() {
                   <View className="flex-row gap-2.5 w-full items-center">
                     {/* Separate +91 Prefix Box */}
                     <View
-                      className="bg-[#1A1A1E] border border-white/10 rounded-2xl px-4 items-center justify-center h-[52px]"
+                      className="bg-[#1A1A1E] rounded-2xl px-4 items-center justify-center h-[52px]"
                     >
                       <Text className="text-white font-black" style={{ fontSize: 16 }}>+91</Text>
                     </View>
 
                     {/* Separate Curvy Number Input Box */}
                     <View
-                      className="flex-1 bg-[#1A1A1E] border border-white/10 rounded-2xl justify-center h-[52px]"
+                      className="flex-1 bg-[#1A1A1E] rounded-2xl justify-center h-[52px]"
                       style={{ paddingHorizontal: Platform.OS === 'android' ? 14 : 16 }}
                     >
                       <TextInput
@@ -1038,7 +1038,7 @@ export default function GetStartedScreen() {
                                   ],
                                 }}
                               >
-                                <View className="flex-row items-center justify-center bg-[#0F0F12] p-3 rounded-2xl border border-[#E11D48] shadow-lg">
+                                <View className="flex-row items-center justify-center bg-[#0F0F12] p-3 rounded-2xl shadow-lg">
                                   <Svg width="40" height="22" viewBox="0 0 42 24" fill="none">
                                     <Path d="M 2 2 L 6 2 L 6 22 L 2 22 Z" fill="#E11D48" />
                                     <Path d="M 8 5 L 12 5 L 12 19 L 8 19 Z" fill="#FFFFFF" />

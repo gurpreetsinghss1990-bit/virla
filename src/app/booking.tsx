@@ -2262,7 +2262,7 @@ export default function BookingScreen() {
   const renderBadge = (slotObj: any) => {
     if (slotObj.isBooked) {
       return (
-        <View className="bg-zinc-100 border border-zinc-200 px-2.5 py-1 rounded-full flex-row items-center gap-1">
+        <View className="bg-zinc-100 px-2.5 py-1 rounded-full flex-row items-center gap-1">
           <Text className="text-zinc-500 text-[9px] font-black uppercase tracking-wider">⛔ Fully Booked</Text>
         </View>
       );
@@ -2479,7 +2479,7 @@ export default function BookingScreen() {
                               <Feather name="check" size={13} color="white" />
                             </View>
                           ) : (
-                            <View className="w-6 h-6 rounded-full border border-zinc-200 bg-zinc-50" />
+                            <View className="w-6 h-6 rounded-full bg-zinc-50" />
                           )}
                         </TouchableOpacity>
                       );
@@ -3233,7 +3233,7 @@ export default function BookingScreen() {
                                       <Text className="text-[#E11D48] text-[10px] font-bold uppercase tracking-wider">Change</Text>
                                     </TouchableOpacity>
                                   </View>
-                                  <View className="bg-zinc-50 border border-zinc-200/90 p-3.5 rounded-2xl flex-row items-start gap-3">
+                                  <View className="bg-zinc-50 p-3.5 rounded-2xl flex-row items-start gap-3">
                                     <View className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 items-center justify-center mt-0.5">
                                       <Feather name="map-pin" size={14} color="#E11D48" />
                                     </View>
@@ -3461,7 +3461,7 @@ export default function BookingScreen() {
                                   <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-[1.5px] pl-0.5">
                                     Receiver details
                                   </Text>
-                                  <View className="bg-zinc-50 border border-zinc-200/90 p-4 rounded-2xl gap-2.5">
+                                  <View className="bg-zinc-50 p-4 rounded-2xl gap-2.5">
                                     <View className="flex-row justify-between items-center">
                                       <Text className="text-zinc-500 text-[10px] font-bold uppercase">Name</Text>
                                       <Text className="text-zinc-900 text-xs font-black">{user.name}</Text>
@@ -3697,7 +3697,7 @@ export default function BookingScreen() {
 
                   {/* Horizontal Bar under Calendar when Calendar is selected */}
                   {showCalendarPicker && (
-                    <View className="bg-white border border-[#E5E7EB] p-3 rounded-2xl gap-2 shadow-2xs">
+                    <View className="bg-white p-3 rounded-2xl gap-2 shadow-2xs">
                       <ScrollView 
                         horizontal 
                         showsHorizontalScrollIndicator={false}
@@ -3784,7 +3784,7 @@ export default function BookingScreen() {
                       if (!selectedDate) {
                         return (
                           <View 
-                            className="bg-white border border-[#E5E7EB] p-8 rounded-[24px] items-center justify-center mt-2 shadow-2xs gap-2"
+                            className="bg-white p-8 rounded-[24px] items-center justify-center mt-2 shadow-2xs gap-2"
                             style={{ minHeight: 160 }}
                           >
                             <Feather name="calendar" size={28} color="#9CA3AF" />
@@ -3801,7 +3801,7 @@ export default function BookingScreen() {
                       if (isLoadingAvailability) {
                         return (
                           <View 
-                            className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center justify-center mt-2 shadow-sm"
+                            className="bg-white p-8 rounded-[28px] items-center justify-center mt-2 shadow-sm"
                             style={{
                               ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                               minHeight: 180
@@ -3821,7 +3821,7 @@ export default function BookingScreen() {
                       if (customerHasNoCoords) {
                         return (
                           <View 
-                            className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center gap-6 mt-2 shadow-sm"
+                            className="bg-white p-8 rounded-[28px] items-center gap-6 mt-2 shadow-sm"
                             style={{
                               ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                             }}
@@ -3932,7 +3932,7 @@ export default function BookingScreen() {
 
                         return (
                           <View 
-                            className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center gap-6 mt-2 shadow-sm"
+                            className="bg-white p-8 rounded-[28px] items-center gap-6 mt-2 shadow-sm"
                             style={{
                               ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                             }}
@@ -3968,7 +3968,7 @@ export default function BookingScreen() {
                               <TouchableOpacity
                                 activeOpacity={0.8}
                                 onPress={() => triggerTransition(1)}
-                                className="bg-zinc-50 border border-zinc-200 py-4 rounded-xl items-center justify-center"
+                                className="bg-zinc-50 py-4 rounded-xl items-center justify-center"
                               >
                                 <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Try Another Workout</Text>
                               </TouchableOpacity>
@@ -3977,7 +3977,7 @@ export default function BookingScreen() {
                                 <TouchableOpacity
                                   activeOpacity={0.8}
                                   onPress={() => triggerTransition(2)}
-                                  className="bg-zinc-50 border border-zinc-200 py-4 rounded-xl items-center justify-center"
+                                  className="bg-zinc-50 py-4 rounded-xl items-center justify-center"
                                 >
                                   <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Change Trainer Preference</Text>
                                 </TouchableOpacity>
@@ -4062,7 +4062,7 @@ export default function BookingScreen() {
                                   ) : isDisabled ? (
                                     <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">FULL</Text>
                                   ) : (
-                                    <View className="w-6 h-6 rounded-full border border-zinc-200 bg-zinc-50" />
+                                    <View className="w-6 h-6 rounded-full bg-zinc-50" />
                                   )}
                                 </View>
                               </TouchableOpacity>
@@ -4496,7 +4496,7 @@ export default function BookingScreen() {
                   </View>
 
                   {/* Question 5: Additional note for trainer */}
-                  <View className="bg-white border border-[#E5E7EB] p-5 rounded-[24px] shadow-2xs gap-3">
+                  <View className="bg-white p-5 rounded-[24px] shadow-2xs gap-3">
                     <View className="flex-row items-center justify-between">
                       <Text className="text-zinc-900 text-sm font-bold tracking-tight">
                         5. Is there anything else your trainer should know?
@@ -4545,7 +4545,7 @@ export default function BookingScreen() {
                   </View>
 
                   {/* Trust Banner */}
-                  <View className="bg-zinc-100/70 border border-zinc-200/70 p-4 rounded-2xl flex-row items-start gap-2.5">
+                  <View className="bg-zinc-100/70 p-4 rounded-2xl flex-row items-start gap-2.5">
                     <Feather name="shield" size={16} color="#E11D48" style={{ marginTop: 2 }} />
                     <Text className="text-zinc-600 text-xs font-medium flex-1 leading-5">
                       Your safety matters. Please share any relevant health concerns or exercise restrictions with your trainer before your session.
@@ -4592,7 +4592,7 @@ export default function BookingScreen() {
 
                   {/* Section 1 — Booking Summary Card */}
                   <View 
-                    className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4"
+                    className="bg-white p-5 rounded-[28px] shadow-sm gap-4"
                     style={{
                       ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                     }}
@@ -4620,7 +4620,7 @@ export default function BookingScreen() {
                     <View className="flex-row gap-4 items-center mt-1">
                       <ExpoImage
                         source={{ uri: getWorkoutImage(selectedExperience?.id || 'exp-strength') }}
-                        className="w-20 h-20 rounded-[20px] bg-zinc-50 border border-zinc-100"
+                        className="w-20 h-20 rounded-[20px] bg-zinc-50"
                         contentFit="cover"
                         cachePolicy="memory-disk"
                       />
@@ -4692,7 +4692,7 @@ export default function BookingScreen() {
 
                   {/* About Your Health Summary Card */}
                   <View
-                    className="bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-2xs gap-3"
+                    className="bg-white p-4.5 rounded-[24px] shadow-2xs gap-3"
                     style={{
                       ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                     }}
@@ -4765,7 +4765,7 @@ export default function BookingScreen() {
                     </ScrollView>
 
                     {/* Multiline text box */}
-                    <View className="relative bg-white border border-[#E5E7EB] rounded-2xl p-4 mt-0.5">
+                    <View className="relative bg-white rounded-2xl p-4 mt-0.5">
                       <TextInput
                         ref={noteInputRef}
                         multiline
@@ -4790,7 +4790,7 @@ export default function BookingScreen() {
 
                   {/* Section 3 — Session Policies Card */}
                   <View 
-                    className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4 mt-1"
+                    className="bg-white p-5 rounded-[28px] shadow-sm gap-4 mt-1"
                     style={{
                       ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                     }}
@@ -4810,7 +4810,7 @@ export default function BookingScreen() {
                         activeOpacity={0.8}
                         onPress={() => router.push('/legal-center')}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        className="bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-1.5 flex-row items-center gap-1"
+                        className="bg-zinc-50 rounded-xl px-3 py-1.5 flex-row items-center gap-1"
                       >
                         <Text className="text-zinc-700 text-xs font-semibold">View Details</Text>
                         <Feather name="chevron-right" size={12} color="#6B7280" />
@@ -4818,7 +4818,7 @@ export default function BookingScreen() {
                     </View>
 
                     {/* 2x2 Highlights Grid */}
-                    <View className="bg-zinc-50/80 border border-zinc-100 rounded-2xl p-3 gap-2.5">
+                    <View className="bg-zinc-50/80 rounded-2xl p-3 gap-2.5">
                       <View className="flex-row gap-2.5">
                         <View className="flex-1 bg-white p-2.5 rounded-xl flex-row items-center gap-2.5">
                           <View className="w-7 h-7 rounded-lg bg-indigo-50 items-center justify-center">
@@ -4919,7 +4919,7 @@ export default function BookingScreen() {
 
                     {/* Modal Content */}
                     <ScrollView showsVerticalScrollIndicator={false} className="mt-4 gap-4">
-                      <View className="bg-zinc-50 border border-zinc-200/80 p-4 rounded-2xl gap-1">
+                      <View className="bg-zinc-50 p-4 rounded-2xl gap-1">
                         <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
                           1. Workout Frequency
                         </Text>
@@ -4928,7 +4928,7 @@ export default function BookingScreen() {
                         </Text>
                       </View>
 
-                      <View className="bg-zinc-50 border border-zinc-200/80 p-4 rounded-2xl gap-1">
+                      <View className="bg-zinc-50 p-4 rounded-2xl gap-1">
                         <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
                           2. Current Injuries or Pain
                         </Text>
@@ -4937,7 +4937,7 @@ export default function BookingScreen() {
                         </Text>
                       </View>
 
-                      <View className="bg-zinc-50 border border-zinc-200/80 p-4 rounded-2xl gap-1">
+                      <View className="bg-zinc-50 p-4 rounded-2xl gap-1">
                         <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
                           3. Health Conditions
                         </Text>
@@ -4946,7 +4946,7 @@ export default function BookingScreen() {
                         </Text>
                       </View>
 
-                      <View className="bg-zinc-50 border border-zinc-200/80 p-4 rounded-2xl gap-1">
+                      <View className="bg-zinc-50 p-4 rounded-2xl gap-1">
                         <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
                           4. Doctor Advised Restrictions
                         </Text>
@@ -4956,7 +4956,7 @@ export default function BookingScreen() {
                       </View>
 
                       {safetyNotes.trim() ? (
-                        <View className="bg-zinc-50 border border-zinc-200/80 p-4 rounded-2xl gap-1">
+                        <View className="bg-zinc-50 p-4 rounded-2xl gap-1">
                           <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
                             5. Additional Safety Note
                           </Text>
@@ -4972,7 +4972,7 @@ export default function BookingScreen() {
                           setShowHealthDetailsModal(false);
                           triggerTransition(5);
                         }}
-                        className="py-3 rounded-2xl bg-zinc-100 border border-zinc-200/80 items-center justify-center mt-2"
+                        className="py-3 rounded-2xl bg-zinc-100 items-center justify-center mt-2"
                       >
                         <Text className="text-zinc-800 text-xs font-bold">
                           Edit Safety Details

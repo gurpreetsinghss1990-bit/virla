@@ -92,7 +92,7 @@ export default function LegalCenterScreen() {
                   key={doc.id}
                   activeOpacity={0.85}
                   onPress={() => setExpandedSection(isOpen ? null : doc.id)}
-                  className="bg-white border border-[#E5E7EB] p-4 rounded-[22px] shadow-sm gap-2"
+                  className="bg-white p-4 rounded-[22px] shadow-sm gap-2"
                   style={{
                     ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                   }}

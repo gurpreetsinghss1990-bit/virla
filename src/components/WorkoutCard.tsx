@@ -12,12 +12,12 @@ export function WorkoutCard({ workout, onPress }: WorkoutCardProps) {
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
-      className="bg-white border border-zinc-100 p-5 rounded-[20px] shadow-sm flex-col justify-between w-64 mr-4"
+      className="bg-white p-5 rounded-[20px] shadow-sm flex-col justify-between w-64 mr-4"
     >
       <View>
         {/* Workout Icon Header */}
         <View className="flex-row justify-between items-center mb-3">
-          <View className="w-12 h-12 bg-zinc-50 border border-zinc-100 rounded-2xl items-center justify-center">
+          <View className="w-12 h-12 bg-zinc-50 rounded-2xl items-center justify-center">
             <Text className="text-2xl">{workout.icon}</Text>
           </View>
         </View>

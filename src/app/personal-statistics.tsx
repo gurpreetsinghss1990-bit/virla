@@ -48,7 +48,7 @@ export default function PersonalStatisticsScreen() {
             {stats.map((s, idx) => (
               <View
                 key={idx}
-                className="w-[47%] bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-xs gap-2"
+                className="w-[47%] bg-white p-4.5 rounded-[24px] shadow-xs gap-2"
               >
                 <View className="flex-row items-center justify-between">
                   <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">{s.label}</Text>
@@ -60,7 +60,7 @@ export default function PersonalStatisticsScreen() {
           </View>
 
           {/* Monthly Activity chart graph visual */}
-          <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+          <View className="bg-white p-5 rounded-[28px] shadow-sm gap-4">
             <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider border-b border-zinc-50 pb-3">Monthly Workouts log</Text>
             
             <View className="flex-row justify-around items-end h-28 pt-4">

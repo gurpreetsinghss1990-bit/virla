@@ -47,7 +47,7 @@ export default function WorkoutDetailScreen() {
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => router.back()}
-          className="w-10 h-10 rounded-full bg-white items-center justify-center shadow-md border border-zinc-100"
+          className="w-10 h-10 rounded-full bg-white items-center justify-center shadow-md"
         >
           <Ionicons name="arrow-back" size={20} color="#111111" />
         </TouchableOpacity>

@@ -70,7 +70,7 @@ export default function PaymentHistoryScreen() {
                     activeOpacity={0.8}
                     disabled={isFailed}
                     onPress={() => handleInvoiceClick(pay.id)}
-                    className="flex-1 bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-xs flex-row justify-between items-center"
+                    className="flex-1 bg-white p-4.5 rounded-[24px] shadow-xs flex-row justify-between items-center"
                   >
                     <View className="flex-1 pr-3 gap-0.5">
                       <Text className="text-zinc-900 text-xs font-black">{pay.planName}</Text>

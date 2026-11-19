@@ -40,7 +40,7 @@ export function WorkoutDetailCard({ workout }: WorkoutDetailCardProps) {
               <View className="bg-indigo-600 px-3 py-1 rounded-full flex-row items-center gap-1 shadow-sm">
                 <Text className="text-white text-[10px] font-black uppercase tracking-wider">🏠 Home Visit</Text>
               </View>
-              <View className="bg-white/20 px-3 py-1 rounded-full border border-white/10 backdrop-blur-md">
+              <View className="bg-white/20 px-3 py-1 rounded-full backdrop-blur-md">
                 <Text className="text-white text-[10px] font-bold uppercase tracking-wider">{workout.category || 'Fitness'}</Text>
               </View>
             </View>
@@ -57,7 +57,7 @@ export function WorkoutDetailCard({ workout }: WorkoutDetailCardProps) {
       <View className="p-6 gap-6">
         
         {/* 2. Specs Highlights Row */}
-        <View className="flex-row justify-around bg-zinc-50 border border-zinc-100 p-4 rounded-[24px]">
+        <View className="flex-row justify-around bg-zinc-50 p-4 rounded-[24px]">
           <View className="items-center">
             <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">Duration</Text>
             <Text className="text-primary text-sm font-black mt-1">⏱️ {workout.duration} mins</Text>
@@ -105,7 +105,7 @@ export function WorkoutDetailCard({ workout }: WorkoutDetailCardProps) {
             <Text className="text-primary text-base font-extrabold tracking-tight">Required Equipment</Text>
             <View className="flex-row flex-wrap gap-2">
               {workout.equipment.map((item, i) => (
-                <View key={i} className="bg-zinc-50 border border-zinc-100 px-4 py-3 rounded-2xl flex-row items-center gap-2">
+                <View key={i} className="bg-zinc-50 px-4 py-3 rounded-2xl flex-row items-center gap-2">
                   <Text className="text-xs">📦</Text>
                   <Text className="text-zinc-700 text-xs font-bold">{item}</Text>
                 </View>
@@ -149,7 +149,7 @@ export function WorkoutDetailCard({ workout }: WorkoutDetailCardProps) {
               ))}
             </View>
           ) : (
-            <View className="bg-zinc-50 border border-zinc-100 p-4 rounded-2xl items-center">
+            <View className="bg-zinc-50 p-4 rounded-2xl items-center">
               <Text className="text-zinc-400 text-xs font-medium">No reviews yet for this workout category.</Text>
             </View>
           )}

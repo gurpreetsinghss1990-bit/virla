@@ -294,7 +294,7 @@ export default function MessagesScreen() {
 
       {/* Lively Search Input Bar */}
       <View className="px-5 pt-1 pb-2.5">
-        <View className="flex-row items-center bg-white border border-zinc-200/80 px-3.5 py-2.5 rounded-full shadow-sm">
+        <View className="flex-row items-center bg-white px-3.5 py-2.5 rounded-full shadow-sm">
           <Feather name="search" size={17} color="#71717A" />
           <TextInput
             maxLength={250}

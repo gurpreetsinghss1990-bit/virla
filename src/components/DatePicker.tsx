@@ -57,7 +57,7 @@ export function DatePicker({ selectedDate, onSelect }: DatePickerProps) {
             return (
               <View
                 key={date.id}
-                className="bg-zinc-50 border border-zinc-100 p-4 rounded-2xl w-16 items-center mr-3 opacity-30 justify-center"
+                className="bg-zinc-50 p-4 rounded-2xl w-16 items-center mr-3 opacity-30 justify-center"
               >
                 <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">{date.dayName}</Text>
                 <Text className="text-zinc-400 text-lg font-black mt-1.5">{date.dayNum}</Text>

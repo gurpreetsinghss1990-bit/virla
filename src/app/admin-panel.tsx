@@ -643,7 +643,7 @@ export default function AdminPanelScreen() {
             
             <TouchableOpacity
               onPress={() => router.push('/admin-workout-approvals')}
-              className="px-4 py-2 rounded-xl items-center justify-center bg-zinc-50 border border-zinc-200/50"
+              className="px-4 py-2 rounded-xl items-center justify-center bg-zinc-50"
             >
               <Text className="text-[9px] font-black uppercase tracking-wider text-zinc-500 font-extrabold">Workouts</Text>
             </TouchableOpacity>
@@ -720,11 +720,11 @@ export default function AdminPanelScreen() {
               ) : (
                 <>
                   <View className="flex-row justify-between gap-y-4">
-                    <View className="w-[47%] bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-xs gap-1.5">
+                    <View className="w-[47%] bg-white p-4.5 rounded-[24px] shadow-xs gap-1.5">
                       <Text className="text-zinc-400 text-[8px] font-black uppercase">Pending Approval</Text>
                       <Text className="text-zinc-900 text-sm font-black">{pendingAppsCount} Applications</Text>
                     </View>
-                    <View className="w-[47%] bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-xs gap-1.5">
+                    <View className="w-[47%] bg-white p-4.5 rounded-[24px] shadow-xs gap-1.5">
                       <Text className="text-zinc-400 text-[8px] font-black uppercase">Total Records</Text>
                       <Text className="text-zinc-900 text-sm font-black">{applications.length} Profiles</Text>
                     </View>
@@ -732,7 +732,7 @@ export default function AdminPanelScreen() {
 
                   <View className="gap-4">
                     {applications.length === 0 ? (
-                      <View className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center justify-center py-10 shadow-xs">
+                      <View className="bg-white p-8 rounded-[28px] items-center justify-center py-10 shadow-xs">
                         <Feather name="folder" size={24} color="#9CA3AF" />
                         <Text className="text-zinc-500 text-xs font-black uppercase mt-2">No application files found</Text>
                       </View>
@@ -814,7 +814,7 @@ export default function AdminPanelScreen() {
                             </View>
 
                             {!!app.aboutMe && (
-                              <Text className="text-zinc-500 text-[11px] italic mt-0.5 leading-relaxed bg-zinc-50 p-2 rounded-lg border border-zinc-100">
+                              <Text className="text-zinc-500 text-[11px] italic mt-0.5 leading-relaxed bg-zinc-50 p-2 rounded-lg">
                                 "{app.aboutMe}"
                               </Text>
                             )}
@@ -831,7 +831,7 @@ export default function AdminPanelScreen() {
                               <TouchableOpacity
                                 activeOpacity={0.8}
                                 onPress={() => handleViewDocument(app.documentSelfie || app.avatar)}
-                                className="flex-1 bg-zinc-50 p-3 rounded-xl border border-zinc-200/80 items-center justify-center flex-row gap-2"
+                                className="flex-1 bg-zinc-50 p-3 rounded-xl items-center justify-center flex-row gap-2"
                               >
                                 <Feather name="image" size={14} color="#E11D48" />
                                 <View>
@@ -896,7 +896,7 @@ export default function AdminPanelScreen() {
 
                                 if (mapEntries.length > 0) {
                                   return (
-                                    <View className="mt-1 gap-1.5 bg-zinc-50/70 p-2.5 rounded-xl border border-zinc-200/80">
+                                    <View className="mt-1 gap-1.5 bg-zinc-50/70 p-2.5 rounded-xl">
                                       <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">
                                         Uploaded Qualification Certificates ({mapEntries.length}):
                                       </Text>
@@ -905,7 +905,7 @@ export default function AdminPanelScreen() {
                                           key={idx}
                                           activeOpacity={0.7}
                                           onPress={() => handleViewDocument(cUrl)}
-                                          className="flex-row items-center justify-between p-2.5 bg-white border border-zinc-200 rounded-lg shadow-2xs"
+                                          className="flex-row items-center justify-between p-2.5 bg-white rounded-lg shadow-2xs"
                                         >
                                           <View className="flex-row items-center gap-2 flex-1 pr-2">
                                             <Feather name="file-text" size={13} color="#059669" />
@@ -929,7 +929,7 @@ export default function AdminPanelScreen() {
 
                                 if (list.length > 0) {
                                   return (
-                                    <View className="mt-1 gap-1.5 bg-zinc-50/70 p-2.5 rounded-xl border border-zinc-200/80">
+                                    <View className="mt-1 gap-1.5 bg-zinc-50/70 p-2.5 rounded-xl">
                                       <Text className="text-zinc-500 text-[8px] font-black uppercase tracking-wider">
                                         Uploaded Certificates ({list.length}):
                                       </Text>
@@ -938,7 +938,7 @@ export default function AdminPanelScreen() {
                                           key={idx}
                                           activeOpacity={0.7}
                                           onPress={() => handleViewDocument(cUrl)}
-                                          className="flex-row items-center justify-between p-2.5 bg-white border border-zinc-200 rounded-lg shadow-2xs"
+                                          className="flex-row items-center justify-between p-2.5 bg-white rounded-lg shadow-2xs"
                                         >
                                           <View className="flex-row items-center gap-2 flex-1 pr-2">
                                             <Feather name="file-text" size={13} color="#059669" />
@@ -1121,7 +1121,7 @@ export default function AdminPanelScreen() {
               </View>
 
               {/* Filters */}
-              <View className="bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-xs gap-3.5">
+              <View className="bg-white p-4.5 rounded-[24px] shadow-xs gap-3.5">
                 <View className="flex-row justify-between items-center">
                   <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">Filter Trainers</Text>
                   <Text className="text-zinc-400 text-[10px] font-bold">
@@ -1337,7 +1337,7 @@ export default function AdminPanelScreen() {
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => toggleSection('liveStream')}
-                  className="bg-white border border-zinc-200 p-4 rounded-2xl flex-row items-center justify-between"
+                  className="bg-white p-4 rounded-2xl flex-row items-center justify-between"
                 >
                   <View className="flex-row items-center gap-2.5 flex-1 pr-2">
                     <View className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
@@ -1365,7 +1365,7 @@ export default function AdminPanelScreen() {
                 {expandedSections.liveStream && (
                   <View className="gap-2.5">
                     {bookings.length === 0 ? (
-                      <View className="bg-white border border-zinc-200 p-6 rounded-2xl items-center justify-center">
+                      <View className="bg-white p-6 rounded-2xl items-center justify-center">
                         <Feather name="inbox" size={20} color="#9CA3AF" />
                         <Text className="text-zinc-400 text-[10px] font-bold uppercase mt-2">No bookings recorded yet</Text>
                       </View>
@@ -1408,7 +1408,7 @@ export default function AdminPanelScreen() {
                             }
 
                             return (
-                              <View key={`live-stream-${b.id}`} className="bg-white border border-zinc-200 p-4 rounded-2xl gap-2.5">
+                              <View key={`live-stream-${b.id}`} className="bg-white p-4 rounded-2xl gap-2.5">
                                 <View className="flex-row items-center justify-between">
                                   <View className="flex-1 pr-2">
                                     <Text className="text-zinc-950 text-sm font-black tracking-tight" numberOfLines={1}>
@@ -1445,7 +1445,7 @@ export default function AdminPanelScreen() {
                         {bookings.length > (sectionLimits.liveStream || 7) && (
                           <TouchableOpacity
                             onPress={() => loadMoreForSection('liveStream')}
-                            className="bg-zinc-100 border border-zinc-200 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
+                            className="bg-zinc-100 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
                           >
                             <Feather name="plus-circle" size={14} color="#374151" />
                             <Text className="text-zinc-800 text-[10px] font-black uppercase tracking-wider">
@@ -1461,19 +1461,19 @@ export default function AdminPanelScreen() {
 
               {/* Sessions Analytics counters */}
               <View className="flex-row flex-wrap justify-between gap-y-4">
-                <View className="w-[48%] bg-white border border-zinc-200 p-4 rounded-2xl">
+                <View className="w-[48%] bg-white p-4 rounded-2xl">
                   <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Live Tracking Active</Text>
                   <Text className="text-zinc-950 text-base font-black mt-1">{liveSessions.length} sessions</Text>
                 </View>
-                <View className="w-[48%] bg-white border border-zinc-200 p-4 rounded-2xl">
+                <View className="w-[48%] bg-white p-4 rounded-2xl">
                   <Text className="text-amber-600 text-[8px] font-black uppercase tracking-wider">Delayed Coaches</Text>
                   <Text className="text-amber-700 text-base font-black mt-1">{delayedSessions.length} delayed</Text>
                 </View>
-                <View className="w-[48%] bg-white border border-zinc-200 p-4 rounded-2xl">
+                <View className="w-[48%] bg-white p-4 rounded-2xl">
                   <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Completed Sessions</Text>
                   <Text className="text-zinc-950 text-base font-black mt-1">{completedSessionsCount}</Text>
                 </View>
-                <View className="w-[48%] bg-white border border-zinc-200 p-4 rounded-2xl">
+                <View className="w-[48%] bg-white p-4 rounded-2xl">
                   <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Cancelled / No-shows</Text>
                   <Text className="text-zinc-950 text-base font-black mt-1">{cancelledSessionsCount}</Text>
                 </View>
@@ -1549,7 +1549,7 @@ export default function AdminPanelScreen() {
                       <TouchableOpacity
                         activeOpacity={0.7}
                         onPress={() => toggleSection('todayBooked')}
-                        className="bg-white border border-zinc-200 p-4 rounded-2xl flex-row items-center justify-between"
+                        className="bg-white p-4 rounded-2xl flex-row items-center justify-between"
                       >
                         <View className="flex-1 pr-2">
                           <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">
@@ -1569,7 +1569,7 @@ export default function AdminPanelScreen() {
                       {expandedSections.todayBooked && (
                         <View className="gap-3">
                           {todayBooked.length === 0 ? (
-                            <View className="bg-white border border-zinc-200 p-8 rounded-[24px] items-center justify-center">
+                            <View className="bg-white p-8 rounded-[24px] items-center justify-center">
                               <Feather name="calendar" size={20} color="#9CA3AF" />
                               <Text className="text-zinc-400 text-[10px] font-black uppercase mt-2">No bookings scheduled for today.</Text>
                             </View>
@@ -1610,7 +1610,7 @@ export default function AdminPanelScreen() {
                               {todayBooked.length > (sectionLimits.todayBooked || 7) && (
                                 <TouchableOpacity
                                   onPress={() => loadMoreForSection('todayBooked')}
-                                  className="bg-zinc-100 border border-zinc-200 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
+                                  className="bg-zinc-100 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
                                 >
                                   <Feather name="plus-circle" size={14} color="#374151" />
                                   <Text className="text-zinc-800 text-[10px] font-black uppercase tracking-wider">
@@ -1629,7 +1629,7 @@ export default function AdminPanelScreen() {
                       <TouchableOpacity
                         activeOpacity={0.7}
                         onPress={() => toggleSection('upcomingBooked')}
-                        className="bg-white border border-zinc-200 p-4 rounded-2xl flex-row items-center justify-between"
+                        className="bg-white p-4 rounded-2xl flex-row items-center justify-between"
                       >
                         <View className="flex-1 pr-2">
                           <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">
@@ -1649,7 +1649,7 @@ export default function AdminPanelScreen() {
                       {expandedSections.upcomingBooked && (
                         <View className="gap-3">
                           {upcomingBooked.length === 0 ? (
-                            <View className="bg-white border border-zinc-200 p-8 rounded-[24px] items-center justify-center">
+                            <View className="bg-white p-8 rounded-[24px] items-center justify-center">
                               <Feather name="clock" size={20} color="#9CA3AF" />
                               <Text className="text-zinc-400 text-[10px] font-black uppercase mt-2">No upcoming bookings scheduled.</Text>
                             </View>
@@ -1690,7 +1690,7 @@ export default function AdminPanelScreen() {
                               {upcomingBooked.length > (sectionLimits.upcomingBooked || 7) && (
                                 <TouchableOpacity
                                   onPress={() => loadMoreForSection('upcomingBooked')}
-                                  className="bg-zinc-100 border border-zinc-200 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
+                                  className="bg-zinc-100 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
                                 >
                                   <Feather name="plus-circle" size={14} color="#374151" />
                                   <Text className="text-zinc-800 text-[10px] font-black uppercase tracking-wider">
@@ -1712,7 +1712,7 @@ export default function AdminPanelScreen() {
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => toggleSection('liveOngoing')}
-                  className="bg-white border border-zinc-200 p-4 rounded-2xl flex-row items-center justify-between"
+                  className="bg-white p-4 rounded-2xl flex-row items-center justify-between"
                 >
                   <View className="flex-1 pr-2">
                     <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">
@@ -1732,7 +1732,7 @@ export default function AdminPanelScreen() {
                 {expandedSections.liveOngoing && (
                   <View className="gap-3">
                     {liveSessions.length === 0 ? (
-                      <View className="bg-white border border-zinc-200 p-8 rounded-[24px] items-center justify-center">
+                      <View className="bg-white p-8 rounded-[24px] items-center justify-center">
                         <Feather name="activity" size={20} color="#9CA3AF" />
                         <Text className="text-zinc-400 text-[10px] font-black uppercase mt-2">No active live tracking sessions</Text>
                       </View>
@@ -1774,7 +1774,7 @@ export default function AdminPanelScreen() {
                                     Alert.alert('Error', err.message || 'Could not advance status.');
                                   }
                                 }}
-                                className="flex-1 bg-zinc-100 border border-zinc-200 py-2 rounded-lg items-center justify-center"
+                                className="flex-1 bg-zinc-100 py-2 rounded-lg items-center justify-center"
                               >
                                 <Text className="text-zinc-950 text-[8px] font-black uppercase">Force Arrived</Text>
                               </TouchableOpacity>
@@ -1785,7 +1785,7 @@ export default function AdminPanelScreen() {
                         {liveSessions.length > (sectionLimits.liveOngoing || 7) && (
                           <TouchableOpacity
                             onPress={() => loadMoreForSection('liveOngoing')}
-                            className="bg-zinc-100 border border-zinc-200 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
+                            className="bg-zinc-100 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
                           >
                             <Feather name="plus-circle" size={14} color="#374151" />
                             <Text className="text-zinc-800 text-[10px] font-black uppercase tracking-wider">
@@ -1804,7 +1804,7 @@ export default function AdminPanelScreen() {
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => toggleSection('historyAudit')}
-                  className="bg-white border border-zinc-200 p-4 rounded-2xl flex-row items-center justify-between"
+                  className="bg-white p-4 rounded-2xl flex-row items-center justify-between"
                 >
                   <View className="flex-1 pr-2">
                     <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">
@@ -1824,7 +1824,7 @@ export default function AdminPanelScreen() {
                 {expandedSections.historyAudit && (
                   <View className="gap-3">
                     {missedOrEndedSessions.length === 0 ? (
-                      <View className="bg-white border border-zinc-200 p-8 rounded-[24px] items-center justify-center">
+                      <View className="bg-white p-8 rounded-[24px] items-center justify-center">
                         <Feather name="list" size={20} color="#9CA3AF" />
                         <Text className="text-zinc-400 text-[10px] font-black uppercase mt-2">No historical sessions to display</Text>
                       </View>
@@ -1869,7 +1869,7 @@ export default function AdminPanelScreen() {
                         {missedOrEndedSessions.length > (sectionLimits.historyAudit || 7) && (
                           <TouchableOpacity
                             onPress={() => loadMoreForSection('historyAudit')}
-                            className="bg-zinc-100 border border-zinc-200 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
+                            className="bg-zinc-100 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
                           >
                             <Feather name="plus-circle" size={14} color="#374151" />
                             <Text className="text-zinc-800 text-[10px] font-black uppercase tracking-wider">
@@ -2097,7 +2097,7 @@ export default function AdminPanelScreen() {
                 </View>
 
                 {/* Section Toggle: User vs Trainer */}
-                <View className="flex-row bg-zinc-100 p-1 rounded-2xl border border-zinc-200/60">
+                <View className="flex-row bg-zinc-100 p-1 rounded-2xl">
                   <TouchableOpacity
                     onPress={() => setDisputeSection('user')}
                     className={`flex-1 py-2.5 rounded-xl items-center justify-center flex-row gap-2 ${
@@ -2520,7 +2520,7 @@ export default function AdminPanelScreen() {
               return (
                 <ScrollView showsVerticalScrollIndicator={false} className="gap-4">
                   {/* Explanation Alert */}
-                  <View className="bg-zinc-50 border border-zinc-200 p-4 rounded-2xl mb-2">
+                  <View className="bg-zinc-50 p-4 rounded-2xl mb-2">
                     <Text className="text-[#101828] text-[10px] font-black uppercase tracking-wider">Audit Explanation</Text>
                     <Text className="text-zinc-500 text-xs font-semibold mt-1.5 leading-relaxed">{statusExplanation}</Text>
                   </View>
@@ -2721,7 +2721,7 @@ export default function AdminPanelScreen() {
                   </View>
 
                   {/* ID Preview / Capture Box */}
-                  <View className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-xl gap-2.5">
+                  <View className="p-3.5 bg-zinc-50 rounded-xl gap-2.5">
                     {interviewIdDocUri && !/^(https?:|file:|content:|data:)/i.test(interviewIdDocUri) ? (
                       <View className="py-6 items-center justify-center gap-1 border border-emerald-200 bg-emerald-50 rounded-xl">
                         <Feather name="shield" size={22} color="#059669" />
@@ -2756,7 +2756,7 @@ export default function AdminPanelScreen() {
 
                       <TouchableOpacity
                         onPress={() => handlePickInterviewGallery('id')}
-                        className="flex-1 py-2.5 bg-white border border-zinc-200 rounded-xl items-center justify-center flex-row gap-1.5"
+                        className="flex-1 py-2.5 bg-white rounded-xl items-center justify-center flex-row gap-1.5"
                       >
                         <Feather name="image" size={13} color="#18181B" />
                         <Text className="text-zinc-800 text-[10px] font-black uppercase">Pick Gallery</Text>
@@ -2771,7 +2771,7 @@ export default function AdminPanelScreen() {
                     2. Trainer Profile Photo (Live Admin Capture)
                   </Text>
 
-                  <View className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-xl gap-2.5">
+                  <View className="p-3.5 bg-zinc-50 rounded-xl gap-2.5">
                     {interviewProfilePicUri ? (
                       <View className="items-center gap-2">
                         <AvatarImage
@@ -2798,7 +2798,7 @@ export default function AdminPanelScreen() {
 
                       <TouchableOpacity
                         onPress={() => handlePickInterviewGallery('profile')}
-                        className="flex-1 py-2.5 bg-white border border-zinc-200 rounded-xl items-center justify-center flex-row gap-1.5"
+                        className="flex-1 py-2.5 bg-white rounded-xl items-center justify-center flex-row gap-1.5"
                       >
                         <Feather name="image" size={13} color="#18181B" />
                         <Text className="text-zinc-800 text-[10px] font-black uppercase">Pick Gallery</Text>
@@ -2940,7 +2940,7 @@ export default function AdminPanelScreen() {
                 <TouchableOpacity
                   onPress={() => setEditingCoachLocation(null)}
                   disabled={isSavingLocation}
-                  className="flex-1 py-3.5 border border-zinc-200 rounded-2xl items-center justify-center bg-white"
+                  className="flex-1 py-3.5 rounded-2xl items-center justify-center bg-white"
                 >
                   <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">Cancel</Text>
                 </TouchableOpacity>

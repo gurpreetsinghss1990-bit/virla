@@ -30,7 +30,7 @@ export function BookingSummaryCard({
   const creditsUsed = useCreditsMode ? 1 : 0;
 
   return (
-    <View className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-5 shadow-xs">
+    <View className="bg-white p-6 rounded-[28px] gap-5 shadow-xs">
       {/* Session Details Row */}
       <View className="flex-row items-center gap-3 pb-4 border-b border-[#E5E7EB]/60">
         <View className="w-12 h-12 rounded-2xl bg-indigo-50/50 items-center justify-center">
@@ -88,7 +88,7 @@ export function BookingSummaryCard({
       </View>
 
       {/* Cancellation Notice */}
-      <View className="bg-zinc-50 p-3.5 rounded-2xl border border-zinc-100">
+      <View className="bg-zinc-50 p-3.5 rounded-2xl">
         <Text className="text-[10px] text-[#6B7280] leading-normal font-semibold">
           🛡️ <Text className="font-extrabold text-[#111827]">Cancellation Policy:</Text> Free cancellations or rescheduling permitted up to 4 hours before the session starts.
         </Text>

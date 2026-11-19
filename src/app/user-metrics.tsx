@@ -490,7 +490,7 @@ export default function UserMetricsLandingScreen() {
                   We'll use this to personalize your journey and connect you with trainers.
                 </Text>
 
-                <View className="mt-8 bg-[#FAFAFC] border border-[#E5E7EB] rounded-[24px] p-6 shadow-sm">
+                <View className="mt-8 bg-[#FAFAFC] rounded-[24px] p-6 shadow-sm">
                   <Text className="text-[#6B7280] text-xs font-bold uppercase tracking-wider mb-2">
                     FULL NAME
                   </Text>
@@ -527,7 +527,7 @@ export default function UserMetricsLandingScreen() {
                 </Text>
 
                 {/* Weight Card */}
-                <View className="mt-6 bg-white border border-[#F3F4F6] rounded-[28px] p-6 items-center shadow-md">
+                <View className="mt-6 bg-white rounded-[28px] p-6 items-center shadow-md">
                   <View className="flex-row items-center justify-between w-full mb-4">
                     <Text className="text-[#6B7280] text-xs font-bold uppercase tracking-wider">
                       WEIGHT
@@ -562,7 +562,7 @@ export default function UserMetricsLandingScreen() {
                         triggerHaptic();
                         setWeight((prev) => Math.max(30, prev - 1));
                       }}
-                      className="w-13 h-13 rounded-2xl bg-[#FFF1F2] border border-[#FECDD3] items-center justify-center"
+                      className="w-13 h-13 rounded-2xl bg-[#FFF1F2] items-center justify-center"
                     >
                       <Feather name="minus" size={22} color="#E11D48" />
                     </TouchableOpacity>
@@ -581,7 +581,7 @@ export default function UserMetricsLandingScreen() {
                         triggerHaptic();
                         setWeight((prev) => Math.min(250, prev + 1));
                       }}
-                      className="w-13 h-13 rounded-2xl bg-[#FFF1F2] border border-[#FECDD3] items-center justify-center"
+                      className="w-13 h-13 rounded-2xl bg-[#FFF1F2] items-center justify-center"
                     >
                       <Feather name="plus" size={22} color="#E11D48" />
                     </TouchableOpacity>
@@ -591,7 +591,7 @@ export default function UserMetricsLandingScreen() {
                 {/* Height & Age Grid with enhanced vertical margin */}
                 <View className="flex-row gap-4 mt-5">
                   {/* Height */}
-                  <View className="flex-1 bg-white border border-[#F3F4F6] rounded-[24px] p-4 shadow-sm">
+                  <View className="flex-1 bg-white rounded-[24px] p-4 shadow-sm">
                     <Text className="text-[#6B7280] text-[11px] font-bold uppercase tracking-wider mb-1">
                       HEIGHT ({heightUnit})
                     </Text>
@@ -601,7 +601,7 @@ export default function UserMetricsLandingScreen() {
                           triggerHaptic();
                           setHeight((prev) => Math.max(90, prev - 1));
                         }}
-                        className="w-9 h-9 rounded-xl bg-[#FFF1F2] border border-[#FECDD3] items-center justify-center"
+                        className="w-9 h-9 rounded-xl bg-[#FFF1F2] items-center justify-center"
                       >
                         <Feather name="minus" size={16} color="#E11D48" />
                       </TouchableOpacity>
@@ -611,7 +611,7 @@ export default function UserMetricsLandingScreen() {
                           triggerHaptic();
                           setHeight((prev) => Math.min(240, prev + 1));
                         }}
-                        className="w-9 h-9 rounded-xl bg-[#FFF1F2] border border-[#FECDD3] items-center justify-center"
+                        className="w-9 h-9 rounded-xl bg-[#FFF1F2] items-center justify-center"
                       >
                         <Feather name="plus" size={16} color="#E11D48" />
                       </TouchableOpacity>
@@ -619,7 +619,7 @@ export default function UserMetricsLandingScreen() {
                   </View>
 
                   {/* Age */}
-                  <View className="flex-1 bg-white border border-[#F3F4F6] rounded-[24px] p-4 shadow-sm">
+                  <View className="flex-1 bg-white rounded-[24px] p-4 shadow-sm">
                     <Text className="text-[#6B7280] text-[11px] font-bold uppercase tracking-wider mb-1">
                       AGE (YEARS)
                     </Text>
@@ -629,7 +629,7 @@ export default function UserMetricsLandingScreen() {
                           triggerHaptic();
                           setAge((prev) => Math.max(12, prev - 1));
                         }}
-                        className="w-9 h-9 rounded-xl bg-[#FFF1F2] border border-[#FECDD3] items-center justify-center"
+                        className="w-9 h-9 rounded-xl bg-[#FFF1F2] items-center justify-center"
                       >
                         <Feather name="minus" size={16} color="#E11D48" />
                       </TouchableOpacity>
@@ -639,7 +639,7 @@ export default function UserMetricsLandingScreen() {
                           triggerHaptic();
                           setAge((prev) => Math.min(99, prev + 1));
                         }}
-                        className="w-9 h-9 rounded-xl bg-[#FFF1F2] border border-[#FECDD3] items-center justify-center"
+                        className="w-9 h-9 rounded-xl bg-[#FFF1F2] items-center justify-center"
                       >
                         <Feather name="plus" size={16} color="#E11D48" />
                       </TouchableOpacity>
@@ -648,7 +648,7 @@ export default function UserMetricsLandingScreen() {
                 </View>
 
                 {/* BMI indicator with enhanced vertical margin */}
-                <View className="bg-[#FFF1F2] border border-[#FECDD3] rounded-[20px] p-4 flex-row items-center mt-5">
+                <View className="bg-[#FFF1F2] rounded-[20px] p-4 flex-row items-center mt-5">
                   <View className="flex-row items-center gap-3">
                     <View className="w-8 h-8 rounded-full bg-[#FFE4E6] items-center justify-center">
                       <Feather name="activity" size={16} color="#E11D48" />

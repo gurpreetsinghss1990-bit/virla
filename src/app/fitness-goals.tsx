@@ -220,7 +220,7 @@ export default function FitnessGoalsScreen() {
                 router.replace('/(tabs)/profile' as any);
               }
             }}
-            className="w-10 h-10 rounded-full bg-white/90 border border-zinc-200/80 shadow-xs items-center justify-center"
+            className="w-10 h-10 rounded-full bg-white/90 shadow-xs items-center justify-center"
             accessibilityRole="button"
             accessibilityLabel="Back"
           >

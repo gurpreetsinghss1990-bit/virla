@@ -61,14 +61,14 @@ export function UserTicketsModal({
             <TouchableOpacity
               onPress={loadTickets}
               activeOpacity={0.7}
-              className="w-9 h-9 rounded-full bg-zinc-100 border border-zinc-200/60 items-center justify-center mr-0.5"
+              className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center mr-0.5"
             >
               <Feather name="refresh-cw" size={14} color="#18181B" />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={onClose}
               activeOpacity={0.7}
-              className="w-9 h-9 rounded-full bg-zinc-100 border border-zinc-200/60 items-center justify-center"
+              className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center"
             >
               <Ionicons name="close" size={18} color="#18181B" />
             </TouchableOpacity>
@@ -87,7 +87,7 @@ export function UserTicketsModal({
             </View>
           ) : tickets.length === 0 ? (
             <View className="py-20 items-center justify-center gap-3">
-              <View className="w-16 h-16 rounded-3xl bg-zinc-100 border border-zinc-200/80 items-center justify-center mb-1 shadow-2xs">
+              <View className="w-16 h-16 rounded-3xl bg-zinc-100 items-center justify-center mb-1 shadow-2xs">
                 <Feather name="shield" size={26} color="#9CA3AF" />
               </View>
               <Text className="text-zinc-900 text-base font-black">
@@ -109,7 +109,7 @@ export function UserTicketsModal({
                       onClose();
                       onSelectTicket(t);
                     }}
-                    className="bg-white border border-zinc-200/90 p-4.5 rounded-2xl gap-3 shadow-xs active:bg-zinc-50/80"
+                    className="bg-white p-4.5 rounded-2xl gap-3 shadow-xs active:bg-zinc-50/80"
                   >
                     <View className="flex-row justify-between items-center">
                       <View className="flex-row items-center gap-2">

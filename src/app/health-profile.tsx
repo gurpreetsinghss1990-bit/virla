@@ -66,7 +66,7 @@ export default function HealthProfileScreen() {
 
             <View className="gap-4">
               {fields.map((field) => (
-                <View key={field.key} className="bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-xs gap-2">
+                <View key={field.key} className="bg-white p-4.5 rounded-[24px] shadow-xs gap-2">
                   <View className="flex-row items-center gap-2">
                     <Feather name={field.icon as any} size={13} color="#4F46E5" />
                     <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">{field.label}</Text>

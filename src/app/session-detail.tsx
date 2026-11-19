@@ -1036,7 +1036,7 @@ export default function SessionDetailScreen() {
 
             {/* Booking Details Card */}
             <View
-              className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-4"
+              className="bg-white p-6 rounded-[28px] gap-4"
               style={{
                 ...softShadow({ color: '#101828', opacity: 0.02, radius: 8, offsetY: 4 }),
               }}
@@ -1090,7 +1090,7 @@ export default function SessionDetailScreen() {
 
             {/* Preparation Note Card */}
             <View
-              className="bg-white border border-[#E5E7EB] p-5 rounded-[28px]"
+              className="bg-white p-5 rounded-[28px]"
               style={{
                 ...softShadow({ color: '#101828', opacity: 0.02, radius: 8, offsetY: 4 }),
               }}
@@ -1108,7 +1108,7 @@ export default function SessionDetailScreen() {
 
             {/* Client Health Alert & Assessment Card (Latest from previous trainer) */}
             <View
-              className="bg-white border border-[#E5E7EB] p-5 rounded-[28px]"
+              className="bg-white p-5 rounded-[28px]"
               style={{
                 ...softShadow({ color: '#101828', opacity: 0.02, radius: 8, offsetY: 4 }),
               }}
@@ -1198,7 +1198,7 @@ export default function SessionDetailScreen() {
 
             {/* Privacy Warning Banner */}
             {role === 'trainer' && currentStatus === 'booked' && (
-              <View className="bg-zinc-50 border border-zinc-200 p-4 rounded-2xl flex-row items-start gap-2.5">
+              <View className="bg-zinc-50 p-4 rounded-2xl flex-row items-start gap-2.5">
                 <Feather name="lock" size={13} color="#9CA3AF" style={{ marginTop: 2 }} />
                 <Text className="text-zinc-500 text-[9px] font-semibold leading-relaxed flex-1">
                   Before you accept this booking, communication options are locked and customer contact information (Name, exact Address, Phone Number) remains private under {"VIRLA's"} privacy policies.
@@ -1595,7 +1595,7 @@ export default function SessionDetailScreen() {
                     <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">
                       {role === 'trainer' ? 'Credits' : 'Credits Used'}
                     </Text>
-                    <View className="bg-zinc-100 px-2.5 py-0.5 rounded-md border border-zinc-200">
+                    <View className="bg-zinc-100 px-2.5 py-0.5 rounded-md">
                       <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">
                         {booking.sessionType === 'COUPLE'
                           ? (role === 'trainer' ? '2 CREDITS' : '2 Credits')
@@ -1623,7 +1623,7 @@ export default function SessionDetailScreen() {
             {/* Preparation Note Card for Trainer (Accepted view) */}
             {role === 'trainer' && (
               <View
-                className="bg-white border border-zinc-200/80 p-5 rounded-[28px] shadow-sm"
+                className="bg-white p-5 rounded-[28px] shadow-sm"
                 style={{
                   ...softShadow({ color: '#101828', opacity: 0.04, radius: 6, offsetY: 2 }),
                 }}
@@ -1643,7 +1643,7 @@ export default function SessionDetailScreen() {
             {/* Client Health Alert & Assessment Card for Trainer (Accepted view) */}
             {role === 'trainer' && (
               <View
-                className="bg-white border border-zinc-200/80 p-5 rounded-[28px] shadow-sm"
+                className="bg-white p-5 rounded-[28px] shadow-sm"
                 style={{
                   ...softShadow({ color: '#101828', opacity: 0.04, radius: 6, offsetY: 2 }),
                 }}
@@ -1861,7 +1861,7 @@ export default function SessionDetailScreen() {
             {/* Module 4: Premium Coach Profile Card */}
             {!isPendingDetails && (
               <View
-                className="bg-white border border-zinc-200/80 p-5 rounded-[28px] shadow-sm gap-4"
+                className="bg-white p-5 rounded-[28px] shadow-sm gap-4"
                 style={{
                   ...softShadow({ color: '#101828', opacity: 0.04, radius: 8, offsetY: 4 }),
                 }}
@@ -1917,7 +1917,7 @@ export default function SessionDetailScreen() {
               <View className="gap-3.5 pl-1">
                 <View className="flex-row items-center justify-between pr-2">
                   <Text className="text-zinc-950 text-sm font-black uppercase tracking-wider">Direct Coach Line</Text>
-                  <View className="bg-zinc-100 px-2.5 py-0.5 rounded-full border border-zinc-200/80">
+                  <View className="bg-zinc-100 px-2.5 py-0.5 rounded-full">
                     <Text className="text-zinc-700 text-[10px] font-extrabold uppercase tracking-wider">
                       {isMissed || isCancelled ? 'Closed' : 'Encrypted'}
                     </Text>
@@ -2075,7 +2075,7 @@ export default function SessionDetailScreen() {
                     {(currentStatus === 'trainer_accepted' || currentStatus === 'trainer_preparing') && (
                       SessionEngine.isTravelWindowOpen(booking) ? (
                         <View className="gap-2 w-full">
-                          <View className="bg-zinc-100 p-2.5 rounded-xl flex-row items-center gap-2 border border-zinc-200">
+                          <View className="bg-zinc-100 p-2.5 rounded-xl flex-row items-center gap-2">
                             <Feather name="navigation" size={12} color="#E11D48" />
                             <Text className="text-zinc-600 text-[10.5px] font-medium flex-1 leading-tight">
                               App uses background location permission to share your live travel route with the client until you reach their venue.
@@ -2390,7 +2390,7 @@ export default function SessionDetailScreen() {
 
             {/* Trainer status banner after filing report */}
             {(currentStatus === 'trainer_report_submitted' || currentStatus === 'customer_review_pending') && !isMissed && !isCancelled && role === 'trainer' && (
-              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-3">
+              <View className="bg-white p-5 rounded-[28px] shadow-sm gap-3">
                 <View className="flex-row items-center gap-2">
                   <View className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                   <Text className="text-emerald-600 text-[10px] font-black uppercase tracking-wider">Health Update Recorded</Text>
@@ -2404,7 +2404,7 @@ export default function SessionDetailScreen() {
 
             {/* Trainer status banner when session closed */}
             {currentStatus === 'session_closed' && !isMissed && !isCancelled && role === 'trainer' && (
-              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-3">
+              <View className="bg-white p-5 rounded-[28px] shadow-sm gap-3">
                 <View className="flex-row items-center gap-2">
                   <View className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                   <Text className="text-emerald-600 text-[10px] font-black uppercase tracking-wider">Session Closed</Text>
@@ -2419,7 +2419,7 @@ export default function SessionDetailScreen() {
             {/* Module 8: Full Post-Session Customer Experience Panel */}
             {(currentStatus === 'customer_review_pending' || currentStatus === 'session_closed' || currentStatus === 'workout_completed' || currentStatus === 'trainer_report_submitted') && !isMissed && !isCancelled && (role === 'customer' || role === 'admin') && (
               <View
-                className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4"
+                className="bg-white p-5 rounded-[28px] shadow-sm gap-4"
                 style={{
                   ...softShadow({ color: '#101828', opacity: 0.04, radius: 12, offsetY: 6 }),
                 }}
@@ -2431,7 +2431,7 @@ export default function SessionDetailScreen() {
                 </View>
 
                 {/* Workout stats metrics grid */}
-                <View className="flex-row justify-between flex-wrap gap-y-3 bg-zinc-50 p-4 rounded-2xl border border-zinc-100">
+                <View className="flex-row justify-between flex-wrap gap-y-3 bg-zinc-50 p-4 rounded-2xl">
                   <View className="w-[47%] gap-0.5">
                     <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Calories burned</Text>
                     <Text className="text-zinc-900 text-sm font-black">{booking.caloriesBurned || 380} kcal</Text>
@@ -2533,7 +2533,7 @@ export default function SessionDetailScreen() {
 
                     <TouchableOpacity
                       onPress={() => Alert.alert('Share Achievement', 'Achievement badge graphics shared successfully!')}
-                      className="flex-1 bg-zinc-100 py-3 rounded-xl items-center justify-center border border-zinc-200"
+                      className="flex-1 bg-zinc-100 py-3 rounded-xl items-center justify-center"
                     >
                       <Text className="text-zinc-950 text-[9px] font-black uppercase tracking-widest">Share achievements</Text>
                     </TouchableOpacity>

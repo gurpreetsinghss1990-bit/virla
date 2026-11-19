@@ -119,7 +119,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                 <Text className="text-[#101828] text-2xl font-black tracking-tight">
                   {profile.name || user?.name || 'User'}
                 </Text>
-                <View className="bg-[#FFFBEB] border border-[#FDE68A] px-2.5 py-0.5 rounded-full flex-row items-center gap-1">
+                <View className="bg-[#FFFBEB] px-2.5 py-0.5 rounded-full flex-row items-center gap-1">
                   <MaterialCommunityIcons name="crown" size={11} color="#D97706" />
                   <Text className="text-[#D97706] text-[9px] font-black uppercase tracking-wider">ELITE MEMBER</Text>
                 </View>
@@ -334,7 +334,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
           </View>
 
           {/* 1. Personal Information Accordion Card */}
-          <View className="bg-white border border-[#E5E7EB] rounded-[24px] p-5 mb-4">
+          <View className="bg-white rounded-[24px] p-5 mb-4">
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => togglePersonalInfoExpansion()}
@@ -535,7 +535,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
           </View>
 
           {/* 2. Fitness Goals Card */}
-          <View className="bg-white border border-[#E5E7EB] rounded-[24px] p-5 mb-4">
+          <View className="bg-white rounded-[24px] p-5 mb-4">
             <View className="flex-row justify-between items-center mb-3">
               <Text className="text-[#101828] text-sm font-black tracking-tight">Fitness Goals</Text>
               <TouchableOpacity

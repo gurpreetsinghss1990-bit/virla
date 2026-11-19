@@ -204,7 +204,7 @@ export const ActivePlanView: React.FC<ActivePlanViewProps> = ({
               Calculated Targets
             </Text>
           </View>
-          <View className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/10">
+          <View className="px-2.5 py-0.5 rounded-full bg-white/10">
             <Text
               style={{
                 fontSize: 10,

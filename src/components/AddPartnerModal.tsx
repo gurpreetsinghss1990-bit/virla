@@ -70,7 +70,7 @@ export const AddPartnerModal: React.FC<AddPartnerModalProps> = ({
           </View>
 
           {/* Pricing/Credits summary */}
-          <View className="bg-zinc-50 border border-zinc-100 p-4.5 rounded-2xl gap-3">
+          <View className="bg-zinc-50 p-4.5 rounded-2xl gap-3">
             <View className="flex-row justify-between items-center">
               <Text className="text-zinc-500 text-xs font-semibold">Current Session (1 Person)</Text>
               <Text className="text-zinc-900 text-xs font-extrabold">1 Credit</Text>

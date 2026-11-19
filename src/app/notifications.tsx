@@ -337,7 +337,7 @@ export default function NotificationsScreen() {
                 activeOpacity={0.7}
                 onPress={() => handleSelectAll(filteredNotifications)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                className="px-2.5 py-1.5 rounded-full bg-white border border-zinc-200/80 shadow-xs"
+                className="px-2.5 py-1.5 rounded-full bg-white shadow-xs"
               >
                 <Text className="text-zinc-900 text-xs font-black">
                   {filteredNotifications.length > 0 && selectedIds.size >= filteredNotifications.length ? 'Deselect All' : 'Select All'}
@@ -350,7 +350,7 @@ export default function NotificationsScreen() {
                   setSelectedIds(new Set());
                 }}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                className="px-2.5 py-1.5 rounded-full bg-white border border-zinc-200/80 shadow-xs"
+                className="px-2.5 py-1.5 rounded-full bg-white shadow-xs"
               >
                 <Text className="text-zinc-600 text-xs font-bold">Done</Text>
               </TouchableOpacity>

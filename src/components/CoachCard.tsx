@@ -13,7 +13,7 @@ export function CoachCard({ coach, onPress }: CoachCardProps) {
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={onPress}
-      className="bg-white border border-zinc-100 p-4 rounded-[20px] shadow-sm flex-row items-center w-72 mr-4"
+      className="bg-white p-4 rounded-[20px] shadow-sm flex-row items-center w-72 mr-4"
     >
       {/* Coach Image */}
       <AvatarImage

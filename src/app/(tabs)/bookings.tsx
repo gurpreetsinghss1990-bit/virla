@@ -1265,7 +1265,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                     return list.map(b => <BookingCard key={b.id} booking={b} />);
                   }
                   return (
-                    <View className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center justify-center">
+                    <View className="bg-white p-8 rounded-[28px] items-center justify-center">
                       <Text className="text-zinc-500 text-xs font-black uppercase text-center">No sessions today</Text>
                     </View>
                   );
@@ -1303,7 +1303,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                     return list.map(b => <BookingCard key={b.id} booking={b} />);
                   }
                   return (
-                    <View className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center justify-center">
+                    <View className="bg-white p-8 rounded-[28px] items-center justify-center">
                       <Text className="text-zinc-500 text-xs font-black uppercase text-center">No sessions booked</Text>
                     </View>
                   );
@@ -1325,7 +1325,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                   }
 
                   return (
-                    <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-1">
+                    <View className="bg-white p-5 rounded-[28px] gap-1">
                       {weeklyList.map((item, idx) => (
                         <View key={idx} className="flex-row justify-between items-center py-2.5 border-b border-zinc-50 last:border-b-0">
                           <Text className="text-zinc-950 text-xs font-semibold uppercase tracking-wider">
@@ -1365,7 +1365,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                           const formattedDate = formatToDDMMYYYY(d);
 
                           return (
-                            <View key={dateKey} className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-2">
+                            <View key={dateKey} className="bg-white p-5 rounded-[28px] gap-2">
                               <View className="flex-row justify-between items-center border-b border-zinc-100 pb-2">
                                 <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">{formattedDate}</Text>
                                 <Text className="text-zinc-500 text-[10px] font-bold uppercase">
@@ -1413,7 +1413,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                           );
                         })
                       ) : (
-                        <View className="bg-white border border-[#E5E7EB] p-8 rounded-[32px] items-center justify-center">
+                        <View className="bg-white p-8 rounded-[32px] items-center justify-center">
                           <Text className="text-zinc-500 text-xs font-semibold text-center">No historical sessions</Text>
                         </View>
                       )}
@@ -1452,7 +1452,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                       router.replace('/(tabs)');
                     }
                   }}
-                  className="w-9 h-9 items-center justify-center rounded-full bg-white/80 border border-zinc-200/70"
+                  className="w-9 h-9 items-center justify-center rounded-full bg-white/80"
                   accessibilityRole="button"
                   accessibilityLabel="Back"
                 >
@@ -1776,7 +1776,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                   router.replace('/(tabs)');
                 }
               }}
-              className="w-10 h-10 rounded-full bg-white/90 border border-zinc-200/80 shadow-xs items-center justify-center"
+              className="w-10 h-10 rounded-full bg-white/90 shadow-xs items-center justify-center"
               accessibilityRole="button"
               accessibilityLabel="Back"
             >
@@ -1840,7 +1840,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
               activeOpacity={0.6}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               onPress={() => setShowUserTicketsModal(true)}
-              className="w-10 h-10 rounded-full bg-white/90 border border-zinc-200/80 shadow-xs items-center justify-center"
+              className="w-10 h-10 rounded-full bg-white/90 shadow-xs items-center justify-center"
               accessibilityRole="button"
               accessibilityLabel="My Support Tickets"
             >

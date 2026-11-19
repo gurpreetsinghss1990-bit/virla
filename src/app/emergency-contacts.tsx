@@ -125,7 +125,7 @@ export default function EmergencyContactsScreen() {
 
           {isAdding ? (
             /* Form Panel */
-            <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+            <View className="bg-white p-5 rounded-[28px] shadow-sm gap-4">
               <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider border-b border-zinc-50 pb-2">
                 {editingId ? 'Modify Contact details' : 'New Contact information'}
               </Text>
@@ -207,7 +207,7 @@ export default function EmergencyContactsScreen() {
               {emergencyContacts.map((contact) => (
                 <View
                   key={contact.id}
-                  className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-3.5"
+                  className="bg-white p-5 rounded-[28px] shadow-sm gap-3.5"
                 >
                   <View className="flex-row justify-between items-start">
                     <View className="gap-0.5 flex-1 pr-3">
@@ -232,7 +232,7 @@ export default function EmergencyContactsScreen() {
                   <View className="flex-row gap-3">
                     <TouchableOpacity
                       onPress={() => handleEdit(contact)}
-                      className="flex-1 bg-zinc-50 border border-zinc-100 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
+                      className="flex-1 bg-zinc-50 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
                     >
                       <Feather name="edit" size={11} color="#101828" />
                       <Text className="text-zinc-950 text-[8px] font-black uppercase">Edit</Text>
@@ -241,7 +241,7 @@ export default function EmergencyContactsScreen() {
                     {!contact.isPrimary && (
                       <TouchableOpacity
                         onPress={() => setPrimaryEmergencyContact(contact.id)}
-                        className="flex-1 bg-zinc-50 border border-zinc-100 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
+                        className="flex-1 bg-zinc-50 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
                       >
                         <Feather name="shield" size={11} color="#4F46E5" />
                         <Text className="text-[#4F46E5] text-[8px] font-black uppercase">Set Primary</Text>
@@ -259,7 +259,7 @@ export default function EmergencyContactsScreen() {
               ))}
 
               {emergencyContacts.length === 0 && (
-                <View className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center justify-center py-10 shadow-xs">
+                <View className="bg-white p-8 rounded-[28px] items-center justify-center py-10 shadow-xs">
                   <Feather name="users" size={24} color="#9CA3AF" />
                   <Text className="text-zinc-500 text-xs font-black uppercase mt-2">No emergency contacts saved</Text>
                 </View>

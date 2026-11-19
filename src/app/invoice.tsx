@@ -40,7 +40,7 @@ export default function InvoiceScreen() {
         <View className="gap-6">
           
           {/* Mock PDF Receipt Sheet (Feature 6) */}
-          <View className="bg-white border border-[#E5E7EB] rounded-[30px] shadow-sm p-6 gap-6 relative overflow-hidden">
+          <View className="bg-white rounded-[30px] shadow-sm p-6 gap-6 relative overflow-hidden">
             
             {/* Header corporate */}
             <View className="flex-row justify-between items-start border-b border-zinc-150 pb-5">

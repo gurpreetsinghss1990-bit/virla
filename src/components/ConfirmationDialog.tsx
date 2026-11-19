@@ -77,7 +77,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                 activeOpacity={0.7}
                 disabled={isLoading}
                 onPress={onCancel}
-                className="flex-1 min-h-[48px] rounded-2xl bg-[#F0ECE1] items-center justify-center border border-[#E5E0D4] active:bg-[#E5E0D5]"
+                className="flex-1 min-h-[48px] rounded-2xl bg-[#F0ECE1] items-center justify-center active:bg-[#E5E0D5]"
                 accessibilityRole="button"
                 accessibilityLabel={cancelText}
               >

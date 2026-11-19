@@ -892,7 +892,7 @@ export default function WalletScreen() {
                   <View>
                     <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1.5">Recipient Phone Number</Text>
                     <View className="flex-row gap-2">
-                      <View className="bg-zinc-100 border border-zinc-200 px-3.5 py-3 rounded-xl justify-center">
+                      <View className="bg-zinc-100 px-3.5 py-3 rounded-xl justify-center">
                         <Text className="text-zinc-700 text-xs font-bold">+91</Text>
                       </View>
                       <TextInput
@@ -929,7 +929,7 @@ export default function WalletScreen() {
                       </View>
                     )}
                     {recipientStatus === 'not_found' && (
-                      <View className="mt-3 p-3.5 rounded-2xl bg-zinc-50 border border-zinc-200 gap-3">
+                      <View className="mt-3 p-3.5 rounded-2xl bg-zinc-50 gap-3">
                         <View className="flex-row items-center gap-2">
                           <Feather name="info" size={15} color="#D97706" />
                           <Text className="text-zinc-800 text-xs font-bold">
@@ -1074,7 +1074,7 @@ export default function WalletScreen() {
                             </Text>
                             
                             {/* Type Badge */}
-                            <View className="px-2.5 py-0.5 rounded-md bg-zinc-100 border border-zinc-200">
+                            <View className="px-2.5 py-0.5 rounded-md bg-zinc-100">
                               <Text className="text-[10px] font-semibold uppercase text-zinc-600">
                                 {tx.type}
                               </Text>
@@ -1088,7 +1088,7 @@ export default function WalletScreen() {
                       <TouchableOpacity
                         activeOpacity={0.8}
                         onPress={() => setVisibleLedgerCount(prev => Math.min(prev + 8, filteredLedger.length))}
-                        className="py-3 mt-2 rounded-2xl bg-zinc-50 border border-zinc-200 items-center justify-center"
+                        className="py-3 mt-2 rounded-2xl bg-zinc-50 items-center justify-center"
                       >
                         <Text className="text-zinc-900 text-xs font-bold uppercase tracking-wider">
                           Load More ({filteredLedger.length - visibleLedgerCount} remaining)
@@ -1110,7 +1110,7 @@ export default function WalletScreen() {
           className="absolute top-0 left-0 right-0 bottom-0 bg-black/60 items-center justify-center z-50 px-6"
           style={{ position: 'absolute', elevation: 10 }}
         >
-          <View className="w-full bg-white rounded-3xl p-5 border border-zinc-200 gap-5 shadow-2xl">
+          <View className="w-full bg-white rounded-3xl p-5 gap-5 shadow-2xl">
             <View className="flex-row items-center gap-2.5 border-b border-zinc-100 pb-3">
               <Feather name="alert-circle" size={18} color="#E11D48" />
               <Text className="text-[#101828] text-sm font-bold uppercase">Transfer Credits?</Text>
@@ -1210,7 +1210,7 @@ export default function WalletScreen() {
                 router.replace('/(tabs)/profile');
               }
             }}
-            className="w-10 h-10 rounded-full bg-white/90 border border-zinc-200/80 shadow-xs items-center justify-center"
+            className="w-10 h-10 rounded-full bg-white/90 shadow-xs items-center justify-center"
             accessibilityRole="button"
             accessibilityLabel="Back"
           >

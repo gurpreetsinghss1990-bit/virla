@@ -281,7 +281,7 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => onPress(booking.id)}
-      className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4 mb-4"
+      className="bg-white p-5 rounded-[28px] shadow-sm gap-4 mb-4"
     >
       <View className="flex-row justify-between items-center">
         <View className="flex-row items-center gap-2">
@@ -1261,7 +1261,7 @@ export default function HomeScreen() {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => navigateSafely('/(tabs)/profile')}
-            className="w-11 h-11 rounded-full border border-zinc-200 overflow-hidden relative bg-zinc-100 items-center justify-center"
+            className="w-11 h-11 rounded-full overflow-hidden relative bg-zinc-100 items-center justify-center"
             style={{ minWidth: 44, minHeight: 44 }}
           >
             <AvatarImage
@@ -1542,7 +1542,7 @@ export default function HomeScreen() {
                       <View className="absolute -top-5 -right-5 w-16 h-16 rounded-full bg-white/10" pointerEvents="none" />
 
                       {/* Top icon badge */}
-                      <View className="w-9 h-9 rounded-xl bg-white/25 border border-white/30 items-center justify-center self-start">
+                      <View className="w-9 h-9 rounded-xl bg-white/25 items-center justify-center self-start">
                         <Text className="text-base">{item.emoji}</Text>
                       </View>
 
@@ -1578,7 +1578,7 @@ export default function HomeScreen() {
                     return (
                       // Booking pending trainer acceptance (Trainer details hidden)
                       <View 
-                        className="border border-[#E5E7EB] p-6 rounded-[28px] gap-5"
+                        className="p-6 rounded-[28px] gap-5"
                         style={{
                           backgroundColor: '#FFFFFF',
                           ...softShadow({ color: '#101828', opacity: 0.04, radius: 12, offsetY: 6 }),
@@ -1614,7 +1614,7 @@ export default function HomeScreen() {
                   return (
                     // Booking accepted by trainer (Trainer details fully revealed)
                     <View 
-                      className="border border-[#E5E7EB] p-4 rounded-[28px] gap-4"
+                      className="p-4 rounded-[28px] gap-4"
                       style={{
                         backgroundColor: '#FFFFFF',
                         ...softShadow({ color: '#101828', opacity: 0.04, radius: 12, offsetY: 6 }),
@@ -1633,7 +1633,7 @@ export default function HomeScreen() {
                           />
                           {/* Rating Overlay */}
                           <View 
-                            className="absolute -top-1.5 -left-1.5 bg-white border border-zinc-100 px-1.5 py-0.5 rounded-lg items-center justify-center flex-row"
+                            className="absolute -top-1.5 -left-1.5 bg-white px-1.5 py-0.5 rounded-lg items-center justify-center flex-row"
                             style={{
                               backgroundColor: '#FFFFFF',
                               ...softShadow({ color: '#101828', opacity: 0.03, radius: 4, offsetY: 2 }),
@@ -1693,7 +1693,7 @@ export default function HomeScreen() {
                   );
                 })() : (
                   <View 
-                    className="border border-[#E5E7EB] py-3.5 px-3 rounded-[24px] relative overflow-hidden"
+                    className="py-3.5 px-3 rounded-[24px] relative overflow-hidden"
                     style={{
                       backgroundColor: '#FFFFFF',
                       ...softShadow({ color: '#101828', opacity: 0.03, radius: 10, offsetY: 4 }),
@@ -2201,7 +2201,7 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={toggleOnlineStatus}
-                    className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-200 bg-white shadow-sm"
+                    className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full bg-white shadow-sm"
                   >
                     <View className={`w-2 h-2 rounded-full ${trainerOnlineStatus === 'online' ? 'bg-[#16C784]' : 'bg-red-500'}`} />
                     <Text className={`text-[11px] font-semibold tracking-wide ${trainerOnlineStatus === 'online' ? 'text-[#16C784]' : 'text-red-500'}`}>
@@ -2555,7 +2555,7 @@ export default function HomeScreen() {
                   );
                 })() : (
                   <View 
-                    className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-2 items-center justify-center text-center"
+                    className="bg-white p-6 rounded-[28px] gap-2 items-center justify-center text-center"
                     style={{
                       backgroundColor: '#FFFFFF',
                       ...softShadow({ color: '#101828', opacity: 0.02, radius: 8, offsetY: 4 }),
@@ -2641,7 +2641,7 @@ export default function HomeScreen() {
                     })}
                   </View>
                 ) : (
-                  <View className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] items-center justify-center">
+                  <View className="bg-white p-6 rounded-[28px] items-center justify-center">
                     <Text className="text-zinc-400 text-xs font-semibold text-center">
                       No sessions today
                     </Text>
@@ -2681,7 +2681,7 @@ export default function HomeScreen() {
                   </View>
                 ) : (
                   <View 
-                    className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-3.5"
+                    className="bg-white p-5 rounded-[28px] gap-3.5"
                     style={{
                       backgroundColor: '#FFFFFF',
                       ...softShadow({ color: '#101828', opacity: 0.02, radius: 8, offsetY: 4 }),

@@ -1271,7 +1271,7 @@ export default function ProfileScreen() {
                       </View>
                       <View className="gap-1.5">
                         <Text className="text-zinc-600 text-[11px] font-bold uppercase tracking-wider">Gender</Text>
-                        <View className="border border-zinc-200 bg-zinc-100/70 px-3.5 py-3 rounded-xl flex-row justify-between items-center">
+                        <View className="bg-zinc-100/70 px-3.5 py-3 rounded-xl flex-row justify-between items-center">
                           <View className="flex-row items-center gap-2">
                             <Feather name="user" size={13} color="#52525B" />
                             <Text className="text-xs text-zinc-800 font-black capitalize">{trainerGender || 'Male'}</Text>
@@ -1317,7 +1317,7 @@ export default function ProfileScreen() {
                         <Text className="text-zinc-500 text-xs font-semibold">Gender</Text>
                         <View className="flex-row items-center gap-2">
                           <Text className="text-zinc-900 text-xs font-black capitalize">{trainerGender || 'Male'}</Text>
-                          <View className="flex-row items-center gap-1 bg-zinc-100 border border-zinc-200 px-2 py-0.5 rounded-md">
+                          <View className="flex-row items-center gap-1 bg-zinc-100 px-2 py-0.5 rounded-md">
                             <Feather name="lock" size={10} color="#71717A" />
                             <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Locked</Text>
                           </View>
@@ -1325,7 +1325,7 @@ export default function ProfileScreen() {
                       </View>
                       <View className="pt-3 pb-1">
                         <Text className="text-zinc-500 text-[11px] font-bold uppercase tracking-wider mb-2">Professional Bio</Text>
-                        <View className="bg-zinc-50 border border-zinc-100 rounded-xl p-3.5">
+                        <View className="bg-zinc-50 rounded-xl p-3.5">
                           <Text className="text-zinc-800 text-xs font-normal leading-relaxed">
                             {trainerBio || 'Certified personal trainer dedicated to functional movement, strength training, and tailored client transformations.'}
                           </Text>
@@ -1570,7 +1570,7 @@ export default function ProfileScreen() {
                           activeOpacity={0.8}
                           onPress={handleUseCurrentLocation}
                           disabled={isSearchingLocation}
-                          className="bg-zinc-100 border border-zinc-200 p-3 rounded-xl flex-row justify-center items-center gap-2"
+                          className="bg-zinc-100 p-3 rounded-xl flex-row justify-center items-center gap-2"
                         >
                           <Feather name="navigation" size={13} color="#18181B" />
                           <Text className="text-zinc-900 text-xs font-semibold">Use Current Location</Text>
@@ -1707,14 +1707,14 @@ export default function ProfileScreen() {
                       <View className="flex-row items-center gap-4 mt-0.5 bg-white p-2.5 rounded-xl justify-between">
                         <TouchableOpacity
                           onPress={() => setMaxSessions(Math.max(1, maxSessions - 1))}
-                          className="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-200 items-center justify-center"
+                          className="w-8 h-8 rounded-lg bg-zinc-100 items-center justify-center"
                         >
                           <Feather name="minus" size={14} color="#18181B" />
                         </TouchableOpacity>
                         <Text className="text-zinc-900 text-xs font-bold">{maxSessions} sessions max / day</Text>
                         <TouchableOpacity
                           onPress={() => setMaxSessions(Math.min(10, maxSessions + 1))}
-                          className="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-200 items-center justify-center"
+                          className="w-8 h-8 rounded-lg bg-zinc-100 items-center justify-center"
                         >
                           <Feather name="plus" size={14} color="#18181B" />
                         </TouchableOpacity>
@@ -1789,7 +1789,7 @@ export default function ProfileScreen() {
                         <Text className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">Bank Account details</Text>
                         <TouchableOpacity
                           onPress={() => setIsEditingTrainer(!isEditingTrainer)}
-                          className="px-2.5 py-1 bg-zinc-100 border border-zinc-200 rounded-lg"
+                          className="px-2.5 py-1 bg-zinc-100 rounded-lg"
                         >
                           <Text className="text-zinc-800 text-xs font-semibold">{isEditingTrainer ? 'Close' : 'Update Details'}</Text>
                         </TouchableOpacity>
@@ -2092,7 +2092,7 @@ export default function ProfileScreen() {
                                       setKitQuantities({ ...kitQuantities, [item]: current - 1 });
                                     }
                                   }}
-                                  className="w-7 h-7 bg-zinc-100 border border-zinc-200 rounded-lg justify-center items-center"
+                                  className="w-7 h-7 bg-zinc-100 rounded-lg justify-center items-center"
                                 >
                                   <Feather name="minus" size={12} color="#18181B" />
                                 </TouchableOpacity>
@@ -2102,7 +2102,7 @@ export default function ProfileScreen() {
                                     const current = kitQuantities[item] || 0;
                                     setKitQuantities({ ...kitQuantities, [item]: current + 1 });
                                   }}
-                                  className="w-7 h-7 bg-zinc-100 border border-zinc-200 rounded-lg justify-center items-center"
+                                  className="w-7 h-7 bg-zinc-100 rounded-lg justify-center items-center"
                                 >
                                   <Feather name="plus" size={12} color="#18181B" />
                                 </TouchableOpacity>
@@ -2360,7 +2360,7 @@ export default function ProfileScreen() {
             >
               <View className="gap-4 pb-4">
                 {/* Profile Picture Selection */}
-                <View className="bg-zinc-50 border border-zinc-200/80 rounded-2xl p-4 gap-3">
+                <View className="bg-zinc-50 rounded-2xl p-4 gap-3">
                   <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Profile Picture</Text>
 
                   <View className="flex-row items-center gap-4">
@@ -2419,7 +2419,7 @@ export default function ProfileScreen() {
                 {/* Mobile Number with separate +91 badge */}
                 <View className="gap-1">
                   <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Mobile Number</Text>
-                  <View className="flex-row items-center border border-[#E5E7EB] bg-[#F8F9FA] rounded-xl overflow-hidden">
+                  <View className="flex-row items-center bg-[#F8F9FA] rounded-xl overflow-hidden">
                     <View className="bg-zinc-200/70 px-3.5 py-3 border-r border-[#E5E7EB] items-center justify-center">
                       <Text className="text-sm font-bold text-zinc-800 tracking-wider">+91</Text>
                     </View>
@@ -2724,7 +2724,7 @@ function AccordionCard({ title, icon, expanded, onToggle, children, rightText, r
               <Text style={rightTextColor ? { color: rightTextColor } : undefined} className={rightTextColor ? "text-[11px] font-bold uppercase tracking-wider" : "text-zinc-500 text-xs font-semibold"}>{rightText}</Text>
             </View>
           )}
-          <View className="w-7 h-7 rounded-full bg-zinc-50 items-center justify-center border border-zinc-100">
+          <View className="w-7 h-7 rounded-full bg-zinc-50 items-center justify-center">
             <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={15} color="#52525B" />
           </View>
         </View>

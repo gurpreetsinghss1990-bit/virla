@@ -109,7 +109,7 @@ export const FitnessGoalsModal: React.FC<FitnessGoalsModalProps> = ({
           <TouchableOpacity
             onPress={onClose}
             activeOpacity={0.7}
-            className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center border border-zinc-200 mt-0.5"
+            className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center mt-0.5"
           >
             <Feather name="x" size={15} color="#101828" />
           </TouchableOpacity>

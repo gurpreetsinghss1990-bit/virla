@@ -666,7 +666,7 @@ export default function MembershipScreen() {
               transform: [{ translateY: slideUpAnim }],
               ...softShadow({ color: '#000', opacity: 0.18, radius: 20, offsetY: 10 }),
             }}
-            className="bg-white rounded-[28px] p-5 pt-3.5 pb-5 border border-zinc-100"
+            className="bg-white rounded-[28px] p-5 pt-3.5 pb-5"
           >
             {/* Modal Drag handle indicator */}
             <View className="w-9 h-1 bg-zinc-200 rounded-full align-self-center mx-auto mb-2" />
@@ -690,7 +690,7 @@ export default function MembershipScreen() {
                       <TouchableOpacity
                         onPress={closeDetails}
                         activeOpacity={0.7}
-                        className="w-10 h-10 rounded-full bg-zinc-100 items-center justify-center border border-zinc-200"
+                        className="w-10 h-10 rounded-full bg-zinc-100 items-center justify-center"
                       >
                         <Feather name="x" size={19} color="#18181B" />
                       </TouchableOpacity>
@@ -744,21 +744,21 @@ export default function MembershipScreen() {
                         <TouchableOpacity
                           onPress={() => setCheckoutActive(false)}
                           activeOpacity={0.7}
-                          className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center border border-zinc-200"
+                          className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center"
                         >
                           <Feather name="arrow-left" size={16} color="#18181B" />
                         </TouchableOpacity>
                         <TouchableOpacity
                           onPress={closeDetails}
                           activeOpacity={0.7}
-                          className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center border border-zinc-200"
+                          className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center"
                         >
                           <Feather name="x" size={16} color="#18181B" />
                         </TouchableOpacity>
                       </View>
                     </View>
 
-                    <View className="bg-zinc-50 border border-zinc-200 p-3.5 rounded-2xl gap-2">
+                    <View className="bg-zinc-50 p-3.5 rounded-2xl gap-2">
                       {/* Base Pack Price */}
                       <View className="flex-row justify-between items-center">
                         <Text className="text-zinc-600 text-xs font-semibold">{selectedPlan.name}</Text>
@@ -912,7 +912,7 @@ export default function MembershipScreen() {
                     onPress={() => {
                       closeDetails();
                     }}
-                    className="w-full bg-zinc-100 border border-zinc-200 h-14 rounded-2xl items-center justify-center"
+                    className="w-full bg-zinc-100 h-14 rounded-2xl items-center justify-center"
                     style={{ height: 54 }}
                   >
                     <Text className="text-zinc-700 text-sm font-extrabold uppercase">Done</Text>
@@ -974,7 +974,7 @@ export default function MembershipScreen() {
                 router.replace('/(tabs)/profile');
               }
             }}
-            className="w-10 h-10 rounded-full bg-white/90 border border-zinc-200/80 shadow-xs items-center justify-center"
+            className="w-10 h-10 rounded-full bg-white/90 shadow-xs items-center justify-center"
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
@@ -1011,7 +1011,7 @@ export default function MembershipScreen() {
             activeOpacity={0.6}
             onPress={() => router.push('/help-support' as any)}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            className="w-10 h-10 rounded-full bg-white/90 border border-zinc-200/80 shadow-xs items-center justify-center"
+            className="w-10 h-10 rounded-full bg-white/90 shadow-xs items-center justify-center"
             accessibilityRole="button"
             accessibilityLabel="Help"
           >

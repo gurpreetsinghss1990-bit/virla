@@ -59,7 +59,7 @@ export function SessionCard({ booking }: SessionCardProps) {
   };
 
   return (
-    <View className="bg-white border border-zinc-100 p-5 rounded-[24px] shadow-sm flex-col w-full">
+    <View className="bg-white p-5 rounded-[24px] shadow-sm flex-col w-full">
       {/* Header Info */}
       <View className="flex-row items-center justify-between mb-4 border-b border-zinc-50 pb-4">
         <View className="flex-row items-center gap-3">
@@ -107,7 +107,7 @@ export function SessionCard({ booking }: SessionCardProps) {
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={handleReschedule}
-          className="flex-1 bg-zinc-50 border border-zinc-100 py-3 rounded-xl items-center justify-center"
+          className="flex-1 bg-zinc-50 py-3 rounded-xl items-center justify-center"
         >
           <Text className="text-primary text-xs font-bold">Reschedule</Text>
         </TouchableOpacity>

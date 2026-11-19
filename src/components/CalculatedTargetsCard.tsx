@@ -112,7 +112,7 @@ export const CalculatedTargetsCard: React.FC<CalculatedTargetsCardProps> = ({
         </View>
 
         <View className="flex-row items-center gap-2">
-          <View className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/10">
+          <View className="px-2.5 py-0.5 rounded-full bg-white/10">
             <Text
               style={{
                 fontSize: 10,
