@@ -1,7 +1,7 @@
 import { Loading } from '../components/Loading';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Platform, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Platform, TextInput, Linking } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -18,6 +18,23 @@ import { SupportChatModal } from '../components/SupportChatModal';
 import { AvatarImage } from '../components/AvatarImage';
 import { NativeSheet } from '../components/NativeSheet';
 
+export interface EnquiryRecord {
+  id: string;
+  created_at: string;
+  full_name: string;
+  phone: string;
+  email: string | null;
+  workout_experience: string | null;
+  trainer_preference: string | null;
+  training_address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  booking_date: string | null;
+  booking_time_slot: string | null;
+  status: string | null;
+  source: string | null;
+}
+
 export default function AdminPanelScreen() {
   const router = useRouter();
   const searchParams = useLocalSearchParams<{ tab?: string }>();
@@ -26,7 +43,10 @@ export default function AdminPanelScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isAdminAuthorized, setIsAdminAuthorized] = useState<boolean | null>(null);
   
-  const [activeTab, setActiveTab] = useState<'applications' | 'live' | 'locations' | 'acceptance' | 'disputes' | 'kits' | 'support'>('applications');
+  const [activeTab, setActiveTab] = useState<'applications' | 'live' | 'locations' | 'acceptance' | 'disputes' | 'kits' | 'support' | 'enquiries'>('applications');
+  const [enquiries, setEnquiries] = useState<EnquiryRecord[]>([]);
+  const [isLoadingEnquiries, setIsLoadingEnquiries] = useState<boolean>(false);
+  const [enquiryStatusFilter, setEnquiryStatusFilter] = useState<'all' | 'pending' | 'contacted' | 'converted' | 'closed'>('all');
   const [disputeSection, setDisputeSection] = useState<'user' | 'trainer'>('user');
   const [disputes, setDisputes] = useState<any[]>([]);
   const [kitOrders, setKitOrders] = useState<any[]>([]);
@@ -360,12 +380,52 @@ export default function AdminPanelScreen() {
       }
     };
 
+  const loadEnquiries = async () => {
+    setIsLoadingEnquiries(true);
+    try {
+      const { data, error } = await supabase
+        .from('enquiries')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('[AdminPanel] Failed to load enquiries:', error.message);
+      } else if (data) {
+        setEnquiries(data as EnquiryRecord[]);
+      }
+    } catch (err: any) {
+      console.warn('[AdminPanel] Error fetching enquiries:', err?.message || err);
+    } finally {
+      setIsLoadingEnquiries(false);
+    }
+  };
+
+  const handleUpdateEnquiryStatus = async (enquiryId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('enquiries')
+        .update({ status: newStatus })
+        .eq('id', enquiryId);
+
+      if (error) {
+        Alert.alert('Error', error.message || 'Failed to update enquiry status.');
+      } else {
+        setEnquiries((prev) =>
+          prev.map((e) => (e.id === enquiryId ? { ...e, status: newStatus } : e))
+        );
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Update failed.');
+    }
+  };
+
   useEffect(() => {
     if (isAdminAuthorized === true) {
       Promise.resolve().then(() => {
         loadApplications();
         loadDisputesAndKits();
         loadSupportTickets();
+        loadEnquiries();
       });
     }
   }, [isAdminAuthorized, activeTab]);
@@ -681,6 +741,23 @@ export default function AdminPanelScreen() {
               className={`px-4 py-2 rounded-xl items-center justify-center ${activeTab === 'kits' ? 'bg-zinc-950' : 'bg-zinc-50 border border-zinc-200/50'}`}
             >
               <Text className={`text-[9px] font-black uppercase tracking-wider ${activeTab === 'kits' ? 'text-white' : 'text-zinc-500'}`}>Kits</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setActiveTab('enquiries')}
+              className={`px-4 py-2 rounded-xl items-center justify-center flex-row gap-1.5 ${activeTab === 'enquiries' ? 'bg-indigo-600' : 'bg-indigo-50 border border-indigo-200/60'}`}
+            >
+              <Feather name="inbox" size={11} color={activeTab === 'enquiries' ? '#FFFFFF' : '#4F46E5'} />
+              <Text className={`text-[9px] font-black uppercase tracking-wider ${activeTab === 'enquiries' ? 'text-white' : 'text-indigo-600'}`}>
+                Enquiries
+              </Text>
+              {enquiries.filter(e => !e.status || e.status === 'pending').length > 0 && (
+                <View className={`px-1.5 py-0.2 rounded-full ${activeTab === 'enquiries' ? 'bg-white' : 'bg-indigo-600'}`}>
+                  <Text className={`text-[8px] font-black ${activeTab === 'enquiries' ? 'text-indigo-600' : 'text-white'}`}>
+                    {enquiries.filter(e => !e.status || e.status === 'pending').length}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -2340,6 +2417,232 @@ export default function AdminPanelScreen() {
           )}
 
           {/* Client Support Tickets Tab */}
+          {activeTab === 'enquiries' && (
+            <View className="gap-6">
+              <View className="flex-row justify-between items-center">
+                <View>
+                  <Text className="text-zinc-900 text-xl font-black tracking-tight uppercase">Website & Ad Enquiries</Text>
+                  <Text className="text-[#6B7280] text-xs font-semibold mt-1 leading-relaxed">
+                    Direct leads received from external website and landing pages.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={loadEnquiries}
+                  className="p-2.5 bg-zinc-100 rounded-xl flex-row items-center gap-1.5"
+                >
+                  <Feather name="refresh-cw" size={12} color="#101828" />
+                  <Text className="text-[10px] font-black uppercase text-zinc-900">Refresh</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Status Filter Tabs */}
+              <View className="flex-row gap-2 flex-wrap">
+                {(['all', 'pending', 'contacted', 'converted', 'closed'] as const).map((st) => (
+                  <TouchableOpacity
+                    key={st}
+                    activeOpacity={0.7}
+                    onPress={() => setEnquiryStatusFilter(st)}
+                    className={`px-3.5 py-1.5 rounded-full border ${
+                      enquiryStatusFilter === st
+                        ? 'bg-zinc-950 border-zinc-950'
+                        : 'bg-white border-zinc-200'
+                    }`}
+                  >
+                    <Text
+                      className={`text-[10px] font-black uppercase tracking-wider ${
+                        enquiryStatusFilter === st ? 'text-white' : 'text-zinc-600'
+                      }`}
+                    >
+                      {st} {st !== 'all' ? `(${enquiries.filter(e => (e.status || 'pending').toLowerCase() === st).length})` : `(${enquiries.length})`}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {isLoadingEnquiries ? (
+                <View className="py-12 items-center justify-center">
+                  <Loading size="large" color="#101828" />
+                  <Text className="text-xs text-zinc-400 font-bold mt-2">Fetching live enquiries...</Text>
+                </View>
+              ) : enquiries.filter(e => enquiryStatusFilter === 'all' || (e.status || 'pending').toLowerCase() === enquiryStatusFilter).length > 0 ? (
+                <View className="gap-4">
+                  {enquiries
+                    .filter(e => enquiryStatusFilter === 'all' || (e.status || 'pending').toLowerCase() === enquiryStatusFilter)
+                    .map((enq) => {
+                      const st = (enq.status || 'pending').toLowerCase();
+                      const statusBadgeColor =
+                        st === 'converted'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : st === 'contacted'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          : st === 'closed'
+                          ? 'bg-zinc-100 text-zinc-600 border-zinc-300'
+                          : 'bg-amber-50 text-amber-700 border-amber-200';
+
+                      return (
+                        <LuxuryCard
+                          key={enq.id}
+                          className="p-5 bg-white border border-[#E5E7EB] rounded-[24px] shadow-xs"
+                        >
+                          <View className="gap-3.5">
+                            {/* Card Header: Name + Status */}
+                            <View className="flex-row justify-between items-start">
+                              <View className="flex-1 pr-2">
+                                <View className="flex-row items-center gap-2 flex-wrap">
+                                  <Text className="text-[#101828] text-base font-black">
+                                    {enq.full_name || 'Website Visitor'}
+                                  </Text>
+                                  <View className="px-2 py-0.5 rounded-full bg-zinc-100 border border-zinc-200">
+                                    <Text className="text-zinc-600 text-[8px] font-black uppercase tracking-wider">
+                                      {enq.source || 'Website'}
+                                    </Text>
+                                  </View>
+                                </View>
+                                <Text className="text-zinc-400 text-[10px] font-semibold mt-0.5">
+                                  {enq.created_at ? new Date(enq.created_at).toLocaleString() : 'Recent'}
+                                </Text>
+                              </View>
+
+                              <View className={`px-2.5 py-1 rounded-full border ${statusBadgeColor}`}>
+                                <Text className="text-[9px] font-black uppercase tracking-wider">
+                                  {enq.status || 'PENDING'}
+                                </Text>
+                              </View>
+                            </View>
+
+                            {/* Contact Details with 1-tap Actions */}
+                            <View className="bg-zinc-50 border border-zinc-200/60 rounded-2xl p-3 gap-2">
+                              <View className="flex-row items-center justify-between">
+                                <View className="flex-row items-center gap-2">
+                                  <Feather name="phone" size={13} color="#4F46E5" />
+                                  <Text className="text-[#101828] text-xs font-black">{enq.phone}</Text>
+                                </View>
+                                <View className="flex-row items-center gap-2">
+                                  <TouchableOpacity
+                                    activeOpacity={0.7}
+                                    onPress={() => Linking.openURL(`tel:${enq.phone.replace(/[^0-9+]/g, '')}`)}
+                                    className="px-2.5 py-1 bg-white border border-zinc-200 rounded-lg flex-row items-center gap-1"
+                                  >
+                                    <Feather name="phone-call" size={10} color="#059669" />
+                                    <Text className="text-[9px] font-bold text-emerald-700">Call</Text>
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
+                                    activeOpacity={0.7}
+                                    onPress={() => {
+                                      const cleanPhone = enq.phone.replace(/[^0-9]/g, '');
+                                      const fullNum = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
+                                      Linking.openURL(`whatsapp://send?phone=${fullNum}&text=Hello ${enq.full_name}, thank you for contacting VIRLA!`);
+                                    }}
+                                    className="px-2.5 py-1 bg-emerald-600 rounded-lg flex-row items-center gap-1"
+                                  >
+                                    <Ionicons name="logo-whatsapp" size={10} color="#FFFFFF" />
+                                    <Text className="text-[9px] font-bold text-white">WhatsApp</Text>
+                                  </TouchableOpacity>
+                                </View>
+                              </View>
+
+                              {enq.email ? (
+                                <View className="flex-row items-center justify-between pt-1 border-t border-zinc-200/50">
+                                  <View className="flex-row items-center gap-2">
+                                    <Feather name="mail" size={13} color="#6B7280" />
+                                    <Text className="text-zinc-700 text-xs font-medium">{enq.email}</Text>
+                                  </View>
+                                  <TouchableOpacity
+                                    activeOpacity={0.7}
+                                    onPress={() => Linking.openURL(`mailto:${enq.email}`)}
+                                  >
+                                    <Text className="text-[9px] font-bold text-indigo-600">Email</Text>
+                                  </TouchableOpacity>
+                                </View>
+                              ) : null}
+                            </View>
+
+                            {/* Booking Preference Grid */}
+                            <View className="gap-1.5 pt-1">
+                              {enq.booking_date || enq.booking_time_slot ? (
+                                <View className="flex-row items-center gap-1.5">
+                                  <Feather name="calendar" size={12} color="#D97706" />
+                                  <Text className="text-zinc-500 text-[10px] font-bold uppercase">Requested Slot:</Text>
+                                  <Text className="text-zinc-900 text-xs font-black">
+                                    {enq.booking_date || 'Flexible Date'} {enq.booking_time_slot ? `• ${enq.booking_time_slot}` : ''}
+                                  </Text>
+                                </View>
+                              ) : null}
+
+                              {enq.trainer_preference ? (
+                                <View className="flex-row items-center gap-1.5">
+                                  <Feather name="user-check" size={12} color="#4F46E5" />
+                                  <Text className="text-zinc-500 text-[10px] font-bold uppercase">Trainer:</Text>
+                                  <Text className="text-zinc-900 text-xs font-semibold">{enq.trainer_preference}</Text>
+                                </View>
+                              ) : null}
+
+                              {enq.workout_experience ? (
+                                <View className="flex-row items-center gap-1.5">
+                                  <Feather name="activity" size={12} color="#E11D48" />
+                                  <Text className="text-zinc-500 text-[10px] font-bold uppercase">Experience:</Text>
+                                  <Text className="text-zinc-900 text-xs font-semibold">{enq.workout_experience}</Text>
+                                </View>
+                              ) : null}
+
+                              {enq.training_address ? (
+                                <View className="flex-row items-start gap-1.5 pt-0.5">
+                                  <Feather name="map-pin" size={12} color="#059669" style={{ marginTop: 2 }} />
+                                  <View className="flex-1">
+                                    <Text className="text-zinc-500 text-[10px] font-bold uppercase">Address:</Text>
+                                    <Text className="text-zinc-800 text-xs font-medium leading-relaxed">
+                                      {enq.training_address}
+                                    </Text>
+                                  </View>
+                                </View>
+                              ) : null}
+                            </View>
+
+                            {/* Status Update Quick Bar */}
+                            <View className="border-t border-zinc-100 pt-3 gap-1.5">
+                              <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Update Lead Stage</Text>
+                              <View className="flex-row gap-1.5 flex-wrap">
+                                {(['pending', 'contacted', 'converted', 'closed'] as const).map((stage) => {
+                                  const isCurrent = (enq.status || 'pending').toLowerCase() === stage;
+                                  return (
+                                    <TouchableOpacity
+                                      key={stage}
+                                      activeOpacity={0.7}
+                                      onPress={() => handleUpdateEnquiryStatus(enq.id, stage)}
+                                      className={`flex-1 min-w-[70px] py-2 border rounded-xl items-center ${
+                                        isCurrent ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-zinc-200'
+                                      }`}
+                                    >
+                                      <Text className={`text-[8px] font-black uppercase ${isCurrent ? 'text-white' : 'text-zinc-600'}`}>
+                                        {stage}
+                                      </Text>
+                                    </TouchableOpacity>
+                                  );
+                                })}
+                              </View>
+                            </View>
+                          </View>
+                        </LuxuryCard>
+                      );
+                    })}
+                </View>
+              ) : (
+                <View className="py-12 px-4 bg-white border border-[#E5E7EB] rounded-[28px] items-center justify-center gap-2">
+                  <Feather name="inbox" size={32} color="#D1D5DB" />
+                  <Text className="text-zinc-500 text-xs font-bold text-center">
+                    {enquiryStatusFilter === 'all'
+                      ? 'No website enquiries received yet.'
+                      : `No enquiries found with status "${enquiryStatusFilter}".`}
+                  </Text>
+                  <Text className="text-zinc-400 text-[10px] text-center max-w-xs">
+                    Submissions from your website / Meta Ads landing page will show up here live.
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
           {activeTab === 'support' && (
             <View className="gap-6">
               <View className="flex-row justify-between items-center">
