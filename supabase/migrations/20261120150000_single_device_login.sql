@@ -211,3 +211,6 @@ GRANT EXECUTE ON FUNCTION public.claim_device(TEXT, TEXT, TEXT, TEXT) TO anon, a
 GRANT EXECUTE ON FUNCTION public.heartbeat_device(TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.release_device(TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.device_is_active(TEXT, TEXT) TO anon, authenticated;
+
+-- Single-device rollout starts from a clean slate: no device holds a slot yet.
+TRUNCATE public.user_devices;

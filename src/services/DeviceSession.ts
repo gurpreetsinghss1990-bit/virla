@@ -43,6 +43,24 @@ async function writeSecure(key: string, value: string): Promise<void> {
   }
 }
 
+const DEVICE_EPOCH = '2';
+const EPOCH_KEY = 'virla.device.epoch';
+
+/**
+ * One-time gate for the single-device rollout: every install signs out once on
+ * the first launch after updating, so the next login claims a clean device slot.
+ */
+export async function consumeUpgradeLogout(): Promise<boolean> {
+  try {
+    const stored = await SecureStore.getItemAsync(EPOCH_KEY);
+    if (stored === DEVICE_EPOCH) return false;
+    await SecureStore.setItemAsync(EPOCH_KEY, DEVICE_EPOCH);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function getDeviceName(): string {
   const model = Device.modelName || Device.deviceName || 'Unknown device';
   const os = Platform.OS === 'ios' ? 'iOS' : Platform.OS === 'android' ? 'Android' : Platform.OS;
@@ -105,6 +123,7 @@ export function claimDeviceSession(userId: string): Promise<ClaimResult> {
         };
       }
       claimedUserId = userId;
+      await SecureStore.setItemAsync(EPOCH_KEY, DEVICE_EPOCH).catch(() => {});
       return { ok: true };
     } catch {
       return { ok: false, reason: 'network' };

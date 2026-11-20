@@ -11,6 +11,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { useAIStore } from '../store/aiStore';
 import { useAddressStore } from '../store/addressStore';
 import { enforceDeviceSessionFor, setupRealtimeSubscriptions } from './realtime';
+import { consumeUpgradeLogout } from '../services/DeviceSession';
 import { locationTrackerService } from '../services/LocationTrackerService';
 
 /**
@@ -22,6 +23,12 @@ export async function bootstrapApp(): Promise<void> {
     // Wait for Zustand store to rehydrate from persistent storage
     while (!useUserStore.persist.hasHydrated()) {
       await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    // 0. Single-device rollout: sign out every install once so accounts that were
+    // open on several phones start from a clean login and claim a single slot.
+    if ((await consumeUpgradeLogout()) && useUserStore.getState().isLoggedIn) {
+      await useUserStore.getState().setLoggedIn(false);
     }
 
     // 1. Restore session credentials first to ensure currentUserId is set in database instance
