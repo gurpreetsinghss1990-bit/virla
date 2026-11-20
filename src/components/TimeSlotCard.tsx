@@ -12,7 +12,7 @@ export function TimeSlotCard({ slot, isSelected, isAvailable, onPress }: TimeSlo
   if (!isAvailable) {
     return (
       <View 
-        className="w-[47%] bg-zinc-50 border border-zinc-100 p-4 rounded-2xl items-center justify-center opacity-30"
+        className="w-[47%] bg-zinc-50 p-4 rounded-2xl items-center justify-center opacity-30"
       >
         <Text className="text-zinc-400 text-xs font-bold">{slot}</Text>
       </View>

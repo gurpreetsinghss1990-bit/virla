@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import Svg, { Circle, Path, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 
+import { softShadow } from '../utils/shadows';
 export type EmptyStateType = 
   | 'no-sessions' 
   | 'no-notifications' 
@@ -189,11 +190,7 @@ export function EmptyState({ type, onAction, actionText, message, title, showCar
           transform: [{ scale: scaleAnim }],
         },
         showCard ? {
-          shadowColor: '#101828',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.05,
-          shadowRadius: 8,
-          elevation: 2,
+          ...softShadow({ color: '#101828', opacity: 0.05, radius: 8, offsetY: 2 }),
         } : undefined,
       ]}
       className={`${
@@ -221,11 +218,7 @@ export function EmptyState({ type, onAction, actionText, message, title, showCar
           onPress={onAction}
           className="mt-6 bg-[#111827] px-6 py-3.5 rounded-2xl"
           style={{
-            shadowColor: '#111827',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.05,
-            shadowRadius: 2,
-            elevation: 1,
+            ...softShadow({ color: '#111827', opacity: 0.05, radius: 2, offsetY: 1 }),
           }}
         >
           <Text className="text-white text-xs font-extrabold tracking-wide uppercase">

@@ -263,7 +263,7 @@ export default function AddressManagementScreen() {
 
             {showForm ? (
               /* Add/Edit Form Panel */
-              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+              <View className="bg-white p-5 rounded-[28px] shadow-sm gap-4">
                 <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider border-b border-zinc-50 pb-2">
                   {editingId ? 'Modify Address Details' : 'New Address Details'}
                 </Text>
@@ -332,7 +332,7 @@ export default function AddressManagementScreen() {
                   />
 
                   {suggestions.length > 0 && (
-                    <View className="bg-white border border-zinc-200 rounded-xl overflow-hidden mt-1 py-1 max-h-40">
+                    <View className="bg-white rounded-xl overflow-hidden mt-1 py-1 max-h-40">
                       {suggestions.map((item, idx) => (
                         <TouchableOpacity
                           key={idx}
@@ -446,7 +446,7 @@ export default function AddressManagementScreen() {
                 {addresses.map((addr) => (
                   <View
                     key={addr.id}
-                    className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-3.5"
+                    className="bg-white p-5 rounded-[28px] shadow-sm gap-3.5"
                   >
                     <View className="flex-row justify-between items-start">
                       <View className="gap-0.5 flex-1 pr-3">
@@ -475,7 +475,7 @@ export default function AddressManagementScreen() {
                     <View className="flex-row gap-3">
                       <TouchableOpacity
                         onPress={() => handleEdit(addr)}
-                        className="flex-1 bg-zinc-50 border border-zinc-100 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
+                        className="flex-1 bg-zinc-50 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
                       >
                         <Feather name="edit" size={11} color="#101828" />
                         <Text className="text-zinc-950 text-[8px] font-black uppercase">Edit</Text>
@@ -484,7 +484,7 @@ export default function AddressManagementScreen() {
                       {!addr.isDefault && (
                         <TouchableOpacity
                           onPress={() => setDefaultAddress(addr.id)}
-                          className="flex-1 bg-zinc-50 border border-zinc-100 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
+                          className="flex-1 bg-zinc-50 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
                         >
                           <Feather name="check" size={11} color="#4F46E5" />
                           <Text className="text-[#4F46E5] text-[8px] font-black uppercase">Make Default</Text>

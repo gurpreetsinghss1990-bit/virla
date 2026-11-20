@@ -20,7 +20,7 @@ export function LocationCard({ icon, title, isSelected, onPress }: LocationCardP
       }`}
     >
       <View className="flex-row items-center gap-4">
-        <View className="w-12 h-12 rounded-xl bg-zinc-50 border border-zinc-100 items-center justify-center">
+        <View className="w-12 h-12 rounded-xl bg-zinc-50 items-center justify-center">
           <Text className="text-xl">{icon}</Text>
         </View>
         <Text className="text-primary text-base font-extrabold tracking-tight">

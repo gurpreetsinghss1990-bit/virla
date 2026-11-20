@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { softShadow } from '../utils/shadows';
 // Smooth fade in helper
 export function LifestyleFadeIn({
   delay = 0,
@@ -241,11 +242,7 @@ export function LifestyleTagCard({ tag, isSelected, onToggle, index = 0 }: Lifes
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            shadowColor: isSelected ? '#E11D48' : '#0F172A',
-            shadowOffset: { width: 0, height: isSelected ? 3 : 1.5 },
-            shadowOpacity: isSelected ? 0.16 : 0.03,
-            shadowRadius: isSelected ? 8 : 4,
-            elevation: isSelected ? 3 : 1,
+            ...softShadow({ color: isSelected ? '#E11D48' : '#0F172A', opacity: isSelected ? 0.16 : 0.03, radius: isSelected ? 8 : 4, offsetY: isSelected ? 3 : 1.5 }),
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, flex: 1 }}>
@@ -493,11 +490,7 @@ export function LifestyleSelectionView({
                 borderWidth: 1.5,
                 borderRadius: 20,
                 padding: 13,
-                shadowColor: '#F59E0B',
-                shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.08,
-                shadowRadius: 8,
-                elevation: 2,
+                ...softShadow({ color: '#F59E0B', opacity: 0.08, radius: 8, offsetY: 3 }),
               }}
             >
               {/* Header row */}
@@ -661,11 +654,7 @@ export function LifestyleSelectionView({
                 borderWidth: 1.5,
                 borderRadius: 20,
                 padding: 13,
-                shadowColor: '#6366F1',
-                shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.08,
-                shadowRadius: 8,
-                elevation: 2,
+                ...softShadow({ color: '#6366F1', opacity: 0.08, radius: 8, offsetY: 3 }),
               }}
             >
               {/* Header row */}
@@ -898,11 +887,7 @@ export function LifestyleSelectionView({
                 justifyContent: 'center',
                 flexDirection: 'row',
                 gap: 10,
-                shadowColor: '#E11D48',
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.3,
-                shadowRadius: 12,
-                elevation: 4,
+                ...softShadow({ color: '#E11D48', opacity: 0.3, radius: 12, offsetY: 6 }),
               }}
               className="w-full"
             >

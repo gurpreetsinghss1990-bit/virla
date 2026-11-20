@@ -10,6 +10,7 @@ import { Database } from '../database/Database';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 
+import { softShadow } from '../utils/shadows';
 const FALLBACK_BACKGROUND_COLOR = '#FCF5F5';
 
 let useMaterialColorsSafe: any = null;
@@ -219,7 +220,7 @@ export default function FitnessGoalsScreen() {
                 router.replace('/(tabs)/profile' as any);
               }
             }}
-            className="w-10 h-10 rounded-full bg-white/90 border border-zinc-200/80 shadow-xs items-center justify-center"
+            className="w-10 h-10 rounded-full bg-white/90 shadow-xs items-center justify-center"
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
@@ -246,20 +247,12 @@ const styles = StyleSheet.create({
   capsuleSelected: {
     backgroundColor: '#E11D48',
     borderColor: '#E11D48',
-    shadowColor: '#E11D48',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
+    ...softShadow({ color: '#E11D48', opacity: 0.25, radius: 6, offsetY: 3 }),
   },
   capsuleUnselected: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#E4E4E7',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
+    borderColor: 'transparent',
+    ...softShadow({ color: '#000000', opacity: 0.04, radius: 2, offsetY: 1 }),
   },
   capsuleText: {
     fontSize: 12,
@@ -281,11 +274,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginTop: 20,
     backgroundColor: '#E11D48',
-    shadowColor: '#E11D48',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    ...softShadow({ color: '#E11D48', opacity: 0.25, radius: 8, offsetY: 4 }),
     height: 56,
     alignItems: 'center',
     justifyContent: 'center',

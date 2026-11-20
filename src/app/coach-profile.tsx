@@ -87,11 +87,11 @@ export default function CoachProfileScreen() {
             <Text className="text-primary text-2xl font-black tracking-tight">{coach.name}</Text>
             <Text className="text-zinc-500 text-sm font-semibold">{coach.specialization || coach.specialty}</Text>
             <View className="flex-row items-center gap-2 mt-2">
-              <View className="bg-zinc-50 border border-zinc-100 px-3 py-1.5 rounded-xl flex-row items-center gap-1">
+              <View className="bg-zinc-50 px-3 py-1.5 rounded-xl flex-row items-center gap-1">
                 <Ionicons name="star" size={12} color="#EAB308" />
                 <Text className="text-primary text-xs font-black">{coach.rating}</Text>
               </View>
-              <View className="bg-zinc-50 border border-zinc-100 px-3 py-1.5 rounded-xl">
+              <View className="bg-zinc-50 px-3 py-1.5 rounded-xl">
                 <Text className="text-primary text-xs font-black">💼 {coach.yearsExperience || coach.experience} Experience</Text>
               </View>
             </View>
@@ -111,7 +111,7 @@ export default function CoachProfileScreen() {
               <Text className="text-primary text-base font-extrabold tracking-tight">Workout Specialties</Text>
               <View className="flex-row flex-wrap gap-2">
                 {coach.workoutSpecialties.map((specialty, i) => (
-                  <View key={i} className="bg-zinc-50 border border-zinc-100 px-4 py-2.5 rounded-2xl">
+                  <View key={i} className="bg-zinc-50 px-4 py-2.5 rounded-2xl">
                     <Text className="text-zinc-700 text-xs font-bold">✨ {specialty}</Text>
                   </View>
                 ))}
@@ -163,7 +163,7 @@ export default function CoachProfileScreen() {
               <Text className="text-primary text-base font-extrabold tracking-tight">Daily Availability</Text>
               <View className="flex-row flex-wrap gap-2">
                 {coach.availability.map((time, i) => (
-                  <View key={i} className="bg-zinc-50 border border-zinc-100 px-3 py-2 rounded-xl">
+                  <View key={i} className="bg-zinc-50 px-3 py-2 rounded-xl">
                     <Text className="text-zinc-600 text-xs font-bold">⏱️ {time.split(' - ')[0]}</Text>
                   </View>
                 ))}

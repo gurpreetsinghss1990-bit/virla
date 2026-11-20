@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text as RNText, TouchableOpacity, Platform } from 'react-native';
 
+import { softShadow } from '../utils/shadows';
 export interface SegmentItem<T extends string> {
   key: T;
   label: string;
@@ -114,11 +115,7 @@ export function NativeSegmentedControl<T extends string>({
             className="flex-1 py-3 rounded-xl items-center justify-center"
             style={{
               backgroundColor: isActive ? '#101828' : 'transparent',
-              shadowColor: '#101828',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: isActive ? 0.15 : 0,
-              shadowRadius: 4,
-              elevation: isActive ? 2 : 0,
+              ...softShadow({ color: '#101828', opacity: isActive ? 0.15 : 0, radius: 4, offsetY: 2 }),
             }}
           >
             <RNText

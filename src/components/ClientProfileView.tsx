@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Svg, { Path, Polygon, Polyline } from 'react-native-svg';
@@ -67,10 +68,11 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
   userApplication,
 }) => {
   return (
-    <FlatList
+    <FlashList
       data={[1]}
       keyExtractor={() => 'client-profile'}
       showsVerticalScrollIndicator={false}
+      overScrollMode="never"
       scrollEventThrottle={32}
       removeClippedSubviews={false}
       onScroll={(e) => {
@@ -83,7 +85,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
         <TouchableOpacity
           onPress={handleLogout}
           activeOpacity={0.8}
-          className="bg-rose-50 border border-rose-200/70 px-8 py-3.5 rounded-full flex-row justify-center items-center self-center mt-6 mb-24 gap-2 shadow-2xs"
+          className="bg-rose-50 border border-rose-200/70 px-8 py-3.5 rounded-full flex-row justify-center items-center self-center mt-6 mb-24 gap-2"
         >
           <Feather name="log-out" size={15} color="#E11D48" style={{ transform: [{ rotate: '-90deg' }] }} />
           <Text className="text-rose-600 text-xs font-bold uppercase tracking-wider">Sign Out</Text>
@@ -98,7 +100,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
               onPress={openEditProfileModal}
               className="relative"
             >
-              <View className="w-[78px] h-[78px] rounded-full p-[2.5px] border-2 border-[#F59E0B] bg-white shadow-sm">
+              <View className="w-[78px] h-[78px] rounded-full p-[2.5px] border-2 border-[#F59E0B] bg-white">
                 <AvatarImage
                   uri={profile.avatar || user?.avatar}
                   gender={(profile.gender || (user as any)?.gender) as string}
@@ -108,7 +110,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                   transition={200}
                 />
               </View>
-              <View className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-rose-500 border-2 border-white items-center justify-center shadow-xs">
+              <View className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-rose-500 border-2 border-white items-center justify-center">
                 <Feather name="camera" size={11} color="#FFFFFF" />
               </View>
             </TouchableOpacity>
@@ -117,7 +119,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                 <Text className="text-[#101828] text-2xl font-black tracking-tight">
                   {profile.name || user?.name || 'User'}
                 </Text>
-                <View className="bg-[#FFFBEB] border border-[#FDE68A] px-2.5 py-0.5 rounded-full flex-row items-center gap-1">
+                <View className="bg-[#FFFBEB] px-2.5 py-0.5 rounded-full flex-row items-center gap-1">
                   <MaterialCommunityIcons name="crown" size={11} color="#D97706" />
                   <Text className="text-[#D97706] text-[9px] font-black uppercase tracking-wider">ELITE MEMBER</Text>
                 </View>
@@ -131,7 +133,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                 <TouchableOpacity
                   activeOpacity={0.85}
                   onPress={() => handleRoleChange('trainer')}
-                  className="mt-2.5 bg-[#101828] border border-zinc-800 px-3 py-1.5 rounded-xl flex-row items-center gap-1.5 self-start shadow-sm"
+                  className="mt-2.5 bg-[#101828] border border-zinc-800 px-3 py-1.5 rounded-xl flex-row items-center gap-1.5 self-start"
                 >
                   <Feather name="repeat" size={11} color="#F5B942" />
                   <Text className="text-white text-[10px] font-black uppercase tracking-wider">
@@ -216,7 +218,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                   );
                 })()}
               </TouchableOpacity>
-              <View className="bg-white p-1.5 rounded-xl shadow-xs">
+              <View className="bg-white p-1.5 rounded-xl">
                 <Ionicons name="qr-code" size={32} color="#0B1528" />
               </View>
             </View>
@@ -332,7 +334,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
           </View>
 
           {/* 1. Personal Information Accordion Card */}
-          <View className="bg-white border border-[#E5E7EB] rounded-[24px] p-5 shadow-xs mb-4">
+          <View className="bg-white rounded-[24px] p-5 mb-4">
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => togglePersonalInfoExpansion()}
@@ -533,7 +535,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
           </View>
 
           {/* 2. Fitness Goals Card */}
-          <View className="bg-white border border-[#E5E7EB] rounded-[24px] p-5 shadow-xs mb-4">
+          <View className="bg-white rounded-[24px] p-5 mb-4">
             <View className="flex-row justify-between items-center mb-3">
               <Text className="text-[#101828] text-sm font-black tracking-tight">Fitness Goals</Text>
               <TouchableOpacity

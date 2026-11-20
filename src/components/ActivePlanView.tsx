@@ -12,6 +12,7 @@ import {
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { AIWellnessPlan } from '../store/aiWellnessStore';
 
+import { softShadow } from '../utils/shadows';
 interface ActivePlanViewProps {
   plan: AIWellnessPlan;
   onSavePlan: () => void;
@@ -203,7 +204,7 @@ export const ActivePlanView: React.FC<ActivePlanViewProps> = ({
               Calculated Targets
             </Text>
           </View>
-          <View className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/10">
+          <View className="px-2.5 py-0.5 rounded-full bg-white/10">
             <Text
               style={{
                 fontSize: 10,
@@ -479,11 +480,7 @@ export const ActivePlanView: React.FC<ActivePlanViewProps> = ({
                   alignItems: 'center',
                   justifyContent: 'center',
                   backgroundColor: isSelected ? '#FFFFFF' : 'transparent',
-                  shadowColor: isSelected ? '#000' : 'transparent',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: isSelected ? 0.08 : 0,
-                  shadowRadius: 2,
-                  elevation: isSelected ? 1 : 0,
+                  ...softShadow({ color: isSelected ? '#000' : 'transparent', opacity: isSelected ? 0.08 : 0, radius: 2, offsetY: 1 }),
                 }}
               >
                 <Text
@@ -820,11 +817,7 @@ export const ActivePlanView: React.FC<ActivePlanViewProps> = ({
               justifyContent: 'center',
               flexDirection: 'row',
               gap: 8,
-              shadowColor: '#0F172A',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.15,
-              shadowRadius: 10,
-              elevation: 4,
+              ...softShadow({ color: '#0F172A', opacity: 0.15, radius: 10, offsetY: 4 }),
             }}
           >
             <Feather name="check" size={18} color="#FFFFFF" />

@@ -10,6 +10,7 @@ import { useIsAppActive } from '../hooks/useIsAppActive';
 import { getCachedMediaUri } from '../services/mediaCache';
 import { BUNNY_CDN_ASSETS } from '../services/bunnyCdnService';
 
+import { softShadow } from '../utils/shadows';
 // Module-level manager for Single Active Playback across all CoachVideoAvatar instances
 type PlaybackListener = (activeId: string | null) => void;
 let currentPlayingId: string | null = null;
@@ -286,14 +287,10 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
           borderRadius: 12,
           backgroundColor: shouldPlay ? '#101828' : '#FFFFFF',
           borderWidth: 1.5,
-          borderColor: '#E5E7EB',
+          borderColor: 'transparent',
           alignItems: 'center',
           justifyContent: 'center',
-          shadowColor: '#101828',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-          elevation: 2,
+          ...softShadow({ color: '#101828', opacity: 0.1, radius: 4, offsetY: 2 }),
         }}
       >
         <Feather

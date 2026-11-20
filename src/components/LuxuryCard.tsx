@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Animated, TouchableWithoutFeedback, View, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 
+import { softShadow } from '../utils/shadows';
 interface LuxuryCardProps {
   children: React.ReactNode;
   onPress?: () => void;
@@ -44,11 +45,7 @@ export function LuxuryCard({
       style={[
         {
           transform: [{ scale: scaleAnim }],
-          shadowColor: '#101828',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.04,
-          shadowRadius: 18,
-          elevation: 2,
+          ...softShadow({ color: '#101828', opacity: 0.04, radius: 18, offsetY: 8 }),
         },
         styles.cardShadow,
         style,
@@ -84,7 +81,6 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.04,
     shadowRadius: 16,
-    elevation: 3,
   },
 });
 export default LuxuryCard;

@@ -1,6 +1,7 @@
 import { Loading } from '../components/Loading';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { requestForegroundLocationWithDisclosure } from '../utils/locationDisclosure';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -26,9 +27,11 @@ import { useUserStore } from '../store/userStore';
 import { formatToDDMMYYYY, getBookingISTDateRange, getDisplayWorkoutTitle } from '../utils/date';
 import { AvatarImage } from '../components/AvatarImage';
 import { parseBookingAddress } from '../utils/LocationParser';
+import { broadcastBookingUpdate } from '../utils/realtime';
 import { calculateDistanceKm } from '../utils/distance';
 import { cleanOtp } from '../utils/inputSafety';
 
+import { softShadow } from '../utils/shadows';
 let useMaterialColorsSafe: any = null;
 if (Platform.OS === 'android') {
   try {
@@ -256,7 +259,9 @@ export default function SessionDetailScreen() {
 
     const trackLocation = async () => {
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
+        const { status } = await requestForegroundLocationWithDisclosure(
+          'VIRLA uses your location while the app is in use to verify your arrival at the training venue.'
+        );
         if (status !== 'granted') return;
 
         // Get initial position
@@ -1017,11 +1022,7 @@ export default function SessionDetailScreen() {
             <View
               className="bg-rose-50 border border-rose-100 p-5 rounded-[28px] flex-row justify-between items-center"
               style={{
-                shadowColor: '#E11D48',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.02,
-                shadowRadius: 8,
-                elevation: 1,
+                ...softShadow({ color: '#E11D48', opacity: 0.02, radius: 8, offsetY: 4 }),
               }}
             >
               <View className="gap-1 flex-1 pr-3">
@@ -1036,13 +1037,9 @@ export default function SessionDetailScreen() {
 
             {/* Booking Details Card */}
             <View
-              className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-4"
+              className="bg-white p-6 rounded-[28px] gap-4"
               style={{
-                shadowColor: '#101828',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.02,
-                shadowRadius: 8,
-                elevation: 1,
+                ...softShadow({ color: '#101828', opacity: 0.02, radius: 8, offsetY: 4 }),
               }}
             >
               <View className="flex-row items-center gap-2.5 border-b border-zinc-100 pb-3.5">
@@ -1094,13 +1091,9 @@ export default function SessionDetailScreen() {
 
             {/* Preparation Note Card */}
             <View
-              className="bg-white border border-[#E5E7EB] p-5 rounded-[28px]"
+              className="bg-white p-5 rounded-[28px]"
               style={{
-                shadowColor: '#101828',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.02,
-                shadowRadius: 8,
-                elevation: 1,
+                ...softShadow({ color: '#101828', opacity: 0.02, radius: 8, offsetY: 4 }),
               }}
             >
               <View className="flex-row items-center gap-2.5 mb-3">
@@ -1116,13 +1109,9 @@ export default function SessionDetailScreen() {
 
             {/* Client Health Alert & Assessment Card (Latest from previous trainer) */}
             <View
-              className="bg-white border border-[#E5E7EB] p-5 rounded-[28px]"
+              className="bg-white p-5 rounded-[28px]"
               style={{
-                shadowColor: '#101828',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.02,
-                shadowRadius: 8,
-                elevation: 1,
+                ...softShadow({ color: '#101828', opacity: 0.02, radius: 8, offsetY: 4 }),
               }}
             >
               <View className="flex-row items-center justify-between mb-3">
@@ -1210,7 +1199,7 @@ export default function SessionDetailScreen() {
 
             {/* Privacy Warning Banner */}
             {role === 'trainer' && currentStatus === 'booked' && (
-              <View className="bg-zinc-50 border border-zinc-200 p-4 rounded-2xl flex-row items-start gap-2.5">
+              <View className="bg-zinc-50 p-4 rounded-2xl flex-row items-start gap-2.5">
                 <Feather name="lock" size={13} color="#9CA3AF" style={{ marginTop: 2 }} />
                 <Text className="text-zinc-500 text-[9px] font-semibold leading-relaxed flex-1">
                   Before you accept this booking, communication options are locked and customer contact information (Name, exact Address, Phone Number) remains private under {"VIRLA's"} privacy policies.
@@ -1249,11 +1238,7 @@ export default function SessionDetailScreen() {
           className="absolute bottom-0 left-0 right-0 bg-white border-t border-zinc-100 p-6"
           style={{
             zIndex: 99,
-            shadowColor: '#101828',
-            shadowOffset: { width: 0, height: -4 },
-            shadowOpacity: 0.05,
-            shadowRadius: 12,
-            elevation: 10,
+            ...softShadow({ color: '#101828', opacity: 0.05, radius: 12, offsetY: -4 }),
           }}
         >
           <TouchableOpacity
@@ -1318,11 +1303,7 @@ export default function SessionDetailScreen() {
             className="w-full bg-[#E11D48] py-4.5 rounded-[20px] items-center justify-center"
             style={{
               opacity: (isAccepting || isConfirmed) ? 0.6 : 1,
-              shadowColor: '#E11D48',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
-              elevation: 2,
+              ...softShadow({ color: '#E11D48', opacity: 0.1, radius: 8, offsetY: 4 }),
             }}
           >
             {isConfirmed ? (
@@ -1357,11 +1338,7 @@ export default function SessionDetailScreen() {
           backgroundColor: 'rgba(255, 255, 255, 0.92)',
           borderBottomWidth: 0.5,
           borderBottomColor: 'rgba(0, 0, 0, 0.08)',
-          shadowColor: '#101828',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.03,
-          shadowRadius: 6,
-          elevation: 2,
+          ...softShadow({ color: '#101828', opacity: 0.03, radius: 6, offsetY: 2 }),
         }}
       >
         <View className="h-14 flex-row items-center px-5 justify-between">
@@ -1619,7 +1596,7 @@ export default function SessionDetailScreen() {
                     <Text className="text-zinc-500 text-xs font-bold uppercase tracking-wider">
                       {role === 'trainer' ? 'Credits' : 'Credits Used'}
                     </Text>
-                    <View className="bg-zinc-100 px-2.5 py-0.5 rounded-md border border-zinc-200">
+                    <View className="bg-zinc-100 px-2.5 py-0.5 rounded-md">
                       <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">
                         {booking.sessionType === 'COUPLE'
                           ? (role === 'trainer' ? '2 CREDITS' : '2 Credits')
@@ -1647,13 +1624,9 @@ export default function SessionDetailScreen() {
             {/* Preparation Note Card for Trainer (Accepted view) */}
             {role === 'trainer' && (
               <View
-                className="bg-white border border-zinc-200/80 p-5 rounded-[28px] shadow-sm"
+                className="bg-white p-5 rounded-[28px] shadow-sm"
                 style={{
-                  shadowColor: '#101828',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 6,
-                  elevation: 1,
+                  ...softShadow({ color: '#101828', opacity: 0.04, radius: 6, offsetY: 2 }),
                 }}
               >
                 <View className="flex-row items-center gap-2.5 mb-3">
@@ -1671,13 +1644,9 @@ export default function SessionDetailScreen() {
             {/* Client Health Alert & Assessment Card for Trainer (Accepted view) */}
             {role === 'trainer' && (
               <View
-                className="bg-white border border-zinc-200/80 p-5 rounded-[28px] shadow-sm"
+                className="bg-white p-5 rounded-[28px] shadow-sm"
                 style={{
-                  shadowColor: '#101828',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 6,
-                  elevation: 1,
+                  ...softShadow({ color: '#101828', opacity: 0.04, radius: 6, offsetY: 2 }),
                 }}
               >
                 <View className="flex-row items-center justify-between mb-3">
@@ -1893,13 +1862,9 @@ export default function SessionDetailScreen() {
             {/* Module 4: Premium Coach Profile Card */}
             {!isPendingDetails && (
               <View
-                className="bg-white border border-zinc-200/80 p-5 rounded-[28px] shadow-sm gap-4"
+                className="bg-white p-5 rounded-[28px] shadow-sm gap-4"
                 style={{
-                  shadowColor: '#101828',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 8,
-                  elevation: 2,
+                  ...softShadow({ color: '#101828', opacity: 0.04, radius: 8, offsetY: 4 }),
                 }}
               >
                 <View className="flex-row gap-4 items-start">
@@ -1953,7 +1918,7 @@ export default function SessionDetailScreen() {
               <View className="gap-3.5 pl-1">
                 <View className="flex-row items-center justify-between pr-2">
                   <Text className="text-zinc-950 text-sm font-black uppercase tracking-wider">Direct Coach Line</Text>
-                  <View className="bg-zinc-100 px-2.5 py-0.5 rounded-full border border-zinc-200/80">
+                  <View className="bg-zinc-100 px-2.5 py-0.5 rounded-full">
                     <Text className="text-zinc-700 text-[10px] font-extrabold uppercase tracking-wider">
                       {isMissed || isCancelled ? 'Closed' : 'Encrypted'}
                     </Text>
@@ -2051,7 +2016,14 @@ export default function SessionDetailScreen() {
                         style: 'destructive',
                         onPress: async () => {
                           try {
-                            await Database.cancelBooking(user?.id || '', booking!.id);
+                            const store = useBookingStore.getState();
+                            if (store.bookings.some(b => b.id === booking!.id)) {
+                              await store.cancelSession(booking!.id);
+                            } else {
+                              await Database.cancelBooking(user?.id || '', booking!.id);
+                              store.syncFromDB();
+                              broadcastBookingUpdate(booking!.id, 'cancelled');
+                            }
                             router.back();
                           } catch (e: any) {
                             Alert.alert('Error', e.message || 'Could not cancel booking');
@@ -2111,7 +2083,7 @@ export default function SessionDetailScreen() {
                     {(currentStatus === 'trainer_accepted' || currentStatus === 'trainer_preparing') && (
                       SessionEngine.isTravelWindowOpen(booking) ? (
                         <View className="gap-2 w-full">
-                          <View className="bg-zinc-100 p-2.5 rounded-xl flex-row items-center gap-2 border border-zinc-200">
+                          <View className="bg-zinc-100 p-2.5 rounded-xl flex-row items-center gap-2">
                             <Feather name="navigation" size={12} color="#E11D48" />
                             <Text className="text-zinc-600 text-[10.5px] font-medium flex-1 leading-tight">
                               App uses background location permission to share your live travel route with the client until you reach their venue.
@@ -2120,13 +2092,17 @@ export default function SessionDetailScreen() {
                           <TouchableOpacity
                             onPress={async () => {
                               try {
+                                const started = await locationTrackerService.startTracking(booking.id, true);
+                                if (!started) {
+                                  // User declined or dismissed disclosure
+                                  return;
+                                }
                                 markSelfUpdate();
                                 setCurrentStatus('trainer_travelling');
-                                await locationTrackerService.startTracking(booking.id, true);
                                 await updateTimelineStatus(booking.id, 'trainer_travelling');
                                 handleNavigateAddress();
                               } catch (err: any) {
-                                Alert.alert('Error', err.message || 'Could not start travel.');
+                                Alert.alert('Location Permission', err.message || 'Please grant location permissions to start navigation.');
                               }
                             }}
                             className="w-full bg-[#E11D48] py-3.5 rounded-[18px] items-center justify-center flex-row gap-2 shadow-sm"
@@ -2422,7 +2398,7 @@ export default function SessionDetailScreen() {
 
             {/* Trainer status banner after filing report */}
             {(currentStatus === 'trainer_report_submitted' || currentStatus === 'customer_review_pending') && !isMissed && !isCancelled && role === 'trainer' && (
-              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-3">
+              <View className="bg-white p-5 rounded-[28px] shadow-sm gap-3">
                 <View className="flex-row items-center gap-2">
                   <View className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                   <Text className="text-emerald-600 text-[10px] font-black uppercase tracking-wider">Health Update Recorded</Text>
@@ -2436,7 +2412,7 @@ export default function SessionDetailScreen() {
 
             {/* Trainer status banner when session closed */}
             {currentStatus === 'session_closed' && !isMissed && !isCancelled && role === 'trainer' && (
-              <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-3">
+              <View className="bg-white p-5 rounded-[28px] shadow-sm gap-3">
                 <View className="flex-row items-center gap-2">
                   <View className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                   <Text className="text-emerald-600 text-[10px] font-black uppercase tracking-wider">Session Closed</Text>
@@ -2451,13 +2427,9 @@ export default function SessionDetailScreen() {
             {/* Module 8: Full Post-Session Customer Experience Panel */}
             {(currentStatus === 'customer_review_pending' || currentStatus === 'session_closed' || currentStatus === 'workout_completed' || currentStatus === 'trainer_report_submitted') && !isMissed && !isCancelled && (role === 'customer' || role === 'admin') && (
               <View
-                className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4"
+                className="bg-white p-5 rounded-[28px] shadow-sm gap-4"
                 style={{
-                  shadowColor: '#101828',
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 12,
-                  elevation: 2,
+                  ...softShadow({ color: '#101828', opacity: 0.04, radius: 12, offsetY: 6 }),
                 }}
               >
                 <View className="items-center gap-2">
@@ -2467,7 +2439,7 @@ export default function SessionDetailScreen() {
                 </View>
 
                 {/* Workout stats metrics grid */}
-                <View className="flex-row justify-between flex-wrap gap-y-3 bg-zinc-50 p-4 rounded-2xl border border-zinc-100">
+                <View className="flex-row justify-between flex-wrap gap-y-3 bg-zinc-50 p-4 rounded-2xl">
                   <View className="w-[47%] gap-0.5">
                     <Text className="text-zinc-400 text-[8px] font-black uppercase tracking-wider">Calories burned</Text>
                     <Text className="text-zinc-900 text-sm font-black">{booking.caloriesBurned || 380} kcal</Text>
@@ -2569,7 +2541,7 @@ export default function SessionDetailScreen() {
 
                     <TouchableOpacity
                       onPress={() => Alert.alert('Share Achievement', 'Achievement badge graphics shared successfully!')}
-                      className="flex-1 bg-zinc-100 py-3 rounded-xl items-center justify-center border border-zinc-200"
+                      className="flex-1 bg-zinc-100 py-3 rounded-xl items-center justify-center"
                     >
                       <Text className="text-zinc-950 text-[9px] font-black uppercase tracking-widest">Share achievements</Text>
                     </TouchableOpacity>

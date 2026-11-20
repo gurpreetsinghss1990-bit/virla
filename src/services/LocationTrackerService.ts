@@ -1,8 +1,9 @@
-import { Platform, AppState, AppStateStatus } from 'react-native';
+import { Platform, AppState, AppStateStatus, Alert, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { supabase } from '../database/supabaseClient';
 import { requestBackgroundLocationDisclosure } from '../store/locationDisclosureStore';
+import { requestForegroundLocationWithDisclosure } from '../utils/locationDisclosure';
 
 export const VIRLA_TRAINER_BG_LOCATION_TASK = 'VIRLA_TRAINER_BG_LOCATION_TASK';
 const ACTIVE_BOOKING_STORAGE_KEY = '@virla_active_tracked_booking_id';
@@ -52,9 +53,26 @@ class LocationTrackerService {
       // 1. Foreground permission ("While using the app")
       let fg = await Location.getForegroundPermissionsAsync();
       if (fg.status !== 'granted') {
-        fg = await Location.requestForegroundPermissionsAsync();
+        fg = await requestForegroundLocationWithDisclosure([
+          '• What is collected: Your device location while you are using the app.',
+          '',
+          '• Purpose: To track your active travel route and share live arrival updates with your client.',
+          '',
+          '• Duration: Only during an active travel window until you tap "Reached Location".',
+        ].join('\n'));
       }
       if (fg.status !== 'granted') {
+        if (fg.canAskAgain === false && Platform.OS === 'android') {
+          // User checked "Don't ask again" or OS blocked further dialogs; prompt to open Settings
+          Alert.alert(
+            'Location Permission Required',
+            'Location access is required to track travel. Please enable "Location" in App Settings.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            ]
+          );
+        }
         return { foregroundGranted: false, backgroundGranted: false };
       }
 
@@ -68,16 +86,27 @@ class LocationTrackerService {
         return { foregroundGranted: true, backgroundGranted: true };
       }
 
-      if (promptBackgroundIfNeeded && !this.hasPromptedBackgroundPermission) {
+      if (promptBackgroundIfNeeded) {
         // Google Play policy: prominent in-app disclosure with an explicit opt-in
         // must be shown before the OS background-location prompt is triggered.
         const disclosed = await requestBackgroundLocationDisclosure();
         if (disclosed) {
-          this.hasPromptedBackgroundPermission = true;
           try {
             bg = await Location.requestBackgroundPermissionsAsync();
           } catch (bgErr) {
             console.warn('[LocationTracker] Background permission request warning:', bgErr);
+          }
+
+          if (bg.status !== 'granted' && Platform.OS === 'android') {
+            // User tapped Continue on disclosure, but dismissed/denied the OS settings prompt
+            Alert.alert(
+              'Background Location Required',
+              'To track your live arrival when the screen is locked or while using navigation apps, please set Location permission to "Allow all the time" in Settings.',
+              [
+                { text: 'Not Now', style: 'cancel' },
+                { text: 'Open Settings', onPress: () => Linking.openSettings() },
+              ]
+            );
           }
         }
       }
@@ -121,6 +150,12 @@ class LocationTrackerService {
       const perms = await this.ensureTrainerTravelPermissions(promptBackground);
       if (!perms.foregroundGranted) {
         console.warn('[LocationTracker] Foreground location permission denied.');
+        this.isStarting = false;
+        return false;
+      }
+
+      if (Platform.OS === 'android' && !perms.backgroundGranted) {
+        console.warn('[LocationTracker] Background location permission not granted.');
         this.isStarting = false;
         return false;
       }

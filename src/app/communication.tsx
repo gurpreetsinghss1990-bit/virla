@@ -8,6 +8,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { useWalletStore } from '../store/walletStore';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { requestForegroundLocationWithDisclosure } from '../utils/locationDisclosure';
 import { ScreenHeader, ConfirmationDialog } from '../components';
 
 import { Database } from '../database/Database';
@@ -314,7 +315,9 @@ export default function CommunicationScreen() {
     const sender = role === 'trainer' ? 'trainer' : 'customer';
     setIsSharingLocation(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await requestForegroundLocationWithDisclosure(
+        'VIRLA uses your location while the app is in use to share your current location in chat.'
+      );
       if (status !== 'granted') {
         setIsSharingLocation(false);
         setIsLocationConfirmVisible(false);
@@ -444,7 +447,7 @@ export default function CommunicationScreen() {
               <AvatarImage
                 uri={coachAvatar}
                 style={{ width: 38, height: 38, borderRadius: 19 }}
-                className="bg-[#EFECE6] border border-[#E5E0D8]"
+                className="bg-[#EFECE6]"
               />
 
               <View className="flex-1">
@@ -472,10 +475,10 @@ export default function CommunicationScreen() {
 
       {/* Claude Artifact-Style Session Context Card (display only — actions live in the header ⋮ menu) */}
       <View className="px-4 pt-2.5 pb-1">
-        <View className="bg-white border border-[#E8E4DC] rounded-2xl p-3 shadow-xs">
+        <View className="bg-white rounded-2xl p-3 shadow-xs">
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-2 flex-1 pr-2">
-              <View className="w-7 h-7 rounded-lg bg-[#FAF5EE] items-center justify-center border border-[#EEDCC7]">
+              <View className="w-7 h-7 rounded-lg bg-[#FAF5EE] items-center justify-center">
                 <Feather name="activity" size={13} color="#CC785C" />
               </View>
               <View className="flex-1">
@@ -488,7 +491,7 @@ export default function CommunicationScreen() {
               </View>
             </View>
 
-            <View className="px-2 py-0.5 rounded-md bg-[#F4F1EA] border border-[#E8E4DC]">
+            <View className="px-2 py-0.5 rounded-md bg-[#F4F1EA]">
               <Text className="text-[#5C5954] text-xs font-bold uppercase tracking-wider">
                 {booking.sessionType === 'COUPLE' ? 'Couple' : 'Solo'}
               </Text>
@@ -507,7 +510,7 @@ export default function CommunicationScreen() {
         contentContainerStyle={{ paddingBottom: 16 }}
       >
         {/* Claude Security Pill */}
-        <View className="self-center flex-row items-center gap-1.5 bg-[#F0ECE1] border border-[#E5E0D4] px-3 py-1 rounded-full my-2">
+        <View className="self-center flex-row items-center gap-1.5 bg-[#F0ECE1] px-3 py-1 rounded-full my-2">
           <Feather name="lock" size={10} color="#716F6A" />
           <Text className="text-[#5C5954] text-xs font-medium">Private Line • Monitored for safety</Text>
         </View>
@@ -604,7 +607,7 @@ export default function CommunicationScreen() {
 
           {/* Typing Indicator */}
           {isTyping && (
-            <View className="bg-white border border-[#E8E4DC] p-3 rounded-2xl rounded-bl-xs self-start flex-row gap-1.5 items-center">
+            <View className="bg-white p-3 rounded-2xl rounded-bl-xs self-start flex-row gap-1.5 items-center">
               <View className="w-2 h-2 rounded-full bg-[#8C8983]" />
               <View className="w-2 h-2 rounded-full bg-[#8C8983]" />
               <View className="w-2 h-2 rounded-full bg-[#8C8983]" />
@@ -665,7 +668,7 @@ export default function CommunicationScreen() {
           }}
           className="px-4 border-t border-[#ECE7DE]/80 items-center justify-center"
         >
-          <View className="w-full bg-[#F4EFEA] border border-[#E2DDD5] rounded-2xl py-3.5 px-4 flex-row items-center justify-center gap-2 shadow-xs">
+          <View className="w-full bg-[#F4EFEA] rounded-2xl py-3.5 px-4 flex-row items-center justify-center gap-2 shadow-xs">
             <Feather name="check-circle" size={16} color="#78716C" />
             <Text className="text-[#57534E] text-xs font-bold tracking-wide">
               The session is already completed.
@@ -683,7 +686,7 @@ export default function CommunicationScreen() {
           }}
           className="px-4 border-t border-[#ECE7DE]/80"
         >
-          <View className="bg-white border border-[#E2DDD5] rounded-[24px] pl-4 pr-1.5 py-1.5 flex-row items-end gap-2 shadow-xs">
+          <View className="bg-white rounded-[24px] pl-4 pr-1.5 py-1.5 flex-row items-end gap-2 shadow-xs">
             {/* Text Input */}
             <TextInput
               maxLength={1200}
@@ -740,7 +743,7 @@ export default function CommunicationScreen() {
                     activeOpacity={0.7} 
                     className="flex-row items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-[#F5F2EC]"
                   >
-                    <View className="w-8 h-8 rounded-xl bg-[#FAF9F5] border border-[#E8E4DC] items-center justify-center">
+                    <View className="w-8 h-8 rounded-xl bg-[#FAF9F5] items-center justify-center">
                       <Feather name="phone" size={15} color={isCallLocked ? '#9E9B93' : '#1F1E1D'} />
                     </View>
                     <View className="flex-1">
@@ -758,7 +761,7 @@ export default function CommunicationScreen() {
                     activeOpacity={0.7} 
                     className="flex-row items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-[#F5F2EC]"
                   >
-                    <View className="w-8 h-8 rounded-xl bg-[#FAF9F5] border border-[#E8E4DC] items-center justify-center">
+                    <View className="w-8 h-8 rounded-xl bg-[#FAF9F5] items-center justify-center">
                       <Feather name="navigation" size={15} color="#1F1E1D" />
                     </View>
                     <View className="flex-1">

@@ -19,6 +19,7 @@ import {
 } from '../components/SelectableTagCard';
 import { ActivePlanView } from '../components/ActivePlanView';
 
+import { softShadow } from '../utils/shadows';
 // ponytail: opacity ramp stands in for blur — RN has no blur filter, BlurView isn't worth it here.
 function StepIn({ delay = 0, style, children }: { delay?: number; style?: any; children: React.ReactNode }) {
   const v = useRef(new Animated.Value(0)).current;
@@ -697,11 +698,7 @@ export default function VirlaAIScreen() {
                   justifyContent: 'center',
                   borderWidth: 1.5,
                   borderColor: '#FDA4AF',
-                  shadowColor: '#E11D48',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.18,
-                  shadowRadius: 12,
-                  elevation: 3,
+                  ...softShadow({ color: '#E11D48', opacity: 0.18, radius: 12, offsetY: 4 }),
                 }}
               >
                 <Image
@@ -821,18 +818,14 @@ export default function VirlaAIScreen() {
                         <View
                           style={{
                             backgroundColor: '#FFFFFF',
-                            borderColor: '#F1F5F9',
+                            borderColor: 'transparent',
                             borderWidth: 1.4,
                             borderRadius: 22,
                             padding: 14,
                             flexDirection: 'row',
                             alignItems: 'center',
                             gap: 12,
-                            shadowColor: '#0F172A',
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: 0.04,
-                            shadowRadius: 6,
-                            elevation: 1.5,
+                            ...softShadow({ color: '#0F172A', opacity: 0.04, radius: 6, offsetY: 2 }),
                           }}
                         >
                           <View
@@ -895,11 +888,7 @@ export default function VirlaAIScreen() {
                         justifyContent: 'center',
                         flexDirection: 'row',
                         gap: 10,
-                        shadowColor: '#E11D48',
-                        shadowOffset: { width: 0, height: 6 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 12,
-                        elevation: 4,
+                        ...softShadow({ color: '#E11D48', opacity: 0.3, radius: 12, offsetY: 6 }),
                       }}
                       className="w-full mt-1"
                     >
@@ -1012,15 +1001,11 @@ export default function VirlaAIScreen() {
                                   height: 52,
                                   borderRadius: 18,
                                   backgroundColor: isSel ? '#E11D48' : '#FFFFFF',
-                                  borderColor: isSel ? '#E11D48' : '#F1F5F9',
+                                  borderColor: isSel ? '#E11D48' : 'transparent',
                                   borderWidth: isSel ? 2 : 1.4,
                                   alignItems: 'center',
                                   justifyContent: 'center',
-                                  shadowColor: isSel ? '#E11D48' : '#0F172A',
-                                  shadowOffset: { width: 0, height: isSel ? 4 : 2 },
-                                  shadowOpacity: isSel ? 0.2 : 0.04,
-                                  shadowRadius: isSel ? 10 : 6,
-                                  elevation: isSel ? 3.5 : 1.5,
+                                  ...softShadow({ color: isSel ? '#E11D48' : '#0F172A', opacity: isSel ? 0.2 : 0.04, radius: isSel ? 10 : 6, offsetY: isSel ? 4 : 2 }),
                                 }}
                               >
                                 <Text
@@ -1077,13 +1062,9 @@ export default function VirlaAIScreen() {
                                 paddingVertical: 12,
                                 borderRadius: 16,
                                 backgroundColor: isSel ? '#FFF5F6' : '#FFFFFF',
-                                borderColor: isSel ? '#E11D48' : '#F1F5F9',
+                                borderColor: isSel ? '#E11D48' : 'transparent',
                                 borderWidth: isSel ? 1.8 : 1.2,
-                                shadowColor: isSel ? '#E11D48' : '#0F172A',
-                                shadowOffset: { width: 0, height: isSel ? 3 : 1 },
-                                shadowOpacity: isSel ? 0.16 : 0.03,
-                                shadowRadius: isSel ? 8 : 4,
-                                elevation: isSel ? 2 : 1,
+                                ...softShadow({ color: isSel ? '#E11D48' : '#0F172A', opacity: isSel ? 0.16 : 0.03, radius: isSel ? 8 : 4, offsetY: isSel ? 3 : 1 }),
                               }}
                             >
                               <Text
@@ -1118,11 +1099,7 @@ export default function VirlaAIScreen() {
                           justifyContent: 'center',
                           flexDirection: 'row',
                           gap: 10,
-                          shadowColor: '#E11D48',
-                          shadowOffset: { width: 0, height: 6 },
-                          shadowOpacity: isStep2Valid ? 0.3 : 0.08,
-                          shadowRadius: 12,
-                          elevation: 4,
+                          ...softShadow({ color: '#E11D48', opacity: isStep2Valid ? 0.3 : 0.08, radius: 12, offsetY: 6 }),
                           opacity: isStep2Valid ? 1 : 0.65,
                         }}
                         className="w-full mt-1"
@@ -1333,11 +1310,7 @@ export default function VirlaAIScreen() {
                           justifyContent: 'center',
                           flexDirection: 'row',
                           gap: 10,
-                          shadowColor: '#E11D48',
-                          shadowOffset: { width: 0, height: 6 },
-                          shadowOpacity: isStep4Valid ? 0.3 : 0.08,
-                          shadowRadius: 12,
-                          elevation: 4,
+                          ...softShadow({ color: '#E11D48', opacity: isStep4Valid ? 0.3 : 0.08, radius: 12, offsetY: 6 }),
                           opacity: isStep4Valid ? 1 : 0.65,
                         }}
                         className="w-full mt-1"
@@ -1455,16 +1428,12 @@ export default function VirlaAIScreen() {
                         <View
                           style={{
                             backgroundColor: '#FFFFFF',
-                            borderColor: '#E2E8F0',
+                            borderColor: 'transparent',
                             borderWidth: 1.5,
                             borderRadius: 20,
                             paddingHorizontal: 16,
                             paddingVertical: 14,
-                            shadowColor: '#0F172A',
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: 0.04,
-                            shadowRadius: 6,
-                            elevation: 1.5,
+                            ...softShadow({ color: '#0F172A', opacity: 0.04, radius: 6, offsetY: 2 }),
                           }}
                         >
                           <TextInput
@@ -1504,11 +1473,7 @@ export default function VirlaAIScreen() {
                           justifyContent: 'center',
                           flexDirection: 'row',
                           gap: 10,
-                          shadowColor: '#E11D48',
-                          shadowOffset: { width: 0, height: 6 },
-                          shadowOpacity: isStep5Valid ? 0.3 : 0.08,
-                          shadowRadius: 12,
-                          elevation: 4,
+                          ...softShadow({ color: '#E11D48', opacity: isStep5Valid ? 0.3 : 0.08, radius: 12, offsetY: 6 }),
                           opacity: isStep5Valid ? 1 : 0.65,
                         }}
                         className="w-full mt-1"
@@ -1634,16 +1599,12 @@ export default function VirlaAIScreen() {
                         <View
                           style={{
                             backgroundColor: '#FFFFFF',
-                            borderColor: '#E2E8F0',
+                            borderColor: 'transparent',
                             borderWidth: 1.5,
                             borderRadius: 20,
                             paddingHorizontal: 16,
                             paddingVertical: 14,
-                            shadowColor: '#0F172A',
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: 0.04,
-                            shadowRadius: 6,
-                            elevation: 1.5,
+                            ...softShadow({ color: '#0F172A', opacity: 0.04, radius: 6, offsetY: 2 }),
                           }}
                         >
                           <TextInput
@@ -1690,11 +1651,7 @@ export default function VirlaAIScreen() {
                 paddingBottom: Math.max(insets.bottom, 16) + 4,
                 borderTopWidth: 1,
                 borderTopColor: '#F1F5F9',
-                shadowColor: '#0F172A',
-                shadowOffset: { width: 0, height: -4 },
-                shadowOpacity: 0.06,
-                shadowRadius: 10,
-                elevation: 6,
+                ...softShadow({ color: '#0F172A', opacity: 0.06, radius: 10, offsetY: -4 }),
               }}
             >
               <TouchableOpacity
@@ -1713,11 +1670,7 @@ export default function VirlaAIScreen() {
                   justifyContent: 'center',
                   flexDirection: 'row',
                   gap: 10,
-                  shadowColor: '#E11D48',
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: isStep6Valid ? 0.3 : 0.08,
-                  shadowRadius: 12,
-                  elevation: 4,
+                  ...softShadow({ color: '#E11D48', opacity: isStep6Valid ? 0.3 : 0.08, radius: 12, offsetY: 6 }),
                   opacity: isStep6Valid ? 1 : 0.65,
                 }}
                 className="w-full"

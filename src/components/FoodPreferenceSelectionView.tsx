@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
+import { softShadow } from '../utils/shadows';
 // Smooth entrance fade
 export function FoodFadeIn({ delay = 0, style, children }: { delay?: number; style?: any; children: React.ReactNode }) {
   const v = useRef(new Animated.Value(0)).current;
@@ -244,11 +245,7 @@ export function FoodPreferenceCard({ item, isSelected, onSelect, index = 0 }: Fo
             alignItems: 'center',
             justifyContent: 'center',
             position: 'relative',
-            shadowColor: isSelected ? '#E11D48' : '#0F172A',
-            shadowOffset: { width: 0, height: isSelected ? 4 : 2 },
-            shadowOpacity: isSelected ? 0.20 : 0.04,
-            shadowRadius: isSelected ? 12 : 6,
-            elevation: isSelected ? 4 : 1.5,
+            ...softShadow({ color: isSelected ? '#E11D48' : '#0F172A', opacity: isSelected ? 0.20 : 0.04, radius: isSelected ? 12 : 6, offsetY: isSelected ? 4 : 2 }),
           }}
         >
           {/* Top-Right Animated Checkmark Badge with Pop & Rotate */}
@@ -267,11 +264,7 @@ export function FoodPreferenceCard({ item, isSelected, onSelect, index = 0 }: Fo
               transform: [{ scale: checkAnim }, { rotate: checkRotate }],
               opacity: checkAnim,
               zIndex: 10,
-              shadowColor: '#E11D48',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.35,
-              shadowRadius: 4,
-              elevation: 2,
+              ...softShadow({ color: '#E11D48', opacity: 0.35, radius: 4, offsetY: 2 }),
             }}
           >
             <Feather name="check" size={12} color="#FFFFFF" />
@@ -460,11 +453,7 @@ export function FoodPreferenceSelectionView({
                 justifyContent: 'center',
                 flexDirection: 'row',
                 gap: 10,
-                shadowColor: '#E11D48',
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.3,
-                shadowRadius: 12,
-                elevation: 4,
+                ...softShadow({ color: '#E11D48', opacity: 0.3, radius: 12, offsetY: 6 }),
               }}
               className="w-full mt-1"
             >

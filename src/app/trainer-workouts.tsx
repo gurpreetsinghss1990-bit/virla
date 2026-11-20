@@ -136,7 +136,7 @@ export default function TrainerWorkoutsScreen() {
 
         {/* Status Blocks */}
         {assignments.length === 0 && (
-          <View className="bg-zinc-50 border border-zinc-100 rounded-3xl p-6 items-center my-6">
+          <View className="bg-zinc-50 rounded-3xl p-6 items-center my-6">
             <View className="w-12 h-12 bg-zinc-100 rounded-full items-center justify-center mb-4">
               <Feather name="shield-off" size={24} color="#71717A" />
             </View>
@@ -154,7 +154,7 @@ export default function TrainerWorkoutsScreen() {
             {approved.map(a => (
               <View 
                 key={a.id}
-                className="bg-white border border-zinc-100 rounded-2xl p-4 flex-row items-center justify-between mb-2 shadow-sm"
+                className="bg-white rounded-2xl p-4 flex-row items-center justify-between mb-2 shadow-sm"
               >
                 <View className="flex-row items-center flex-1">
                   <View className="w-8 h-8 bg-emerald-50 rounded-full items-center justify-center mr-3">
@@ -229,7 +229,7 @@ export default function TrainerWorkoutsScreen() {
             {rejected.map(a => (
               <View 
                 key={a.id}
-                className="bg-zinc-50 border border-zinc-100 rounded-2xl p-4 mb-2"
+                className="bg-zinc-50 rounded-2xl p-4 mb-2"
               >
                 <View className="flex-row items-center justify-between">
                   <View className="flex-row items-center flex-1">
@@ -288,7 +288,7 @@ export default function TrainerWorkoutsScreen() {
                   <TouchableOpacity
                     key={cat.key}
                     onPress={() => handleRequest(cat.key, cat.name)}
-                    className="flex-row items-center p-4 border border-zinc-100 rounded-2xl active:bg-zinc-50"
+                    className="flex-row items-center p-4 rounded-2xl active:bg-zinc-50"
                   >
                     <Text className="text-xl mr-3">{cat.icon}</Text>
                     <View className="flex-1">

@@ -18,6 +18,7 @@ import { useUserStore } from '../store/userStore';
 import { Database } from '../database/Database';
 import { supabase } from '../database/supabaseClient';
 
+import { softShadow } from '../utils/shadows';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 type GenderType = 'Male' | 'Female' | 'Other';
@@ -388,11 +389,7 @@ export default function UserMetricsLandingScreen() {
                       setGender('Male');
                     }}
                     style={{
-                      shadowColor: gender === 'Male' ? '#E11D48' : '#000',
-                      shadowOffset: { width: 0, height: gender === 'Male' ? 6 : 2 },
-                      shadowOpacity: gender === 'Male' ? 0.18 : 0.04,
-                      shadowRadius: gender === 'Male' ? 14 : 8,
-                      elevation: gender === 'Male' ? 6 : 1,
+                      ...softShadow({ color: gender === 'Male' ? '#E11D48' : '#000', opacity: gender === 'Male' ? 0.18 : 0.04, radius: gender === 'Male' ? 14 : 8, offsetY: gender === 'Male' ? 6 : 2 }),
                     }}
                     className={`flex-1 rounded-[28px] p-4 items-center justify-between min-h-[290px] border-2 transition-all ${
                       gender === 'Male'
@@ -434,11 +431,7 @@ export default function UserMetricsLandingScreen() {
                       setGender('Female');
                     }}
                     style={{
-                      shadowColor: gender === 'Female' ? '#E11D48' : '#000',
-                      shadowOffset: { width: 0, height: gender === 'Female' ? 6 : 2 },
-                      shadowOpacity: gender === 'Female' ? 0.18 : 0.04,
-                      shadowRadius: gender === 'Female' ? 14 : 8,
-                      elevation: gender === 'Female' ? 6 : 1,
+                      ...softShadow({ color: gender === 'Female' ? '#E11D48' : '#000', opacity: gender === 'Female' ? 0.18 : 0.04, radius: gender === 'Female' ? 14 : 8, offsetY: gender === 'Female' ? 6 : 2 }),
                     }}
                     className={`flex-1 rounded-[28px] p-4 items-center justify-between min-h-[290px] border-2 transition-all ${
                       gender === 'Female'
@@ -497,7 +490,7 @@ export default function UserMetricsLandingScreen() {
                   We'll use this to personalize your journey and connect you with trainers.
                 </Text>
 
-                <View className="mt-8 bg-[#FAFAFC] border border-[#E5E7EB] rounded-[24px] p-6 shadow-sm">
+                <View className="mt-8 bg-[#FAFAFC] rounded-[24px] p-6 shadow-sm">
                   <Text className="text-[#6B7280] text-xs font-bold uppercase tracking-wider mb-2">
                     FULL NAME
                   </Text>
@@ -534,7 +527,7 @@ export default function UserMetricsLandingScreen() {
                 </Text>
 
                 {/* Weight Card */}
-                <View className="mt-6 bg-white border border-[#F3F4F6] rounded-[28px] p-6 items-center shadow-md">
+                <View className="mt-6 bg-white rounded-[28px] p-6 items-center shadow-md">
                   <View className="flex-row items-center justify-between w-full mb-4">
                     <Text className="text-[#6B7280] text-xs font-bold uppercase tracking-wider">
                       WEIGHT
@@ -569,7 +562,7 @@ export default function UserMetricsLandingScreen() {
                         triggerHaptic();
                         setWeight((prev) => Math.max(30, prev - 1));
                       }}
-                      className="w-13 h-13 rounded-2xl bg-[#FFF1F2] border border-[#FECDD3] items-center justify-center"
+                      className="w-13 h-13 rounded-2xl bg-[#FFF1F2] items-center justify-center"
                     >
                       <Feather name="minus" size={22} color="#E11D48" />
                     </TouchableOpacity>
@@ -588,7 +581,7 @@ export default function UserMetricsLandingScreen() {
                         triggerHaptic();
                         setWeight((prev) => Math.min(250, prev + 1));
                       }}
-                      className="w-13 h-13 rounded-2xl bg-[#FFF1F2] border border-[#FECDD3] items-center justify-center"
+                      className="w-13 h-13 rounded-2xl bg-[#FFF1F2] items-center justify-center"
                     >
                       <Feather name="plus" size={22} color="#E11D48" />
                     </TouchableOpacity>
@@ -598,7 +591,7 @@ export default function UserMetricsLandingScreen() {
                 {/* Height & Age Grid with enhanced vertical margin */}
                 <View className="flex-row gap-4 mt-5">
                   {/* Height */}
-                  <View className="flex-1 bg-white border border-[#F3F4F6] rounded-[24px] p-4 shadow-sm">
+                  <View className="flex-1 bg-white rounded-[24px] p-4 shadow-sm">
                     <Text className="text-[#6B7280] text-[11px] font-bold uppercase tracking-wider mb-1">
                       HEIGHT ({heightUnit})
                     </Text>
@@ -608,7 +601,7 @@ export default function UserMetricsLandingScreen() {
                           triggerHaptic();
                           setHeight((prev) => Math.max(90, prev - 1));
                         }}
-                        className="w-9 h-9 rounded-xl bg-[#FFF1F2] border border-[#FECDD3] items-center justify-center"
+                        className="w-9 h-9 rounded-xl bg-[#FFF1F2] items-center justify-center"
                       >
                         <Feather name="minus" size={16} color="#E11D48" />
                       </TouchableOpacity>
@@ -618,7 +611,7 @@ export default function UserMetricsLandingScreen() {
                           triggerHaptic();
                           setHeight((prev) => Math.min(240, prev + 1));
                         }}
-                        className="w-9 h-9 rounded-xl bg-[#FFF1F2] border border-[#FECDD3] items-center justify-center"
+                        className="w-9 h-9 rounded-xl bg-[#FFF1F2] items-center justify-center"
                       >
                         <Feather name="plus" size={16} color="#E11D48" />
                       </TouchableOpacity>
@@ -626,7 +619,7 @@ export default function UserMetricsLandingScreen() {
                   </View>
 
                   {/* Age */}
-                  <View className="flex-1 bg-white border border-[#F3F4F6] rounded-[24px] p-4 shadow-sm">
+                  <View className="flex-1 bg-white rounded-[24px] p-4 shadow-sm">
                     <Text className="text-[#6B7280] text-[11px] font-bold uppercase tracking-wider mb-1">
                       AGE (YEARS)
                     </Text>
@@ -636,7 +629,7 @@ export default function UserMetricsLandingScreen() {
                           triggerHaptic();
                           setAge((prev) => Math.max(12, prev - 1));
                         }}
-                        className="w-9 h-9 rounded-xl bg-[#FFF1F2] border border-[#FECDD3] items-center justify-center"
+                        className="w-9 h-9 rounded-xl bg-[#FFF1F2] items-center justify-center"
                       >
                         <Feather name="minus" size={16} color="#E11D48" />
                       </TouchableOpacity>
@@ -646,7 +639,7 @@ export default function UserMetricsLandingScreen() {
                           triggerHaptic();
                           setAge((prev) => Math.min(99, prev + 1));
                         }}
-                        className="w-9 h-9 rounded-xl bg-[#FFF1F2] border border-[#FECDD3] items-center justify-center"
+                        className="w-9 h-9 rounded-xl bg-[#FFF1F2] items-center justify-center"
                       >
                         <Feather name="plus" size={16} color="#E11D48" />
                       </TouchableOpacity>
@@ -655,7 +648,7 @@ export default function UserMetricsLandingScreen() {
                 </View>
 
                 {/* BMI indicator with enhanced vertical margin */}
-                <View className="bg-[#FFF1F2] border border-[#FECDD3] rounded-[20px] p-4 flex-row items-center mt-5">
+                <View className="bg-[#FFF1F2] rounded-[20px] p-4 flex-row items-center mt-5">
                   <View className="flex-row items-center gap-3">
                     <View className="w-8 h-8 rounded-full bg-[#FFE4E6] items-center justify-center">
                       <Feather name="activity" size={16} color="#E11D48" />
@@ -704,11 +697,7 @@ export default function UserMetricsLandingScreen() {
                         onPress={() => toggleInterest(item.id)}
                         style={{
                           width: (SCREEN_WIDTH - 40 - 24) / 3, // 3 columns with padding
-                          shadowColor: isSelected ? '#E11D48' : '#000',
-                          shadowOffset: { width: 0, height: isSelected ? 4 : 1 },
-                          shadowOpacity: isSelected ? 0.16 : 0.03,
-                          shadowRadius: isSelected ? 10 : 6,
-                          elevation: isSelected ? 4 : 1,
+                          ...softShadow({ color: isSelected ? '#E11D48' : '#000', opacity: isSelected ? 0.16 : 0.03, radius: isSelected ? 10 : 6, offsetY: isSelected ? 4 : 1 }),
                         }}
                         className={`aspect-square rounded-[24px] items-center justify-center p-2 relative border-2 transition-all ${
                           isSelected
@@ -756,11 +745,7 @@ export default function UserMetricsLandingScreen() {
               onPress={isSubmitting ? undefined : handleNext}
               disabled={isSubmitting}
               style={{
-                shadowColor: '#E11D48',
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.35,
-                shadowRadius: 14,
-                elevation: 6,
+                ...softShadow({ color: '#E11D48', opacity: 0.35, radius: 14, offsetY: 6 }),
                 backgroundColor: '#E11D48',
               }}
               className="w-full py-4 rounded-full items-center justify-center flex-row gap-2"

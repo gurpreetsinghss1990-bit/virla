@@ -44,7 +44,7 @@ export default function SettingsScreen() {
           </View>
 
           {/* 1. General Preferences */}
-          <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+          <View className="bg-white p-5 rounded-[28px] shadow-sm gap-4">
             <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider border-b border-zinc-50 pb-2">App Preferences</Text>
             
             <View className="flex-row justify-between items-center py-1">
@@ -121,7 +121,7 @@ export default function SettingsScreen() {
           </View>
 
           {/* 2. Notification Settings (Feature 6) */}
-          <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4">
+          <View className="bg-white p-5 rounded-[28px] shadow-sm gap-4">
             <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider border-b border-zinc-50 pb-2">Notification preferences</Text>
             
             <View className="flex-row justify-between items-center py-1">
@@ -225,7 +225,7 @@ export default function SettingsScreen() {
           </View>
 
           {/* 3. Help / App details links */}
-          <View className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-3">
+          <View className="bg-white p-5 rounded-[28px] shadow-sm gap-3">
             <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider">About VIRLA</Text>
             
             <TouchableOpacity

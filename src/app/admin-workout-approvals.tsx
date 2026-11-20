@@ -192,7 +192,7 @@ export default function AdminWorkoutApprovalsScreen() {
       ) : (
         <ScrollView className="flex-1 p-6" contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
           {listData.length === 0 ? (
-            <View className="bg-white border border-zinc-100 rounded-[28px] p-10 items-center justify-center py-20 shadow-xs">
+            <View className="bg-white rounded-[28px] p-10 items-center justify-center py-20 shadow-xs">
               <Feather name="folder" size={24} color="#9CA3AF" />
               <Text className="text-zinc-400 text-xs font-black uppercase mt-2">No Requests Found</Text>
             </View>
@@ -212,7 +212,7 @@ export default function AdminWorkoutApprovalsScreen() {
                     <Text className="text-zinc-400 text-[8px] font-bold mt-0.5">ID: {a.trainerId}</Text>
                   </View>
 
-                  <View className="mb-4 bg-zinc-50/50 p-3.5 rounded-2xl border border-zinc-100">
+                  <View className="mb-4 bg-zinc-50/50 p-3.5 rounded-2xl">
                     <Text className="text-zinc-400 text-[8px] font-black uppercase">Requested Workout</Text>
                     <Text className="text-zinc-900 text-xs font-black mt-1">{displayCategory}</Text>
                     
@@ -238,7 +238,7 @@ export default function AdminWorkoutApprovalsScreen() {
                     <View className="flex-row gap-3 mt-3">
                       <TouchableOpacity
                         onPress={() => handleRejectPrompt(a.id)}
-                        className="flex-1 py-3 bg-zinc-50 border border-zinc-200 rounded-xl items-center"
+                        className="flex-1 py-3 bg-zinc-50 rounded-xl items-center"
                       >
                         <Text className="text-zinc-700 text-xs font-black uppercase">Reject</Text>
                       </TouchableOpacity>

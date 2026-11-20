@@ -7,6 +7,7 @@ import { AddPartnerModal } from './AddPartnerModal';
 import { normalizeDate } from '../utils/date';
 import { useBookingStore } from '../store/bookingStore';
 
+import { softShadow } from '../utils/shadows';
 interface BookingSuccessAnimationProps {
   workoutTitle: string;
   workoutDuration: number;
@@ -292,11 +293,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
               style={{
                 width: 52,
                 height: 52,
-                shadowColor: '#00C389',
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.35,
-                shadowRadius: 10,
-                elevation: 6,
+                ...softShadow({ color: '#00C389', opacity: 0.35, radius: 10, offsetY: 6 }),
               }}
             >
               <Feather name="check" size={28} color="white" />
@@ -355,13 +352,9 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
         }}
       >
         <View
-          className="w-full bg-white border border-slate-200/90 rounded-[26px] overflow-hidden"
+          className="w-full bg-white rounded-[26px] overflow-hidden"
           style={{
-            shadowColor: '#0F172A',
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.06,
-            shadowRadius: 16,
-            elevation: 3,
+            ...softShadow({ color: '#0F172A', opacity: 0.06, radius: 16, offsetY: 6 }),
           }}
         >
           {/* Boarding Pass Top Metadata Bar */}
@@ -409,7 +402,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
                     • {activeBooking?.sessionType === 'COUPLE' ? '2 Credits' : '1 Credit'}
                   </Text>
                 </View>
-                <View className="px-3 py-1 rounded-full bg-slate-100 border border-slate-200">
+                <View className="px-3 py-1 rounded-full bg-slate-100">
                   <Text className="text-slate-800 text-xs font-extrabold">{effectiveDuration}m</Text>
                 </View>
               </View>
@@ -492,7 +485,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
             {/* Scheduled Date */}
             <View className="flex-row justify-between items-center py-1">
               <View className="flex-row items-center gap-3">
-                <View className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200/70 items-center justify-center">
+                <View className="w-8 h-8 rounded-lg bg-slate-50 items-center justify-center">
                   <Feather name="calendar" size={15} color="#475569" />
                 </View>
                 <Text className="text-slate-400 text-[10px] font-black uppercase tracking-[1.5px]">
@@ -525,7 +518,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
             <View className="py-1 border-t border-slate-100 gap-2">
               <View className="flex-row justify-between items-center">
                 <View className="flex-row items-center gap-3">
-                  <View className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200/70 items-center justify-center">
+                  <View className="w-8 h-8 rounded-lg bg-slate-50 items-center justify-center">
                     <Feather name="map-pin" size={15} color="#475569" />
                   </View>
                   <Text className="text-slate-400 text-[10px] font-black uppercase tracking-[1.5px]">
@@ -543,7 +536,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
               <Text className="text-slate-400 text-[10px] font-black uppercase tracking-[1.5px]">
                 Session Tier
               </Text>
-              <View className="bg-slate-50 border border-slate-200/80 px-3.5 py-1.5 rounded-full flex-row items-center gap-2">
+              <View className="bg-slate-50 px-3.5 py-1.5 rounded-full flex-row items-center gap-2">
                 <Feather name="user" size={12} color="#0F172A" />
                 <Text className="text-slate-900 text-xs font-black">
                   {activeBooking?.sessionType === 'COUPLE' ? 'Couple Session' : 'Solo Private Session'}
@@ -566,11 +559,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
       <View 
         className="w-full bg-zinc-900 border border-zinc-800 rounded-[24px] overflow-hidden"
         style={{
-          shadowColor: '#000000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.25,
-          shadowRadius: 12,
-          elevation: 5,
+          ...softShadow({ color: '#000000', opacity: 0.25, radius: 12, offsetY: 4 }),
         }}
       >
         {/* Ticket Header */}
@@ -730,14 +719,10 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
         }}
       >
         <View
-          className="w-full bg-white border border-slate-200/90 rounded-[26px] gap-4"
+          className="w-full bg-white rounded-[26px] gap-4"
           style={{
             padding: 20,
-            shadowColor: '#0F172A',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.05,
-            shadowRadius: 12,
-            elevation: 2,
+            ...softShadow({ color: '#0F172A', opacity: 0.05, radius: 12, offsetY: 4 }),
           }}
         >
           <View className="flex-row justify-between items-center">
@@ -818,7 +803,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
 
             {/* Stage 3: Coach Dossier */}
             <View className="flex-row items-start gap-3.5">
-              <View className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 items-center justify-center z-10">
+              <View className="w-6 h-6 rounded-full bg-slate-100 items-center justify-center z-10">
                 <Feather name="lock" size={11} color="#64748B" />
               </View>
               <View className="flex-1 gap-0.5">
@@ -838,7 +823,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
 
             {/* Stage 4: Live Arrival Tracking */}
             <View className="flex-row items-start gap-3.5">
-              <View className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 items-center justify-center z-10">
+              <View className="w-6 h-6 rounded-full bg-slate-100 items-center justify-center z-10">
                 <Feather name="map-pin" size={11} color="#64748B" />
               </View>
               <View className="flex-1 gap-0.5">
@@ -904,7 +889,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={onBackToHome}
-          className="flex-1 bg-white border border-slate-200 py-4 rounded-2xl items-center justify-center shadow-xs"
+          className="flex-1 bg-white py-4 rounded-2xl items-center justify-center shadow-xs"
         >
           <Text className="text-slate-900 text-xs font-black uppercase tracking-wider">Home</Text>
         </TouchableOpacity>
@@ -914,11 +899,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
           onPress={() => onViewSession(successBookingId)}
           className="flex-[1.8] bg-[#E11D48] py-4 rounded-2xl items-center justify-center shadow-md"
           style={{
-            shadowColor: '#E11D48',
-            shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.28,
-            shadowRadius: 8,
-            elevation: 4,
+            ...softShadow({ color: '#E11D48', opacity: 0.28, radius: 8, offsetY: 3 }),
           }}
         >
           <Text className="text-white text-xs font-black uppercase tracking-wider">

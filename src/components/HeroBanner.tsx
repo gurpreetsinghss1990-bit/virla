@@ -11,7 +11,7 @@ export function HeroBanner() {
   };
 
   return (
-    <View className="w-full bg-zinc-50 border border-zinc-100 p-6 rounded-[24px] shadow-sm relative overflow-hidden">
+    <View className="w-full bg-zinc-50 p-6 rounded-[24px] shadow-sm relative overflow-hidden">
       {/* Decorative gradient overlay */}
       <View className="absolute w-32 h-32 rounded-full bg-zinc-200/20 -top-10 -left-10" />
       

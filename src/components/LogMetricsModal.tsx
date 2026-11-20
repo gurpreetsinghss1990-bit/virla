@@ -81,7 +81,7 @@ export const LogMetricsModal: React.FC<LogMetricsModalProps> = ({
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={onClose}
-                className="w-8 h-8 rounded-full bg-zinc-100/90 items-center justify-center border border-zinc-200/60 active:bg-zinc-200"
+                className="w-8 h-8 rounded-full bg-zinc-100/90 items-center justify-center active:bg-zinc-200"
                 accessibilityRole="button"
                 accessibilityLabel="Close dialog"
               >

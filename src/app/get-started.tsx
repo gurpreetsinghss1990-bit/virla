@@ -32,6 +32,7 @@ import { NativePrimaryButton } from '../components/NativePrimaryButton';
 import { NativeAlertDialog } from '../components/NativeAlertDialog';
 import { cleanOtp, clampInt } from '../utils/inputSafety';
 
+import { softShadow } from '../utils/shadows';
 export default function GetStartedScreen() {
   const [fontsLoaded] = useFonts({
     Outfit_400Regular: require('../../node_modules/@expo-google-fonts/outfit/400Regular/Outfit_400Regular.ttf'),
@@ -919,11 +920,7 @@ export default function GetStartedScreen() {
               <View
                 className="bg-white p-6 rounded-[28px] border border-zinc-150 gap-4 my-6"
                 style={{
-                  elevation: 1,
-                  shadowColor: '#101828',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.05,
-                  shadowRadius: 2,
+                  ...softShadow({ color: '#101828', opacity: 0.05, radius: 2, offsetY: 1 }),
                 }}
               >
                 {setupStep === 0 && (
@@ -1265,11 +1262,7 @@ export default function GetStartedScreen() {
                                     }`}
                                   style={{
                                     transform: [{ rotate: rot }, { scale: isFocusedIndex ? 1.08 : 1 }],
-                                    shadowColor: (digit || isFocusedIndex) ? '#E11D48' : '#000',
-                                    shadowOffset: { width: 0, height: (digit || isFocusedIndex) ? 4 : 2 },
-                                    shadowOpacity: (digit || isFocusedIndex) ? 0.5 : 0.2,
-                                    shadowRadius: (digit || isFocusedIndex) ? 8 : 4,
-                                    elevation: (digit || isFocusedIndex) ? 8 : 2,
+                                    ...softShadow({ color: (digit || isFocusedIndex) ? '#E11D48' : '#000', opacity: (digit || isFocusedIndex) ? 0.5 : 0.2, radius: (digit || isFocusedIndex) ? 8 : 4, offsetY: (digit || isFocusedIndex) ? 4 : 2 }),
                                   }}
                                 >
                                   <Text className="text-white text-xl font-black">
@@ -1291,11 +1284,7 @@ export default function GetStartedScreen() {
                                 <View
                                   className="w-14 h-14 rounded-full border-2 border-[#E11D48] items-center justify-center bg-[#1F1F24]"
                                   style={{
-                                    shadowColor: '#E11D48',
-                                    shadowOffset: { width: 0, height: 0 },
-                                    shadowOpacity: 0.8,
-                                    shadowRadius: 12,
-                                    elevation: 10,
+                                    ...softShadow({ color: '#E11D48', opacity: 0.8, radius: 12, offsetY: 0 }),
                                   }}
                                 >
                                   <View className="w-3 h-3 rounded-full bg-white" />
@@ -1307,7 +1296,7 @@ export default function GetStartedScreen() {
                                 className="absolute items-center justify-center"
                                 style={animatedDumbbellStyle}
                               >
-                                <View className="flex-row items-center justify-center bg-[#0F0F12] p-3 rounded-2xl border border-[#E11D48] shadow-lg">
+                                <View className="flex-row items-center justify-center bg-[#0F0F12] p-3 rounded-2xl shadow-lg">
                                   <Svg width="40" height="22" viewBox="0 0 42 24" fill="none">
                                     <Path d="M 2 2 L 6 2 L 6 22 L 2 22 Z" fill="#E11D48" />
                                     <Path d="M 8 5 L 12 5 L 12 19 L 8 19 Z" fill="#FFFFFF" />

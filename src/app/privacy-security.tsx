@@ -89,7 +89,7 @@ export default function PrivacySecurityScreen() {
             </View>
 
             {/* 1. Biometrics & Login Toggles */}
-            <View className="bg-white border border-[#E5E7EB] p-5 rounded-[24px] shadow-sm gap-4">
+            <View className="bg-white p-5 rounded-[24px] shadow-sm gap-4">
               <Text className="text-zinc-900 text-sm font-bold tracking-tight border-b border-zinc-100 pb-2.5">
                 Login Credentials
               </Text>
@@ -132,7 +132,7 @@ export default function PrivacySecurityScreen() {
             </View>
 
             {/* 2. Device Management */}
-            <View className="bg-white border border-[#E5E7EB] p-5 rounded-[24px] shadow-sm gap-4">
+            <View className="bg-white p-5 rounded-[24px] shadow-sm gap-4">
               <Text className="text-zinc-900 text-sm font-bold tracking-tight border-b border-zinc-100 pb-2.5">
                 Active Logged Devices
               </Text>
@@ -166,7 +166,7 @@ export default function PrivacySecurityScreen() {
             </View>
 
             {/* 3. Privacy Permissions */}
-            <View className="bg-white border border-[#E5E7EB] p-5 rounded-[24px] shadow-sm gap-4">
+            <View className="bg-white p-5 rounded-[24px] shadow-sm gap-4">
               <Text className="text-zinc-900 text-sm font-bold tracking-tight border-b border-zinc-100 pb-2.5">
                 System Permissions
               </Text>
@@ -209,7 +209,7 @@ export default function PrivacySecurityScreen() {
             </View>
 
             {/* 4. Danger actions */}
-            <View className="bg-white border border-[#E5E7EB] p-5 rounded-[24px] shadow-sm gap-3">
+            <View className="bg-white p-5 rounded-[24px] shadow-sm gap-3">
               <Text className="text-rose-600 text-sm font-bold tracking-tight border-b border-zinc-100 pb-2.5">
                 Danger Zone
               </Text>
@@ -217,7 +217,7 @@ export default function PrivacySecurityScreen() {
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={handleLogout}
-                className="bg-zinc-50 border border-zinc-200 py-3.5 rounded-2xl items-center"
+                className="bg-zinc-50 py-3.5 rounded-2xl items-center"
               >
                 <Text className="text-zinc-800 text-xs font-bold uppercase tracking-wider">Sign Out of Account</Text>
               </TouchableOpacity>

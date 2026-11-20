@@ -10,6 +10,7 @@ import {
 import { Feather, Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
+import { softShadow } from '../utils/shadows';
 export interface SelectableTagItem {
   id: string;
   label: string;
@@ -389,7 +390,7 @@ export function SelectableGridCard({
             minHeight: 128,
             height: 128,
             backgroundColor: isSelected ? '#FFF5F6' : '#FFFFFF',
-            borderColor: isSelected ? '#E11D48' : '#F1F5F9',
+            borderColor: isSelected ? '#E11D48' : 'transparent',
             borderWidth: isSelected ? 2 : 1.4,
             borderRadius: 22,
             paddingVertical: 14,
@@ -397,11 +398,7 @@ export function SelectableGridCard({
             alignItems: 'center',
             justifyContent: 'center',
             position: 'relative',
-            shadowColor: isSelected ? '#E11D48' : '#0F172A',
-            shadowOffset: { width: 0, height: isSelected ? 4 : 2 },
-            shadowOpacity: isSelected ? 0.16 : 0.04,
-            shadowRadius: isSelected ? 10 : 5,
-            elevation: isSelected ? 3.5 : 1.5,
+            ...softShadow({ color: isSelected ? '#E11D48' : '#0F172A', opacity: isSelected ? 0.16 : 0.04, radius: isSelected ? 10 : 5, offsetY: isSelected ? 4 : 2 }),
           }}
         >
           {/* Top-Right Radio / Checkbox Indicator */}
@@ -608,18 +605,14 @@ export function SelectableBannerCard({
             minHeight: 68,
             height: 68,
             backgroundColor: isSelected ? '#FFF5F6' : '#FFFFFF',
-            borderColor: isSelected ? '#E11D48' : '#F1F5F9',
+            borderColor: isSelected ? '#E11D48' : 'transparent',
             borderWidth: isSelected ? 2 : 1.4,
             borderRadius: 22,
             paddingHorizontal: 14,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            shadowColor: isSelected ? '#E11D48' : '#0F172A',
-            shadowOffset: { width: 0, height: isSelected ? 4 : 2 },
-            shadowOpacity: isSelected ? 0.16 : 0.04,
-            shadowRadius: isSelected ? 10 : 5,
-            elevation: isSelected ? 3.5 : 1.5,
+            ...softShadow({ color: isSelected ? '#E11D48' : '#0F172A', opacity: isSelected ? 0.16 : 0.04, radius: isSelected ? 10 : 5, offsetY: isSelected ? 4 : 2 }),
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, paddingRight: 8 }}>

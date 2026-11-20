@@ -9,6 +9,20 @@ module.exports = {
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
+      // NativeWind maps shadow-* classes to Android `elevation`, and 1-3dp
+      // elevation paints a hard grey hairline around rounded cards. Zero the
+      // hairline range so Android stops drawing those faint edges.
+      elevation: {
+        "2xs": 0,
+        xs: 0,
+        sm: 0,
+        DEFAULT: 0,
+        md: 0,
+        lg: 0,
+        xl: 0,
+        "2xl": 0,
+        none: 0,
+      },
       colors: {
         primary: "#4F46E5",
         secondary: "#6D5EF7",

@@ -1,11 +1,12 @@
 import { Loading } from './Loading';
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Modal, TouchableOpacity, TextInput, ScrollView, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, KeyboardAvoidingView, Platform, Keyboard, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../database/supabaseClient';
 import { Database, SupportTicket, ChatMessage } from '../database/Database';
+import { NativeSheet } from './NativeSheet';
 
 interface SupportChatModalProps {
   visible: boolean;
@@ -22,6 +23,7 @@ export function SupportChatModal({
 }: SupportChatModalProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState<string>('');
   const [isSending, setIsSending] = useState<boolean>(false);
@@ -173,13 +175,8 @@ export function SupportChatModal({
   if (!ticket) return null;
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="fullScreen"
-      onRequestClose={onClose}
-    >
-      <View style={{ flex: 1, backgroundColor: '#FFFFFF', paddingTop: insets.top }}>
+    <NativeSheet visible={visible} onClose={onClose} backgroundColor="#FFFFFF">
+      <View style={{ height: Math.round(height * 0.9), backgroundColor: '#FFFFFF' }}>
         {/* Header */}
         <View className="h-16 px-5 border-b border-zinc-150 flex-row items-center justify-between bg-white">
           <View className="flex-row items-center gap-3 flex-1 mr-2">
@@ -391,6 +388,6 @@ export function SupportChatModal({
           )}
         </KeyboardAvoidingView>
       </View>
-    </Modal>
+    </NativeSheet>
   );
 }

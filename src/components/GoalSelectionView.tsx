@@ -12,6 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 
+import { softShadow } from '../utils/shadows';
 // ponytail: opacity ramp stands in for blur — RN has no blur filter, BlurView isn't worth it here.
 export function FadeIn({ delay = 0, style, children }: { delay?: number; style?: any; children: React.ReactNode }) {
   const v = useRef(new Animated.Value(0)).current;
@@ -194,7 +195,7 @@ export function GoalCard({ goal, isSelected, onSelect, index = 0 }: GoalCardProp
         onPress={handlePress}
         style={{
           backgroundColor: '#FFFFFF',
-          borderColor: isSelected ? '#E11D48' : '#F1F5F9',
+          borderColor: isSelected ? '#E11D48' : 'transparent',
           borderWidth: isSelected ? 2 : 1.4,
           borderRadius: 22,
           minHeight: 124,
@@ -204,11 +205,7 @@ export function GoalCard({ goal, isSelected, onSelect, index = 0 }: GoalCardProp
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
-          shadowColor: isSelected ? '#E11D48' : '#0F172A',
-          shadowOffset: { width: 0, height: isSelected ? 4 : 2 },
-          shadowOpacity: isSelected ? 0.18 : 0.04,
-          shadowRadius: isSelected ? 10 : 6,
-          elevation: isSelected ? 3.5 : 1.5,
+          ...softShadow({ color: isSelected ? '#E11D48' : '#0F172A', opacity: isSelected ? 0.18 : 0.04, radius: isSelected ? 10 : 6, offsetY: isSelected ? 4 : 2 }),
         }}
       >
         {/* Top-Right Animated Checkmark Badge */}
@@ -410,11 +407,7 @@ export function GoalSelectionView({
               justifyContent: 'center',
               flexDirection: 'row',
               gap: 10,
-              shadowColor: '#E11D48',
-              shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: 0.3,
-              shadowRadius: 12,
-              elevation: 4,
+              ...softShadow({ color: '#E11D48', opacity: 0.3, radius: 12, offsetY: 6 }),
             }}
             className="w-full mt-1"
           >

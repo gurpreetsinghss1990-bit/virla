@@ -63,7 +63,7 @@ export function AppHeader({ onNotificationPress, onAvatarPress }: AppHeaderProps
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={handlePress}
-        className="w-10 h-10 rounded-full border border-zinc-100 items-center justify-center relative bg-zinc-50/50"
+        className="w-10 h-10 rounded-full items-center justify-center relative bg-zinc-50/50"
       >
         <Ionicons name="notifications-outline" size={20} color="#111111" />
         <NotificationBadge count={unreadCount} />

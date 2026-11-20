@@ -11,6 +11,7 @@ import { useMembershipStore } from '../store/membershipStore';
 import { calculateDistanceKm, trainerServiceRadiusKm, fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, isValidServiceCoord, reverseGeocodeCoords, AutocompleteSuggestion, getCurrentLocationCoords, searchNearbyPlaces } from '../utils/distance';
 import { normalizeDate, canonicalizeTimeRange, formatToDDMMYYYY } from '../utils/date';
 import * as Location from 'expo-location';
+import { requestForegroundLocationWithDisclosure, showNativeAlert } from '../utils/locationDisclosure';
 import { useAddressStore } from '../store/addressStore';
 import { useCoachStore, generateMonthlySlots } from '../store/coachStore';
 import { isAreaServedByAnyTrainer } from '../utils/serviceArea';
@@ -26,6 +27,7 @@ import { WORKOUT_CATEGORY_MAPPING, getCategoryFromTitle } from '../config/Workou
 import { AvatarImage } from '../components/AvatarImage';
 import { NativeSheet } from '../components/NativeSheet';
 
+import { softShadow } from '../utils/shadows';
 // Error boundary to prevent MapView crash if native Google Maps API Key is uninitialized on older client builds
 class SafeMapWrapper extends React.Component<{ children: React.ReactNode; fallback?: React.ReactNode }, { hasError: boolean }> {
   constructor(props: any) {
@@ -616,12 +618,13 @@ export default function BookingScreen() {
   const openAddressModal = async () => {
     // Prominently request permission FIRST before opening the map page
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await requestForegroundLocationWithDisclosure(
+        'VIRLA uses your location while the app is in use to detect your training address and match nearby trainers.'
+      );
       if (status !== 'granted') {
-        Alert.alert(
+        showNativeAlert(
           'Location Permission Required 📍',
-          'Virla requires location access to pinpoint your doorstep workout address and check service availability. Please allow location access to proceed.',
-          [{ text: 'OK' }]
+          'Virla requires location access to pinpoint your doorstep workout address and check service availability. Please allow location access to proceed.'
         );
         return;
       }
@@ -1485,7 +1488,9 @@ export default function BookingScreen() {
   const handleUseCurrentGps = async () => {
     setIsSearchingLocation(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await requestForegroundLocationWithDisclosure(
+        'VIRLA uses your location while the app is in use to detect your training address and match nearby trainers.'
+      );
       if (status !== 'granted') {
         throw new Error('Location permission was denied. Please allow location access in settings or enter your address manually.');
       }
@@ -2257,7 +2262,7 @@ export default function BookingScreen() {
   const renderBadge = (slotObj: any) => {
     if (slotObj.isBooked) {
       return (
-        <View className="bg-zinc-100 border border-zinc-200 px-2.5 py-1 rounded-full flex-row items-center gap-1">
+        <View className="bg-zinc-100 px-2.5 py-1 rounded-full flex-row items-center gap-1">
           <Text className="text-zinc-500 text-[9px] font-black uppercase tracking-wider">⛔ Fully Booked</Text>
         </View>
       );
@@ -2428,11 +2433,7 @@ export default function BookingScreen() {
                             expCardStyles.card,
                             isSelected ? expCardStyles.cardSelected : expCardStyles.cardUnselected,
                             {
-                              shadowColor: isSelected ? '#000000' : '#101828',
-                              shadowOffset: { width: 0, height: isSelected ? 4 : 1 },
-                              shadowOpacity: isSelected ? 0.2 : 0.04,
-                              shadowRadius: isSelected ? 8 : 2,
-                              elevation: isSelected ? 4 : 1,
+                              ...softShadow({ color: isSelected ? '#000000' : '#101828', opacity: isSelected ? 0.2 : 0.04, radius: isSelected ? 8 : 2, offsetY: isSelected ? 4 : 1 }),
                             },
                           ]}
                         >
@@ -2478,7 +2479,7 @@ export default function BookingScreen() {
                               <Feather name="check" size={13} color="white" />
                             </View>
                           ) : (
-                            <View className="w-6 h-6 rounded-full border border-zinc-200 bg-zinc-50" />
+                            <View className="w-6 h-6 rounded-full bg-zinc-50" />
                           )}
                         </TouchableOpacity>
                       );
@@ -2607,11 +2608,7 @@ export default function BookingScreen() {
                                       isSelected ? 'border-[#E11D48] bg-rose-50' : 'border-zinc-200 bg-zinc-100'
                                     }`}
                                     style={{
-                                      shadowColor: isSelected ? '#E11D48' : '#101828',
-                                      shadowOffset: { width: 0, height: 2 },
-                                      shadowOpacity: isSelected ? 0.25 : 0.04,
-                                      shadowRadius: 4,
-                                      elevation: isSelected ? 3 : 1,
+                                      ...softShadow({ color: isSelected ? '#E11D48' : '#101828', opacity: isSelected ? 0.25 : 0.04, radius: 4, offsetY: 2 }),
                                     }}
                                   >
                                     <AvatarImage
@@ -2687,11 +2684,7 @@ export default function BookingScreen() {
                               : 'bg-white'
                           }`}
                           style={{
-                            shadowColor: '#101828',
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: isSelected ? 0.05 : 0.03,
-                            shadowRadius: 8,
-                            elevation: isSelected ? 2 : 1,
+                            ...softShadow({ color: '#101828', opacity: isSelected ? 0.05 : 0.03, radius: 8, offsetY: 2 }),
                           }}
                         >
                           <View className="flex-row items-center gap-3.5 flex-1">
@@ -2757,11 +2750,7 @@ export default function BookingScreen() {
                     <View
                       className="p-4 rounded-[22px] bg-white flex-row items-center justify-between"
                       style={{
-                        shadowColor: '#101828',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.03,
-                        shadowRadius: 8,
-                        elevation: 1,
+                        ...softShadow({ color: '#101828', opacity: 0.03, radius: 8, offsetY: 2 }),
                       }}
                     >
                       <View className="flex-1 pr-3">
@@ -2950,11 +2939,7 @@ export default function BookingScreen() {
                                   // 3D bottom shading
                                   borderBottomWidth: 2,
                                   borderBottomColor: isLocationOutsideCoverage ? '#7F1D1D' : '#064E3B',
-                                  shadowColor: isLocationOutsideCoverage ? '#DC2626' : '#059669',
-                                  shadowOffset: { width: 0, height: 2 },
-                                  shadowOpacity: 0.35,
-                                  shadowRadius: 3,
-                                  elevation: 5,
+                                  ...softShadow({ color: isLocationOutsideCoverage ? '#DC2626' : '#059669', opacity: 0.35, radius: 3, offsetY: 2 }),
                                 }}
                               >
                                 {/* Curved white specular highlight texture on top */}
@@ -2993,11 +2978,7 @@ export default function BookingScreen() {
                                   backgroundColor: '#FFFFFF',
                                   borderRadius: 1.5,
                                   marginTop: -0.5,
-                                  shadowColor: '#000000',
-                                  shadowOffset: { width: 0, height: 1.5 },
-                                  shadowOpacity: 0.25,
-                                  shadowRadius: 2,
-                                  elevation: 3,
+                                  ...softShadow({ color: '#000000', opacity: 0.25, radius: 2, offsetY: 1.5 }),
                                 }} 
                               />
 
@@ -3039,11 +3020,7 @@ export default function BookingScreen() {
                                 borderRadius: 24,
                                 padding: 14,
                                 zIndex: 50,
-                                shadowColor: '#000000',
-                                shadowOffset: { width: 0, height: 2 },
-                                shadowOpacity: 0.05,
-                                shadowRadius: 10,
-                                elevation: 3,
+                                ...softShadow({ color: '#000000', opacity: 0.05, radius: 10, offsetY: 2 }),
                               }}
                             >
                               {/* Back button and clean title */}
@@ -3131,12 +3108,8 @@ export default function BookingScreen() {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 borderWidth: 1,
-                                borderColor: '#E5E7EB',
-                                shadowColor: '#101828',
-                                shadowOffset: { width: 0, height: 4 },
-                                shadowOpacity: 0.1,
-                                shadowRadius: 8,
-                                elevation: 4,
+                                borderColor: 'transparent',
+                                ...softShadow({ color: '#101828', opacity: 0.1, radius: 8, offsetY: 4 }),
                                 zIndex: 30,
                               }}
                             >
@@ -3154,11 +3127,7 @@ export default function BookingScreen() {
                                 borderRadius: 26,
                                 paddingHorizontal: 18,
                                 paddingVertical: 15,
-                                shadowColor: '#000000',
-                                shadowOffset: { width: 0, height: 4 },
-                                shadowOpacity: 0.06,
-                                shadowRadius: 12,
-                                elevation: 4,
+                                ...softShadow({ color: '#000000', opacity: 0.06, radius: 12, offsetY: 4 }),
                                 zIndex: 30,
                               }}
                             >
@@ -3264,7 +3233,7 @@ export default function BookingScreen() {
                                       <Text className="text-[#E11D48] text-[10px] font-bold uppercase tracking-wider">Change</Text>
                                     </TouchableOpacity>
                                   </View>
-                                  <View className="bg-zinc-50 border border-zinc-200/90 p-3.5 rounded-2xl flex-row items-start gap-3">
+                                  <View className="bg-zinc-50 p-3.5 rounded-2xl flex-row items-start gap-3">
                                     <View className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 items-center justify-center mt-0.5">
                                       <Feather name="map-pin" size={14} color="#E11D48" />
                                     </View>
@@ -3492,7 +3461,7 @@ export default function BookingScreen() {
                                   <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-[1.5px] pl-0.5">
                                     Receiver details
                                   </Text>
-                                  <View className="bg-zinc-50 border border-zinc-200/90 p-4 rounded-2xl gap-2.5">
+                                  <View className="bg-zinc-50 p-4 rounded-2xl gap-2.5">
                                     <View className="flex-row justify-between items-center">
                                       <Text className="text-zinc-500 text-[10px] font-bold uppercase">Name</Text>
                                       <Text className="text-zinc-900 text-xs font-black">{user.name}</Text>
@@ -3613,11 +3582,7 @@ export default function BookingScreen() {
                                     isAddressFormValid ? 'bg-zinc-950' : 'bg-zinc-900'
                                   }`}
                                   style={isAddressFormValid ? {
-                                    shadowColor: '#000',
-                                    shadowOffset: { width: 0, height: 2 },
-                                    shadowOpacity: 0.15,
-                                    shadowRadius: 4,
-                                    elevation: 3,
+                                    ...softShadow({ color: '#000', opacity: 0.15, radius: 4, offsetY: 2 }),
                                   } : undefined}
                                 >
                                   <Text className="text-xs font-black uppercase tracking-wider text-white">
@@ -3709,11 +3674,7 @@ export default function BookingScreen() {
                             isSelected ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-[#E5E7EB]'
                           }`}
                           style={{
-                            shadowColor: '#101828',
-                            shadowOffset: { width: 0, height: 1 },
-                            shadowOpacity: 0.02,
-                            shadowRadius: 2,
-                            elevation: 1,
+                            ...softShadow({ color: '#101828', opacity: 0.02, radius: 2, offsetY: 1 }),
                           }}
                         >
                           <Text 
@@ -3736,7 +3697,7 @@ export default function BookingScreen() {
 
                   {/* Horizontal Bar under Calendar when Calendar is selected */}
                   {showCalendarPicker && (
-                    <View className="bg-white border border-[#E5E7EB] p-3 rounded-2xl gap-2 shadow-2xs">
+                    <View className="bg-white p-3 rounded-2xl gap-2 shadow-2xs">
                       <ScrollView 
                         horizontal 
                         showsHorizontalScrollIndicator={false}
@@ -3774,11 +3735,7 @@ export default function BookingScreen() {
                                   isPicked ? 'bg-[#E11D48] border-[#E11D48]' : 'bg-zinc-50 border-[#E5E7EB]'
                                 }`}
                                 style={{
-                                  shadowColor: '#101828',
-                                  shadowOffset: { width: 0, height: 1 },
-                                  shadowOpacity: isPicked ? 0.15 : 0.02,
-                                  shadowRadius: 3,
-                                  elevation: 1,
+                                  ...softShadow({ color: '#101828', opacity: isPicked ? 0.15 : 0.02, radius: 3, offsetY: 1 }),
                                 }}
                               >
                                 <Text className={`text-[8px] font-black uppercase tracking-wider text-center ${
@@ -3827,7 +3784,7 @@ export default function BookingScreen() {
                       if (!selectedDate) {
                         return (
                           <View 
-                            className="bg-white border border-[#E5E7EB] p-8 rounded-[24px] items-center justify-center mt-2 shadow-2xs gap-2"
+                            className="bg-white p-8 rounded-[24px] items-center justify-center mt-2 shadow-2xs gap-2"
                             style={{ minHeight: 160 }}
                           >
                             <Feather name="calendar" size={28} color="#9CA3AF" />
@@ -3844,13 +3801,9 @@ export default function BookingScreen() {
                       if (isLoadingAvailability) {
                         return (
                           <View 
-                            className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center justify-center mt-2 shadow-sm"
+                            className="bg-white p-8 rounded-[28px] items-center justify-center mt-2 shadow-sm"
                             style={{
-                              shadowColor: '#101828',
-                              shadowOffset: { width: 0, height: 2 },
-                              shadowOpacity: 0.02,
-                              shadowRadius: 6,
-                              elevation: 1,
+                              ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                               minHeight: 180
                             }}
                           >
@@ -3868,13 +3821,9 @@ export default function BookingScreen() {
                       if (customerHasNoCoords) {
                         return (
                           <View 
-                            className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center gap-6 mt-2 shadow-sm"
+                            className="bg-white p-8 rounded-[28px] items-center gap-6 mt-2 shadow-sm"
                             style={{
-                              shadowColor: '#101828',
-                              shadowOffset: { width: 0, height: 2 },
-                              shadowOpacity: 0.02,
-                              shadowRadius: 6,
-                              elevation: 1
+                              ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                             }}
                           >
                             <View className="w-16 h-16 rounded-full bg-rose-50 items-center justify-center">
@@ -3983,13 +3932,9 @@ export default function BookingScreen() {
 
                         return (
                           <View 
-                            className="bg-white border border-[#E5E7EB] p-8 rounded-[28px] items-center gap-6 mt-2 shadow-sm"
+                            className="bg-white p-8 rounded-[28px] items-center gap-6 mt-2 shadow-sm"
                             style={{
-                              shadowColor: '#101828',
-                              shadowOffset: { width: 0, height: 2 },
-                              shadowOpacity: 0.02,
-                              shadowRadius: 6,
-                              elevation: 1
+                              ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                             }}
                           >
                             <View className="w-16 h-16 rounded-full bg-amber-50 items-center justify-center">
@@ -4023,7 +3968,7 @@ export default function BookingScreen() {
                               <TouchableOpacity
                                 activeOpacity={0.8}
                                 onPress={() => triggerTransition(1)}
-                                className="bg-zinc-50 border border-zinc-200 py-4 rounded-xl items-center justify-center"
+                                className="bg-zinc-50 py-4 rounded-xl items-center justify-center"
                               >
                                 <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Try Another Workout</Text>
                               </TouchableOpacity>
@@ -4032,7 +3977,7 @@ export default function BookingScreen() {
                                 <TouchableOpacity
                                   activeOpacity={0.8}
                                   onPress={() => triggerTransition(2)}
-                                  className="bg-zinc-50 border border-zinc-200 py-4 rounded-xl items-center justify-center"
+                                  className="bg-zinc-50 py-4 rounded-xl items-center justify-center"
                                 >
                                   <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Change Trainer Preference</Text>
                                 </TouchableOpacity>
@@ -4063,11 +4008,7 @@ export default function BookingScreen() {
                                 }}
                                 style={{
                                   height: 80,
-                                  shadowColor: '#101828',
-                                  shadowOffset: { width: 0, height: 2 },
-                                  shadowOpacity: isPicked ? 0.12 : 0.03,
-                                  shadowRadius: 8,
-                                  elevation: 2,
+                                  ...softShadow({ color: '#101828', opacity: isPicked ? 0.12 : 0.03, radius: 8, offsetY: 2 }),
                                 }}
                                 className={`px-5 rounded-2xl border flex-row justify-between items-center ${
                                   isDisabled
@@ -4121,7 +4062,7 @@ export default function BookingScreen() {
                                   ) : isDisabled ? (
                                     <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">FULL</Text>
                                   ) : (
-                                    <View className="w-6 h-6 rounded-full border border-zinc-200 bg-zinc-50" />
+                                    <View className="w-6 h-6 rounded-full bg-zinc-50" />
                                   )}
                                 </View>
                               </TouchableOpacity>
@@ -4555,7 +4496,7 @@ export default function BookingScreen() {
                   </View>
 
                   {/* Question 5: Additional note for trainer */}
-                  <View className="bg-white border border-[#E5E7EB] p-5 rounded-[24px] shadow-2xs gap-3">
+                  <View className="bg-white p-5 rounded-[24px] shadow-2xs gap-3">
                     <View className="flex-row items-center justify-between">
                       <Text className="text-zinc-900 text-sm font-bold tracking-tight">
                         5. Is there anything else your trainer should know?
@@ -4604,7 +4545,7 @@ export default function BookingScreen() {
                   </View>
 
                   {/* Trust Banner */}
-                  <View className="bg-zinc-100/70 border border-zinc-200/70 p-4 rounded-2xl flex-row items-start gap-2.5">
+                  <View className="bg-zinc-100/70 p-4 rounded-2xl flex-row items-start gap-2.5">
                     <Feather name="shield" size={16} color="#E11D48" style={{ marginTop: 2 }} />
                     <Text className="text-zinc-600 text-xs font-medium flex-1 leading-5">
                       Your safety matters. Please share any relevant health concerns or exercise restrictions with your trainer before your session.
@@ -4619,11 +4560,7 @@ export default function BookingScreen() {
                       backgroundColor: '#E11D48',
                       height: 52,
                       borderRadius: 26,
-                      shadowColor: '#E11D48',
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.28,
-                      shadowRadius: 10,
-                      elevation: 4,
+                      ...softShadow({ color: '#E11D48', opacity: 0.28, radius: 10, offsetY: 4 }),
                     }}
                     className="w-full items-center justify-center flex-row gap-2 mt-1"
                   >
@@ -4655,13 +4592,9 @@ export default function BookingScreen() {
 
                   {/* Section 1 — Booking Summary Card */}
                   <View 
-                    className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4"
+                    className="bg-white p-5 rounded-[28px] shadow-sm gap-4"
                     style={{
-                      shadowColor: '#101828',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.02,
-                      shadowRadius: 6,
-                      elevation: 1,
+                      ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                     }}
                   >
                     {/* Card Header: Calendar Icon, Title, Edit Button */}
@@ -4687,7 +4620,7 @@ export default function BookingScreen() {
                     <View className="flex-row gap-4 items-center mt-1">
                       <ExpoImage
                         source={{ uri: getWorkoutImage(selectedExperience?.id || 'exp-strength') }}
-                        className="w-20 h-20 rounded-[20px] bg-zinc-50 border border-zinc-100"
+                        className="w-20 h-20 rounded-[20px] bg-zinc-50"
                         contentFit="cover"
                         cachePolicy="memory-disk"
                       />
@@ -4759,13 +4692,9 @@ export default function BookingScreen() {
 
                   {/* About Your Health Summary Card */}
                   <View
-                    className="bg-white border border-[#E5E7EB] p-4.5 rounded-[24px] shadow-2xs gap-3"
+                    className="bg-white p-4.5 rounded-[24px] shadow-2xs gap-3"
                     style={{
-                      shadowColor: '#101828',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.02,
-                      shadowRadius: 6,
-                      elevation: 1,
+                      ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                     }}
                   >
                     <View className="flex-row items-center justify-between">
@@ -4836,7 +4765,7 @@ export default function BookingScreen() {
                     </ScrollView>
 
                     {/* Multiline text box */}
-                    <View className="relative bg-white border border-[#E5E7EB] rounded-2xl p-4 mt-0.5">
+                    <View className="relative bg-white rounded-2xl p-4 mt-0.5">
                       <TextInput
                         ref={noteInputRef}
                         multiline
@@ -4861,13 +4790,9 @@ export default function BookingScreen() {
 
                   {/* Section 3 — Session Policies Card */}
                   <View 
-                    className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4 mt-1"
+                    className="bg-white p-5 rounded-[28px] shadow-sm gap-4 mt-1"
                     style={{
-                      shadowColor: '#101828',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.02,
-                      shadowRadius: 6,
-                      elevation: 1,
+                      ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 2 }),
                     }}
                   >
                     {/* Header: Shield Icon, Title & View Details button */}
@@ -4885,7 +4810,7 @@ export default function BookingScreen() {
                         activeOpacity={0.8}
                         onPress={() => router.push('/legal-center')}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        className="bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-1.5 flex-row items-center gap-1"
+                        className="bg-zinc-50 rounded-xl px-3 py-1.5 flex-row items-center gap-1"
                       >
                         <Text className="text-zinc-700 text-xs font-semibold">View Details</Text>
                         <Feather name="chevron-right" size={12} color="#6B7280" />
@@ -4893,9 +4818,9 @@ export default function BookingScreen() {
                     </View>
 
                     {/* 2x2 Highlights Grid */}
-                    <View className="bg-zinc-50/80 border border-zinc-100 rounded-2xl p-3 gap-2.5">
+                    <View className="bg-zinc-50/80 rounded-2xl p-3 gap-2.5">
                       <View className="flex-row gap-2.5">
-                        <View className="flex-1 bg-white border border-zinc-200/80 p-2.5 rounded-xl flex-row items-center gap-2.5">
+                        <View className="flex-1 bg-white p-2.5 rounded-xl flex-row items-center gap-2.5">
                           <View className="w-7 h-7 rounded-lg bg-indigo-50 items-center justify-center">
                             <Feather name="clock" size={13} color="#4F46E5" />
                           </View>
@@ -4905,7 +4830,7 @@ export default function BookingScreen() {
                           </View>
                         </View>
 
-                        <View className="flex-1 bg-white border border-zinc-200/80 p-2.5 rounded-xl flex-row items-center gap-2.5">
+                        <View className="flex-1 bg-white p-2.5 rounded-xl flex-row items-center gap-2.5">
                           <View className="w-7 h-7 rounded-lg bg-emerald-50 items-center justify-center">
                             <Feather name="activity" size={13} color="#059669" />
                           </View>
@@ -4917,7 +4842,7 @@ export default function BookingScreen() {
                       </View>
 
                       <View className="flex-row gap-2.5">
-                        <View className="flex-1 bg-white border border-zinc-200/80 p-2.5 rounded-xl flex-row items-center gap-2.5">
+                        <View className="flex-1 bg-white p-2.5 rounded-xl flex-row items-center gap-2.5">
                           <View className="w-7 h-7 rounded-lg bg-rose-50 items-center justify-center">
                             <Feather name="shield" size={13} color="#E11D48" />
                           </View>
@@ -4927,7 +4852,7 @@ export default function BookingScreen() {
                           </View>
                         </View>
 
-                        <View className="flex-1 bg-white border border-zinc-200/80 p-2.5 rounded-xl flex-row items-center gap-2.5">
+                        <View className="flex-1 bg-white p-2.5 rounded-xl flex-row items-center gap-2.5">
                           <View className="w-7 h-7 rounded-lg bg-purple-50 items-center justify-center">
                             <Feather name="lock" size={13} color="#7C3AED" />
                           </View>
@@ -4949,11 +4874,7 @@ export default function BookingScreen() {
                     style={{
                       height: 56,
                       borderRadius: 16,
-                      shadowColor: '#E11D48',
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.15,
-                      shadowRadius: 8,
-                      elevation: 3,
+                      ...softShadow({ color: '#E11D48', opacity: 0.15, radius: 8, offsetY: 4 }),
                     }}
                   >
                     {isConfirming ? (
@@ -4998,7 +4919,7 @@ export default function BookingScreen() {
 
                     {/* Modal Content */}
                     <ScrollView showsVerticalScrollIndicator={false} className="mt-4 gap-4">
-                      <View className="bg-zinc-50 border border-zinc-200/80 p-4 rounded-2xl gap-1">
+                      <View className="bg-zinc-50 p-4 rounded-2xl gap-1">
                         <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
                           1. Workout Frequency
                         </Text>
@@ -5007,7 +4928,7 @@ export default function BookingScreen() {
                         </Text>
                       </View>
 
-                      <View className="bg-zinc-50 border border-zinc-200/80 p-4 rounded-2xl gap-1">
+                      <View className="bg-zinc-50 p-4 rounded-2xl gap-1">
                         <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
                           2. Current Injuries or Pain
                         </Text>
@@ -5016,7 +4937,7 @@ export default function BookingScreen() {
                         </Text>
                       </View>
 
-                      <View className="bg-zinc-50 border border-zinc-200/80 p-4 rounded-2xl gap-1">
+                      <View className="bg-zinc-50 p-4 rounded-2xl gap-1">
                         <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
                           3. Health Conditions
                         </Text>
@@ -5025,7 +4946,7 @@ export default function BookingScreen() {
                         </Text>
                       </View>
 
-                      <View className="bg-zinc-50 border border-zinc-200/80 p-4 rounded-2xl gap-1">
+                      <View className="bg-zinc-50 p-4 rounded-2xl gap-1">
                         <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
                           4. Doctor Advised Restrictions
                         </Text>
@@ -5035,7 +4956,7 @@ export default function BookingScreen() {
                       </View>
 
                       {safetyNotes.trim() ? (
-                        <View className="bg-zinc-50 border border-zinc-200/80 p-4 rounded-2xl gap-1">
+                        <View className="bg-zinc-50 p-4 rounded-2xl gap-1">
                           <Text className="text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
                             5. Additional Safety Note
                           </Text>
@@ -5051,7 +4972,7 @@ export default function BookingScreen() {
                           setShowHealthDetailsModal(false);
                           triggerTransition(5);
                         }}
-                        className="py-3 rounded-2xl bg-zinc-100 border border-zinc-200/80 items-center justify-center mt-2"
+                        className="py-3 rounded-2xl bg-zinc-100 items-center justify-center mt-2"
                       >
                         <Text className="text-zinc-800 text-xs font-bold">
                           Edit Safety Details
@@ -5116,11 +5037,7 @@ export default function BookingScreen() {
               height: 44,
               borderRadius: 22, // Curvy pill shape
               paddingHorizontal: 32, // Content-hugging natural width
-              shadowColor: '#E11D48',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.32,
-              shadowRadius: 8,
-              elevation: 5,
+              ...softShadow({ color: '#E11D48', opacity: 0.32, radius: 8, offsetY: 4 }),
             }}
             className="items-center justify-center flex-row gap-2"
           >
@@ -5186,7 +5103,7 @@ export default function BookingScreen() {
               }
             }}
             style={{ zIndex: 51 }}
-            className="w-10 h-10 rounded-full bg-white/90 border border-zinc-200/80 shadow-xs items-center justify-center"
+            className="w-10 h-10 rounded-full bg-white/90 shadow-xs items-center justify-center"
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
@@ -5238,7 +5155,7 @@ export default function BookingScreen() {
             onPress={handleShareBooking}
             activeOpacity={0.8}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            className="w-10 h-10 items-center justify-center rounded-full bg-white/90 border border-zinc-200/80 shadow-xs"
+            className="w-10 h-10 items-center justify-center rounded-full bg-white/90 shadow-xs"
           >
             <Feather name="share-2" size={16} color="#09090B" />
           </TouchableOpacity>

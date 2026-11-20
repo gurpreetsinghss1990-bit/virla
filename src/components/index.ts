@@ -14,7 +14,6 @@ export * from './BottomNavigation';
 export * from './WorkoutDetailCard';
 export * from './LocationCard';
 export * from './MemberCard';
-export * from './DatePicker';
 export * from './TimeSlotCard';
 export * from './BookingSummaryCard';
 export * from './BookingStatusBadge';

@@ -49,7 +49,6 @@ const styles = StyleSheet.create({
     gap: 6,
     flexShrink: 0,
     overflow: 'hidden',
-    elevation: Platform.OS === 'android' ? 0.5 : 0,
   },
   capsuleSmall: {
     paddingHorizontal: 13,

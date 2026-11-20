@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
+import { softShadow } from '../utils/shadows';
 // Smooth fade in helper
 export function MetricsFadeIn({
   delay = 0,
@@ -296,18 +297,14 @@ export function MetricsSelectionView({
                 }}
                 style={{
                   backgroundColor: '#FFFFFF',
-                  borderColor: gender === 'Male' ? '#C0003C' : '#E2E8F0',
+                  borderColor: gender === 'Male' ? '#C0003C' : 'transparent',
                   borderWidth: gender === 'Male' ? 1.5 : 1,
                   borderRadius: 18,
                   paddingVertical: 14,
                   alignItems: 'center',
                   justifyContent: 'center',
                   position: 'relative',
-                  shadowColor: gender === 'Male' ? '#C0003C' : '#64748B',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: gender === 'Male' ? 0.12 : 0.04,
-                  shadowRadius: 6,
-                  elevation: 2,
+                  ...softShadow({ color: gender === 'Male' ? '#C0003C' : '#64748B', opacity: gender === 'Male' ? 0.12 : 0.04, radius: 6, offsetY: 2 }),
                 }}
                 className="flex-1"
               >
@@ -362,18 +359,14 @@ export function MetricsSelectionView({
                 }}
                 style={{
                   backgroundColor: '#FFFFFF',
-                  borderColor: gender === 'Female' ? '#C0003C' : '#E2E8F0',
+                  borderColor: gender === 'Female' ? '#C0003C' : 'transparent',
                   borderWidth: gender === 'Female' ? 1.5 : 1,
                   borderRadius: 18,
                   paddingVertical: 14,
                   alignItems: 'center',
                   justifyContent: 'center',
                   position: 'relative',
-                  shadowColor: gender === 'Female' ? '#C0003C' : '#64748B',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: gender === 'Female' ? 0.12 : 0.04,
-                  shadowRadius: 6,
-                  elevation: 2,
+                  ...softShadow({ color: gender === 'Female' ? '#C0003C' : '#64748B', opacity: gender === 'Female' ? 0.12 : 0.04, radius: 6, offsetY: 2 }),
                 }}
                 className="flex-1"
               >
@@ -427,18 +420,14 @@ export function MetricsSelectionView({
                 }}
                 style={{
                   backgroundColor: '#FFFFFF',
-                  borderColor: gender === 'Other' ? '#C0003C' : '#E2E8F0',
+                  borderColor: gender === 'Other' ? '#C0003C' : 'transparent',
                   borderWidth: gender === 'Other' ? 1.5 : 1,
                   borderRadius: 18,
                   paddingVertical: 14,
                   alignItems: 'center',
                   justifyContent: 'center',
                   position: 'relative',
-                  shadowColor: gender === 'Other' ? '#C0003C' : '#64748B',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: gender === 'Other' ? 0.12 : 0.04,
-                  shadowRadius: 6,
-                  elevation: 2,
+                  ...softShadow({ color: gender === 'Other' ? '#C0003C' : '#64748B', opacity: gender === 'Other' ? 0.12 : 0.04, radius: 6, offsetY: 2 }),
                 }}
                 className="flex-1"
               >
@@ -560,11 +549,7 @@ export function MetricsSelectionView({
                     backgroundColor: '#FFFFFF',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    shadowColor: '#0F172A',
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.08,
-                    shadowRadius: 3,
-                    elevation: 2,
+                    ...softShadow({ color: '#0F172A', opacity: 0.08, radius: 3, offsetY: 1 }),
                     opacity: pressed ? 0.75 : 1,
                   },
                 ]}
@@ -607,11 +592,7 @@ export function MetricsSelectionView({
                     backgroundColor: '#FFFFFF',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    shadowColor: '#0F172A',
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.08,
-                    shadowRadius: 3,
-                    elevation: 2,
+                    ...softShadow({ color: '#0F172A', opacity: 0.08, radius: 3, offsetY: 1 }),
                     opacity: pressed ? 0.75 : 1,
                   },
                 ]}
@@ -631,13 +612,9 @@ export function MetricsSelectionView({
                 backgroundColor: '#FFFFFF',
                 borderRadius: 20,
                 borderWidth: 1,
-                borderColor: '#E2E8F0',
+                borderColor: 'transparent',
                 padding: 13,
-                shadowColor: '#64748B',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.05,
-                shadowRadius: 5,
-                elevation: 1,
+                ...softShadow({ color: '#64748B', opacity: 0.05, radius: 5, offsetY: 2 }),
               }}
               className="flex-1 gap-2.5"
             >
@@ -742,11 +719,7 @@ export function MetricsSelectionView({
                       backgroundColor: '#FFFFFF',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      shadowColor: '#0F172A',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.08,
-                      shadowRadius: 2,
-                      elevation: 1,
+                      ...softShadow({ color: '#0F172A', opacity: 0.08, radius: 2, offsetY: 1 }),
                       opacity: pressed ? 0.75 : 1,
                     },
                   ]}
@@ -788,11 +761,7 @@ export function MetricsSelectionView({
                       backgroundColor: '#FFFFFF',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      shadowColor: '#0F172A',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.08,
-                      shadowRadius: 2,
-                      elevation: 1,
+                      ...softShadow({ color: '#0F172A', opacity: 0.08, radius: 2, offsetY: 1 }),
                       opacity: pressed ? 0.75 : 1,
                     },
                   ]}
@@ -808,13 +777,9 @@ export function MetricsSelectionView({
                 backgroundColor: '#FFFFFF',
                 borderRadius: 20,
                 borderWidth: 1,
-                borderColor: '#E2E8F0',
+                borderColor: 'transparent',
                 padding: 13,
-                shadowColor: '#64748B',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.05,
-                shadowRadius: 5,
-                elevation: 1,
+                ...softShadow({ color: '#64748B', opacity: 0.05, radius: 5, offsetY: 2 }),
               }}
               className="flex-1 gap-2.5"
             >
@@ -919,11 +884,7 @@ export function MetricsSelectionView({
                       backgroundColor: '#FFFFFF',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      shadowColor: '#0F172A',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.08,
-                      shadowRadius: 2,
-                      elevation: 1,
+                      ...softShadow({ color: '#0F172A', opacity: 0.08, radius: 2, offsetY: 1 }),
                       opacity: pressed ? 0.75 : 1,
                     },
                   ]}
@@ -963,11 +924,7 @@ export function MetricsSelectionView({
                       backgroundColor: '#FFFFFF',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      shadowColor: '#0F172A',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.08,
-                      shadowRadius: 2,
-                      elevation: 1,
+                      ...softShadow({ color: '#0F172A', opacity: 0.08, radius: 2, offsetY: 1 }),
                       opacity: pressed ? 0.75 : 1,
                     },
                   ]}
@@ -1028,11 +985,7 @@ export function MetricsSelectionView({
                 justifyContent: 'center',
                 flexDirection: 'row',
                 gap: 10,
-                shadowColor: '#E11D48',
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: gender ? 0.3 : 0.08,
-                shadowRadius: 12,
-                elevation: 4,
+                ...softShadow({ color: '#E11D48', opacity: gender ? 0.3 : 0.08, radius: 12, offsetY: 6 }),
                 opacity: gender ? 1 : 0.65,
               }}
               className="w-full"

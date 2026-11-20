@@ -36,11 +36,27 @@ module.exports = function withAndroidUpiAndMaps(config) {
       androidManifest.$['xmlns:tools'] = 'http://schemas.android.com/tools';
     }
 
+    // Ensure android.hardware.screen.portrait is marked optional so it doesn't restrict tablets/desktops
+    if (!androidManifest['uses-feature']) {
+      androidManifest['uses-feature'] = [];
+    }
+    const hasPortraitFeature = androidManifest['uses-feature'].some(
+      (f) => f.$?.['android:name'] === 'android.hardware.screen.portrait'
+    );
+    if (!hasPortraitFeature) {
+      androidManifest['uses-feature'].push({
+        $: {
+          'android:name': 'android.hardware.screen.portrait',
+          'android:required': 'false',
+        },
+      });
+    }
+
     const app = androidManifest.application?.[0];
     if (app) {
       if (!app.$) app.$ = {};
       app.$['android:usesCleartextTraffic'] = 'true';
-      app.$['tools:replace'] = 'android:allowBackup,android:usesCleartextTraffic';
+      app.$['tools:replace'] = 'android:allowBackup,android:usesCleartextTraffic,android:enableOnBackInvokedCallback';
 
       if (!app['meta-data']) {
         app['meta-data'] = [];

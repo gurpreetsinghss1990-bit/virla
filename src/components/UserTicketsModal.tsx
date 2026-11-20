@@ -1,10 +1,11 @@
 import { Loading } from './Loading';
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, useWindowDimensions } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Database, SupportTicket } from '../database/Database';
 import { formatToDDMMYYYY } from '../utils/date';
+import { NativeSheet } from './NativeSheet';
 
 interface UserTicketsModalProps {
   visible: boolean;
@@ -20,6 +21,7 @@ export function UserTicketsModal({
   onSelectTicket,
 }: UserTicketsModalProps) {
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -42,13 +44,8 @@ export function UserTicketsModal({
   }, [visible, userId]);
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="fullScreen"
-      onRequestClose={onClose}
-    >
-      <View style={{ flex: 1, backgroundColor: '#FAFAFA' }}>
+    <NativeSheet visible={visible} onClose={onClose} backgroundColor="#FAFAFA">
+      <View style={{ height: Math.round(height * 0.88), backgroundColor: '#FAFAFA' }}>
         {/* Header */}
         <View
           style={{ paddingTop: insets.top }}
@@ -61,14 +58,14 @@ export function UserTicketsModal({
             <TouchableOpacity
               onPress={loadTickets}
               activeOpacity={0.7}
-              className="w-9 h-9 rounded-full bg-zinc-100 border border-zinc-200/60 items-center justify-center mr-0.5"
+              className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center mr-0.5"
             >
               <Feather name="refresh-cw" size={14} color="#18181B" />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={onClose}
               activeOpacity={0.7}
-              className="w-9 h-9 rounded-full bg-zinc-100 border border-zinc-200/60 items-center justify-center"
+              className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center"
             >
               <Ionicons name="close" size={18} color="#18181B" />
             </TouchableOpacity>
@@ -87,7 +84,7 @@ export function UserTicketsModal({
             </View>
           ) : tickets.length === 0 ? (
             <View className="py-20 items-center justify-center gap-3">
-              <View className="w-16 h-16 rounded-3xl bg-zinc-100 border border-zinc-200/80 items-center justify-center mb-1 shadow-2xs">
+              <View className="w-16 h-16 rounded-3xl bg-zinc-100 items-center justify-center mb-1 shadow-2xs">
                 <Feather name="shield" size={26} color="#9CA3AF" />
               </View>
               <Text className="text-zinc-900 text-base font-black">
@@ -109,7 +106,7 @@ export function UserTicketsModal({
                       onClose();
                       onSelectTicket(t);
                     }}
-                    className="bg-white border border-zinc-200/90 p-4.5 rounded-2xl gap-3 shadow-xs active:bg-zinc-50/80"
+                    className="bg-white p-4.5 rounded-2xl gap-3 shadow-xs active:bg-zinc-50/80"
                   >
                     <View className="flex-row justify-between items-center">
                       <View className="flex-row items-center gap-2">
@@ -161,6 +158,6 @@ export function UserTicketsModal({
           )}
         </ScrollView>
       </View>
-    </Modal>
+    </NativeSheet>
   );
 }

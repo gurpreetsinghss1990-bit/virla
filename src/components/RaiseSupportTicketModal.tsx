@@ -108,7 +108,7 @@ export function RaiseSupportTicketModal({
           keyboardShouldPersistTaps="handled"
         >
           {booking && (
-            <View className="bg-zinc-50 border border-zinc-200/70 rounded-xl px-3 py-2.5 mb-5">
+            <View className="bg-zinc-50 rounded-xl px-3 py-2.5 mb-5">
               <Text className="text-zinc-800 text-[13px] font-medium" numberOfLines={1}>
                 {booking.workoutTitle} · Coach {booking.trainerName || 'Assigned Trainer'}
               </Text>
@@ -163,7 +163,7 @@ export function RaiseSupportTicketModal({
             placeholderTextColor="#A1A1AA"
             multiline
             textAlignVertical="top"
-            className="bg-white border border-zinc-200 rounded-xl p-3 text-[13px] text-zinc-900 min-h-[84px] mb-5"
+            className="bg-white rounded-xl p-3 text-[13px] text-zinc-900 min-h-[84px] mb-5"
           />
 
           <TouchableOpacity

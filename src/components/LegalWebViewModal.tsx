@@ -2,14 +2,15 @@ import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
   Linking,
-  Modal,
   Platform,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { NativeSheet } from './NativeSheet';
 
 export interface LegalWebViewModalProps {
   visible: boolean;
@@ -23,6 +24,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
   onClose,
 }) => {
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<'terms' | 'privacy'>(initialTab);
 
   useEffect(() => {
@@ -40,17 +42,11 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
+    <NativeSheet visible={visible} onClose={onClose} backgroundColor="#F8F9FD" fullHeight>
       <View
         style={{
-          flex: 1,
+          height: Math.round(height * 0.92),
           backgroundColor: '#F8F9FD',
-          paddingTop: Platform.OS === 'android' ? insets.top : 0,
         }}
       >
         {/* Top App Header */}
@@ -60,7 +56,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               onPress={onClose}
               activeOpacity={0.7}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center border border-zinc-200"
+              className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center"
             >
               <Feather name="x" size={18} color="#18181B" />
             </TouchableOpacity>
@@ -82,7 +78,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
             onPress={handleOpenBrowser}
             activeOpacity={0.7}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            className="flex-row items-center gap-1 bg-zinc-50 border border-zinc-200 px-2.5 py-1.5 rounded-lg"
+            className="flex-row items-center gap-1 bg-zinc-50 px-2.5 py-1.5 rounded-lg"
           >
             <Feather name="external-link" size={13} color="#71717A" />
             <Text className="text-zinc-600 text-[11px] font-bold">Browser</Text>
@@ -95,8 +91,8 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
             activeOpacity={0.8}
             onPress={() => setActiveTab('terms')}
             className={`flex-1 py-2 rounded-xl items-center justify-center flex-row gap-1.5 border ${activeTab === 'terms'
-                ? 'bg-rose-50 border-rose-200'
-                : 'bg-zinc-50 border-zinc-100'
+              ? 'bg-rose-50 border-rose-200'
+              : 'bg-zinc-50 border-zinc-100'
               }`}
           >
             <Feather
@@ -116,8 +112,8 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
             activeOpacity={0.8}
             onPress={() => setActiveTab('privacy')}
             className={`flex-1 py-2 rounded-xl items-center justify-center flex-row gap-1.5 border ${activeTab === 'privacy'
-                ? 'bg-rose-50 border-rose-200'
-                : 'bg-zinc-50 border-zinc-100'
+              ? 'bg-rose-50 border-rose-200'
+              : 'bg-zinc-50 border-zinc-100'
               }`}
           >
             <Feather
@@ -143,7 +139,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
           {activeTab === 'terms' ? (
             <View className="gap-5">
               {/* Header Box */}
-              <View className="bg-white border border-zinc-200 p-5 rounded-[22px] shadow-2xs">
+              <View className="bg-white p-5 rounded-[22px] shadow-2xs">
                 <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">
                   Last Updated: August 24, 2026
                 </Text>
@@ -156,14 +152,14 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               </View>
 
               {/* Section 1 */}
-              <View className="bg-white border border-zinc-200 p-4 rounded-[20px] shadow-2xs gap-2">
+              <View className="bg-white p-4 rounded-[20px] shadow-2xs gap-2">
                 <Text className="text-zinc-900 text-sm font-black tracking-tight">
                   1. Legal Ownership Coordinates
                 </Text>
                 <Text className="text-zinc-600 text-xs leading-relaxed">
                   This website and brand are operated under the following corporate registration details:
                 </Text>
-                <View className="bg-zinc-50 border border-zinc-100 rounded-xl p-3 mt-1 gap-1">
+                <View className="bg-zinc-50 rounded-xl p-3 mt-1 gap-1">
                   <Text className="text-zinc-800 text-xs font-bold">Legal Name: Namratha Jauni</Text>
                   <Text className="text-zinc-800 text-xs font-bold">Brand: Virla</Text>
                   <Text className="text-zinc-800 text-xs font-bold">Phone: +91 22-49715552</Text>
@@ -177,7 +173,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               </View>
 
               {/* Section 2 */}
-              <View className="bg-white border border-zinc-200 p-4 rounded-[20px] shadow-2xs gap-2">
+              <View className="bg-white p-4 rounded-[20px] shadow-2xs gap-2">
                 <Text className="text-zinc-900 text-sm font-black tracking-tight">
                   2. Use of Website & Platform
                 </Text>
@@ -187,7 +183,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               </View>
 
               {/* Section 3 */}
-              <View className="bg-white border border-zinc-200 p-4 rounded-[20px] shadow-2xs gap-2">
+              <View className="bg-white p-4 rounded-[20px] shadow-2xs gap-2">
                 <Text className="text-zinc-900 text-sm font-black tracking-tight">
                   3. Virla Services
                 </Text>
@@ -197,7 +193,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               </View>
 
               {/* Section 4 */}
-              <View className="bg-white border border-zinc-200 p-4 rounded-[20px] shadow-2xs gap-2">
+              <View className="bg-white p-4 rounded-[20px] shadow-2xs gap-2">
                 <Text className="text-zinc-900 text-sm font-black tracking-tight">
                   4. User Responsibilities
                 </Text>
@@ -218,7 +214,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               </View>
 
               {/* Section 5 */}
-              <View className="bg-white border border-zinc-200 p-4 rounded-[20px] shadow-2xs gap-2">
+              <View className="bg-white p-4 rounded-[20px] shadow-2xs gap-2">
                 <Text className="text-zinc-900 text-sm font-black tracking-tight">
                   5. Trainer & Service-Provider Relationship
                 </Text>
@@ -228,7 +224,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               </View>
 
               {/* Section 6 */}
-              <View className="bg-white border border-zinc-200 p-4 rounded-[20px] shadow-2xs gap-2">
+              <View className="bg-white p-4 rounded-[20px] shadow-2xs gap-2">
                 <Text className="text-zinc-900 text-sm font-black tracking-tight">
                   6. Booking & Service Terms
                 </Text>
@@ -238,7 +234,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               </View>
 
               {/* Section 7 */}
-              <View className="bg-white border border-zinc-200 p-4 rounded-[20px] shadow-2xs gap-2">
+              <View className="bg-white p-4 rounded-[20px] shadow-2xs gap-2">
                 <Text className="text-zinc-900 text-sm font-black tracking-tight">
                   7. Payments, Cancellations & Refunds
                 </Text>
@@ -248,7 +244,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               </View>
 
               {/* Section 8 */}
-              <View className="bg-white border border-zinc-200 p-4 rounded-[20px] shadow-2xs gap-2">
+              <View className="bg-white p-4 rounded-[20px] shadow-2xs gap-2">
                 <Text className="text-zinc-900 text-sm font-black tracking-tight">
                   8. Limitation of Liability
                 </Text>
@@ -258,7 +254,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               </View>
 
               {/* Section 9 */}
-              <View className="bg-white border border-zinc-200 p-4 rounded-[20px] shadow-2xs gap-2">
+              <View className="bg-white p-4 rounded-[20px] shadow-2xs gap-2">
                 <Text className="text-zinc-900 text-sm font-black tracking-tight">
                   9. Intellectual Property
                 </Text>
@@ -268,14 +264,14 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               </View>
 
               {/* Section 10 */}
-              <View className="bg-white border border-zinc-200 p-4 rounded-[20px] shadow-2xs gap-2">
+              <View className="bg-white p-4 rounded-[20px] shadow-2xs gap-2">
                 <Text className="text-zinc-900 text-sm font-black tracking-tight">
                   10. Contact Information
                 </Text>
                 <Text className="text-zinc-600 text-xs leading-relaxed">
                   For compliance queries or legal inquiries, reach out at virla.in or call +91 22-49715552.
                 </Text>
-                <View className="bg-zinc-50 border border-zinc-100 rounded-xl p-3 mt-1 gap-1">
+                <View className="bg-zinc-50 rounded-xl p-3 mt-1 gap-1">
                   <Text className="text-zinc-800 text-xs font-bold">Address: 35/151, Laxmi Vijay Industries,{`\n`}SAB TV Lane, New Link Road,{`\n`}Andheri West, Mumbai – 400053,{`\n`}Maharashtra, India.</Text>
                 </View>
               </View>
@@ -283,7 +279,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
           ) : (
             <View className="gap-5">
               {/* Header Box */}
-              <View className="bg-white border border-zinc-200 p-5 rounded-[22px] shadow-2xs">
+              <View className="bg-white p-5 rounded-[22px] shadow-2xs">
                 <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">
                   Last Updated: August 24, 2026
                 </Text>
@@ -296,14 +292,14 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               </View>
 
               {/* Section 1 */}
-              <View className="bg-white border border-zinc-200 p-4 rounded-[20px] shadow-2xs gap-2">
+              <View className="bg-white p-4 rounded-[20px] shadow-2xs gap-2">
                 <Text className="text-zinc-900 text-sm font-black tracking-tight">
                   1. Legal Ownership Coordinates
                 </Text>
                 <Text className="text-zinc-600 text-xs leading-relaxed">
                   This website and brand are operated under the following corporate registration details:
                 </Text>
-                <View className="bg-zinc-50 border border-zinc-100 rounded-xl p-3 mt-1 gap-1">
+                <View className="bg-zinc-50 rounded-xl p-3 mt-1 gap-1">
                   <Text className="text-zinc-800 text-xs font-bold">Legal Name: Namratha Jauni</Text>
                   <Text className="text-zinc-800 text-xs font-bold">Brand: Virla</Text>
                   <Text className="text-zinc-800 text-xs font-bold">Phone: +91 22-49715552</Text>
@@ -313,7 +309,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               </View>
 
               {/* Section 2 */}
-              <View className="bg-white border border-zinc-200 p-4 rounded-[20px] shadow-2xs gap-2">
+              <View className="bg-white p-4 rounded-[20px] shadow-2xs gap-2">
                 <Text className="text-zinc-900 text-sm font-black tracking-tight">
                   2. Information Collected
                 </Text>
@@ -334,7 +330,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               </View>
 
               {/* Section 3 */}
-              <View className="bg-white border border-zinc-200 p-4 rounded-[20px] shadow-2xs gap-2">
+              <View className="bg-white p-4 rounded-[20px] shadow-2xs gap-2">
                 <Text className="text-zinc-900 text-sm font-black tracking-tight">
                   3. Cookies & Session Storage
                 </Text>
@@ -344,7 +340,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               </View>
 
               {/* Section 4 */}
-              <View className="bg-white border border-zinc-200 p-4 rounded-[20px] shadow-2xs gap-2">
+              <View className="bg-white p-4 rounded-[20px] shadow-2xs gap-2">
                 <Text className="text-zinc-900 text-sm font-black tracking-tight">
                   4. How Information Is Used
                 </Text>
@@ -365,7 +361,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               </View>
 
               {/* Section 5 */}
-              <View className="bg-white border border-zinc-200 p-4 rounded-[20px] shadow-2xs gap-2">
+              <View className="bg-white p-4 rounded-[20px] shadow-2xs gap-2">
                 <Text className="text-zinc-900 text-sm font-black tracking-tight">
                   5. Service Providers & Third Parties
                 </Text>
@@ -375,7 +371,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               </View>
 
               {/* Section 6 */}
-              <View className="bg-white border border-zinc-200 p-4 rounded-[20px] shadow-2xs gap-2">
+              <View className="bg-white p-4 rounded-[20px] shadow-2xs gap-2">
                 <Text className="text-zinc-900 text-sm font-black tracking-tight">
                   6. Data Security
                 </Text>
@@ -385,7 +381,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
               </View>
 
               {/* Section 7 */}
-              <View className="bg-white border border-zinc-200 p-4 rounded-[20px] shadow-2xs gap-2">
+              <View className="bg-white p-4 rounded-[20px] shadow-2xs gap-2">
                 <Text className="text-zinc-900 text-sm font-black tracking-tight">
                   7. User Rights & Data Erasure
                 </Text>
@@ -410,6 +406,6 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
           </View>
         </ScrollView>
       </View>
-    </Modal>
+    </NativeSheet>
   );
 };

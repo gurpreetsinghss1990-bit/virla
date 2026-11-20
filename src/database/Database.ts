@@ -2719,8 +2719,14 @@ class DatabaseClient {
     await this.refreshBookings();
 
     // Ensure local schema copy also stores the cancelledAtStage in ratingDetails
-    const updated = this.schema.bookings.find(b => b.id === bookingId);
+    let updated = this.schema.bookings.find(b => b.id === bookingId);
+    if (!updated && existing) {
+      // refreshBookings() can silently fail (RLS/network); keep the UI truthful
+      existing.status = 'cancelled';
+      updated = existing;
+    }
     if (updated) {
+      updated.status = 'cancelled';
       updated.ratingDetails = {
         ...(updated.ratingDetails || { overallRating: 5, trainerRating: 5, workoutRating: 5, difficulty: 'Moderate', energy: 'High' }),
         cancelledAtStage: prevTimelineStatus,

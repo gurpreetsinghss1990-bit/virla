@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, Platform, ViewStyle, StyleProp } from 'react-native';
 
+import { softShadow } from '../utils/shadows';
 interface NativeOverviewCardProps {
   backgroundColor: string;
   borderColor?: string;
@@ -26,13 +27,9 @@ export const NativeOverviewCard: React.FC<NativeOverviewCardProps> = ({
         {
           backgroundColor,
           borderRadius: 24,
-          borderWidth: Platform.OS === 'ios' ? 0.5 : 1,
+          borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
           borderColor: borderColor || (Platform.OS === 'android' ? 'rgba(0, 0, 0, 0.04)' : 'rgba(60, 60, 67, 0.12)'),
-          elevation: Platform.OS === 'android' ? 2 : 0,
-          shadowColor: '#101828',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.06,
-          shadowRadius: 8,
+          ...softShadow({ color: '#101828', opacity: 0.06, radius: 8, offsetY: 2 }),
           overflow: 'hidden',
         },
         style,

@@ -46,6 +46,7 @@ import { CoachVideoAvatar } from '../../components/CoachVideoAvatar';
 import { BackgroundVideoLoop } from '../../components/BackgroundVideoLoop';
 import { BUNNY_CDN_ASSETS } from '../../services/bunnyCdnService';
 
+import { softShadow } from '../../utils/shadows';
 // Bundled local assets: required once at module load so the reference is stable
 // and a wrong path fails the build instead of leaving a blank frame at runtime.
 const ATHLETE_HERO_IMAGE = require('../../../assets/images/athlete_hero.webp');
@@ -284,7 +285,7 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => onPress(booking.id)}
-      className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] shadow-sm gap-4 mb-4"
+      className="bg-white p-5 rounded-[28px] shadow-sm gap-4 mb-4"
     >
       <View className="flex-row justify-between items-center">
         <View className="flex-row items-center gap-2">
@@ -1265,7 +1266,7 @@ export default function HomeScreen() {
           >
             <Feather name="bell" size={20} color="#101828" />
             {unreadCount > 0 && (
-              <View className="absolute top-0 right-0 bg-[#E11D48] rounded-full min-w-[20px] h-[20px] px-1.5 justify-center items-center border border-[#FCF5F5]">
+              <View className="absolute top-0 right-0 bg-[#E11D48] rounded-full min-w-[20px] h-[20px] px-1.5 justify-center items-center">
                 <Text numberOfLines={1} className="text-white text-[8px] font-bold text-center leading-none">{unreadCount > 99 ? '99+' : unreadCount}</Text>
               </View>
             )}
@@ -1274,7 +1275,7 @@ export default function HomeScreen() {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => navigateSafely('/(tabs)/profile')}
-            className="w-11 h-11 rounded-full border border-zinc-200 overflow-hidden relative bg-zinc-100 items-center justify-center"
+            className="w-11 h-11 rounded-full overflow-hidden relative bg-zinc-100 items-center justify-center"
             style={{ minWidth: 44, minHeight: 44 }}
           >
             <AvatarImage
@@ -1303,11 +1304,7 @@ export default function HomeScreen() {
               className="mx-6 mt-3 mb-2 bg-zinc-950 border border-zinc-800 rounded-[22px] flex-row items-center justify-between p-4 shadow-lg"
               style={{
                 backgroundColor: '#09090b',
-                shadowColor: '#000000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.18,
-                shadowRadius: 10,
-                elevation: 4,
+                ...softShadow({ color: '#000000', opacity: 0.18, radius: 10, offsetY: 4 }),
               }}
             >
               <View className="flex-row items-center gap-3.5 flex-1 pr-2">
@@ -1317,11 +1314,7 @@ export default function HomeScreen() {
                     className="w-3 h-3 rounded-full bg-[#E11D48]"
                     style={{
                       backgroundColor: '#E11D48',
-                      shadowColor: '#E11D48',
-                      shadowOffset: { width: 0, height: 0 },
-                      shadowOpacity: 0.9,
-                      shadowRadius: 6,
-                      elevation: 3,
+                      ...softShadow({ color: '#E11D48', opacity: 0.9, radius: 6, offsetY: 0 }),
                     }}
                   />
                 </View>
@@ -1397,14 +1390,10 @@ export default function HomeScreen() {
                 style={{
                   backgroundColor: '#FFF1F1',
                   borderRadius: 32,
-                  shadowColor: '#E11D48',
-                  shadowOffset: { width: 0, height: 10 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 20,
-                  elevation: 4,
+                  ...softShadow({ color: '#E11D48', opacity: 0.04, radius: 20, offsetY: 10 }),
                 }}
               >
-                <View className="w-full bg-[#FFF1F1] rounded-[32px] p-6 relative overflow-hidden border border-[#FFE4E6] min-h-[250px]">
+                <View className="w-full bg-[#FFF1F1] rounded-[32px] p-6 relative overflow-hidden min-h-[250px]">
                 {/* Athlete Image on the right */}
                 <View className="absolute right-0 top-0 bottom-0 w-[52%] z-0">
                   <ExpoImage
@@ -1441,11 +1430,7 @@ export default function HomeScreen() {
                         backgroundColor: '#FFFFFF',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        shadowColor: '#101828',
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.04,
-                        shadowRadius: 12,
-                        elevation: 2,
+                        ...softShadow({ color: '#101828', opacity: 0.04, radius: 12, offsetY: 4 }),
                       }}
                     >
                       <ProgressRing progress={recoveryVal / 100} size={92} strokeWidth={8} activeColor="#E11D48" inactiveColor="#FFE4E6">
@@ -1486,11 +1471,7 @@ export default function HomeScreen() {
                       backgroundColor: '#E11D48',
                       minHeight: 56,
                       borderRadius: 28,
-                      shadowColor: '#E11D48',
-                      shadowOffset: { width: 0, height: 8 },
-                      shadowOpacity: 0.2,
-                      shadowRadius: 16,
-                      elevation: 4,
+                      ...softShadow({ color: '#E11D48', opacity: 0.2, radius: 16, offsetY: 8 }),
                     }}
                   >
                     <View className="flex-row items-center gap-2.5">
@@ -1550,14 +1531,10 @@ export default function HomeScreen() {
                       })}
                       style={{
                         borderRadius: 16,
-                        shadowColor: '#101828',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.04,
-                        shadowRadius: 6,
-                        elevation: 2,
+                        ...softShadow({ color: '#101828', opacity: 0.04, radius: 6, offsetY: 2 }),
                       }}
                     >
-                      <View className="w-[140px] h-[150px] p-3.5 rounded-2xl relative overflow-hidden justify-between border border-white/20">
+                      <View className="w-[140px] h-[150px] p-3.5 rounded-2xl relative overflow-hidden justify-between">
                       {/* Optional Background Video for Workout (e.g. Strength) */}
                       {item.video && (
                         <BackgroundVideoLoop source={item.video} />
@@ -1581,7 +1558,7 @@ export default function HomeScreen() {
                       <View className="absolute -top-5 -right-5 w-16 h-16 rounded-full bg-white/10" pointerEvents="none" />
 
                       {/* Top icon badge */}
-                      <View className="w-9 h-9 rounded-xl bg-white/25 border border-white/30 items-center justify-center self-start">
+                      <View className="w-9 h-9 rounded-xl bg-white/25 items-center justify-center self-start">
                         <Text className="text-base">{item.emoji}</Text>
                       </View>
 
@@ -1617,14 +1594,10 @@ export default function HomeScreen() {
                     return (
                       // Booking pending trainer acceptance (Trainer details hidden)
                       <View 
-                        className="border border-[#E5E7EB] p-6 rounded-[28px] gap-5"
+                        className="p-6 rounded-[28px] gap-5"
                         style={{
                           backgroundColor: '#FFFFFF',
-                          shadowColor: '#101828',
-                          shadowOffset: { width: 0, height: 6 },
-                          shadowOpacity: 0.04,
-                          shadowRadius: 12,
-                          elevation: 3,
+                          ...softShadow({ color: '#101828', opacity: 0.04, radius: 12, offsetY: 6 }),
                         }}
                       >
                         <View className="flex-row gap-4 items-center">
@@ -1657,14 +1630,10 @@ export default function HomeScreen() {
                   return (
                     // Booking accepted by trainer (Trainer details fully revealed)
                     <View 
-                      className="border border-[#E5E7EB] p-4 rounded-[28px] gap-4"
+                      className="p-4 rounded-[28px] gap-4"
                       style={{
                         backgroundColor: '#FFFFFF',
-                        shadowColor: '#101828',
-                        shadowOffset: { width: 0, height: 6 },
-                        shadowOpacity: 0.04,
-                        shadowRadius: 12,
-                        elevation: 3,
+                        ...softShadow({ color: '#101828', opacity: 0.04, radius: 12, offsetY: 6 }),
                       }}
                     >
                       <View className="flex-row gap-4 items-center">
@@ -1680,14 +1649,10 @@ export default function HomeScreen() {
                           />
                           {/* Rating Overlay */}
                           <View 
-                            className="absolute -top-1.5 -left-1.5 bg-white border border-zinc-100 px-1.5 py-0.5 rounded-lg items-center justify-center flex-row"
+                            className="absolute -top-1.5 -left-1.5 bg-white px-1.5 py-0.5 rounded-lg items-center justify-center flex-row"
                             style={{
                               backgroundColor: '#FFFFFF',
-                              shadowColor: '#101828',
-                              shadowOffset: { width: 0, height: 2 },
-                              shadowOpacity: 0.03,
-                              shadowRadius: 4,
-                              elevation: 1,
+                              ...softShadow({ color: '#101828', opacity: 0.03, radius: 4, offsetY: 2 }),
                             }}
                           >
                             <Text className="text-[11px] font-bold text-zinc-800">⭐ 4.9</Text>
@@ -1744,14 +1709,10 @@ export default function HomeScreen() {
                   );
                 })() : (
                   <View 
-                    className="border border-[#E5E7EB] py-3.5 px-3 rounded-[24px] relative overflow-hidden"
+                    className="py-3.5 px-3 rounded-[24px] relative overflow-hidden"
                     style={{
                       backgroundColor: '#FFFFFF',
-                      shadowColor: '#101828',
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.03,
-                      shadowRadius: 10,
-                      elevation: 2,
+                      ...softShadow({ color: '#101828', opacity: 0.03, radius: 10, offsetY: 4 }),
                     }}
                   >
                     <ReanimatedAnimated.ScrollView 
@@ -1973,11 +1934,7 @@ export default function HomeScreen() {
                   style={{
                     backgroundColor: '#1F1135',
                     borderRadius: 32,
-                    shadowColor: '#8B5CF6',
-                    shadowOffset: { width: 0, height: 8 },
-                    shadowOpacity: 0.15,
-                    shadowRadius: 20,
-                    elevation: 4,
+                    ...softShadow({ color: '#8B5CF6', opacity: 0.15, radius: 20, offsetY: 8 }),
                   }}
                 >
                   <View className="w-full bg-[#1F1135] rounded-[32px] p-6 relative overflow-hidden border border-zinc-800">
@@ -1998,7 +1955,7 @@ export default function HomeScreen() {
                       <Circle cx="50" cy="50" r="10" fill="#EC4899" opacity={0.7} />
                     </Svg>
 
-                    <View className="absolute z-10 w-9 h-9 rounded-full bg-white/10 items-center justify-center border border-white/20">
+                    <View className="absolute z-10 w-9 h-9 rounded-full bg-white/10 items-center justify-center">
                       <Image
                         source={AI_COACH_EMBLEM}
                         style={{ width: 22, height: 22 }}
@@ -2071,11 +2028,7 @@ export default function HomeScreen() {
                       className="bg-[#E11D48] rounded-2xl py-3 px-4 flex-row items-center self-start gap-2.5 mt-1"
                       style={{
                         backgroundColor: '#E11D48',
-                        shadowColor: '#E11D48',
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.2,
-                        shadowRadius: 8,
-                        elevation: 3,
+                        ...softShadow({ color: '#E11D48', opacity: 0.2, radius: 8, offsetY: 4 }),
                       }}
                     >
                       <Text className="text-white text-xs font-bold uppercase">
@@ -2106,7 +2059,7 @@ export default function HomeScreen() {
                         backgroundColor: Platform.OS === 'ios' ? 'rgba(255, 255, 255, 0.92)' : '#FFFFFF',
                         borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
                         borderColor: 'rgba(60, 60, 67, 0.12)',
-                        elevation: Platform.OS === 'android' ? 1 : 0,
+                        ...softShadow({ color: '#101828', opacity: 0.05, radius: 10, offsetY: 2 }),
                       }}
                     >
                       {/* Top: Coach avatar, title, and badge */}
@@ -2192,11 +2145,7 @@ export default function HomeScreen() {
                               backgroundColor: '#16C784',
                               minWidth: 44,
                               minHeight: 44,
-                              shadowColor: '#16C784',
-                              shadowOffset: { width: 0, height: 6 },
-                              shadowOpacity: 0.25,
-                              shadowRadius: 12,
-                              elevation: 3,
+                              ...softShadow({ color: '#16C784', opacity: 0.25, radius: 12, offsetY: 6 }),
                             }}
                           >
                             <Feather name="navigation" size={16} color="white" />
@@ -2241,7 +2190,7 @@ export default function HomeScreen() {
                       backgroundColor: '#FFF5F5',
                       borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
                       borderColor: 'rgba(60, 60, 67, 0.12)',
-                      elevation: Platform.OS === 'android' ? 1 : 0,
+                      ...softShadow({ color: '#101828', opacity: 0.05, radius: 10, offsetY: 2 }),
                     }}
                   >
                     <Text className="text-3xl">🗓️</Text>
@@ -2270,7 +2219,7 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={toggleOnlineStatus}
-                    className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-200 bg-white shadow-sm"
+                    className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full bg-white shadow-sm"
                   >
                     <View className={`w-2 h-2 rounded-full ${trainerOnlineStatus === 'online' ? 'bg-[#16C784]' : 'bg-red-500'}`} />
                     <Text className={`text-[11px] font-semibold tracking-wide ${trainerOnlineStatus === 'online' ? 'text-[#16C784]' : 'text-red-500'}`}>
@@ -2358,11 +2307,7 @@ export default function HomeScreen() {
                     className="bg-white border-2 border-rose-500/30 p-5 rounded-[28px] gap-4"
                     style={{
                       backgroundColor: '#FFFFFF',
-                      shadowColor: '#F43F5E',
-                      shadowOffset: { width: 0, height: 6 },
-                      shadowOpacity: 0.05,
-                      shadowRadius: 12,
-                      elevation: 2,
+                      ...softShadow({ color: '#F43F5E', opacity: 0.05, radius: 12, offsetY: 6 }),
                     }}
                   >
                     <View className="flex-row justify-between items-center">
@@ -2412,11 +2357,7 @@ export default function HomeScreen() {
                       className="w-full bg-rose-500 py-3.5 rounded-2xl items-center justify-center flex-row gap-2"
                       style={{
                         backgroundColor: '#F43F5E',
-                        shadowColor: '#E11D48',
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.15,
-                        shadowRadius: 8,
-                        elevation: 2,
+                        ...softShadow({ color: '#E11D48', opacity: 0.15, radius: 8, offsetY: 4 }),
                       }}
                     >
                       <Text className="text-white text-xs font-bold uppercase tracking-wider">Open Session →</Text>
@@ -2440,11 +2381,7 @@ export default function HomeScreen() {
                       className="bg-zinc-950 p-5 rounded-[28px] border border-zinc-800 gap-4"
                       style={{
                         backgroundColor: '#09090b',
-                        shadowColor: '#000000',
-                        shadowOffset: { width: 0, height: 12 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 24,
-                        elevation: 6,
+                        ...softShadow({ color: '#000000', opacity: 0.3, radius: 24, offsetY: 12 }),
                       }}
                     >
                       <View className="flex-row justify-between items-center">
@@ -2553,7 +2490,11 @@ export default function HomeScreen() {
                             <TouchableOpacity
                               onPress={async () => {
                                 try {
-                                  await locationTrackerService.startTracking(nextSession.id, true);
+                                  const started = await locationTrackerService.startTracking(nextSession.id, true);
+                                  if (!started) {
+                                    // User dismissed or denied location permission disclosure
+                                    return;
+                                  }
                                   await updateTimelineStatus(nextSession.id, 'trainer_travelling');
                                   useNotificationStore.getState().addNotification({
                                     title: 'Coach On The Way 🚗',
@@ -2564,8 +2505,8 @@ export default function HomeScreen() {
                                 } catch (err) {
                                   setNativeAlertState({
                                     visible: true,
-                                    title: 'Error',
-                                    message: errorMessage(err) || 'Could not start travel.',
+                                    title: 'Location Permission',
+                                    message: errorMessage(err) || 'Please grant location permissions to start travel.',
                                     confirmText: 'OK',
                                     onConfirm: () => setNativeAlertState(prev => ({ ...prev, visible: false })),
                                   });
@@ -2632,14 +2573,10 @@ export default function HomeScreen() {
                   );
                 })() : (
                   <View 
-                    className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] gap-2 items-center justify-center text-center"
+                    className="bg-white p-6 rounded-[28px] gap-2 items-center justify-center text-center"
                     style={{
                       backgroundColor: '#FFFFFF',
-                      shadowColor: '#101828',
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.02,
-                      shadowRadius: 8,
-                      elevation: 1,
+                      ...softShadow({ color: '#101828', opacity: 0.02, radius: 8, offsetY: 4 }),
                     }}
                   >
                     <Text className="text-3xl mt-1">👌</Text>
@@ -2677,11 +2614,7 @@ export default function HomeScreen() {
                         className={`bg-white border border-[#E5E7EB] p-4 rounded-2xl flex-row justify-between items-center ${isCancelledByUser ? 'opacity-70' : ''}`}
                         style={{
                           backgroundColor: '#FFFFFF',
-                          shadowColor: '#101828',
-                          shadowOffset: { width: 0, height: 3 },
-                          shadowOpacity: 0.02,
-                          shadowRadius: 6,
-                          elevation: 1,
+                          ...softShadow({ color: '#101828', opacity: 0.02, radius: 6, offsetY: 3 }),
                         }}
                       >
                         <View className="flex-row items-center gap-3 flex-1">
@@ -2726,7 +2659,7 @@ export default function HomeScreen() {
                     })}
                   </View>
                 ) : (
-                  <View className="bg-white border border-[#E5E7EB] p-6 rounded-[28px] items-center justify-center">
+                  <View className="bg-white p-6 rounded-[28px] items-center justify-center">
                     <Text className="text-zinc-400 text-xs font-semibold text-center">
                       No sessions today
                     </Text>
@@ -2766,14 +2699,10 @@ export default function HomeScreen() {
                   </View>
                 ) : (
                   <View 
-                    className="bg-white border border-[#E5E7EB] p-5 rounded-[28px] gap-3.5"
+                    className="bg-white p-5 rounded-[28px] gap-3.5"
                     style={{
                       backgroundColor: '#FFFFFF',
-                      shadowColor: '#101828',
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.02,
-                      shadowRadius: 8,
-                      elevation: 1,
+                      ...softShadow({ color: '#101828', opacity: 0.02, radius: 8, offsetY: 4 }),
                     }}
                   >
                     {tomorrowBookings.length > 0 ? (

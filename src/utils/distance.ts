@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { requestForegroundLocationWithDisclosure } from './locationDisclosure';
 
 /**
  * Calculates the geodetic distance between two points on the Earth's surface
@@ -415,7 +416,9 @@ export async function getCurrentLocationCoords(): Promise<{ latitude: number; lo
     });
   } else {
     const Location = require('expo-location');
-    const { status } = await Location.requestForegroundPermissionsAsync();
+    const { status } = await requestForegroundLocationWithDisclosure(
+      'VIRLA uses your location while the app is in use to calculate distance and match you with nearby trainers.'
+    );
     if (status !== 'granted') {
       throw new Error('Location permission was denied. Please allow location access in settings or enter your address manually.');
     }
