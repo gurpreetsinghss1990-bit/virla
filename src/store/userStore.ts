@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Invoice } from '../types';
 import { Database } from '../database/Database';
 import { PushNotificationService } from '../services/PushNotificationService';
+import { releaseDeviceSession } from '../services/DeviceSession';
 
 let SecureStore: any = null;
 try {
@@ -137,6 +138,9 @@ export const useUserStore = create<UserState>()(
           if (userId) {
             await PushNotificationService.removeTokenFromBackend(userId).catch(console.error);
           }
+
+          await releaseDeviceSession(userId);
+          Database.setCurrentUserId(null);
           
           set({ isLoggedIn: loggedIn });
           set({ user: emptyUser, familyMembers: [], invoices: [] });

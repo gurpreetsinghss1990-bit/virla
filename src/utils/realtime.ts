@@ -1,9 +1,10 @@
-import { AppState, AppStateStatus } from 'react-native';
+import { Alert, AppState, AppStateStatus } from 'react-native';
 import { supabase } from '../database/supabaseClient';
 import { Database, mapBooking, mapCoach, mapChatMessage, mapNotificationItem, mapWorkoutAssignment } from '../database/Database';
 import { useCoachStore } from '../store/coachStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useUserStore } from '../store/userStore';
+import { heartbeatDeviceSession } from '../services/DeviceSession';
 
 let realtimeChannel: any = null;
 let smartPollTimer: any = null;
@@ -35,9 +36,31 @@ const syncBookingStore = () => {
   } catch (_) {}
 };
 
+let lastDeviceHeartbeatAt = 0;
+let deviceRevokedHandled = false;
+
+async function performDeviceHeartbeat() {
+  const userId = Database.getCurrentUserId();
+  if (!userId) return;
+  if (Date.now() - lastDeviceHeartbeatAt < 60000) return;
+  lastDeviceHeartbeatAt = Date.now();
+
+  const result = await heartbeatDeviceSession(userId);
+  if (result.revoked && !deviceRevokedHandled) {
+    deviceRevokedHandled = true;
+    Alert.alert(
+      'Session ended',
+      'This account was logged in on another device, so this session has been signed out.'
+    );
+    useUserStore.getState().setLoggedIn(false);
+  }
+}
+
 async function performSmartBookingSync() {
   // 1. Never poll when app is in background or inactive (prevents battery drain / heating)
   if (currentAppState !== 'active') return;
+
+  await performDeviceHeartbeat();
 
   // 2. Only poll if user is logged in
   const userId = Database.getCurrentUserId();
