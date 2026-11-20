@@ -1,7 +1,15 @@
-import React from 'react';
-import { View, Text as RNText, TouchableOpacity, Platform } from 'react-native';
-
+import React, { useState, useEffect } from 'react';
+import { View, Text as RNText, TouchableOpacity, LayoutChangeEvent } from 'react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withSpring,
+  withTiming,
+  Easing
+} from 'react-native-reanimated';
+import { Feather } from '@expo/vector-icons';
 import { softShadow } from '../utils/shadows';
+
 export interface SegmentItem<T extends string> {
   key: T;
   label: string;
@@ -14,114 +22,134 @@ interface NativeSegmentedControlProps<T extends string> {
   marginVertical?: number;
 }
 
-let JetpackCompose: any = null;
-let ComposeModifiers: any = null;
-if (Platform.OS === 'android') {
-  try {
-    JetpackCompose = require('@expo/ui/jetpack-compose');
-    ComposeModifiers = require('@expo/ui/jetpack-compose/modifiers');
-  } catch {}
-}
-
-let CommunitySegmentedControl: any = null;
-if (Platform.OS === 'ios') {
-  try {
-    CommunitySegmentedControl = require('@expo/ui/community/segmented-control').SegmentedControl;
-  } catch {}
-}
+// Spring configuration for super-smooth physical sliding pill on UI Thread
+const SPRING_CONFIG = {
+  damping: 18,
+  stiffness: 170,
+  mass: 0.8,
+};
 
 export function NativeSegmentedControl<T extends string>({
   items,
   activeKey,
   onChangeKey,
-  marginVertical = 6,
+  marginVertical = 4,
 }: NativeSegmentedControlProps<T>) {
-  // Android: Jetpack Compose SingleChoiceSegmentedButtonRow
-  if (Platform.OS === 'android' && JetpackCompose?.SingleChoiceSegmentedButtonRow && JetpackCompose?.SegmentedButton) {
-    const { Host, SingleChoiceSegmentedButtonRow, SegmentedButton, Text } = JetpackCompose;
-    const fillMaxWidthMod = ComposeModifiers?.fillMaxWidth ? [ComposeModifiers.fillMaxWidth()] : undefined;
-    const weightMod = ComposeModifiers?.weight ? [ComposeModifiers.weight(1)] : undefined;
+  const [containerWidth, setContainerWidth] = useState(0);
+  const activeIndex = items.findIndex((i) => i.key === activeKey);
+  const validIndex = activeIndex >= 0 ? activeIndex : 0;
 
-    return (
-      <View style={{ width: '100%', marginVertical }}>
-        <Host matchContents={{ vertical: true }} style={{ width: '100%' }}>
-          <SingleChoiceSegmentedButtonRow modifiers={fillMaxWidthMod}>
-            {items.map((item) => {
-              const isSelected = activeKey === item.key;
-              return (
-                <SegmentedButton
-                  key={item.key}
-                  selected={isSelected}
-                  onClick={() => onChangeKey(item.key)}
-                  modifiers={weightMod}
-                  colors={{
-                    activeContainerColor: '#101828',
-                    activeContentColor: '#FFFFFF',
-                    activeBorderColor: '#101828',
-                    inactiveContainerColor: 'transparent',
-                    inactiveContentColor: '#6B7280',
-                    inactiveBorderColor: '#E5E7EB',
-                  }}
-                >
-                  <SegmentedButton.Label>
-                    <Text 
-                      color={isSelected ? '#FFFFFF' : '#4B5563'}
-                      fontWeight="900"
-                      style={{ fontSize: 13, letterSpacing: 0.5 }}
-                    >
-                      {item.label}
-                    </Text>
-                  </SegmentedButton.Label>
-                </SegmentedButton>
-              );
-            })}
-          </SingleChoiceSegmentedButtonRow>
-        </Host>
-      </View>
-    );
-  }
+  // Shared values running 100% on native Reanimated UI thread
+  const translateX = useSharedValue(0);
+  const checkScale = useSharedValue(1);
+  const checkOpacity = useSharedValue(1);
 
-  // iOS: Native iOS UISegmentedControl via @expo/ui/community/segmented-control
-  if (Platform.OS === 'ios' && CommunitySegmentedControl) {
-    const selectedIndex = items.findIndex((r) => r.key === activeKey);
-    return (
-      <View style={{ width: '100%', marginVertical }}>
-        <CommunitySegmentedControl
-          values={items.map((r) => r.label)}
-          selectedIndex={selectedIndex >= 0 ? selectedIndex : 0}
-          onChange={(event: any) => {
-            const index = event?.nativeEvent?.selectedSegmentIndex;
-            if (typeof index === 'number' && items[index]) {
-              onChangeKey(items[index].key);
-            }
-          }}
-          tintColor="#101828"
-          style={{ height: 38 }}
-        />
-      </View>
-    );
-  }
+  // Available width for segments (containerWidth minus 8px padding: 4px left + 4px right)
+  const tabWidth = containerWidth > 0 ? (containerWidth - 8) / items.length : 0;
 
-  // Fallback: React Native Custom Segmented Buttons
+  useEffect(() => {
+    if (tabWidth > 0) {
+      // Smooth sliding motion on UI thread
+      translateX.value = withSpring(validIndex * tabWidth, SPRING_CONFIG);
+
+      // Micro bounce & pop-in animation for the checkmark
+      checkScale.value = 0.3;
+      checkOpacity.value = 0;
+      checkScale.value = withSpring(1, { damping: 12, stiffness: 220 });
+      checkOpacity.value = withTiming(1, { duration: 160, easing: Easing.out(Easing.quad) });
+    }
+  }, [validIndex, tabWidth]);
+
+  const animatedIndicatorStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: translateX.value }],
+      width: tabWidth,
+    };
+  });
+
+  const animatedCheckStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: checkScale.value }],
+      opacity: checkOpacity.value,
+    };
+  });
+
+  const onLayout = (e: LayoutChangeEvent) => {
+    const width = e.nativeEvent.layout.width;
+    if (width > 0 && width !== containerWidth) {
+      setContainerWidth(width);
+      const computedTabWidth = (width - 8) / items.length;
+      translateX.value = validIndex * computedTabWidth;
+    }
+  };
+
   return (
-    <View className="flex-row bg-[#E5E7EB]/40 border border-[#E5E7EB]/80 p-1.5 rounded-2xl" style={{ marginVertical }}>
-      {items.map(({ key: r, label }) => {
+    <View 
+      onLayout={onLayout}
+      style={{
+        width: '100%',
+        marginVertical,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 9999,
+        padding: 4,
+        flexDirection: 'row',
+        alignItems: 'center',
+        position: 'relative',
+        borderWidth: 1,
+        borderColor: 'rgba(226, 232, 240, 0.8)',
+        ...softShadow({ color: '#0F172A', opacity: 0.05, radius: 8, offsetY: 2 }),
+      }}
+    >
+      {/* 🚀 Physical Gliding Active Obsidian Pill (UI Thread Reanimated) */}
+      {tabWidth > 0 && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            {
+              position: 'absolute',
+              top: 4,
+              left: 4,
+              bottom: 4,
+              backgroundColor: '#0F172A',
+              borderRadius: 9999,
+              ...softShadow({ color: '#0F172A', opacity: 0.28, radius: 6, offsetY: 2 }),
+            },
+            animatedIndicatorStyle,
+          ]}
+        />
+      )}
+
+      {/* Segment Buttons Row */}
+      {items.map(({ key: r, label }, idx) => {
         const isActive = activeKey === r;
         return (
           <TouchableOpacity
             key={r}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             onPress={() => onChangeKey(r)}
-            className="flex-1 py-3 rounded-xl items-center justify-center"
             style={{
-              backgroundColor: isActive ? '#101828' : 'transparent',
-              ...softShadow({ color: '#101828', opacity: isActive ? 0.15 : 0, radius: 4, offsetY: 2 }),
+              flex: 1,
+              paddingVertical: 8,
+              borderRadius: 9999,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 5,
+              zIndex: 2,
             }}
           >
+            {isActive && (
+              <Animated.View style={animatedCheckStyle}>
+                <Feather name="check" size={13} color="#FFFFFF" />
+              </Animated.View>
+            )}
             <RNText
-              className="text-[11px] font-bold uppercase tracking-wider"
               style={{
-                color: isActive ? '#FFFFFF' : '#4B5563',
+                fontFamily: 'Outfit_700Bold',
+                fontSize: 12,
+                color: isActive ? '#FFFFFF' : '#64748B',
+                letterSpacing: 0.5,
+                textTransform: 'uppercase',
               }}
             >
               {label}

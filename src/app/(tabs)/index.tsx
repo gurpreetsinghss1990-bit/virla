@@ -3,15 +3,21 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { Alert, Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet, AppState, AppStateStatus, Vibration, Linking } from 'react-native';
+import { Alert, Image, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet, AppState, AppStateStatus, Vibration, Linking } from 'react-native';
 import Svg, { Rect, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ReanimatedAnimated, { 
   useAnimatedScrollHandler, 
-  useSharedValue 
+  useSharedValue,
+  useAnimatedStyle,
+  useAnimatedProps,
+  createAnimatedComponent,
+  withTiming,
+  withSpring,
+  Easing
 } from 'react-native-reanimated';
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const AnimatedCircle = createAnimatedComponent(Circle);
 import { ProgressRing } from '../../components/ProgressRing';
 import { LuxuryCard } from '../../components/LuxuryCard';
 import { useBookingStore } from '../../store/bookingStore';
@@ -872,22 +878,26 @@ export default function HomeScreen() {
   };
 
   const [isHolding, setIsHolding] = useState(false);
-  const [holdProgress] = useState(() => new Animated.Value(0));
+  const holdProgress = useSharedValue(0);
+  const animatedCircleProps = useAnimatedProps(() => {
+    return {
+      strokeDashoffset: 88 - (88 * holdProgress.value),
+    };
+  });
   const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isAliveRef = useRef(true);
 
   const handlePressIn = () => {
     setIsHolding(true);
-    holdProgress.setValue(0);
-    Animated.timing(holdProgress, {
-      toValue: 1,
+    holdProgress.value = 0;
+    holdProgress.value = withTiming(1, {
       duration: 5000,
-      useNativeDriver: false,
-    }).start();
+      easing: Easing.linear,
+    });
 
     holdTimeoutRef.current = setTimeout(async () => {
       setIsHolding(false);
-      holdProgress.setValue(0);
+      holdProgress.value = 0;
       await handleHiddenAdminAccess();
     }, 5000);
   };
@@ -898,8 +908,7 @@ export default function HomeScreen() {
       clearTimeout(holdTimeoutRef.current);
       holdTimeoutRef.current = null;
     }
-    holdProgress.stopAnimation();
-    holdProgress.setValue(0);
+    holdProgress.value = 0;
   };
 
   useEffect(() => {
@@ -1026,29 +1035,22 @@ export default function HomeScreen() {
     return 5;
   }, [savedPlan?.workoutFrequency]);
 
-  // Animations
-  const [fadeAnim] = useState(() => new Animated.Value(1));
-  const [slideAnim] = useState(() => new Animated.Value(0));
-  const [pulseAnim] = useState(() => new Animated.Value(1));
+  // 🚀 Native Reanimated UI-thread slide animation for dashboard mount
+  const dashboardSlideY = useSharedValue(10);
+  const animatedDashboardStyle = useAnimatedStyle(() => {
+    return {
+      opacity: 1,
+      transform: [{ translateY: dashboardSlideY.value }],
+    };
+  });
 
   useEffect(() => {
-    slideAnim.setValue(10);
-    Animated.timing(slideAnim, {
-      toValue: 0,
+    dashboardSlideY.value = 10;
+    dashboardSlideY.value = withTiming(0, {
       duration: 350,
-      useNativeDriver: true,
-    }).start();
-
-    const pulseLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.03, duration: 1500, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: true })
-      ])
-    );
-    pulseLoop.start();
-
-    return () => pulseLoop.stop();
-  }, [role, slideAnim, pulseAnim]);
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [role]);
 
   useEffect(() => {
     if (user.id) {
@@ -1246,10 +1248,7 @@ export default function HomeScreen() {
                   strokeWidth={2}
                   fill="none"
                   strokeDasharray={88}
-                  strokeDashoffset={holdProgress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [88, 0],
-                  })}
+                  animatedProps={animatedCircleProps}
                   strokeLinecap="round"
                   transform="rotate(-90 16 16)"
                 />
@@ -1364,10 +1363,10 @@ export default function HomeScreen() {
             contentContainerStyle={{ paddingBottom: 140 }}
             className="bg-[#FCF5F5] flex-1"
           >
-            <Animated.View
-          style={{ opacity: 1, transform: [{ translateY: slideAnim }] }}
-          className="px-6 pt-6 gap-8"
-        >
+            <ReanimatedAnimated.View
+              style={animatedDashboardStyle}
+              className="px-6 pt-6 gap-8"
+            >
           {/* ==================== CLIENT MODE DASHBOARD ==================== */}
           {(role === 'customer' || role === 'admin') && (
             <>
@@ -2759,7 +2758,7 @@ export default function HomeScreen() {
             </>
           )}
 
-        </Animated.View>
+        </ReanimatedAnimated.View>
       </ScrollView>
       </View>
       )}

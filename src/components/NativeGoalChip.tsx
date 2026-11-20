@@ -39,7 +39,7 @@ export const NativeGoalChip = React.memo(({ label, selected, onPress, color, siz
         >
           {label}
         </Text>
-        {selected && <Feather name="check" size={isSmall ? 10 : 13} color="#059669" />}
+        {selected && <Feather name="check" size={isSmall ? 10 : 13} color="#E11D48" />}
       </NativePressable>
     </View>
   );
@@ -60,19 +60,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   capsuleSelected: {
-    backgroundColor: '#ECFDF5', // subtle soft light green
-    borderColor: '#A7F3D0', // light emerald border
+    backgroundColor: '#FFF1F2', // subtle soft crimson wash
+    borderColor: '#FECDD3',     // light crimson border
   },
   capsuleUnselected: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FAFC',
     borderColor: '#E2E8F0',
   },
   capsuleText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 12.5,
   },
   capsuleTextSelected: {
-    color: '#065F46', // deep readable green
+    color: '#E11D48', // Virla Crimson Red
   },
   capsuleTextUnselected: {
     color: '#475569',

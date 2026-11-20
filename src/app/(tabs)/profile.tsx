@@ -1097,30 +1097,56 @@ export default function ProfileScreen() {
   return (
     <SafeAreaViewWrapper>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
-        <View className="flex-1 relative bg-[#F7F8FC]">
-          {/* Subtle botanical branch illustration fixed on top right */}
+        <View className="flex-1 relative bg-[#F8F9FC]">
+          {/* Botanical background atmosphere matching Stitch code.html (.bg-leaf-pattern) */}
           {activeRole !== 'trainer' && (
-            <View pointerEvents="none" style={{ position: 'absolute', top: 0, right: 0, width: 140, height: 160, opacity: 0.85, zIndex: 0 }}>
-              <Svg width="140" height="160" viewBox="0 0 140 160" fill="none">
-                <Defs>
-                  <LinearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <Stop offset="0%" stopColor="#C2D3C8" stopOpacity="0.85" />
-                    <Stop offset="100%" stopColor="#94AA9D" stopOpacity="0.45" />
-                  </LinearGradient>
-                  <LinearGradient id="stemGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <Stop offset="0%" stopColor="#B0C2B6" stopOpacity="0.8" />
-                    <Stop offset="100%" stopColor="#7E9688" stopOpacity="0.35" />
-                  </LinearGradient>
-                </Defs>
-                <Path d="M 140 10 Q 85 65 30 135" stroke="url(#stemGrad)" strokeWidth="1.6" strokeLinecap="round" />
-                <Path d="M 125 32 Q 92 18 78 38 Q 106 48 125 32 Z" fill="url(#leafGrad)" />
-                <Path d="M 110 48 Q 72 42 58 66 Q 90 72 110 48 Z" fill="url(#leafGrad)" />
-                <Path d="M 90 68 Q 52 70 40 98 Q 72 98 90 68 Z" fill="url(#leafGrad)" />
-                <Path d="M 72 90 Q 38 100 30 128 Q 58 124 72 90 Z" fill="url(#leafGrad)" />
-                <Path d="M 48 114 Q 20 128 14 154 Q 38 144 48 114 Z" fill="url(#leafGrad)" />
-                <Path d="M 135 18 Q 112 4 98 20 Q 122 28 135 18 Z" fill="url(#leafGrad)" />
-              </Svg>
-            </View>
+            <>
+              {/* Botanical Green Wash & Amber Ambient Aura */}
+              <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 460, zIndex: 0, overflow: 'hidden' }}>
+                <Svg width="100%" height={460}>
+                  <Defs>
+                    {/* Top Right Botanical Green Wash from code.html */}
+                    <RadialGradient id="topRightMint" cx="90%" cy="8%" rx="65%" ry="65%">
+                      <Stop offset="0%" stopColor="#A7F3D0" stopOpacity={0.9} />
+                      <Stop offset="35%" stopColor="#D1FAE5" stopOpacity={0.6} />
+                      <Stop offset="70%" stopColor="#E6F4EA" stopOpacity={0.25} />
+                      <Stop offset="100%" stopColor="#F8F9FC" stopOpacity={0} />
+                    </RadialGradient>
+                    {/* Top Left Warm Amber Glow from code.html */}
+                    <RadialGradient id="leftAmberGlow" cx="10%" cy="22%" rx="45%" ry="45%">
+                      <Stop offset="0%" stopColor="#FEF3C7" stopOpacity={0.7} />
+                      <Stop offset="55%" stopColor="#FEF3C7" stopOpacity={0.25} />
+                      <Stop offset="100%" stopColor="#F8F9FC" stopOpacity={0} />
+                    </RadialGradient>
+                  </Defs>
+                  <Rect width="100%" height={460} fill="url(#topRightMint)" />
+                  <Rect width="100%" height={460} fill="url(#leftAmberGlow)" />
+                </Svg>
+              </View>
+
+              {/* High-intensity Botanical Vine & Leaves Illustration from Stitch code.html */}
+              <View pointerEvents="none" style={{ position: 'absolute', top: -5, right: -10, width: 270, height: 320, opacity: 0.92, zIndex: 0 }}>
+                <Svg width="270" height="320" viewBox="0 0 200 250" fill="none">
+                  <Defs>
+                    <LinearGradient id="stitchLeafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <Stop offset="0%" stopColor="#10B981" stopOpacity={0.95} />
+                      <Stop offset="100%" stopColor="#059669" stopOpacity="0.85" />
+                    </LinearGradient>
+                  </Defs>
+                  <Path 
+                    d="M180,-10 C160,30 140,50 110,65 C135,70 160,60 175,45 C150,80 120,95 85,100 C115,110 145,105 165,85 C135,120 100,135 60,140 C85,155 125,150 145,130 C110,165 75,175 35,178 C65,190 100,185 120,165 C85,200 45,210 5,215 C40,225 75,220 95,200 C60,230 20,240 -10,245" 
+                    stroke="#059669" 
+                    strokeDasharray="1.5,2.5" 
+                    strokeWidth="2" 
+                  />
+                  <Path d="M135,35 C155,20 175,25 185,45 C170,55 150,50 135,35 Z" fill="url(#stitchLeafGrad)" opacity={0.9} />
+                  <Path d="M105,75 C130,60 150,68 160,90 C140,98 120,92 105,75 Z" fill="url(#stitchLeafGrad)" opacity={0.88} />
+                  <Path d="M80,115 C108,100 130,110 138,132 C118,140 98,132 80,115 Z" fill="url(#stitchLeafGrad)" opacity={0.9} />
+                  <Path d="M50,152 C78,140 100,150 108,170 C88,178 68,170 50,152 Z" fill="url(#stitchLeafGrad)" opacity={0.85} />
+                  <Path d="M20,190 C45,180 65,190 72,210 C52,216 35,208 20,190 Z" fill="url(#stitchLeafGrad)" opacity={0.88} />
+                </Svg>
+              </View>
+            </>
           )}
           {activeRole !== 'trainer' ? (
             <ClientProfileView
@@ -2741,7 +2767,7 @@ function AccordionCard({ title, icon, expanded, onToggle, children, rightText, r
 
 function SafeAreaViewWrapper({ children }: { children: React.ReactNode }) {
   return (
-    <View style={{ flex: 1, backgroundColor: '#F7F8FC' }}>
+    <View style={{ flex: 1, backgroundColor: '#FFF8F8' }}>
       {children}
     </View>
   );

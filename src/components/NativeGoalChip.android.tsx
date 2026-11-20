@@ -33,7 +33,7 @@ export const NativeGoalChip = React.memo(({ label, selected, onPress, size = 'sm
       >
         {label}
       </Text>
-      {selected && <Feather name="check" size={isSmall ? 11 : 13} color="#065F46" />}
+      {selected && <Feather name="check" size={isSmall ? 11 : 13} color="#E11D48" />}
     </NativePressable>
   );
 });
@@ -56,23 +56,23 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
   },
   capsuleSelected: {
-    backgroundColor: '#ECFDF5', // subtle light emerald
-    borderColor: '#10B981',     // green border
+    backgroundColor: '#FFF1F2', // subtle soft crimson wash matching Stitch DESIGN.md
+    borderColor: '#FECDD3',     // soft crimson border
   },
   capsuleUnselected: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FAFC',
     borderColor: '#E2E8F0',     // subtle outline
   },
   capsuleText: {
+    fontFamily: 'Outfit_600SemiBold',
     fontSize: 12.5,
-    fontWeight: '700',
   },
   capsuleTextSmall: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 11.5,
   },
   capsuleTextSelected: {
-    color: '#065F46', // deep readable emerald
+    color: '#E11D48', // Virla Athletic Crimson Red
   },
   capsuleTextUnselected: {
     color: '#475569',

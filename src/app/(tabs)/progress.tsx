@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Animated, Platform, BackHandler } from 'react-native';
+import { View, Text, TouchableOpacity, Platform, BackHandler, Animated as RNAnimated } from 'react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming, 
+  Easing 
+} from 'react-native-reanimated';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,7 +42,14 @@ export default function ProgressScreen() {
   const [simulateEmpty, setSimulateEmpty] = useState(false);
   const [forceShowDemo, setForceShowDemo] = useState(false);
   const [scrollY, setScrollY] = useState(0);
-  const fadeAnim = useMemo(() => new Animated.Value(0), []);
+  // 🚀 Native Reanimated UI-thread fade animation for timeframe switches
+  const fadeSharedValue = useSharedValue(1);
+  const animatedFadeStyle = useAnimatedStyle(() => {
+    return {
+      opacity: fadeSharedValue.value,
+    };
+  });
+  const trainerFadeAnim = useRef(new RNAnimated.Value(1)).current;
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -109,13 +122,12 @@ export default function ProgressScreen() {
   }, [simulateEmpty, forceShowDemo, isNaturallyEmpty]);
 
   useEffect(() => {
-    fadeAnim.setValue(0.3);
-    Animated.timing(fadeAnim, {
-      toValue: 1,
+    fadeSharedValue.value = 0.3;
+    fadeSharedValue.value = withTiming(1, {
       duration: 220,
-      useNativeDriver: true,
-    }).start();
-  }, [activeRange, fadeAnim]);
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [activeRange]);
 
   const currentStats = useMemo(() => {
     const userId = user.id || Database.getCurrentUserId();
@@ -403,8 +415,8 @@ export default function ProgressScreen() {
   const userName = userProfile.name || user?.name || (role === 'trainer' ? 'Trainer' : 'User');
 
   return (
-    <View style={{ flex: 1, backgroundColor: systemBgColor }}>
-      <View className="flex-1 relative" style={{ backgroundColor: systemBgColor }}>
+    <View style={{ flex: 1, backgroundColor: '#F8F9FB' }}>
+      <View className="flex-1 relative" style={{ backgroundColor: '#F8F9FB' }}>
         <FlashList
           data={[1]}
           keyExtractor={() => 'progress-root'}
@@ -415,52 +427,60 @@ export default function ProgressScreen() {
             const y = e.nativeEvent.contentOffset.y;
             setScrollY(y);
           }}
-          contentContainerStyle={{ paddingTop: insets.top + 62, paddingBottom: 140 }}
-          style={{ backgroundColor: systemBgColor }}
+          contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: 140 }}
+          style={{ backgroundColor: '#F8F9FB' }}
           renderItem={() => (
-          <View className="px-6 pt-2 pb-4 gap-6">
-            <View className="flex-row justify-between items-start">
-              <View className="flex-1 pr-3">
-                <Text className="text-[#6B7280] text-[11px] font-semibold uppercase tracking-wider">
-                  {role === 'trainer' ? 'Partner Insights & Metrics' : 'Analytics & Daily Metrics'}
+          <View className="px-5 pt-2 pb-4 gap-5">
+            {/* Top Navigation & Page Title matching Stitch code.html */}
+            <View className="flex-row items-center justify-between pt-1">
+              <View>
+                <Text 
+                  style={{ fontFamily: 'Outfit_700Bold' }} 
+                  className="text-2xl text-[#0F172A] tracking-tight"
+                >
+                  {role === 'trainer' ? 'Performance' : 'My Progress'}
+                </Text>
+                <Text 
+                  style={{ fontFamily: 'Outfit_600SemiBold' }} 
+                  className="text-[10px] tracking-wider uppercase text-slate-400 mt-0.5"
+                >
+                  {role === 'trainer' ? 'PARTNER INSIGHTS & METRICS' : 'ANALYTICS & DAILY METRICS'}
                 </Text>
               </View>
 
               {role !== 'trainer' && (
-              <TouchableOpacity 
-                activeOpacity={0.7}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                onPress={() => {
-                  if (isEmpty) {
-                    // Restoring data: turn off simulateEmpty and turn on forceShowDemo
-                    setSimulateEmpty(false);
-                    setForceShowDemo(true);
-                  } else {
-                    // Simulating empty: turn on simulateEmpty and turn off forceShowDemo
-                    setSimulateEmpty(true);
-                    setForceShowDemo(false);
-                  }
-                }}
-                style={{
-                  backgroundColor: isEmpty ? '#4F46E5' : '#101828',
-                  ...softShadow({ color: isEmpty ? '#4F46E5' : '#101828', opacity: 0.22, radius: 5, offsetY: 2 }),
-                }}
-                className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full mt-1 border border-white/10"
-              >
-                <Feather 
-                  name={isEmpty ? 'refresh-cw' : 'sliders'} 
-                  size={11} 
-                  color={isEmpty ? '#FFFFFF' : '#F59E0B'} 
-                />
-                <Text 
-                  style={{ color: isEmpty ? '#FFFFFF' : '#FBBF24' }} 
-                  className="text-[9.5px] font-bold uppercase tracking-wider"
+                <TouchableOpacity 
+                  activeOpacity={0.75}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  onPress={() => {
+                    if (isEmpty) {
+                      setSimulateEmpty(false);
+                      setForceShowDemo(true);
+                    } else {
+                      setSimulateEmpty(true);
+                      setForceShowDemo(false);
+                    }
+                  }}
+                  style={{
+                    backgroundColor: '#111726',
+                    ...softShadow({ color: '#0F172A', opacity: 0.15, radius: 6, offsetY: 2 }),
+                  }}
+                  className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full"
                 >
-                  {isEmpty ? 'Restore Data' : 'Simulate Empty'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+                  <Feather 
+                    name={isEmpty ? 'refresh-cw' : 'sliders'} 
+                    size={12} 
+                    color="#F59E0B" 
+                  />
+                  <Text 
+                    style={{ fontFamily: 'Outfit_700Bold' }} 
+                    className="text-white tracking-widest text-[9px] uppercase"
+                  >
+                    {isEmpty ? 'RESTORE DATA' : 'SIMULATE EMPTY'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
           {isEmpty ? (
             <EmptyState type="no-progress" showCard={false} />
@@ -468,7 +488,7 @@ export default function ProgressScreen() {
             <TrainerPerformanceView
               activeRange={activeRange}
               setActiveRange={setActiveRange}
-              fadeAnim={fadeAnim}
+              fadeAnim={trainerFadeAnim}
               currentStats={currentStats}
             />
           ) : (
@@ -480,185 +500,220 @@ export default function ProgressScreen() {
               />
 
               {/* Calculated Targets Hero Card */}
-              <Animated.View style={{ opacity: fadeAnim }}>
+              <Animated.View style={animatedFadeStyle}>
                 <CalculatedTargetsCard />
               </Animated.View>
 
-              {/* Card 1: 4 Animated Rings (Feature 8) - Seamless on canvas */}
-              <Animated.View style={{ opacity: fadeAnim }} className="gap-4">
+              {/* Card 1: 4 Animated Rings - Crisp White Pods matching Stitch master tokens */}
+              <Animated.View style={animatedFadeStyle} className="gap-3.5">
                 <View className="flex-row justify-between items-center px-1">
-                  <Text className="text-[#101828] text-xs font-bold uppercase tracking-wider">
+                  <Text 
+                    style={{ fontFamily: 'Outfit_700Bold' }} 
+                    className="text-[#0F172A] text-xs font-bold uppercase tracking-wider"
+                  >
                     Wellness Indicators
                   </Text>
                 </View>
 
-                {/* 2x2 Stat Pods Grid (No white card background) */}
-                <View className="flex-row flex-wrap justify-between gap-y-6 pt-1">
+                {/* 2x2 Stat Pods Grid (White Cards with ultra-soft hairline slate border) */}
+                <View className="flex-row flex-wrap justify-between gap-y-3.5 pt-1">
                   {/* Pod 1: Calories */}
-                  <View className="items-center" style={{ width: '48%', paddingVertical: 8 }}>
-                    <ProgressRing progress={currentStats.caloriesProgress} size={84} strokeWidth={10} activeColor="#F43F5E" enable3D={true}>
-                      <Text className="text-[#101828] text-sm font-extrabold">
+                  <View 
+                    style={{ 
+                      width: '48%', 
+                      paddingVertical: 16, 
+                      paddingHorizontal: 12,
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      borderColor: 'rgba(15, 23, 42, 0.06)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      ...softShadow({ color: '#0F172A', opacity: 0.04, radius: 10, offsetY: 4 }),
+                    }}
+                  >
+                    <ProgressRing progress={currentStats.caloriesProgress} size={84} strokeWidth={9} activeColor="#E11D48" enable3D={true}>
+                      <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#0F172A] text-base font-extrabold">
                         {Math.round(currentStats.caloriesProgress * 100)}%
                       </Text>
                     </ProgressRing>
-                    <Text className="text-[#101828] text-xs font-bold mt-2.5">Calories</Text>
-                    <Text className="text-zinc-500 text-[10px] font-semibold uppercase mt-0.5">{currentStats.calories} Kcal</Text>
+                    <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-[#0F172A] text-xs font-bold mt-2.5">Calories</Text>
+                    <Text style={{ fontFamily: 'Outfit_500Medium' }} className="text-slate-400 text-[10px] font-semibold uppercase mt-0.5 tracking-tight">{currentStats.calories} KCAL</Text>
                   </View>
 
                   {/* Pod 2: Attendance */}
-                  <View className="items-center" style={{ width: '48%', paddingVertical: 8 }}>
-                    <ProgressRing progress={currentStats.attendance / 100} size={84} strokeWidth={10} activeColor="#10B981" enable3D={true}>
-                      <Text className="text-[#101828] text-sm font-extrabold">{currentStats.attendance}%</Text>
+                  <View 
+                    style={{ 
+                      width: '48%', 
+                      paddingVertical: 16, 
+                      paddingHorizontal: 12,
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      borderColor: 'rgba(15, 23, 42, 0.06)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      ...softShadow({ color: '#0F172A', opacity: 0.04, radius: 10, offsetY: 4 }),
+                    }}
+                  >
+                    <ProgressRing progress={currentStats.attendance / 100} size={84} strokeWidth={9} activeColor="#10B981" enable3D={true}>
+                      <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#0F172A] text-base font-extrabold">{currentStats.attendance}%</Text>
                     </ProgressRing>
-                    <Text className="text-[#101828] text-xs font-bold mt-2.5">Attendance</Text>
-                    <Text className="text-zinc-500 text-[10px] font-semibold uppercase mt-0.5">Optimal Rate</Text>
+                    <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-[#0F172A] text-xs font-bold mt-2.5">Attendance</Text>
+                    <Text style={{ fontFamily: 'Outfit_500Medium' }} className="text-slate-400 text-[10px] font-semibold uppercase mt-0.5 tracking-tight">OPTIMAL RATE</Text>
                   </View>
 
                   {/* Pod 3: Sessions */}
-                  <View className="items-center" style={{ width: '48%', paddingVertical: 8 }}>
-                    <ProgressRing progress={currentStats.sessionsProgress} size={84} strokeWidth={10} activeColor="#6366F1" enable3D={true}>
-                      <Text className="text-[#101828] text-sm font-extrabold">{currentStats.sessions}</Text>
+                  <View 
+                    style={{ 
+                      width: '48%', 
+                      paddingVertical: 16, 
+                      paddingHorizontal: 12,
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      borderColor: 'rgba(15, 23, 42, 0.06)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      ...softShadow({ color: '#0F172A', opacity: 0.04, radius: 10, offsetY: 4 }),
+                    }}
+                  >
+                    <ProgressRing progress={currentStats.sessionsProgress} size={84} strokeWidth={9} activeColor="#3B82F6" enable3D={true}>
+                      <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#0F172A] text-lg font-extrabold">{currentStats.sessions}</Text>
                     </ProgressRing>
-                    <Text className="text-[#101828] text-xs font-bold mt-2.5">Sessions</Text>
-                    <Text className="text-zinc-500 text-[10px] font-semibold uppercase mt-0.5">Completed</Text>
+                    <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-[#0F172A] text-xs font-bold mt-2.5">Sessions</Text>
+                    <Text style={{ fontFamily: 'Outfit_500Medium' }} className="text-slate-400 text-[10px] font-semibold uppercase mt-0.5 tracking-tight">COMPLETED</Text>
                   </View>
 
                   {/* Pod 4: Recovery */}
-                  <View className="items-center" style={{ width: '48%', paddingVertical: 8 }}>
-                    <ProgressRing progress={currentStats.recovery / 100} size={84} strokeWidth={10} activeColor="#F59E0B" enable3D={true}>
-                      <Text className="text-[#101828] text-sm font-extrabold">{currentStats.recovery}%</Text>
+                  <View 
+                    style={{ 
+                      width: '48%', 
+                      paddingVertical: 16, 
+                      paddingHorizontal: 12,
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      borderColor: 'rgba(15, 23, 42, 0.06)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      ...softShadow({ color: '#0F172A', opacity: 0.04, radius: 10, offsetY: 4 }),
+                    }}
+                  >
+                    <ProgressRing progress={currentStats.recovery / 100} size={84} strokeWidth={9} activeColor="#F59E0B" enable3D={true}>
+                      <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#0F172A] text-base font-extrabold">{currentStats.recovery}%</Text>
                     </ProgressRing>
-                    <Text className="text-[#101828] text-xs font-bold mt-2.5">Recovery</Text>
-                    <Text className="text-zinc-500 text-[10px] font-semibold uppercase mt-0.5">High Index</Text>
+                    <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-[#0F172A] text-xs font-bold mt-2.5">Recovery</Text>
+                    <Text style={{ fontFamily: 'Outfit_500Medium' }} className="text-slate-400 text-[10px] font-semibold uppercase mt-0.5 tracking-tight">HIGH INDEX</Text>
                   </View>
                 </View>
               </Animated.View>
 
-              {/* Card 2: Sculpted 3D Liquid Energy Cylinders Chart (Seamless on canvas) */}
-              <Animated.View style={{ opacity: fadeAnim }} className="gap-4">
-                <View className="flex-row justify-between items-center px-1">
+              {/* Card 2: 7-Day Consistency Capsules Chart inside clean white card */}
+              <Animated.View 
+                style={[
+                  animatedFadeStyle,
+                  {
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: 24,
+                    padding: 20,
+                    borderWidth: 1,
+                    borderColor: 'rgba(15, 23, 42, 0.06)',
+                    ...softShadow({ color: '#0F172A', opacity: 0.04, radius: 12, offsetY: 4 }),
+                  }
+                ]} 
+                className="gap-4"
+              >
+                <View className="flex-row justify-between items-center">
                   <View>
-                    <Text className="text-[#101828] text-xs font-bold uppercase tracking-wider">
+                    <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#0F172A] text-xs font-bold uppercase tracking-wider">
                       Activity History
                     </Text>
-                    <Text className="text-zinc-500 text-[10px] font-medium mt-0.5">
+                    <Text style={{ fontFamily: 'Outfit_500Medium' }} className="text-slate-400 text-xs mt-0.5">
                       {activeRange === 'weekly' ? 'Daily intensity & consistency' : activeRange === 'monthly' ? '4-Week progression' : 'Annual volume overview'}
                     </Text>
                   </View>
-                  <View className="flex-row items-center gap-1.5 px-2.5 py-1 bg-[#101828]/5 rounded-full border border-[#101828]/10">
-                    <View className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                    <Text className="text-indigo-700 text-[9px] font-bold uppercase tracking-wider">
+                  <View className="flex-row items-center gap-1.5 px-2.5 py-1 bg-indigo-50 rounded-full border border-indigo-100">
+                    <View className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
+                    <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-indigo-600 text-[10px] font-bold uppercase tracking-wider">
                       {activeRange === 'weekly' ? '7-Day View' : activeRange === 'monthly' ? 'Monthly' : 'Yearly'}
                     </Text>
                   </View>
                 </View>
 
-                <View style={{ height: 152, justifyContent: 'flex-end', paddingTop: 8 }}>
+                <View style={{ height: 160, justifyContent: 'flex-end', paddingTop: 10 }}>
                   <View className="flex-row items-end justify-between">
                     {currentStats.chartData.map((d, index) => {
                       const isPeak = d.val > 0 && d.val === Math.max(...currentStats.chartData.map(c => c.val));
-                      const heightPercent = d.val ? `${d.val}%` : '8%';
-                      const barWidth = currentStats.chartData.length > 5 ? 24 : 30;
-                      const shadowWidth = currentStats.chartData.length > 5 ? 20 : 24;
+                      const heightPercent = d.val ? `${Math.max(12, d.val)}%` : '12%';
+                      const barWidth = 24;
                       return (
                         <View key={index} className="items-center flex-1">
                           {/* Floating Peak / Value Indicator */}
-                          <View style={{ height: 20, justifyContent: 'center', marginBottom: 6 }}>
-                            {isPeak ? (
+                          <View style={{ height: 22, justifyContent: 'center', marginBottom: 6 }}>
+                            {d.val > 0 ? (
                               <View 
                                 style={{
-                                  backgroundColor: '#4F46E5',
-                                  paddingHorizontal: 6,
-                                  paddingVertical: 1.5,
+                                  backgroundColor: isPeak ? '#4338CA' : 'transparent',
+                                  paddingHorizontal: isPeak ? 6 : 0,
+                                  paddingVertical: isPeak ? 1.5 : 0,
                                   borderRadius: 5,
-                                  ...softShadow({ color: '#4F46E5', opacity: 0.35, radius: 3, offsetY: 2 }),
+                                  ...softShadow({ color: '#4338CA', opacity: isPeak ? 0.35 : 0, radius: 4, offsetY: 2 }),
                                 }}
                               >
-                                <Text style={{ color: '#FFFFFF', fontSize: 8.5, fontWeight: '800' }}>
+                                <Text 
+                                  style={{ 
+                                    fontFamily: 'Outfit_700Bold',
+                                    color: isPeak ? '#FFFFFF' : '#94A3B8', 
+                                    fontSize: 9, 
+                                    fontWeight: '800' 
+                                  }}
+                                >
                                   {d.val}%
                                 </Text>
                               </View>
                             ) : (
-                              <Text style={{ color: '#94A3B8', fontSize: 8.5, fontWeight: '600' }}>
-                                {d.val > 0 ? `${d.val}%` : ''}
+                              <Text style={{ color: '#CBD5E1', fontSize: 10, fontWeight: '600' }}>
+                                -
                               </Text>
                             )}
                           </View>
 
-                          {/* Sculpted 3D Glass Cylindrical Conduit */}
+                          {/* Consistency Capsule Outer Track */}
                           <View 
                             style={{
                               width: barWidth,
-                              height: 88,
+                              height: 108,
                               borderRadius: barWidth / 2,
-                              backgroundColor: '#EAEFF5',
+                              backgroundColor: '#F1F5F9',
                               justifyContent: 'flex-end',
                               overflow: 'hidden',
-                              borderTopWidth: 2,
-                              borderLeftWidth: 1.5,
-                              borderTopColor: '#CBD5E1',
-                              borderLeftColor: '#CBD5E1',
-                              borderBottomWidth: 1,
-                              borderRightWidth: 1,
-                              borderBottomColor: '#FFFFFF',
-                              borderRightColor: '#FFFFFF',
-                              shadowColor: '#000000',
-                              shadowOffset: { width: 0, height: 2 },
-                              shadowOpacity: 0.08,
-                              shadowRadius: 3,
+                              padding: 2,
+                              borderWidth: isPeak ? 1.5 : 0,
+                              borderColor: isPeak ? '#818CF8' : 'transparent',
                             }}
                           >
-                            {/* Liquid Energy Core with Specular Reflections */}
-                            <View 
-                              style={{ 
-                                height: heightPercent as any,
-                                width: '100%',
-                                borderRadius: (barWidth - 2) / 2,
-                                backgroundColor: d.val === 0 
-                                  ? '#E2E8F0' 
-                                  : index % 2 === 0 ? '#4F46E5' : '#6366F1',
-                                borderLeftWidth: 1.5,
-                                borderLeftColor: 'rgba(255, 255, 255, 0.85)',
-                                borderRightWidth: 1.5,
-                                borderRightColor: 'rgba(0, 0, 0, 0.28)',
-                                ...softShadow({ color: '#4F46E5', opacity: 0.5, radius: 8, offsetY: 0 }),
-                              }} 
-                            >
-                              {d.val > 0 && (
-                                <View 
-                                  style={{
-                                    width: '100%',
-                                    height: 5,
-                                    borderRadius: 2.5,
-                                    backgroundColor: '#FFFFFF',
-                                    opacity: 0.9,
-                                    shadowColor: '#FFFFFF',
-                                    shadowOffset: { width: 0, height: -1 },
-                                    shadowOpacity: 0.9,
-                                    shadowRadius: 3,
-                                  }}
-                                />
-                              )}
-                            </View>
+                            {/* Inner Filled Capsule Pill with Indigo Gradient */}
+                            {d.val > 0 && (
+                              <View 
+                                style={{ 
+                                  height: heightPercent as any,
+                                  width: '100%',
+                                  borderRadius: (barWidth - 4) / 2,
+                                  backgroundColor: isPeak ? '#4338CA' : '#4F46E5',
+                                  ...softShadow({ color: '#4338CA', opacity: 0.4, radius: 6, offsetY: 0 }),
+                                }} 
+                              />
+                            )}
                           </View>
-
-                          {/* 3D Pillar Base Ground Glow Shadow */}
-                          <View 
-                            style={{
-                              width: shadowWidth,
-                              height: 4,
-                              borderRadius: 2,
-                              backgroundColor: d.val > 0 ? 'rgba(79, 70, 229, 0.28)' : 'rgba(15, 23, 42, 0.06)',
-                              marginTop: 4,
-                            }}
-                          />
 
                           <Text 
                             style={{
-                              color: isPeak ? '#101828' : '#64748B',
-                              fontSize: 10,
-                              fontWeight: isPeak ? '800' : '600',
-                              marginTop: 4,
+                              fontFamily: isPeak ? 'Outfit_700Bold' : 'Outfit_500Medium',
+                              color: isPeak ? '#0F172A' : '#64748B',
+                              fontSize: 10.5,
+                              fontWeight: isPeak ? '700' : '500',
+                              marginTop: 6,
                             }}
                           >
                             {d.label}
@@ -670,130 +725,140 @@ export default function ProgressScreen() {
                 </View>
               </Animated.View>
 
-              {/* Card 3: Embossed 3D Medallion Badges (Dynamic Status) */}
-              <View className="gap-3.5">
+              {/* Card 3: Achievements Badges Section matching Stitch Master Tokens */}
+              <View className="gap-3">
                 <View className="flex-row items-center justify-between px-1">
-                  <Text className="text-[#101828] text-xs font-bold uppercase tracking-wider">
+                  <Text 
+                    style={{ fontFamily: 'Outfit_700Bold' }} 
+                    className="text-[#0F172A] text-xs font-bold uppercase tracking-wider"
+                  >
                     Achievements Badges
                   </Text>
-                  <View className="px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/80">
-                    <Text className="text-indigo-700 text-[9px] font-bold uppercase tracking-wider">
+                  <View className="px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-100">
+                    <Text 
+                      style={{ fontFamily: 'Outfit_700Bold' }} 
+                      className="text-indigo-600 text-[10px] font-bold uppercase tracking-wider"
+                    >
                       {unlockedCount} of {achievements.length} Unlocked
                     </Text>
                   </View>
                 </View>
 
                 {achievements.map((b) => {
-                  const theme = getMedallionTheme(b.id, b.unlocked);
                   return (
                     <View
                       key={b.id}
                       style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: 'rgba(15, 23, 42, 0.08)',
+                        padding: 14,
                         flexDirection: 'row',
                         alignItems: 'center',
                         gap: 14,
-                        paddingVertical: 10,
-                        paddingHorizontal: 4,
-                        borderBottomWidth: 1,
-                        borderBottomColor: 'rgba(226, 232, 240, 0.7)',
-                        opacity: b.unlocked ? 1 : 0.75,
+                        ...softShadow({ color: '#0F172A', opacity: 0.03, radius: 8, offsetY: 2 }),
                       }}
                     >
-                      {/* Deep Inset Chamfer Medallion Socket */}
-                      <View
-                        style={{
-                          width: 58,
-                          height: 58,
-                          borderRadius: 29,
-                          backgroundColor: b.unlocked ? '#E2E8F0' : '#EDE8E8',
-                          borderTopWidth: 2.5,
-                          borderLeftWidth: 2.5,
-                          borderTopColor: b.unlocked ? '#94A3B8' : '#CBD5E1',
-                          borderLeftColor: b.unlocked ? '#94A3B8' : '#CBD5E1',
-                          borderBottomWidth: 1.5,
-                          borderRightWidth: 1.5,
-                          borderBottomColor: '#FFFFFF',
-                          borderRightColor: '#FFFFFF',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        {/* Glowing Metallic / 3D Gem Core */}
+                      {/* Left Icon: Golden Medal for Unlocked, Slate Lock for Locked */}
+                      {b.unlocked ? (
                         <View
                           style={{
                             width: 48,
                             height: 48,
                             borderRadius: 24,
-                            backgroundColor: theme.bg,
+                            backgroundColor: '#FEF3C7',
                             borderWidth: 2,
-                            borderColor: theme.border,
-                            ...softShadow({ color: theme.glow, opacity: b.unlocked ? 0.55 : 0, radius: 10, offsetY: 0 }),
+                            borderColor: '#FDE68A',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            position: 'relative',
-                            overflow: 'hidden',
                           }}
                         >
-                          {/* Specular 3D Reflection Glint for Unlocked Badges */}
-                          {b.unlocked && (
-                            <View
-                              style={{
-                                position: 'absolute',
-                                top: 3,
-                                left: 7,
-                                width: 16,
-                                height: 9,
-                                borderRadius: 5,
-                                backgroundColor: '#FFFFFF',
-                                opacity: 0.85,
-                                transform: [{ rotate: '-25deg' }],
-                              }}
-                            />
-                          )}
-                          {b.unlocked ? (
-                            <Text style={{ fontSize: 24 }}>{b.icon}</Text>
-                          ) : (
-                            <Feather name="lock" size={18} color="#94A3B8" />
-                          )}
+                          <Ionicons name="star" size={24} color="#F59E0B" />
                         </View>
-                      </View>
+                      ) : (
+                        <View
+                          style={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: 24,
+                            backgroundColor: '#F8FAFC',
+                            borderWidth: 1,
+                            borderColor: '#E2E8F0',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Feather name="lock" size={20} color="#94A3B8" />
+                        </View>
+                      )}
 
                       {/* Content */}
-                      <View className="flex-1">
+                      <View className="flex-1 min-w-0">
                         <View className="flex-row items-center justify-between">
                           <Text 
-                            style={{ color: b.unlocked ? '#101828' : '#64748B' }}
-                            className="text-sm font-bold tracking-tight"
+                            style={{ 
+                              fontFamily: 'Outfit_700Bold', 
+                              color: b.unlocked ? '#0F172A' : '#334155',
+                              fontSize: 13,
+                            }}
+                            numberOfLines={1}
                           >
                             {b.title}
                           </Text>
-                          <View 
-                            style={{
-                              backgroundColor: theme.chipBg,
-                              paddingHorizontal: 7,
-                              paddingVertical: 2,
-                              borderRadius: 6,
-                            }}
-                          >
-                            <Text style={{ color: theme.chipText, fontSize: 9, fontWeight: '700' }}>
-                              {theme.tag}
+                          {b.unlocked ? (
+                            <View 
+                              style={{
+                                backgroundColor: 'rgba(254, 243, 199, 0.9)',
+                                paddingHorizontal: 8,
+                                paddingVertical: 2,
+                                borderRadius: 6,
+                              }}
+                            >
+                              <Text 
+                                style={{ 
+                                  fontFamily: 'Outfit_700Bold', 
+                                  color: '#B45309', 
+                                  fontSize: 9, 
+                                  textTransform: 'uppercase' 
+                                }}
+                              >
+                                Pioneer
+                              </Text>
+                            </View>
+                          ) : (
+                            <Text 
+                              style={{ 
+                                fontFamily: 'Outfit_600SemiBold', 
+                                color: '#94A3B8', 
+                                fontSize: 9 
+                              }}
+                            >
+                              Locked
                             </Text>
-                          </View>
+                          )}
                         </View>
-                        <Text className="text-zinc-500 text-xs font-normal mt-0.5 leading-4">
+
+                        <Text 
+                          style={{ fontFamily: 'Outfit_500Medium', color: '#64748B', fontSize: 11 }}
+                          className="mt-0.5"
+                          numberOfLines={1}
+                        >
                           {b.desc}
                         </Text>
 
                         {/* Progress Tracker for Locked Badges */}
                         {!b.unlocked && (
                           <View className="flex-row items-center gap-2 mt-2">
-                            <View className="flex-1 h-1 bg-[#E2E8F0] rounded-full overflow-hidden">
+                            <View className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                               <View 
-                                style={{ width: `${b.progress * 100}%` }} 
+                                style={{ width: `${Math.min(100, Math.max(5, b.progress * 100))}%` }} 
                                 className="h-full bg-indigo-500 rounded-full" 
                               />
                             </View>
-                            <Text className="text-zinc-400 text-[9px] font-semibold">
+                            <Text 
+                              style={{ fontFamily: 'Outfit_700Bold', color: '#94A3B8', fontSize: 9 }}
+                            >
                               {b.progressText}
                             </Text>
                           </View>
@@ -809,68 +874,20 @@ export default function ProgressScreen() {
           )}
         />
 
-      {/* Semi-transparent white status bar strip for smooth frosted glass / translucent edge-to-edge feel */}
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: insets.top,
-          backgroundColor: 'rgba(255, 255, 255, 0.55)',
-          borderBottomWidth: 0.5,
-          borderBottomColor: 'rgba(0, 0, 0, 0.05)',
-          zIndex: 35,
-        }}
-      />
-
-      {/* Floating Top Header: Inline title with subtle scrim right next to the element */}
-      <View 
-        pointerEvents="box-none" 
-        style={{ 
-          position: 'absolute', 
-          top: insets.top + 10, 
-          left: 20, 
-          zIndex: 40,
-          flexDirection: 'row',
-          alignItems: 'center',
-        }}
-      >
-        {/* Inline Progress Badge with surrounding scrim backdrop */}
-        <View pointerEvents="none" className="relative flex-row items-center">
-          {/* Scrim Glow / Fade specifically localized behind and to the side of the progress element */}
-          <View 
-            style={{
-              position: 'absolute',
-              top: -8,
-              left: -12,
-              right: -45,
-              bottom: -8,
-            }}
-          >
-            <Svg width="100%" height="100%" preserveAspectRatio="none">
-              <Defs>
-                <LinearGradient id="progressSideScrim" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <Stop offset="0%" stopColor={systemBgColor} stopOpacity="0.95" />
-                  <Stop offset="65%" stopColor={systemBgColor} stopOpacity="0.85" />
-                  <Stop offset="85%" stopColor={systemBgColor} stopOpacity="0.4" />
-                  <Stop offset="100%" stopColor={systemBgColor} stopOpacity="0" />
-                </LinearGradient>
-              </Defs>
-              <Rect x="0" y="0" width="100%" height="100%" rx={20} ry={20} fill="url(#progressSideScrim)" />
-            </Svg>
-          </View>
-
-          {/* Progress Title Element: Clean, prominent Tab Name font without pill background */}
-          <View className="flex-row items-center py-1">
-            <Text className="text-[#101828] text-2xl font-black tracking-tight" numberOfLines={1}>
-              {role === 'trainer' ? 'Performance' : 'My Progress'}
-            </Text>
-          </View>
-        </View>
+        {/* Semi-transparent status bar backdrop */}
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: insets.top,
+            backgroundColor: '#F8F9FB',
+            zIndex: 35,
+          }}
+        />
       </View>
     </View>
-  </View>
-);
+  );
 }

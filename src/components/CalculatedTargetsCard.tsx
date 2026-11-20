@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, Vibration, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import Svg, { Path } from 'react-native-svg';
 import { useAIWellnessStore, AIWellnessPlan } from '../store/aiWellnessStore';
 import { useUserProfileStore } from '../store/userProfileStore';
 import { NativeProgressBar } from './NativeProgressBar';
@@ -82,42 +83,50 @@ export const CalculatedTargetsCard: React.FC<CalculatedTargetsCardProps> = ({
   return (
     <View
       style={{
-        backgroundColor: '#0B0F19',
-        borderColor: '#1E2536',
+        backgroundColor: '#0D0F17',
+        borderColor: 'rgba(255, 255, 255, 0.08)',
         borderWidth: 1,
-        borderRadius: 28,
-        padding: 24,
-        ...softShadow({ color: '#0B0F19', opacity: 0.24, radius: 16, offsetY: 8 }),
+        borderRadius: 24,
+        padding: 20,
+        ...softShadow({ color: '#0F172A', opacity: 0.35, radius: 20, offsetY: 10 }),
       }}
     >
       {/* Top Tag & Goal Header */}
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center gap-2">
-          <Image
-            source={require('../../assets/images/ai-coach-emblem.png')}
-            style={{ width: 16, height: 16 }}
-            resizeMode="contain"
-          />
+          {/* Sparkle 4-point star icon exact SVG match from Stitch code.html */}
+          <Svg width={16} height={16} viewBox="0 0 24 24" fill="#D8B4FE">
+            <Path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z" />
+          </Svg>
           <Text
             style={{
+              fontFamily: 'Outfit_700Bold',
               fontSize: 11,
-              fontWeight: '700',
               textTransform: 'uppercase',
-              letterSpacing: 0.88,
-              color: 'rgba(255, 255, 255, 0.7)',
+              letterSpacing: 1.2,
+              color: '#CBD5E1',
             }}
           >
-            Calculated Targets
+            CALCULATED TARGETS
           </Text>
         </View>
 
         <View className="flex-row items-center gap-2">
-          <View className="px-2.5 py-0.5 rounded-full bg-white/10">
+          <View 
+            style={{
+              backgroundColor: 'rgba(30, 41, 59, 0.8)',
+              borderWidth: 1,
+              borderColor: '#334155',
+              paddingHorizontal: 10,
+              paddingVertical: 3,
+              borderRadius: 9999,
+            }}
+          >
             <Text
               style={{
+                fontFamily: 'Outfit_600SemiBold',
                 fontSize: 10,
-                fontWeight: '600',
-                color: 'rgba(255, 255, 255, 0.85)',
+                color: '#CBD5E1',
                 textTransform: 'uppercase',
                 letterSpacing: 0.8,
               }}
@@ -131,9 +140,16 @@ export const CalculatedTargetsCard: React.FC<CalculatedTargetsCardProps> = ({
               activeOpacity={0.7}
               onPress={handleCardPress}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              className="p-1 rounded-full bg-white/10"
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 12,
+                backgroundColor: '#1E293B',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
-              <Feather name="arrow-up-right" size={13} color="#FFFFFF" />
+              <Feather name="arrow-up-right" size={13} color="#CBD5E1" />
             </TouchableOpacity>
           )}
         </View>
@@ -141,10 +157,13 @@ export const CalculatedTargetsCard: React.FC<CalculatedTargetsCardProps> = ({
 
       {/* Headline Calorie Target */}
       <View className="flex-row justify-between items-baseline mt-3.5">
-        <Text className="text-white text-[32px] font-bold tracking-tight">
-          {targets.calories.toLocaleString()} kcal
+        <Text 
+          style={{ fontFamily: 'Outfit_700Bold' }} 
+          className="text-white text-[32px] tracking-tight font-bold"
+        >
+          {targets.calories.toLocaleString()} <Text style={{ fontSize: 22, fontWeight: '700' }}>kcal</Text>
         </Text>
-        <Text className="text-zinc-400 text-xs font-medium">
+        <Text style={{ fontFamily: 'Outfit_500Medium' }} className="text-slate-400 text-xs font-medium">
           Daily Calorie Target
         </Text>
       </View>
@@ -178,7 +197,7 @@ export const CalculatedTargetsCard: React.FC<CalculatedTargetsCardProps> = ({
               {targets.protein}g
             </Text>
           </View>
-          <NativeProgressBar progress={proteinPercent / 100} color="#F43F5E" trackColor="#27272A" height={6} />
+          <NativeProgressBar progress={proteinPercent / 100} color="#E11D48" trackColor="#1E293B" height={6} />
         </View>
 
         {/* Carbohydrates */}
@@ -199,7 +218,7 @@ export const CalculatedTargetsCard: React.FC<CalculatedTargetsCardProps> = ({
               {targets.carbs}g
             </Text>
           </View>
-          <NativeProgressBar progress={carbsPercent / 100} color="#6366F1" trackColor="#27272A" height={6} />
+          <NativeProgressBar progress={carbsPercent / 100} color="#6366F1" trackColor="#1E293B" height={6} />
         </View>
 
         {/* Fats */}
@@ -220,7 +239,7 @@ export const CalculatedTargetsCard: React.FC<CalculatedTargetsCardProps> = ({
               {targets.fats}g
             </Text>
           </View>
-          <NativeProgressBar progress={fatsPercent / 100} color="#F59E0B" trackColor="#27272A" height={6} />
+          <NativeProgressBar progress={fatsPercent / 100} color="#F59E0B" trackColor="#1E293B" height={6} />
         </View>
       </View>
 
@@ -273,10 +292,10 @@ export const CalculatedTargetsCard: React.FC<CalculatedTargetsCardProps> = ({
             </Text>
           </View>
           <View className="flex-row items-center gap-1">
-            <Text className="text-[#EC4899] text-[11px] font-bold">
+            <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#E11D48] text-[11px] font-bold">
               {targets.isAiGenerated ? 'View Protocol' : 'Customize Plan'}
             </Text>
-            <Feather name="chevron-right" size={13} color="#EC4899" />
+            <Feather name="chevron-right" size={13} color="#E11D48" />
           </View>
         </TouchableOpacity>
       )}
