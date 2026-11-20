@@ -10,7 +10,7 @@ import { useMembershipStore } from '../store/membershipStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useAIStore } from '../store/aiStore';
 import { useAddressStore } from '../store/addressStore';
-import { setupRealtimeSubscriptions } from './realtime';
+import { enforceDeviceSessionFor, setupRealtimeSubscriptions } from './realtime';
 import { locationTrackerService } from '../services/LocationTrackerService';
 
 /**
@@ -29,6 +29,7 @@ export async function bootstrapApp(): Promise<void> {
     const isLoggedIn = useUserStore.getState().isLoggedIn;
     if (isLoggedIn && storedUser && storedUser.id) {
       Database.setCurrentUserId(storedUser.id);
+      enforceDeviceSessionFor(storedUser.id).catch(() => {});
     }
 
     // 2. Load database collections from Supabase under the restored session context

@@ -174,8 +174,19 @@ BEGIN
   v_uid := NULLIF(current_setting('request.headers', true)::jsonb ->> 'x-user-id', '');
   v_token := NULLIF(current_setting('request.headers', true)::jsonb ->> 'x-device-token', '');
 
-  IF v_uid IS NULL OR v_token IS NULL THEN
+  -- No user header at all: server-side jobs, service_role and SQL editor.
+  IF v_uid IS NULL THEN
     RETURN NEW;
+  END IF;
+
+  -- Admins act from the admin panel, which is not a per-user phone.
+  IF EXISTS (SELECT 1 FROM public.users u WHERE u.id = v_uid AND u.role = 'admin') THEN
+    RETURN NEW;
+  END IF;
+
+  -- Requests from app builds older than single-device login carry no device token.
+  IF v_token IS NULL THEN
+    RAISE EXCEPTION 'DEVICE_UPDATE_REQUIRED' USING ERRCODE = 'P0401';
   END IF;
 
   IF NOT public.device_is_active(v_uid, v_token) THEN

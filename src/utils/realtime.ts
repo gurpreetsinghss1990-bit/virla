@@ -39,6 +39,20 @@ const syncBookingStore = () => {
 let lastDeviceHeartbeatAt = 0;
 let deviceRevokedHandled = false;
 
+export async function enforceDeviceSessionFor(userId: string): Promise<boolean> {
+  const claim = await ensureDeviceSession(userId);
+  if (claim.ok) return true;
+  if (claim.reason === 'active_elsewhere' && !deviceRevokedHandled) {
+    deviceRevokedHandled = true;
+    Alert.alert(
+      'Already logged in',
+      `This account is logged in on ${claim.deviceName || 'another device'}. Please log out from that device first.`
+    );
+    useUserStore.getState().setLoggedIn(false);
+  }
+  return false;
+}
+
 async function performDeviceHeartbeat() {
   const userId = Database.getCurrentUserId();
   if (!userId) return;
@@ -46,19 +60,11 @@ async function performDeviceHeartbeat() {
   if (Date.now() - lastDeviceHeartbeatAt < 60000) return;
 
   // Install updated while still logged in: claim the slot once before heartbeats.
-  const claim = await ensureDeviceSession(userId);
-  lastDeviceHeartbeatAt = Date.now();
-  if (!claim.ok) {
-    if (claim.reason === 'active_elsewhere' && !deviceRevokedHandled) {
-      deviceRevokedHandled = true;
-      Alert.alert(
-        'Already logged in',
-        `This account is logged in on ${claim.deviceName || 'another device'}. Please log out from that device first.`
-      );
-      useUserStore.getState().setLoggedIn(false);
-    }
+  if (!(await enforceDeviceSessionFor(userId))) {
+    lastDeviceHeartbeatAt = Date.now();
     return;
   }
+  lastDeviceHeartbeatAt = Date.now();
 
   const result = await heartbeatDeviceSession(userId);
   if (result.revoked && !deviceRevokedHandled) {
