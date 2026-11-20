@@ -1,10 +1,11 @@
 import * as Device from 'expo-device';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { setClientDeviceToken, supabase } from '../database/supabaseClient';
+import { setClientDeviceToken, setClientSessionToken, supabase } from '../database/supabaseClient';
 
 const DEVICE_ID_KEY = 'virla.device.id';
 const DEVICE_TOKEN_KEY = 'virla.device.token';
+const SESSION_TOKEN_KEY = 'virla.session.token';
 
 export type ClaimResult = {
   ok: boolean;
@@ -18,6 +19,7 @@ let deviceIdCache: string | null = null;
 let deviceTokenCache: string | null = null;
 let claimInFlight: Promise<ClaimResult> | null = null;
 let claimedUserId: string | null = null;
+let sessionTokenCache: string | null = null;
 
 const randomHex = (length: number) => {
   let out = '';
@@ -93,6 +95,56 @@ async function getDeviceToken(): Promise<string> {
  * Claims the single active device slot for this account.
  * Returns ok:false with the other device's name when the account is logged in elsewhere.
  */
+
+async function issueSessionToken(userId: string, deviceId: string, deviceToken: string): Promise<void> {
+  try {
+    const { data, error } = await supabase.rpc('issue_session_token', {
+      p_user_id: userId,
+      p_device_id: deviceId,
+      p_token: deviceToken,
+    });
+    if (error || !data || (data as any).ok !== true) return;
+    const token = String((data as any).token || '');
+    if (token.length < 16) return;
+    sessionTokenCache = token;
+    setClientSessionToken(token);
+    await writeSecure(SESSION_TOKEN_KEY, token);
+  } catch {
+    // Token is best-effort until policies enforce it
+  }
+}
+
+/** Restores the signed token from storage so early reads are authenticated. */
+export async function attachCachedSessionToken(): Promise<void> {
+  if (sessionTokenCache) {
+    setClientSessionToken(sessionTokenCache);
+    return;
+  }
+  const token = await readSecure(SESSION_TOKEN_KEY);
+  if (token && token.length >= 16) {
+    sessionTokenCache = token;
+    setClientSessionToken(token);
+  }
+}
+
+export async function getSessionToken(): Promise<string | null> {
+  if (sessionTokenCache) return sessionTokenCache;
+  const token = await readSecure(SESSION_TOKEN_KEY);
+  sessionTokenCache = token;
+  return token;
+}
+
+/** Rotates the token when the server no longer accepts it. */
+export async function refreshSessionToken(userId: string): Promise<boolean> {
+  try {
+    const [deviceId, deviceToken] = await Promise.all([getDeviceId(), getDeviceToken()]);
+    await issueSessionToken(userId, deviceId, deviceToken);
+    return (await getSessionToken()) !== null;
+  } catch {
+    return false;
+  }
+}
+
 export function claimDeviceSession(userId: string): Promise<ClaimResult> {
   if (claimInFlight) return claimInFlight;
 
@@ -124,6 +176,7 @@ export function claimDeviceSession(userId: string): Promise<ClaimResult> {
       }
       claimedUserId = userId;
       await SecureStore.setItemAsync(EPOCH_KEY, DEVICE_EPOCH).catch(() => {});
+      await issueSessionToken(userId, deviceId, token);
       return { ok: true };
     } catch {
       return { ok: false, reason: 'network' };
@@ -155,6 +208,17 @@ export async function heartbeatDeviceSession(userId: string): Promise<{ ok: bool
     });
     if (error) return { ok: false, revoked: false };
     const row: any = data || {};
+
+    if (row.ok === true) {
+      const sessionToken = await getSessionToken();
+      if (!sessionToken) {
+        await refreshSessionToken(userId);
+      } else {
+        const { data: touchData } = await supabase.rpc('touch_session_token', { p_token: sessionToken });
+        if (!(touchData as any)?.ok) await refreshSessionToken(userId);
+      }
+    }
+
     return { ok: row.ok === true, revoked: row.revoked === true, deviceName: row.device_name ?? null };
   } catch {
     return { ok: false, revoked: false };
@@ -164,13 +228,23 @@ export async function heartbeatDeviceSession(userId: string): Promise<{ ok: bool
 export async function releaseDeviceSession(userId: string | null): Promise<void> {
   if (!userId) return;
   try {
-    const token = await getDeviceToken();
+    const [token, sessionToken] = await Promise.all([getDeviceToken(), getSessionToken()]);
+    if (sessionToken) {
+      await supabase.rpc('revoke_session_token', { p_token: sessionToken });
+    }
     await supabase.rpc('release_device', { p_user_id: userId, p_token: token });
   } catch {
     // Logout must never be blocked by the network
   } finally {
     deviceTokenCache = null;
+    sessionTokenCache = null;
     setClientDeviceToken(null);
+    setClientSessionToken(null);
+    try {
+      await SecureStore.deleteItemAsync(SESSION_TOKEN_KEY);
+    } catch {
+      // ignore
+    }
     try {
       await SecureStore.deleteItemAsync(DEVICE_TOKEN_KEY);
     } catch {
