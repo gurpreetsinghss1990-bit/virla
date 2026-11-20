@@ -6,6 +6,10 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { Alert, Animated, Image, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet, AppState, AppStateStatus, Vibration, Linking } from 'react-native';
 import Svg, { Rect, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ReanimatedAnimated, { 
+  useAnimatedScrollHandler, 
+  useSharedValue 
+} from 'react-native-reanimated';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 import { ProgressRing } from '../../components/ProgressRing';
@@ -418,6 +422,16 @@ const getWorkoutEmoji = (title: string) => {
 export default function HomeScreen() {
   const router = useRouter();
   const isNavigatingRef = useRef(false);
+
+  // 🚀 Native Reanimated UI-thread scroll offsets for horizontal carousels
+  const workoutScrollX = useSharedValue(0);
+  const trainerScrollX = useSharedValue(0);
+  const onWorkoutScroll = useAnimatedScrollHandler((event) => {
+    workoutScrollX.value = event.contentOffset.x;
+  });
+  const onTrainerScroll = useAnimatedScrollHandler((event) => {
+    trainerScrollX.value = event.contentOffset.x;
+  });
 
   const navThrottleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigateSafely = useCallback((route: Href) => {
@@ -1502,7 +1516,7 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                 </View>
 
-                <ScrollView
+                <ReanimatedAnimated.ScrollView
                   horizontal
                   nestedScrollEnabled={true}
                   showsHorizontalScrollIndicator={false}
@@ -1512,6 +1526,8 @@ export default function HomeScreen() {
                   overScrollMode="always"
                   bounces={true}
                   alwaysBounceHorizontal={true}
+                  onScroll={onWorkoutScroll}
+                  scrollEventThrottle={16}
                   style={{ marginHorizontal: -24 }}
                   contentContainerStyle={{ paddingHorizontal: 24, gap: 12 }}
                 >
@@ -1586,7 +1602,7 @@ export default function HomeScreen() {
                       </View>
                     </TouchableOpacity>
                   ))}
-                </ScrollView>
+                </ReanimatedAnimated.ScrollView>
               </View>
 
               {/* Top Performing Trainers Section */}
@@ -1738,7 +1754,7 @@ export default function HomeScreen() {
                       elevation: 2,
                     }}
                   >
-                    <ScrollView 
+                    <ReanimatedAnimated.ScrollView 
                       horizontal 
                       showsHorizontalScrollIndicator={false}
                       decelerationRate="fast"
@@ -1748,6 +1764,8 @@ export default function HomeScreen() {
                       bounces={true}
                       alwaysBounceHorizontal={true}
                       nestedScrollEnabled={true}
+                      onScroll={onTrainerScroll}
+                      scrollEventThrottle={16}
                       contentContainerStyle={{ paddingHorizontal: 10, gap: 16 }}
                     >
                       {TOP_PERFORMING_TRAINERS.map((trainer) => (
@@ -1789,7 +1807,7 @@ export default function HomeScreen() {
                           </View>
                         </View>
                       ))}
-                    </ScrollView>
+                    </ReanimatedAnimated.ScrollView>
 
                     {/* Left Side Soft White Gradient Fade Scrim */}
                     <View 

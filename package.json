@@ -4,6 +4,8 @@
   "version": "2.1.3",
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/outfit": "^0.4.3",
+    "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@expo/ui": "~58.0.29",
     "@expo/vector-icons": "^15.0.2",
     "@msg91comm/sendotp-react-native": "^3.1.0",

@@ -56,9 +56,24 @@ export default function RootLayout() {
             Inter_800ExtraBold,
             Inter_900Black,
           },
+          {
+            Outfit_400Regular,
+            Outfit_500Medium,
+            Outfit_600SemiBold,
+            Outfit_700Bold,
+            Outfit_800ExtraBold,
+          },
+          {
+            PlusJakartaSans_400Regular,
+            PlusJakartaSans_500Medium,
+            PlusJakartaSans_600SemiBold,
+            PlusJakartaSans_700Bold,
+          },
           { configureGlobalInterFont },
         ] = await Promise.all([
           import('@expo-google-fonts/inter'),
+          import('@expo-google-fonts/outfit'),
+          import('@expo-google-fonts/plus-jakarta-sans'),
           import('../utils/configureFonts'),
         ]);
 
@@ -71,6 +86,15 @@ export default function RootLayout() {
           Inter_700Bold,
           Inter_800ExtraBold,
           Inter_900Black,
+          Outfit_400Regular,
+          Outfit_500Medium,
+          Outfit_600SemiBold,
+          Outfit_700Bold,
+          Outfit_800ExtraBold,
+          PlusJakartaSans_400Regular,
+          PlusJakartaSans_500Medium,
+          PlusJakartaSans_600SemiBold,
+          PlusJakartaSans_700Bold,
         });
 
         configureGlobalInterFont();

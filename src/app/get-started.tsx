@@ -3,9 +3,20 @@ import { AppLogo, Heading, PrimaryButton, Subtitle } from '@/presentation/compon
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, AppState, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { Alert, AppState, Dimensions, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withSpring, 
+  withTiming, 
+  Easing, 
+  interpolate,
+  runOnJS
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
+import { Feather } from '@expo/vector-icons';
+import { useFonts } from 'expo-font';
 import { Database } from '../database/Database';
 import { supabase } from '../database/supabaseClient';
 import { OTPService } from '../services/OTPService';
@@ -22,6 +33,17 @@ import { NativeAlertDialog } from '../components/NativeAlertDialog';
 import { cleanOtp, clampInt } from '../utils/inputSafety';
 
 export default function GetStartedScreen() {
+  const [fontsLoaded] = useFonts({
+    Outfit_400Regular: require('../../node_modules/@expo-google-fonts/outfit/400Regular/Outfit_400Regular.ttf'),
+    Outfit_500Medium: require('../../node_modules/@expo-google-fonts/outfit/500Medium/Outfit_500Medium.ttf'),
+    Outfit_600SemiBold: require('../../node_modules/@expo-google-fonts/outfit/600SemiBold/Outfit_600SemiBold.ttf'),
+    Outfit_700Bold: require('../../node_modules/@expo-google-fonts/outfit/700Bold/Outfit_700Bold.ttf'),
+    Outfit_800ExtraBold: require('../../node_modules/@expo-google-fonts/outfit/800ExtraBold/Outfit_800ExtraBold.ttf'),
+    PlusJakartaSans_500Medium: require('../../node_modules/@expo-google-fonts/plus-jakarta-sans/500Medium/PlusJakartaSans_500Medium.ttf'),
+    PlusJakartaSans_600SemiBold: require('../../node_modules/@expo-google-fonts/plus-jakarta-sans/600SemiBold/PlusJakartaSans_600SemiBold.ttf'),
+    PlusJakartaSans_700Bold: require('../../node_modules/@expo-google-fonts/plus-jakarta-sans/700Bold/PlusJakartaSans_700Bold.ttf'),
+  });
+
   const insets = useSafeAreaInsets();
   const { setLoggedIn, setCompletedOnboarding, setRole, updateProfile } = useUserStore();
 
@@ -76,33 +98,76 @@ export default function GetStartedScreen() {
   const [authenticatedUserName, setAuthenticatedUserName] = useState('');
   const [isAppActive, setIsAppActive] = useState(AppState.currentState === 'active');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const otpShiftAnim = useRef(new Animated.Value(0)).current;
-  const spinAnim = useRef(new Animated.Value(0)).current;
-  const bgAuraAnim = useRef(new Animated.Value(0)).current;
   const otpInputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
 
+  // 🚀 Native Reanimated UI-thread SharedValues
+  const otpShiftAnim = useSharedValue(0);
+  const inputShiftAnim = useSharedValue(0);
+  const spinAnim = useSharedValue(0);
+
+  // Animate OTP container shift natively on UI thread
   useEffect(() => {
-    Animated.timing(otpShiftAnim, {
-      toValue: otpSent ? -70 : 0,
-      duration: 350,
-      useNativeDriver: true,
-    }).start();
+    otpShiftAnim.value = withSpring(otpSent ? -75 : 0, {
+      damping: 20,
+      stiffness: 180,
+      mass: 0.8,
+    });
   }, [otpSent]);
 
+  // Animate input box shift ONLY natively on UI thread when keyboard opens/closes
   useEffect(() => {
-    const showSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setIsKeyboardVisible(true)
-    );
-    const hideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setIsKeyboardVisible(false)
-    );
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, () => {
+      setIsKeyboardVisible(true);
+      // Natively translate ONLY the input section on the UI thread
+      inputShiftAnim.value = withSpring(-80, {
+        damping: 20,
+        stiffness: 180,
+        mass: 0.8,
+      });
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setIsKeyboardVisible(false);
+      inputShiftAnim.value = withSpring(0, {
+        damping: 20,
+        stiffness: 180,
+        mass: 0.8,
+      });
+    });
+
     return () => {
       showSub.remove();
       hideSub.remove();
     };
   }, []);
+
+  // UI-thread animated styles
+  const animatedInputContainerStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateY: inputShiftAnim.value + otpShiftAnim.value },
+      ],
+    };
+  });
+
+  const animatedSpinCircleStyle = useAnimatedStyle(() => {
+    const rotateDeg = interpolate(spinAnim.value, [0, 1], [0, 1080]);
+    return {
+      transform: [{ rotate: `${rotateDeg}deg` }],
+    };
+  });
+
+  const animatedDumbbellStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(spinAnim.value, [0, 0.7, 1], [0, 0, 1]);
+    const scale = interpolate(spinAnim.value, [0, 0.7, 1], [0.5, 0.7, 1]);
+    return {
+      opacity,
+      transform: [{ scale }],
+    };
+  });
 
   // New user onboarding setup states
   const [newUserIdToRegister, setNewUserIdToRegister] = useState<string | null>(null);
@@ -176,32 +241,7 @@ export default function GetStartedScreen() {
     checkResumeState();
   }, []);
 
-  // Ambient background animation
-  useEffect(() => {
-    const isNative = Platform.OS !== 'web';
 
-    const bgLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(bgAuraAnim, {
-          toValue: 1,
-          duration: 4000,
-          useNativeDriver: isNative,
-        }),
-        Animated.timing(bgAuraAnim, {
-          toValue: 0,
-          duration: 4000,
-          useNativeDriver: isNative,
-        }),
-      ])
-    );
-
-    bgLoop.start();
-
-    return () => {
-      bgLoop.stop();
-      bgAuraAnim.stopAnimation();
-    };
-  }, []);
 
   // Keep the keyboard-avoiding layout still while the app is not in the foreground.
   // iOS fires keyboardWillHide as the app backgrounds, and KeyboardAvoidingView would
@@ -307,12 +347,16 @@ export default function GetStartedScreen() {
 
           // Trigger 6 boxes -> circle -> 3x spin -> dumbbell success animation
           setIsOtpSuccessAnimating(true);
-          Animated.timing(spinAnim, {
-            toValue: 1,
-            duration: 1200,
-            useNativeDriver: true,
-          }).start(() => {
+          const navigateToTabs = () => {
             router.replace('/(tabs)');
+          };
+          spinAnim.value = withTiming(1, {
+            duration: 1200,
+            easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+          }, (finished) => {
+            if (finished) {
+              runOnJS(navigateToTabs)();
+            }
           });
         } else {
           console.log(`[DEBUG] Incomplete registration detected (status: ${regStatus}). Redirecting new user to user-metrics landing page...`);
@@ -652,25 +696,27 @@ export default function GetStartedScreen() {
     }
   };
 
-  const bgScale = bgAuraAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 1.06],
-  });
-  const bgOpacity = bgAuraAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.82, 1],
-  });
+  // Remove animated loop values - keep background solid & calm without jumping
+  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+  // Exact geometric arc dimensions proportional to screen
+  const outerWidth = screenWidth * 1.7;
+  const outerHeight = 600;
+  const midWidth = screenWidth * 1.35;
+  const midHeight = 480;
+  const innerWidth = screenWidth * 1.05;
+  const innerHeight = 380;
 
   return (
     <TouchableWithoutFeedback onPress={Platform.OS === 'web' ? undefined : Keyboard.dismiss}>
-      <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 16) }}>
+      <View style={{ flex: 1, backgroundColor: '#FFF5F6', paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 16) }}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           enabled={Platform.OS === 'ios' && isAppActive}
           className="flex-1"
         >
-          {/* Background Luxury Glowing Aura (Full Screen Ambient Pulse) */}
-          <Animated.View 
+          {/* Balanced Rose-Silk Concierge Canvas with visible gentle warmth */}
+          <View 
             style={{
               position: 'absolute',
               top: 0,
@@ -678,34 +724,98 @@ export default function GetStartedScreen() {
               right: 0,
               bottom: 0,
               overflow: 'hidden',
-              opacity: bgOpacity,
-              transform: [{ scale: bgScale }],
             }} 
             pointerEvents="none"
           >
-            <Svg width="100%" height="100%" viewBox="0 0 360 800" fill="none" preserveAspectRatio="xMidYMid slice">
+            <Svg width="100%" height="100%" viewBox={`0 0 ${screenWidth} ${screenHeight}`} fill="none">
               <Defs>
-                <LinearGradient id="auraGradTop" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <Stop offset="0%" stopColor="#4F46E5" stopOpacity="0.14" />
-                  <Stop offset="50%" stopColor="#6D5EF7" stopOpacity="0.07" />
-                  <Stop offset="100%" stopColor="#F5B942" stopOpacity="0.0" />
+                {/* 1. Rose Silk Top */}
+                <LinearGradient id="roseSilkTop" x1="50%" y1="0%" x2="50%" y2="100%">
+                  <Stop offset="0%" stopColor="#FECDD3" stopOpacity="0.8" />
+                  <Stop offset="45%" stopColor="#FFE4E6" stopOpacity="0.5" />
+                  <Stop offset="100%" stopColor="#FFF5F6" stopOpacity="0" />
                 </LinearGradient>
-                <LinearGradient id="auraGradBottom" x1="100%" y1="100%" x2="0%" y2="0%">
-                  <Stop offset="0%" stopColor="#E11D48" stopOpacity="0.09" />
-                  <Stop offset="45%" stopColor="#6D5EF7" stopOpacity="0.05" />
-                  <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.0" />
+                {/* 2. Top-Right Athletic Crimson Bloom */}
+                <LinearGradient id="crimsonAuraRight" x1="100%" y1="0%" x2="0%" y2="100%">
+                  <Stop offset="0%" stopColor="#E11D48" stopOpacity="0.14" />
+                  <Stop offset="60%" stopColor="#FFF5F6" stopOpacity="0" />
+                </LinearGradient>
+                {/* 3. Bottom-Left Warm Amber/Gold Whisper */}
+                <LinearGradient id="amberAuraLeft" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <Stop offset="0%" stopColor="#F59E0B" stopOpacity="0.08" />
+                  <Stop offset="60%" stopColor="#FFF5F6" stopOpacity="0" />
+                </LinearGradient>
+                {/* 4. Bottom Center Crimson Footprint */}
+                <LinearGradient id="crimsonFootprint" x1="50%" y1="100%" x2="50%" y2="0%">
+                  <Stop offset="0%" stopColor="#E11D48" stopOpacity="0.08" />
+                  <Stop offset="100%" stopColor="#FFF5F6" stopOpacity="0" />
                 </LinearGradient>
               </Defs>
-              {/* Top ambient orb */}
-              <Circle cx={180} cy={70} r={230} fill="url(#auraGradTop)" />
-              <Path d="M0 180 Q180 120 360 180" stroke="white" strokeWidth={2} opacity={0.3} />
-              <Path d="M0 210 Q180 160 360 210" stroke="white" strokeWidth={1} opacity={0.15} />
 
-              {/* Mid/Bottom ambient glowing orbs covering full background */}
-              <Circle cx={310} cy={520} r={190} fill="url(#auraGradBottom)" />
-              <Circle cx={50} cy={720} r={210} fill="url(#auraGradTop)" opacity={0.7} />
+              {/* Balanced gradient washes */}
+              <Circle cx={screenWidth * 0.5} cy={-20} r={screenWidth * 0.88} fill="url(#roseSilkTop)" />
+              <Circle cx={screenWidth * 0.9} cy={screenHeight * 0.22} r={screenWidth * 0.68} fill="url(#crimsonAuraRight)" />
+              <Circle cx={screenWidth * 0.1} cy={screenHeight * 0.75} r={screenWidth * 0.62} fill="url(#amberAuraLeft)" />
+              <Circle cx={screenWidth * 0.5} cy={screenHeight} r={screenWidth * 0.78} fill="url(#crimsonFootprint)" />
             </Svg>
-          </Animated.View>
+          </View>
+
+          {/* 🌊 Circular Waves & Concentric Lines: Whisper-Soft Pearl Slate (rgba(15, 23, 42, 0.05)) */}
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: insets.top,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              overflow: 'hidden',
+              zIndex: 1,
+            }}
+          >
+            {/* Outer Arc (width: 170%, height: 600px, top: -160px relative to header) */}
+            <View
+              style={{
+                position: 'absolute',
+                top: -160 - insets.top,
+                left: (screenWidth - outerWidth) / 2,
+                width: outerWidth,
+                height: outerHeight,
+                borderRadius: outerWidth / 2,
+                borderWidth: 1,
+                borderColor: 'rgba(15, 23, 42, 0.06)',
+              }}
+            />
+
+            {/* Mid Arc (Dashed - width: 135%, height: 480px, top: -90px) */}
+            <View
+              style={{
+                position: 'absolute',
+                top: -90 - insets.top,
+                left: (screenWidth - midWidth) / 2,
+                width: midWidth,
+                height: midHeight,
+                borderRadius: midWidth / 2,
+                borderWidth: 1.2,
+                borderStyle: 'dashed',
+                borderColor: 'rgba(15, 23, 42, 0.07)',
+              }}
+            />
+
+            {/* Inner Arc (width: 105%, height: 380px, top: -30px) */}
+            <View
+              style={{
+                position: 'absolute',
+                top: -30 - insets.top,
+                left: (screenWidth - innerWidth) / 2,
+                width: innerWidth,
+                height: innerHeight,
+                borderRadius: innerWidth / 2,
+                borderWidth: 1,
+                borderColor: 'rgba(15, 23, 42, 0.05)',
+              }}
+            />
+          </View>
 
           <ScrollView
             showsVerticalScrollIndicator={false}
@@ -714,26 +824,94 @@ export default function GetStartedScreen() {
               flexGrow: 1,
               justifyContent: 'space-between',
               paddingHorizontal: 24,
-              paddingTop: 24,
-              paddingBottom: 24,
+              paddingTop: 16,
+              paddingBottom: 20,
             }}
             className="flex-1 z-10"
           >
-            {/* Top Header Logo */}
-            <View className="items-center mt-6">
-              <View>
-                <AppLogo size="large" />
+            {/* Top Brand Header */}
+            <View className="items-center pt-2">
+              {/* AppLogo using brand V mark & IRLA */}
+              <View className="items-center">
+                <AppLogo size="large" textColor="#09090B" />
               </View>
-              <Heading className="mt-8 mb-2">
+
+              {/* Micro Concierge Access Badge */}
+              <View
+                style={{
+                  marginTop: 14,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 16,
+                  paddingVertical: 7,
+                  borderRadius: 9999,
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(226, 232, 240, 0.9)',
+                  shadowColor: '#101828',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.04,
+                  shadowRadius: 4,
+                  elevation: 1,
+                  gap: 8,
+                }}
+              >
+                <View
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: '#E11D48',
+                  }}
+                />
+                <Text
+                  style={{
+                    fontFamily: 'Outfit_700Bold',
+                    fontSize: 10.5,
+                    letterSpacing: 1.2,
+                    color: '#1E293B',
+                    textTransform: 'uppercase',
+                    paddingRight: 2,
+                  }}
+                >
+                  Doorstep Personal Training Concierge
+                </Text>
+              </View>
+            </View>
+
+            {/* Pure Whitespace Hero Headline & Subtitle */}
+            <View className="items-center my-6">
+              <Text
+                style={{
+                  fontFamily: 'Outfit_700Bold',
+                  fontSize: 34,
+                  fontWeight: '700',
+                  color: '#09090B',
+                  letterSpacing: -0.8,
+                  lineHeight: 40,
+                  textAlign: 'center',
+                }}
+              >
                 {newUserIdToRegister !== null
                   ? (setupStep === 0 ? 'Welcome!' : `Welcome back, ${tempUserObj?.name && tempUserObj.name !== 'Complete your profile' ? tempUserObj.name.split(' ')[0] : 'User'}!`)
                   : 'Welcome Back'}
-              </Heading>
-              <Subtitle align="center" className="max-w-[85%] mt-1">
+              </Text>
+              <Text
+                style={{
+                  fontFamily: 'Outfit_500Medium',
+                  fontSize: 14.5,
+                  fontWeight: '500',
+                  color: '#475569',
+                  marginTop: 8,
+                  textAlign: 'center',
+                  maxWidth: 290,
+                  lineHeight: 22,
+                }}
+              >
                 {newUserIdToRegister !== null
                   ? (setupStep === 0 ? 'Step 1 of 4: Enter your full name to start registration.' : `Step ${setupStep + 1} of 4: Complete your details.`)
                   : 'Log in using your registered mobile number.'}
-              </Subtitle>
+              </Text>
             </View>
 
             {newUserIdToRegister !== null ? (
@@ -867,88 +1045,190 @@ export default function GetStartedScreen() {
                 </View>
               </View>
             ) : (
-              /* Mobile Login/Register Form - Reference Exact Implementation */
+              /* Mobile Login/Register Form - Fluid Stitch Inspired UI */
               <Animated.View
-                className="w-full gap-3.5 my-3 items-center"
-                style={{
-                  transform: [{ translateY: otpShiftAnim }],
-                }}
+                className="w-full gap-4 my-2 items-center"
+                style={animatedInputContainerStyle}
               >
-                {/* Mobile Number Entry Field */}
-                <View className="gap-1.5 w-full">
-                  <Text className="text-xs font-bold uppercase tracking-widest text-[#E11D48]">
-                    Mobile Number
-                  </Text>
-                  <View className="flex-row gap-2.5 w-full items-center">
-                    {/* Separate +91 Prefix Box */}
+                {/* Seamless Fluid Phone Input Container (Exact User Specification) */}
+                <View className="w-full max-w-[340px] gap-3">
+                  {/* Outer Input Pill Container */}
+                  <View
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: 9999,
+                      borderWidth: 1,
+                      borderColor: 'rgba(226, 232, 240, 0.8)',
+                      padding: 6,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      shadowColor: '#0F172A',
+                      shadowOffset: { width: 0, height: 8 },
+                      shadowOpacity: 0.04,
+                      shadowRadius: 20,
+                      elevation: 2,
+                    }}
+                  >
+                    {/* Left Pill — Country Code Badge (+91 with Flag) */}
                     <View
-                      className="bg-[#1A1A1E] border border-white/10 rounded-2xl px-4 items-center justify-center h-[52px]"
+                      style={{
+                        backgroundColor: '#0F172A',
+                        borderRadius: 9999,
+                        paddingHorizontal: 16,
+                        paddingVertical: 12,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                        shadowColor: '#000000',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.12,
+                        shadowRadius: 6,
+                        elevation: 3,
+                      }}
                     >
-                      <Text className="text-white font-black" style={{ fontSize: 16 }}>+91</Text>
+                      <Text style={{ fontSize: 16, lineHeight: 18 }}>🇮🇳</Text>
+                      <Text
+                        style={{
+                          color: '#FFFFFF',
+                          fontFamily: 'Outfit_600SemiBold',
+                          fontWeight: '600',
+                          fontSize: 15,
+                          paddingRight: 2,
+                        }}
+                      >
+                        +91
+                      </Text>
                     </View>
 
-                    {/* Separate Curvy Number Input Box */}
-                    <View
-                      className="flex-1 bg-[#1A1A1E] border border-white/10 rounded-2xl justify-center h-[52px]"
-                      style={{ paddingHorizontal: Platform.OS === 'android' ? 14 : 16 }}
-                    >
+                    {/* Right Section — Phone Number Input Box & Shield Icon */}
+                    <View style={{ flex: 1, paddingHorizontal: 14, paddingVertical: 4, justifyContent: 'center' }}>
                       <TextInput
-                        maxLength={20}
-                        placeholder="XXXXX XXXXX"
-                        placeholderTextColor="#666666"
+                        maxLength={11}
+                        placeholder="98765 43210"
+                        placeholderTextColor="#94A3B8"
                         keyboardType="number-pad"
                         value={formattedPhone}
                         onChangeText={handlePhoneChange}
                         editable={!isLoading}
                         multiline={false}
                         numberOfLines={1}
-                        className="text-white font-bold"
                         style={{
-                          fontSize: 16,
+                          fontFamily: 'Outfit_500Medium',
+                          fontSize: 17,
+                          fontWeight: '500',
+                          color: '#0F172A',
+                          letterSpacing: 0.5,
+                          backgroundColor: 'transparent',
                           paddingVertical: 0,
                           includeFontPadding: false,
                         }}
                       />
                     </View>
 
-                    {/* Native Send OTP Button (appears after entering 10-digit number) */}
-                    {(phone.replace(/\D/g, '').length >= 10 || otpSent) && (
-                      <NativePrimaryButton
-                        compact
-                        color={isLoading || resendCountdown > 0 ? '#3F3F46' : '#E11D48'}
-                        label={otpSent ? (resendCountdown > 0 ? `${resendCountdown}s` : 'Resend') : 'Send OTP'}
-                        onPress={isLoading || resendCountdown > 0 ? () => {} : handleSendOtp}
+                    {/* Right Shield / Verified Icon */}
+                    <View style={{ paddingRight: 12, justifyContent: 'center', alignItems: 'center' }}>
+                      <Feather
+                        name="shield"
+                        size={16}
+                        color={phone.replace(/\D/g, '').length >= 10 ? '#059669' : '#CBD5E1'}
                       />
-                    )}
+                    </View>
                   </View>
+
+                  {/* Primary Action Button: Virla Signature Crimson Red Pill */}
+                  {!otpSent && (
+                    <TouchableOpacity
+                      activeOpacity={0.88}
+                      disabled={isLoading || phone.replace(/\D/g, '').length < 10}
+                      onPress={handleSendOtp}
+                      style={{
+                        width: '100%',
+                        height: 54,
+                        borderRadius: 9999,
+                        backgroundColor: phone.replace(/\D/g, '').length >= 10 ? '#E11D48' : '#F1F5F9',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        paddingHorizontal: 20,
+                        shadowColor: '#E11D48',
+                        shadowOffset: { width: 0, height: 6 },
+                        shadowOpacity: phone.replace(/\D/g, '').length >= 10 ? 0.35 : 0,
+                        shadowRadius: 14,
+                        elevation: phone.replace(/\D/g, '').length >= 10 ? 5 : 0,
+                      }}
+                    >
+                      {isLoading ? (
+                        <Loading size="small" color="#000000" />
+                      ) : (
+                        <>
+                          <Text
+                            style={{
+                              fontFamily: 'Outfit_700Bold',
+                              fontSize: 16,
+                              letterSpacing: 0.2,
+                              color: phone.replace(/\D/g, '').length >= 10 ? '#FFFFFF' : '#94A3B8',
+                              paddingRight: 4,
+                            }}
+                          >
+                            Continue
+                          </Text>
+                          <Feather
+                            name="arrow-right"
+                            size={16}
+                            color={phone.replace(/\D/g, '').length >= 10 ? '#FFFFFF' : '#94A3B8'}
+                          />
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  )}
+
                   {otpStatusMessage ? (
                     <Text
-                      className={`text-xs font-semibold pl-1 ${
-                        otpStatusMessage.toLowerCase().includes('otp sent') || otpStatusMessage.toLowerCase().includes('otp resent')
-                          ? 'text-emerald-400'
-                          : 'text-[#E11D48]'
-                      }`}
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '600',
+                        textAlign: 'center',
+                        marginTop: 2,
+                        color:
+                          otpStatusMessage.toLowerCase().includes('otp sent') ||
+                          otpStatusMessage.toLowerCase().includes('otp resent')
+                            ? '#059669'
+                            : '#E11D48',
+                      }}
                     >
                       {otpStatusMessage}
                     </Text>
                   ) : null}
                 </View>
 
-                {/* 6-Digit Animated OTP Entry & Success Sequence Component */}
+                {/* 6-Digit Animated OTP Entry & Success Sequence Component (Preserved Exact Styling & Rotated Boxes) */}
                 {otpSent && (
-                  <View className="w-full items-center gap-2 mt-1 mb-0.5">
-                    <View className="flex-row justify-between items-center w-full px-1">
-                      <Text className="text-xs font-bold uppercase tracking-widest text-zinc-400">
+                  <View className="w-full items-center gap-2 mt-2 mb-0.5">
+                    <View className="flex-row justify-between items-center w-full max-w-[340px] px-1">
+                      <Text className="text-xs font-bold uppercase tracking-widest text-zinc-500">
                         Verify 6-Digit Code
                       </Text>
-                      <Text className="text-[11px] font-semibold text-zinc-500">
-                        Sent to +91 {phone}
-                      </Text>
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        disabled={resendCountdown > 0 || isLoading}
+                        onPress={handleResendOtp}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            fontWeight: '700',
+                            color: resendCountdown > 0 ? '#94A3B8' : '#E11D48',
+                          }}
+                        >
+                          {resendCountdown > 0 ? `Resend in ${resendCountdown}s` : 'Resend Code'}
+                        </Text>
+                      </TouchableOpacity>
                     </View>
 
                     {/* Container for 6 Animated Rotated Digit Cards */}
                     <TouchableWithoutFeedback onPress={() => otpInputRef.current?.focus()}>
-                      <View className="relative w-full py-1 items-center justify-center min-h-[76px]">
+                      <View className="relative w-full max-w-[340px] py-1 items-center justify-center min-h-[76px]">
                         {/* Hidden Native TextInput for 6-digit Keyboard Entry & Autofill */}
                         <TextInput
                           ref={otpInputRef}
@@ -1006,16 +1286,7 @@ export default function GetStartedScreen() {
                             <View className="relative items-center justify-center">
                               {/* Step A: 2-3 Rapid Rotations Spinning Circle */}
                               <Animated.View
-                                style={{
-                                  transform: [
-                                    {
-                                      rotate: spinAnim.interpolate({
-                                        inputRange: [0, 1],
-                                        outputRange: ['0deg', '1080deg'], // 3 full 360deg spins
-                                      }),
-                                    },
-                                  ],
-                                }}
+                                style={animatedSpinCircleStyle}
                               >
                                 <View
                                   className="w-14 h-14 rounded-full border-2 border-[#E11D48] items-center justify-center bg-[#1F1F24]"
@@ -1034,20 +1305,7 @@ export default function GetStartedScreen() {
                               {/* Step B: Vector Dumbbell Overlaid on Completion */}
                               <Animated.View
                                 className="absolute items-center justify-center"
-                                style={{
-                                  opacity: spinAnim.interpolate({
-                                    inputRange: [0, 0.7, 1],
-                                    outputRange: [0, 0, 1],
-                                  }),
-                                  transform: [
-                                    {
-                                      scale: spinAnim.interpolate({
-                                        inputRange: [0, 0.7, 1],
-                                        outputRange: [0.5, 0.7, 1],
-                                      }),
-                                    },
-                                  ],
-                                }}
+                                style={animatedDumbbellStyle}
                               >
                                 <View className="flex-row items-center justify-center bg-[#0F0F12] p-3 rounded-2xl border border-[#E11D48] shadow-lg">
                                   <Svg width="40" height="22" viewBox="0 0 42 24" fill="none">
@@ -1078,46 +1336,127 @@ export default function GetStartedScreen() {
                   </View>
                 )}
 
-                {isLoading && (
-                  <View className="items-center justify-center py-1">
-                    <Loading size="small" color="#E11D48" />
-                  </View>
-                )}
-
                 {otpSent && (
-                  <View className="mt-1 w-full">
-                    <NativePrimaryButton
-                      label={isLoading ? 'Processing...' : 'Verify & Log In'}
-                      onPress={isLoading ? () => {} : handleMobileSubmit}
-                    />
+                  <View className="mt-2 w-full max-w-[340px]">
+                    <TouchableOpacity
+                      activeOpacity={0.88}
+                      disabled={isLoading || otpCode.length < 6}
+                      onPress={handleMobileSubmit}
+                      style={{
+                        width: '100%',
+                        height: 54,
+                        borderRadius: 9999,
+                        backgroundColor: otpCode.length >= 6 ? '#E11D48' : '#F1F5F9',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        shadowColor: '#E11D48',
+                        shadowOffset: { width: 0, height: 6 },
+                        shadowOpacity: otpCode.length >= 6 ? 0.35 : 0,
+                        shadowRadius: 14,
+                        elevation: otpCode.length >= 6 ? 5 : 0,
+                      }}
+                    >
+                      {isLoading ? (
+                        <Loading size="small" color="#000000" />
+                      ) : (
+                        <>
+                          <Text
+                            style={{
+                              fontSize: 15,
+                              fontWeight: '700',
+                              letterSpacing: 0.3,
+                              color: otpCode.length >= 6 ? '#FFFFFF' : '#94A3B8',
+                            }}
+                          >
+                            Verify & Log In
+                          </Text>
+                          <Feather
+                            name="arrow-right"
+                            size={16}
+                            color={otpCode.length >= 6 ? '#FFFFFF' : '#94A3B8'}
+                          />
+                        </>
+                      )}
+                    </TouchableOpacity>
                   </View>
                 )}
               </Animated.View>
             )}
 
-
-            {/* Terms & Privacy Policies at the Bottom */}
+            {/* Refined Minimal Footer & Concierge Whisper Note matching Stitch code.html */}
             <View className="px-4 pb-2 items-center">
-              <Text className="text-[12px] text-zinc-400 text-center leading-relaxed">
+              {/* Whisper-soft luxury brand touch */}
+              <View className="flex-row items-center justify-center gap-2 mb-3">
+                <View
+                  style={{
+                    width: 5,
+                    height: 5,
+                    borderRadius: 2.5,
+                    backgroundColor: '#E11D48',
+                  }}
+                />
+                <Text
+                  style={{
+                    fontFamily: 'Outfit_500Medium',
+                    fontSize: 12.5,
+                    fontWeight: '500',
+                    color: '#334155',
+                    letterSpacing: 0.2,
+                    paddingRight: 2,
+                  }}
+                >
+                  Personal training, delivered to your doorstep
+                </Text>
+              </View>
+
+              {/* Clean Minimal Legal Terms - High Contrast & Clearly Legible */}
+              <Text
+                style={{
+                  fontFamily: 'PlusJakartaSans_500Medium',
+                  fontSize: 11.5,
+                  color: '#475569',
+                  textAlign: 'center',
+                  lineHeight: 18,
+                  paddingHorizontal: 4,
+                }}
+              >
                 By continuing, you agree to VIRLA&apos;s
               </Text>
-              <View className="flex-row items-center justify-center mt-0.5 gap-2">
+              <View className="flex-row items-center justify-center mt-1 gap-1.5 flex-wrap">
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={handleOpenTerms}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Text className="text-zinc-500 font-extrabold underline text-[12px]">
+                  <Text
+                    style={{
+                      fontFamily: 'PlusJakartaSans_700Bold',
+                      fontSize: 11.5,
+                      color: '#0F172A',
+                      textDecorationLine: 'underline',
+                      paddingRight: 2,
+                    }}
+                  >
                     Terms of Service
                   </Text>
                 </TouchableOpacity>
-                <Text className="text-zinc-400 text-[12px]">&amp;</Text>
+                <Text style={{ color: '#94A3B8', fontSize: 11.5, marginHorizontal: 3 }}>·</Text>
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={handleOpenPrivacy}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Text className="text-zinc-500 font-extrabold underline text-[12px]">
+                  <Text
+                    style={{
+                      fontFamily: 'PlusJakartaSans_700Bold',
+                      fontSize: 11.5,
+                      color: '#0F172A',
+                      textDecorationLine: 'underline',
+                      paddingRight: 4,
+                    }}
+                  >
                     Privacy Policy
                   </Text>
                 </TouchableOpacity>
