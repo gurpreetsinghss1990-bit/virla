@@ -1,6 +1,7 @@
 import React from 'react';
-import { Modal, Platform, Pressable, StyleSheet, Text as RNText, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text as RNText, TouchableOpacity, View } from 'react-native';
 
+import { NativeSheet } from './NativeSheet';
 import { softShadow } from '../utils/shadows';
 export interface NativeSingleChoiceDialogProps {
   visible: boolean;
@@ -24,20 +25,9 @@ export const NativeSingleChoiceDialog: React.FC<NativeSingleChoiceDialogProps> =
   if (!visible) return null;
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onDismiss}
-      statusBarTranslucent
-    >
-      <Pressable 
-        style={styles.backdrop} 
-        onPress={onDismiss}
-      >
-        <Pressable 
-          style={Platform.OS === 'ios' ? styles.iosDialogBox : styles.androidDialogBox} 
-          onPress={e => e.stopPropagation()}
+    <NativeSheet visible={visible} onClose={onDismiss} backgroundColor="#FFFFFF">
+        <View
+          style={Platform.OS === 'ios' ? styles.iosDialogBox : styles.androidDialogBox}
         >
           {/* Header */}
           <RNText style={Platform.OS === 'ios' ? styles.iosTitle : styles.androidTitle}>
@@ -129,9 +119,8 @@ export const NativeSingleChoiceDialog: React.FC<NativeSingleChoiceDialogProps> =
               </TouchableOpacity>
             </View>
           )}
-        </Pressable>
-      </Pressable>
-    </Modal>
+        </View>
+    </NativeSheet>
   );
 });
 
@@ -152,6 +141,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     width: '100%',
     maxWidth: 340,
+    alignSelf: 'center',
     ...softShadow({ color: '#000', opacity: 0.15, radius: 12, offsetY: 4 }),
   },
   androidTitle: {

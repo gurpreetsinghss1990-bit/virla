@@ -2,14 +2,15 @@ import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
   Linking,
-  Modal,
   Platform,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { NativeSheet } from './NativeSheet';
 
 export interface LegalWebViewModalProps {
   visible: boolean;
@@ -23,6 +24,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
   onClose,
 }) => {
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<'terms' | 'privacy'>(initialTab);
 
   useEffect(() => {
@@ -40,17 +42,11 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
+    <NativeSheet visible={visible} onClose={onClose} backgroundColor="#F8F9FD" fullHeight>
       <View
         style={{
-          flex: 1,
+          height: Math.round(height * 0.92),
           backgroundColor: '#F8F9FD',
-          paddingTop: Platform.OS === 'android' ? insets.top : 0,
         }}
       >
         {/* Top App Header */}
@@ -410,6 +406,6 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
           </View>
         </ScrollView>
       </View>
-    </Modal>
+    </NativeSheet>
   );
 };

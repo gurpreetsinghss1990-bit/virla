@@ -1,10 +1,11 @@
 import { Loading } from './Loading';
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, useWindowDimensions } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Database, SupportTicket } from '../database/Database';
 import { formatToDDMMYYYY } from '../utils/date';
+import { NativeSheet } from './NativeSheet';
 
 interface UserTicketsModalProps {
   visible: boolean;
@@ -20,6 +21,7 @@ export function UserTicketsModal({
   onSelectTicket,
 }: UserTicketsModalProps) {
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -42,13 +44,8 @@ export function UserTicketsModal({
   }, [visible, userId]);
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="fullScreen"
-      onRequestClose={onClose}
-    >
-      <View style={{ flex: 1, backgroundColor: '#FAFAFA' }}>
+    <NativeSheet visible={visible} onClose={onClose} backgroundColor="#FAFAFA">
+      <View style={{ height: Math.round(height * 0.88), backgroundColor: '#FAFAFA' }}>
         {/* Header */}
         <View
           style={{ paddingTop: insets.top }}
@@ -161,6 +158,6 @@ export function UserTicketsModal({
           )}
         </ScrollView>
       </View>
-    </Modal>
+    </NativeSheet>
   );
 }

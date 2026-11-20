@@ -1,6 +1,6 @@
 import { Loading } from './Loading';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, Modal, ScrollView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ScrollView, Platform, useWindowDimensions } from 'react-native';
 import { Booking } from '../types';
 import { BookingStatusBadge } from './BookingStatusBadge';
 import { useBookingStore } from '../store/bookingStore';
@@ -11,6 +11,7 @@ import { Feather } from '@expo/vector-icons';
 import { useUserStore } from '../store/userStore';
 import { SessionEngine } from '../services/SessionEngine';
 import { AddPartnerModal } from './AddPartnerModal';
+import { NativeSheet } from './NativeSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Database, getCurrentServerTime, getISTDateInfo } from '../database/Database';
 import { getDisplayWorkoutTitle, getBookingISTDateRange, formatToDDMMYYYY, formatToDayMonthYear } from '../utils/date';
@@ -33,6 +34,7 @@ interface BookingCardProps {
 export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupport }: BookingCardProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const { cancelSession, rescheduleSession } = useBookingStore();
   const { role } = useUserStore();
   const [showPartnerModal, setShowPartnerModal] = useState(false);
@@ -485,14 +487,11 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
 
         {/* Cancellation Warning Modal */}
         {showCancelWarningModal && (
-        <Modal
-          visible={showCancelWarningModal}
-          animationType="slide"
-          presentationStyle="fullScreen"
-        >
+        <NativeSheet visible={showCancelWarningModal} onClose={() => setShowCancelWarningModal(false)} backgroundColor="#FFFFFF">
           <View 
-            className="flex-1 bg-white justify-between px-6"
+            className="bg-white justify-between px-6"
             style={{
+              height: Math.round(height * 0.86),
               paddingTop: Math.max(insets.top + 20, 36),
               paddingBottom: Math.max(insets.bottom + 28, 56),
             }}
@@ -538,20 +537,16 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
               </TouchableOpacity>
             </View>
           </View>
-        </Modal>
+        </NativeSheet>
         )}
 
         {/* Reschedule Modal */}
         {showRescheduleModal && (
-        <Modal
-          visible={showRescheduleModal}
-          animationType="slide"
-          presentationStyle="pageSheet"
-          onRequestClose={() => setShowRescheduleModal(false)}
-        >
+        <NativeSheet visible={showRescheduleModal} onClose={() => setShowRescheduleModal(false)} backgroundColor="#FFFFFF">
           <View 
-            className="flex-1 bg-white justify-between px-6"
+            className="bg-white justify-between px-6"
             style={{
+              height: Math.round(height * 0.86),
               paddingTop: Math.max(insets.top + 16, 24),
               paddingBottom: Math.max(insets.bottom + 20, 32),
             }}
@@ -661,7 +656,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
               </TouchableOpacity>
             </View>
           </View>
-        </Modal>
+        </NativeSheet>
         )}
       </View>
     );
@@ -982,14 +977,11 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
       </View>
 
       {/* Cancellation Warning Modal */}
-      <Modal
-        visible={showCancelWarningModal}
-        animationType="slide"
-        presentationStyle="fullScreen"
-      >
+      <NativeSheet visible={showCancelWarningModal} onClose={() => setShowCancelWarningModal(false)} backgroundColor="#FFFFFF">
         <View 
-          className="flex-1 bg-white justify-between px-6"
+          className="bg-white justify-between px-6"
           style={{
+              height: Math.round(height * 0.86),
             paddingTop: Math.max(insets.top + 20, 36),
             paddingBottom: Math.max(insets.bottom + 28, 56),
           }}
@@ -1037,18 +1029,14 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </NativeSheet>
 
       {/* Reschedule Modal */}
-      <Modal
-        visible={showRescheduleModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowRescheduleModal(false)}
-      >
+      <NativeSheet visible={showRescheduleModal} onClose={() => setShowRescheduleModal(false)} backgroundColor="#FFFFFF">
         <View 
-          className="flex-1 bg-white justify-between px-6"
+          className="bg-white justify-between px-6"
           style={{
+              height: Math.round(height * 0.86),
             paddingTop: Math.max(insets.top + 16, 24),
             paddingBottom: Math.max(insets.bottom + 20, 32),
           }}
@@ -1162,7 +1150,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </NativeSheet>
     </LuxuryCard>
   );
 });
