@@ -4,7 +4,7 @@ import { Database, mapBooking, mapCoach, mapChatMessage, mapNotificationItem, ma
 import { useCoachStore } from '../store/coachStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { useUserStore } from '../store/userStore';
-import { heartbeatDeviceSession } from '../services/DeviceSession';
+import { ensureDeviceSession, heartbeatDeviceSession } from '../services/DeviceSession';
 
 let realtimeChannel: any = null;
 let smartPollTimer: any = null;
@@ -42,8 +42,23 @@ let deviceRevokedHandled = false;
 async function performDeviceHeartbeat() {
   const userId = Database.getCurrentUserId();
   if (!userId) return;
+
   if (Date.now() - lastDeviceHeartbeatAt < 60000) return;
+
+  // Install updated while still logged in: claim the slot once before heartbeats.
+  const claim = await ensureDeviceSession(userId);
   lastDeviceHeartbeatAt = Date.now();
+  if (!claim.ok) {
+    if (claim.reason === 'active_elsewhere' && !deviceRevokedHandled) {
+      deviceRevokedHandled = true;
+      Alert.alert(
+        'Already logged in',
+        `This account is logged in on ${claim.deviceName || 'another device'}. Please log out from that device first.`
+      );
+      useUserStore.getState().setLoggedIn(false);
+    }
+    return;
+  }
 
   const result = await heartbeatDeviceSession(userId);
   if (result.revoked && !deviceRevokedHandled) {

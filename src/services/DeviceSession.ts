@@ -17,6 +17,7 @@ export type ClaimResult = {
 let deviceIdCache: string | null = null;
 let deviceTokenCache: string | null = null;
 let claimInFlight: Promise<ClaimResult> | null = null;
+let claimedUserId: string | null = null;
 
 const randomHex = (length: number) => {
   let out = '';
@@ -103,6 +104,7 @@ export function claimDeviceSession(userId: string): Promise<ClaimResult> {
           lastSeenAt: row.last_seen_at ?? null,
         };
       }
+      claimedUserId = userId;
       return { ok: true };
     } catch {
       return { ok: false, reason: 'network' };
@@ -112,6 +114,17 @@ export function claimDeviceSession(userId: string): Promise<ClaimResult> {
   })();
 
   return claimInFlight;
+}
+
+/**
+ * Makes sure an already logged-in session (install updated mid-session) owns the
+ * single device slot. Called once at launch before the first heartbeat.
+ */
+export async function ensureDeviceSession(userId: string): Promise<ClaimResult> {
+  if (claimedUserId === userId) return { ok: true };
+  const result = await claimDeviceSession(userId);
+  if (result.ok) claimedUserId = userId;
+  return result;
 }
 
 export async function heartbeatDeviceSession(userId: string): Promise<{ ok: boolean; revoked: boolean; deviceName?: string | null }> {
