@@ -14,10 +14,6 @@ export class SessionEngine {
    */
   static isTravelWindowOpen(booking: Booking): boolean {
     if (!booking) return false;
-    // For Google Play App Review / Mayur demo session, always keep travel window open
-    if (booking.id?.startsWith('mock-review-') || booking.trainerId === 'u-ej8bes2xq') {
-      return true;
-    }
     const range = getBookingISTDateRange(booking);
     const now = getCurrentServerTime();
     const unlockTime = range.start.getTime() - this.TRAVEL_WINDOW_MINUTES * 60 * 1000;
