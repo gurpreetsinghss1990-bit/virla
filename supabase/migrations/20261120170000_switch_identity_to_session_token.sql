@@ -107,6 +107,7 @@ DECLARE
   r RECORD;
   v_def TEXT;
   v_new TEXT;
+  v_code TEXT;
   v_done INT := 0;
   v_skipped INT := 0;
 BEGIN
@@ -122,7 +123,10 @@ BEGIN
     v_def := r.def;
     v_new := regexp_replace(v_def, v_pattern, 'public.current_user_id()\1\2', 'gi');
 
-    IF v_new ~* 'x-user-id' THEN
+    -- Comments still mention x-user-id; only real code left over means an unknown pattern.
+    v_code := regexp_replace(v_new, '--[^\n]*', '', 'g');
+
+    IF v_code ~* 'x-user-id' THEN
       RAISE NOTICE 'phase2: function left untouched (unknown pattern): %', r.signature;
       v_skipped := v_skipped + 1;
       CONTINUE;
