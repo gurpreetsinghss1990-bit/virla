@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Animated, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import Reanimated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -7,7 +7,10 @@ import Reanimated, {
   withTiming, 
   withSequence, 
   Easing, 
-  runOnJS 
+  runOnJS,
+  LinearTransition,
+  FadeIn,
+  FadeOut
 } from 'react-native-reanimated';
 import { FlashList } from '@shopify/flash-list';
 import { Feather, Ionicons } from '@expo/vector-icons';
@@ -30,15 +33,8 @@ export interface ClientProfileViewProps {
   user: any;
   isWildcardTestAccount: (user: any, mobile?: string) => boolean;
   handleRoleChange: (role: 'customer' | 'trainer' | 'admin') => void;
-  triggerSparkleAnimation: () => void;
-  sparkleAnim: Animated.Value;
   creditBalance: number | null;
   membership: any;
-  triggerLayersAnimation: () => void;
-  layer1Anim: Animated.Value;
-  layer2Anim: Animated.Value;
-  layer3Anim: Animated.Value;
-  isLayersAnimating: boolean;
   creditLots: any[];
   navigateThrottled: (route: string) => void;
   togglePersonalInfoExpansion: (val?: boolean) => void;
@@ -59,15 +55,8 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
   user,
   isWildcardTestAccount,
   handleRoleChange,
-  triggerSparkleAnimation,
-  sparkleAnim,
   creditBalance,
   membership,
-  triggerLayersAnimation,
-  layer1Anim,
-  layer2Anim,
-  layer3Anim,
-  isLayersAnimating,
   creditLots,
   navigateThrottled,
   togglePersonalInfoExpansion,
@@ -83,6 +72,24 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
   const layer3Y = useSharedValue(0);
   const creditsScale = useSharedValue(1);
   const [isReanimatedLayersActive, setIsReanimatedLayersActive] = React.useState(false);
+
+  // Reanimated UI-thread sparkle/rotation for VIRLA PASS badge
+  const sparkleProgress = useSharedValue(0);
+  const sparkleAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: 1 + sparkleProgress.value * 0.35 },
+      { rotate: `${sparkleProgress.value * 25}deg` },
+    ],
+  }));
+
+  const handleSparklePress = React.useCallback(() => {
+    sparkleProgress.value = withSequence(
+      withTiming(1, { duration: 250, easing: Easing.out(Easing.quad) }),
+      withTiming(0, { duration: 200, easing: Easing.in(Easing.quad) }),
+      withTiming(1, { duration: 250, easing: Easing.out(Easing.quad) }),
+      withSpring(0, { damping: 10, stiffness: 180 })
+    );
+  }, [sparkleProgress]);
 
   const layer1Style = useAnimatedStyle(() => ({
     transform: [{ translateY: layer1Y.value }],
@@ -138,17 +145,6 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
 
   const handleCreditsPress = React.useCallback(() => {
     playCreditsLayerBounce();
-    if (triggerLayersAnimation) {
-      triggerLayersAnimation();
-    }
-  }, [playCreditsLayerBounce, triggerLayersAnimation]);
-
-  // Subtle auto-bounce on initial screen mount
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      playCreditsLayerBounce();
-    }, 450);
-    return () => clearTimeout(timer);
   }, [playCreditsLayerBounce]);
 
   return (
@@ -398,29 +394,12 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
             <View className="flex-row justify-between items-start z-10">
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={triggerSparkleAnimation}
+                onPress={handleSparklePress}
               >
                 <View className="flex-row items-center gap-1.5">
-                  <Animated.View
-                    style={{
-                      transform: [
-                        {
-                          scale: sparkleAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [1, 1.35],
-                          }),
-                        },
-                        {
-                          rotate: sparkleAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: ['0deg', '25deg'],
-                          }),
-                        },
-                      ],
-                    }}
-                  >
+                  <Reanimated.View style={sparkleAnimatedStyle}>
                     <Ionicons name="star" size={13} color="#F59E0B" />
-                  </Animated.View>
+                  </Reanimated.View>
                   <Text 
                     style={{ fontFamily: 'Outfit_700Bold' }} 
                     className="text-[#F59E0B] text-[11px] font-bold uppercase tracking-wider"
@@ -541,7 +520,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                       <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
                         <Polygon
                           points="12 2 2 7 12 12 22 7 12 2"
-                          stroke={isReanimatedLayersActive || isLayersAnimating ? '#E11D48' : '#0F172A'}
+                          stroke={isReanimatedLayersActive ? '#E11D48' : '#0F172A'}
                           strokeWidth="2"
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -563,7 +542,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                       <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
                         <Polyline
                           points="2 12 12 17 22 12"
-                          stroke={isReanimatedLayersActive || isLayersAnimating ? '#E11D48' : '#0F172A'}
+                          stroke={isReanimatedLayersActive ? '#E11D48' : '#0F172A'}
                           strokeWidth="2"
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -585,7 +564,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                       <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
                         <Polyline
                           points="2 17 12 22 22 17"
-                          stroke={isReanimatedLayersActive || isLayersAnimating ? '#E11D48' : '#0F172A'}
+                          stroke={isReanimatedLayersActive ? '#E11D48' : '#0F172A'}
                           strokeWidth="2"
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -691,7 +670,12 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
             </TouchableOpacity>
 
             {isPersonalInfoExpanded && (
-              <View className="gap-2.5 pt-2">
+              <Reanimated.View 
+                entering={FadeIn.duration(180)}
+                exiting={FadeOut.duration(120)}
+                layout={LinearTransition.duration(200)}
+                className="gap-2.5 pt-2"
+              >
                 {/* Sub-header inside Dropdown with Edit button */}
                 <View className="flex-row justify-between items-center pb-2.5 border-b border-zinc-100">
                   <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-zinc-500 text-xs uppercase tracking-wider">Profile Details</Text>
@@ -863,7 +847,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                   <Feather name="chevron-up" size={14} color="#71717A" />
                   <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-zinc-600 text-xs">Wrap / Collapse</Text>
                 </TouchableOpacity>
-              </View>
+              </Reanimated.View>
             )}
           </View>
 

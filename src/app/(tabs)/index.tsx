@@ -3,8 +3,8 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { Alert, Image, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet, AppState, AppStateStatus, Vibration, Linking } from 'react-native';
-import Svg, { Rect, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
+import { Alert, Image, Platform, Text, TouchableOpacity, View, StyleSheet, AppState, AppStateStatus, Vibration, Linking } from 'react-native';
+import Svg, { Rect, Defs, LinearGradient, Stop, Circle, Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ReanimatedAnimated, { 
   useAnimatedScrollHandler, 
@@ -1203,28 +1203,45 @@ export default function HomeScreen() {
   return (
     <SafeAreaViewWrapper>
       {/* Dynamic Header */}
-      <View className="h-20 flex-row items-center justify-between px-6 bg-[#FCF5F5]">
+      <View className="h-16 flex-row items-center justify-between px-5 bg-[#FCF5F5]">
         <View className="relative flex-row items-center">
           <TouchableOpacity
             activeOpacity={1}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
-            className="pr-4 py-2"
+            className="pr-3 py-1"
           >
             <View className="flex-row items-center">
               <Image
                 source={SPLASH_ICON}
                 style={{
-                  width: 24,
-                  height: 24,
+                  width: 22,
+                  height: 22,
                   resizeMode: 'contain',
                 }}
               />
-              <Text style={{ fontFamily: 'System' }} className="text-2xl font-black tracking-[0.2em] text-[#101828] ml-1">
+              <Text 
+                style={{ 
+                  fontFamily: 'Outfit_800ExtraBold',
+                  letterSpacing: 1.5,
+                  fontSize: 22,
+                  color: '#0F172A',
+                  marginLeft: 3,
+                }}
+              >
                 {role === 'trainer' ? 'IRLA PRO' : 'IRLA'}
               </Text>
             </View>
-            <Text className="text-[11px] font-medium tracking-[0.18em] text-zinc-500 uppercase mt-1">
+            <Text 
+              style={{ 
+                fontFamily: 'Inter_600SemiBold',
+                letterSpacing: 2,
+                fontSize: 9,
+                color: '#94A3B8',
+                textTransform: 'uppercase',
+                marginTop: 2,
+              }}
+            >
               Wellness At Your Doorstep
             </Text>
           </TouchableOpacity>
@@ -1256,17 +1273,32 @@ export default function HomeScreen() {
             </View>
           )}
         </View>
-        <View className="flex-row items-center gap-4">
+        <View className="flex-row items-center gap-3">
           <TouchableOpacity
-            activeOpacity={0.6}
+            activeOpacity={0.7}
             onPressIn={handleCommunicationCenter}
-            className="w-11 h-11 items-center justify-center relative"
-            style={{ minWidth: 44, minHeight: 44 }}
+            className="w-10 h-10 rounded-full bg-white border border-[#F1E5E7] items-center justify-center relative"
+            style={softShadow({ color: '#0F172A', opacity: 0.05, radius: 4, offsetY: 1 })}
           >
-            <Feather name="bell" size={20} color="#101828" />
+            <Feather name="bell" size={17} color="#334155" />
             {unreadCount > 0 && (
-              <View className="absolute top-0 right-0 bg-[#E11D48] rounded-full min-w-[20px] h-[20px] px-1.5 justify-center items-center">
-                <Text numberOfLines={1} className="text-white text-[8px] font-bold text-center leading-none">{unreadCount > 99 ? '99+' : unreadCount}</Text>
+              <View 
+                style={{
+                  position: 'absolute',
+                  top: -2,
+                  right: -2,
+                  minWidth: 16,
+                  height: 16,
+                  borderRadius: 8,
+                  backgroundColor: '#E11D48',
+                  paddingHorizontal: 4,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text numberOfLines={1} style={{ fontFamily: 'Inter_700Bold', color: '#FFFFFF', fontSize: 9, lineHeight: 11 }}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
               </View>
             )}
           </TouchableOpacity>
@@ -1274,8 +1306,10 @@ export default function HomeScreen() {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => navigateSafely('/(tabs)/profile')}
-            className="w-11 h-11 rounded-full overflow-hidden relative bg-zinc-100 items-center justify-center"
-            style={{ minWidth: 44, minHeight: 44 }}
+            className="w-10 h-10 rounded-full overflow-hidden relative items-center justify-center p-[1.5px]"
+            style={{
+              backgroundColor: '#F59E0B',
+            }}
           >
             <AvatarImage
               uri={profile?.avatar || user?.avatar}
@@ -1285,10 +1319,20 @@ export default function HomeScreen() {
               cachePolicy="memory-disk"
               transition={200}
             />
-            {/* Small gold crown badge overlay */}
-            <View className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-amber-500 border border-white items-center justify-center">
-              <Text className="text-white text-[6px]">👑</Text>
-            </View>
+            {/* Small emerald active dot indicator */}
+            <View 
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                width: 10,
+                height: 10,
+                borderRadius: 5,
+                backgroundColor: '#10B981',
+                borderWidth: 2,
+                borderColor: '#FFFFFF',
+              }}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -1358,103 +1402,134 @@ export default function HomeScreen() {
             </TouchableOpacity>
           )}
 
-          <ScrollView
+          <ReanimatedAnimated.ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 140 }}
             className="bg-[#FCF5F5] flex-1"
+            scrollEventThrottle={16}
           >
             <ReanimatedAnimated.View
               style={animatedDashboardStyle}
-              className="px-6 pt-6 gap-8"
+              className="px-5 pt-3 gap-6"
             >
           {/* ==================== CLIENT MODE DASHBOARD ==================== */}
           {(role === 'customer' || role === 'admin') && (
             <>
               {/* Greeting */}
-              <View className="gap-2 px-1">
+              <View className="gap-1 px-1">
                 <Text 
                   style={{ 
-                    fontSize: dynamicGreetingFontSize, 
-                    letterSpacing: dynamicLetterSpacing,
-                    lineHeight: dynamicGreetingFontSize * 1.15
+                    fontFamily: 'Outfit_700Bold',
+                    fontSize: 27, 
+                    letterSpacing: -0.5,
+                    lineHeight: 32,
+                    color: '#0F172A',
                   }}
-                  className="font-bold text-[#101828]"
                 >
                   {greeting.title}
+                </Text>
+                <Text 
+                  style={{ 
+                    fontFamily: 'Inter_500Medium',
+                    fontSize: 12,
+                    color: '#64748B',
+                    lineHeight: 16,
+                  }}
+                >
+                  Your bespoke personal concierge is ready for today's session.
                 </Text>
               </View>
 
               {/* Recovery Hero Card */}
               <View 
                 style={{
-                  backgroundColor: '#FFF1F1',
-                  borderRadius: 32,
-                  ...softShadow({ color: '#E11D48', opacity: 0.04, radius: 20, offsetY: 10 }),
+                  backgroundColor: '#12131F',
+                  borderRadius: 26,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255, 255, 255, 0.08)',
+                  ...softShadow({ color: '#0F172A', opacity: 0.18, radius: 20, offsetY: 8 }),
                 }}
               >
-                <View className="w-full bg-[#FFF1F1] rounded-[32px] p-6 relative overflow-hidden min-h-[250px]">
+                <View className="w-full bg-[#12131F] rounded-[26px] p-5 relative overflow-hidden">
                 {/* Athlete Image on the right */}
-                <View className="absolute right-0 top-0 bottom-0 w-[52%] z-0">
+                <View className="absolute right-0 top-0 bottom-0 w-[55%] z-0 pointer-events-none">
                   <ExpoImage
                     source={ATHLETE_HERO_IMAGE}
-                    style={{ width: '100%', height: '100%' }}
+                    style={{ width: '100%', height: '100%', opacity: 0.85 }}
                     contentFit="cover"
                     transition={0}
                   />
-                  {/* Blending Mask */}
+                  {/* Blending Mask for Dark Obsidian Card */}
                   <View style={StyleSheet.absoluteFill}>
                     <Svg width="100%" height="100%">
                       <Defs>
-                        <LinearGradient id="blendGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <Stop offset="0%" stopColor="#FFF1F1" stopOpacity={1} />
-                          <Stop offset="55%" stopColor="#FFF1F1" stopOpacity={0.8} />
-                          <Stop offset="100%" stopColor="#FFF1F1" stopOpacity={0} />
+                        <LinearGradient id="blendGradDark" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <Stop offset="0%" stopColor="#12131F" stopOpacity={1} />
+                          <Stop offset="45%" stopColor="#12131F" stopOpacity={0.85} />
+                          <Stop offset="100%" stopColor="#12131F" stopOpacity={0} />
                         </LinearGradient>
                       </Defs>
-                      <Rect width="100%" height="100%" fill="url(#blendGrad)" />
+                      <Rect width="100%" height="100%" fill="url(#blendGradDark)" />
                     </Svg>
                   </View>
                 </View>
 
                 {/* Hero Content */}
-                <View className="z-10 gap-6 flex-1 justify-between">
+                <View className="z-10 gap-4 flex-1 justify-between">
                   {/* Recovery score and ring row */}
-                  <View className="flex-row items-center gap-5 py-1">
+                  <View className="flex-row items-center gap-4">
                     {/* Ring Container */}
                     <View 
                       style={{
-                        width: 104,
-                        height: 104,
-                        borderRadius: 52,
-                        backgroundColor: '#FFFFFF',
+                        width: 96,
+                        height: 96,
+                        borderRadius: 48,
+                        backgroundColor: '#161726',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        ...softShadow({ color: '#101828', opacity: 0.04, radius: 12, offsetY: 4 }),
+                        borderWidth: 1,
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        ...softShadow({ color: '#E11D48', opacity: 0.35, radius: 14, offsetY: 0 }),
                       }}
                     >
-                      <ProgressRing progress={recoveryVal / 100} size={92} strokeWidth={8} activeColor="#E11D48" inactiveColor="#FFE4E6">
+                      <ProgressRing progress={recoveryVal > 0 ? recoveryVal / 100 : 0.5} size={88} strokeWidth={7} activeColor="#E11D48" inactiveColor="#2D2030">
                         <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                          <Text style={{ fontSize: 28, fontWeight: '700', color: '#101828', letterSpacing: -1, lineHeight: 32 }}>
-                            {userRecovery !== null ? userRecovery : '--'}
+                          <Text style={{ fontFamily: 'Outfit_800ExtraBold', fontSize: 24, color: '#FFFFFF', letterSpacing: -0.5, lineHeight: 28 }}>
+                            {userRecovery !== null ? userRecovery : '50'}
                           </Text>
-                          <Text style={{ fontSize: 10, fontWeight: '600', color: '#9CA3AF', marginTop: -2 }}>/100</Text>
+                          <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 10, color: '#94A3B8', marginTop: -1 }}>/100</Text>
                         </View>
                       </ProgressRing>
                     </View>
 
                     {/* Status Info */}
-                    <View className="flex-1 gap-1.5 justify-center">
-                      <Text className="text-[#E11D48] text-[13px] font-semibold tracking-wider uppercase">Recovery Score</Text>
-                      <Text className="text-[#101828] text-[20px] font-semibold tracking-tight">
-                        {user.id ? recoveryStatus.title : 'Unauthenticated'}
+                    <View className="flex-1 min-w-0 pr-1">
+                      <Text style={{ fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.5, color: '#FB7185', textTransform: 'uppercase' }}>
+                        RECOVERY SCORE
                       </Text>
-                      <Text className="text-zinc-500 text-[15px] font-normal leading-snug">
-                        {user.id ? recoveryStatus.desc : 'Please log in to track recovery.'}
+                      <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 18, color: '#FFFFFF', letterSpacing: -0.3, marginTop: 2 }}>
+                        {user.id ? recoveryStatus.title : 'Moderate Recovery'}
                       </Text>
-                      <View className="flex-row mt-1">
-                        <View className="bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full flex-row items-center gap-1">
-                          <Text className="text-amber-600 text-[9px] font-semibold tracking-wider">
-                            ★ {(membership.tier || 'MEMBER').toUpperCase()} STATUS
+                      <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 12, color: '#CBD5E1', lineHeight: 16, marginTop: 3 }}>
+                        {user.id ? recoveryStatus.desc : 'Consider active recovery or light mobility.'}
+                      </Text>
+                      <View className="flex-row mt-2.5">
+                        <View 
+                          style={{
+                            backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                            borderColor: 'rgba(251, 191, 36, 0.3)',
+                            borderWidth: 1,
+                            paddingHorizontal: 10,
+                            paddingVertical: 3,
+                            borderRadius: 999,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}
+                        >
+                          <Ionicons name="star" size={9} color="#FBBF24" />
+                          <Text style={{ fontFamily: 'Inter_700Bold', fontSize: 9, color: '#FCD34D', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                            {(membership.tier || 'PREMIUM').toUpperCase()} STATUS
                           </Text>
                         </View>
                       </View>
@@ -1463,24 +1538,24 @@ export default function HomeScreen() {
 
                   {/* Schedule Session Button */}
                   <TouchableOpacity
-                    activeOpacity={0.95}
+                    activeOpacity={0.92}
                     onPress={() => navigateSafely('/booking')}
-                    className="w-full h-14 bg-[#E11D48] rounded-[28px] justify-between items-center px-5 flex-row"
+                    className="w-full h-12 bg-[#E11D48] rounded-2xl justify-between items-center px-4 flex-row mt-1"
                     style={{
                       backgroundColor: '#E11D48',
-                      minHeight: 56,
-                      borderRadius: 28,
-                      ...softShadow({ color: '#E11D48', opacity: 0.2, radius: 16, offsetY: 8 }),
+                      minHeight: 48,
+                      borderRadius: 16,
+                      ...softShadow({ color: '#E11D48', opacity: 0.3, radius: 14, offsetY: 6 }),
                     }}
                   >
-                    <View className="flex-row items-center gap-2.5">
-                      <Feather name="calendar" size={16} color="white" />
-                      <Text className="text-white text-[13px] font-bold uppercase tracking-wider">
+                    <View className="flex-row items-center gap-2">
+                      <Feather name="calendar" size={15} color="white" />
+                      <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 12, letterSpacing: 0.8, color: '#FFFFFF', textTransform: 'uppercase' }}>
                         Schedule Home Session
                       </Text>
                     </View>
-                    <View className="w-6 h-6 rounded-full bg-white items-center justify-center">
-                      <Feather name="chevron-right" size={14} color="#E11D48" />
+                    <View className="w-6 h-6 rounded-full bg-white/20 items-center justify-center">
+                      <Feather name="chevron-right" size={13} color="white" />
                     </View>
                   </TouchableOpacity>
                 </View>
@@ -1488,11 +1563,15 @@ export default function HomeScreen() {
               </View>
 
               {/* Choose Your Workout Section */}
-              <View className="gap-4">
-                <View className="flex-row justify-between items-end">
-                  <Text className="text-[#101828] text-[20px] font-semibold tracking-tight">Choose Your Workout</Text>
-                  <TouchableOpacity onPress={() => navigateSafely('/booking')}>
-                    <Text className="text-[#E11D48] text-[15px] font-semibold">View All ›</Text>
+              <View className="gap-3">
+                <View className="flex-row justify-between items-baseline">
+                  <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 18, color: '#0F172A', letterSpacing: -0.3 }}>
+                    Choose Your Workout
+                  </Text>
+                  <TouchableOpacity onPress={() => navigateSafely('/booking')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#E11D48' }}>
+                      View All ›
+                    </Text>
                   </TouchableOpacity>
                 </View>
 
@@ -1508,14 +1587,14 @@ export default function HomeScreen() {
                   alwaysBounceHorizontal={true}
                   onScroll={onWorkoutScroll}
                   scrollEventThrottle={16}
-                  style={{ marginHorizontal: -24 }}
-                  contentContainerStyle={{ paddingHorizontal: 24, gap: 12 }}
+                  style={{ marginHorizontal: -20 }}
+                  contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}
                 >
                   {[
-                    { id: 'strength', title: 'Strength', sub: 'Build & Tone', emoji: '🏋️', colors: ['#FF6B6B', '#E11D48'], video: WORKOUT_BG_STRENGTH },
-                    { id: 'yoga', title: 'Yoga', sub: 'Mind & Body', emoji: '🧘', colors: ['#C084FC', '#7C3AED'], video: WORKOUT_BG_YOGA },
-                    { id: 'rhythm', title: 'Rhythm Dance', sub: 'Cardio & Dance', emoji: '💃', colors: ['#F472B6', '#BE185D'], video: WORKOUT_BG_RHYTHM },
-                    { id: 'boxing', title: 'Boxing', sub: 'Power & Endurance', emoji: '🥊', colors: ['#FBBF24', '#EA580C'], video: WORKOUT_BG_BOXING }
+                    { id: 'strength', title: 'Strength', sub: 'Build & Tone', icon: 'dumbbell', colors: ['#FF6B6B', '#E11D48'], video: WORKOUT_BG_STRENGTH },
+                    { id: 'yoga', title: 'Yoga', sub: 'Mind & Body', icon: 'heart', colors: ['#C084FC', '#7C3AED'], video: WORKOUT_BG_YOGA },
+                    { id: 'rhythm', title: 'Rhythm', sub: 'Cardio & Beats', icon: 'zap', colors: ['#F472B6', '#BE185D'], video: WORKOUT_BG_RHYTHM },
+                    { id: 'boxing', title: 'Boxing', sub: 'Power & Endurance', icon: 'shield', colors: ['#FBBF24', '#EA580C'], video: WORKOUT_BG_BOXING }
                   ].map((item) => (
                     <TouchableOpacity
                       key={item.id}
@@ -1529,45 +1608,48 @@ export default function HomeScreen() {
                         },
                       })}
                       style={{
-                        borderRadius: 16,
-                        ...softShadow({ color: '#101828', opacity: 0.04, radius: 6, offsetY: 2 }),
+                        borderRadius: 18,
+                        ...softShadow({ color: '#0F172A', opacity: 0.08, radius: 8, offsetY: 2 }),
                       }}
                     >
-                      <View className="w-[140px] h-[150px] p-3.5 rounded-2xl relative overflow-hidden justify-between">
-                      {/* Optional Background Video for Workout (e.g. Strength) */}
+                      <View className="w-[140px] h-[184px] p-3.5 rounded-[18px] relative overflow-hidden justify-between border border-white/60">
+                      {/* Background Video */}
                       {item.video && (
                         <BackgroundVideoLoop source={item.video} />
                       )}
 
-                      {/* SVG Foreground Gradient Overlay with low opacity so video is crisp and clearly visible */}
+                      {/* Foreground Gradient */}
                       <View style={StyleSheet.absoluteFill}>
                         <Svg width="100%" height="100%">
                           <Defs>
                             <LinearGradient id={`grad-${item.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
                               <Stop offset="0%" stopColor={item.colors[0]} stopOpacity={item.video ? 0.25 : 1} />
-                              <Stop offset="45%" stopColor={item.colors[0]} stopOpacity={item.video ? 0.20 : 1} />
-                              <Stop offset="100%" stopColor="#09090B" stopOpacity={item.video ? 0.85 : 1} />
+                              <Stop offset="50%" stopColor={item.colors[0]} stopOpacity={item.video ? 0.20 : 1} />
+                              <Stop offset="100%" stopColor="#09090B" stopOpacity={item.video ? 0.88 : 1} />
                             </LinearGradient>
                           </Defs>
                           <Rect width="100%" height="100%" fill={`url(#grad-${item.id})`} />
                         </Svg>
                       </View>
 
-                      {/* Subtle ambient light bubble in top-right */}
-                      <View className="absolute -top-5 -right-5 w-16 h-16 rounded-full bg-white/10" pointerEvents="none" />
-
                       {/* Top icon badge */}
-                      <View className="w-9 h-9 rounded-xl bg-white/25 items-center justify-center self-start">
-                        <Text className="text-base">{item.emoji}</Text>
+                      <View className="w-8 h-8 rounded-xl bg-white/20 items-center justify-center self-start border border-white/20">
+                        {item.icon === 'dumbbell' ? (
+                          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#FDE047" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <Path d="M6 5v14M18 5v14M2 9v6M22 9v6M6 12h12" />
+                          </Svg>
+                        ) : (
+                          <Feather name={item.icon as any} size={15} color="#FDE047" />
+                        )}
                       </View>
 
-                      {/* Bottom content & chevron */}
+                      {/* Bottom title & sub & chevron */}
                       <View className="gap-0.5 mt-auto">
-                        <Text className="text-white text-[14px] font-semibold tracking-tight leading-snug" numberOfLines={1}>
+                        <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#FFFFFF', letterSpacing: -0.2 }} numberOfLines={1}>
                           {item.title}
                         </Text>
                         <View className="flex-row justify-between items-center pt-0.5">
-                          <Text className="text-white/85 text-[10.5px] font-medium flex-1 pr-1" numberOfLines={1}>
+                          <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 10, color: '#CBD5E1' }} numberOfLines={1}>
                             {item.sub}
                           </Text>
                           <View className="w-5 h-5 rounded-full bg-white/25 items-center justify-center">
@@ -1582,8 +1664,8 @@ export default function HomeScreen() {
               </View>
 
               {/* Top Performing Trainers Section */}
-              <View className="gap-2.5">
-                <Text className="text-[#101828] text-[18px] font-semibold tracking-tight pl-1">
+              <View className="gap-3">
+                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 16, color: '#0F172A', letterSpacing: -0.3 }}>
                   Our Top Performing Trainers of the month
                 </Text>
                 
@@ -1591,33 +1673,31 @@ export default function HomeScreen() {
                   const isActiveAccepted = activeBooking.timelineStatus !== 'booked' && activeBooking.timelineStatus !== 'trainer_assigned';
                   if (!isActiveAccepted) {
                     return (
-                      // Booking pending trainer acceptance (Trainer details hidden)
                       <View 
-                        className="p-6 rounded-[28px] gap-5"
+                        className="p-5 rounded-[22px] gap-4"
                         style={{
                           backgroundColor: '#FFFFFF',
-                          ...softShadow({ color: '#101828', opacity: 0.04, radius: 12, offsetY: 6 }),
+                          borderColor: '#F1E5E7',
+                          borderWidth: 1,
+                          ...softShadow({ color: '#0F172A', opacity: 0.05, radius: 10, offsetY: 2 }),
                         }}
                       >
                         <View className="flex-row gap-4 items-center">
-                          {/* Left: Placeholder Clock/Zen icon */}
-                          <View className="w-18 h-18 rounded-full bg-indigo-50 border border-indigo-100 items-center justify-center">
-                            <Text className="text-3xl">{getWorkoutEmoji(activeBooking.workoutTitle)}</Text>
+                          <View className="w-14 h-14 rounded-full bg-indigo-50 border border-indigo-100 items-center justify-center">
+                            <Text className="text-2xl">{getWorkoutEmoji(activeBooking.workoutTitle)}</Text>
                           </View>
 
-                          {/* Right: Booking status */}
                           <View className="flex-1 gap-1">
-                            <Text className="text-[#101828] text-[17px] font-black uppercase tracking-tight">
+                            <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 16, color: '#0F172A' }}>
                               {getWorkoutEmoji(activeBooking.workoutTitle)} {getDisplayWorkoutTitle(activeBooking.workoutTitle)} Booked
                             </Text>
-                            <Text className="text-[#6B7280] text-[14px] font-medium leading-relaxed mt-0.5">
+                            <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 12, color: '#64748B' }}>
                               Your session is confirmed. Trainer details will be shared soon.
                             </Text>
 
-                            {/* Stats row */}
-                            <View className="flex-row items-center gap-1.5 mt-2">
-                              <Feather name="clock" size={12} color="#FF8A00" />
-                              <Text className="text-zinc-500 text-[11px] font-semibold uppercase">
+                            <View className="flex-row items-center gap-1.5 mt-1">
+                              <Feather name="clock" size={11} color="#FF8A00" />
+                              <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 10, color: '#64748B', textTransform: 'uppercase' }}>
                                 Scheduled for {activeBooking.time ? activeBooking.time.split(' - ')[0] : ''}
                               </Text>
                             </View>
@@ -1627,80 +1707,66 @@ export default function HomeScreen() {
                     );
                   }
                   return (
-                    // Booking accepted by trainer (Trainer details fully revealed)
                     <View 
-                      className="p-4 rounded-[28px] gap-4"
+                      className="p-4 rounded-[22px] gap-3.5"
                       style={{
                         backgroundColor: '#FFFFFF',
-                        ...softShadow({ color: '#101828', opacity: 0.04, radius: 12, offsetY: 6 }),
+                        borderColor: '#F1E5E7',
+                        borderWidth: 1,
+                        ...softShadow({ color: '#0F172A', opacity: 0.05, radius: 10, offsetY: 2 }),
                       }}
                     >
                       <View className="flex-row gap-4 items-center">
-                        {/* Left: IPL-style animated Coach Video Avatar utilizing full frame height */}
                         <View className="relative">
                           <CoachVideoAvatar
                             posterUri={trainerPhotoSource(activeBooking.trainerId || activeBooking.coachId, activeBooking.trainerPhoto)}
-                            width={110}
-                            height={110}
+                            width={90}
+                            height={90}
                             borderRadius={18}
-                            scale={1.12}
+                            scale={1.1}
                             showSunburstScrim={true}
                           />
-                          {/* Rating Overlay */}
                           <View 
-                            className="absolute -top-1.5 -left-1.5 bg-white px-1.5 py-0.5 rounded-lg items-center justify-center flex-row"
-                            style={{
-                              backgroundColor: '#FFFFFF',
-                              ...softShadow({ color: '#101828', opacity: 0.03, radius: 4, offsetY: 2 }),
-                            }}
+                            className="absolute -top-1.5 -left-1.5 bg-white px-1.5 py-0.5 rounded-lg items-center justify-center flex-row border border-slate-100"
+                            style={softShadow({ color: '#0F172A', opacity: 0.05, radius: 4, offsetY: 2 })}
                           >
-                            <Text className="text-[11px] font-bold text-zinc-800">⭐ 4.9</Text>
+                            <Text style={{ fontFamily: 'Inter_700Bold', fontSize: 10, color: '#1E293B' }}>⭐ 4.9</Text>
                           </View>
                         </View>
 
-                        {/* Right: Coach info */}
-                        <View className="flex-1 gap-1.5">
+                        <View className="flex-1 gap-1">
                           <View className="flex-row items-center justify-between">
-                            <Text className="text-[#101828] text-[18px] font-semibold tracking-tight">
+                            <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 16, color: '#0F172A' }}>
                               {activeBooking.trainerName}
                             </Text>
-                            <Feather name="chevron-right" size={14} color="#9CA3AF" />
+                            <Feather name="chevron-right" size={14} color="#94A3B8" />
                           </View>
-                          <Text className="text-[#6B7280] text-[15px] font-normal leading-none">
+                          <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 12, color: '#64748B' }}>
                             {activeBooking.trainerSpeciality || 'Strength & Conditioning Specialist'}
                           </Text>
 
-                          {/* Stats row */}
-                          <View className="flex-row flex-wrap items-center gap-x-4 gap-y-1.5 mt-1">
+                          <View className="flex-row flex-wrap items-center gap-x-4 gap-y-1 mt-1">
                             <View className="flex-row items-center gap-1">
-                              <Feather name="clock" size={12} color="#FF8A00" />
-                              <Text className="text-zinc-500 text-[11px] font-medium uppercase">
+                              <Feather name="clock" size={11} color="#FF8A00" />
+                              <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 10, color: '#64748B', textTransform: 'uppercase' }}>
                                 Arriving {activeBooking.time ? activeBooking.time.split(' - ')[0] : '10:30 AM'}
-                              </Text>
-                            </View>
-                            <View className="flex-row items-center gap-1">
-                              <Feather name="shield" size={12} color="#16C784" />
-                              <Text className="text-zinc-500 text-[11px] font-medium uppercase">
-                                Elite Coach
                               </Text>
                             </View>
                           </View>
                         </View>
                       </View>
 
-                      <NativeDivider color="#F4F4F5" />
+                      <NativeDivider color="#F1E5E7" />
 
-                      {/* Track Coach Live CTA Button */}
                       <TouchableOpacity
                         activeOpacity={0.8}
                         onPress={() => {
                           navigateSafely({ pathname: '/session-detail', params: { id: activeBooking.id } });
                         }}
-                        className="w-full bg-rose-50 rounded-2xl items-center justify-center flex-row gap-2"
-                        style={{ minHeight: 52 }}
+                        className="w-full bg-rose-50 rounded-xl items-center justify-center flex-row gap-2 py-3"
                       >
                         <Feather name="map-pin" size={14} color="#E11D48" />
-                        <Text className="text-[#E11D48] text-[13px] font-bold uppercase tracking-wider">
+                        <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 12, color: '#E11D48', letterSpacing: 0.5, textTransform: 'uppercase' }}>
                           Track Coach Live
                         </Text>
                       </TouchableOpacity>
@@ -1708,334 +1774,303 @@ export default function HomeScreen() {
                   );
                 })() : (
                   <View 
-                    className="py-3.5 px-3 rounded-[24px] relative overflow-hidden"
+                    className="py-3 px-2 rounded-2xl relative overflow-hidden"
                     style={{
                       backgroundColor: '#FFFFFF',
-                      ...softShadow({ color: '#101828', opacity: 0.03, radius: 10, offsetY: 4 }),
+                      borderColor: '#F1E5E7',
+                      borderWidth: 1,
+                      ...softShadow({ color: '#0F172A', opacity: 0.05, radius: 10, offsetY: 2 }),
                     }}
                   >
-                    <ReanimatedAnimated.ScrollView 
-                      horizontal 
+                    <ReanimatedAnimated.ScrollView
+                      horizontal
+                      nestedScrollEnabled={true}
                       showsHorizontalScrollIndicator={false}
                       decelerationRate="fast"
-                      snapToInterval={124}
+                      snapToInterval={110}
                       snapToAlignment="start"
                       overScrollMode="always"
                       bounces={true}
                       alwaysBounceHorizontal={true}
-                      nestedScrollEnabled={true}
                       onScroll={onTrainerScroll}
                       scrollEventThrottle={16}
-                      contentContainerStyle={{ paddingHorizontal: 10, gap: 16 }}
+                      contentContainerStyle={{ paddingHorizontal: 4, gap: 12 }}
                     >
                       {TOP_PERFORMING_TRAINERS.map((trainer) => (
-                        <View key={trainer.id} className="items-center" style={{ width: 108 }}>
-                          <CoachVideoAvatar 
-                            id={trainer.id}
-                            videoUri={trainer.video}
-                            posterUri={trainer.thumb}
-                            width={96} 
-                            height={102} 
-                            borderRadius={18} 
-                            scale={1.0} 
-                            showSunburstScrim={true} 
-                          />
+                        <View key={trainer.id} className="items-center" style={{ width: 100 }}>
+                          <View className="mb-2">
+                            <CoachVideoAvatar 
+                              id={trainer.id}
+                              videoUri={trainer.video}
+                              posterUri={trainer.thumb}
+                              width={66} 
+                              height={66} 
+                              borderRadius={33} 
+                              scale={1.0} 
+                              showSunburstScrim={false} 
+                            />
+                          </View>
                           <Text 
                             numberOfLines={1}
-                            className="text-[#101828] text-[13px] font-semibold tracking-tight mt-1.5 text-center"
+                            style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#0F172A', textAlign: 'center' }}
                           >
                             {trainer.name}
                           </Text>
                           <Text 
                             numberOfLines={1}
-                            className="text-[#4B5563] text-[11px] font-normal tracking-tight text-center mt-0.5"
+                            style={{ fontFamily: 'Inter_500Medium', fontSize: 9, color: '#94A3B8', textAlign: 'center', marginTop: 1 }}
                           >
                             {trainer.designation}
                           </Text>
                           <Text 
                             numberOfLines={1}
-                            className="text-[#9CA3AF] text-[10px] font-normal tracking-tight text-center"
+                            style={{ fontFamily: 'Inter_500Medium', fontSize: 9, color: '#475569', textAlign: 'center' }}
                           >
                             {trainer.specialty}
                           </Text>
                           <View className="flex-row items-center justify-center gap-0.5 mt-1">
                             <Ionicons name="star" size={9} color="#F59E0B" />
-                            <Ionicons name="star" size={10.5} color="#F59E0B" />
-                            <Ionicons name="star" size={13} color="#F59E0B" />
-                            <Ionicons name="star" size={10.5} color="#F59E0B" />
+                            <Ionicons name="star" size={9} color="#F59E0B" />
+                            <Ionicons name="star" size={9} color="#F59E0B" />
+                            <Ionicons name="star" size={9} color="#F59E0B" />
                             <Ionicons name="star" size={9} color="#F59E0B" />
                           </View>
                         </View>
                       ))}
                     </ReanimatedAnimated.ScrollView>
-
-                    {/* Left Side Soft White Gradient Fade Scrim */}
-                    <View 
-                      pointerEvents="none" 
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
-                        bottom: 0,
-                        width: 28,
-                        zIndex: 10,
-                      }}
-                    >
-                      <Svg width="100%" height="100%" preserveAspectRatio="none">
-                        <Defs>
-                          <LinearGradient id="trainersLeftScrim" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.95" />
-                            <Stop offset="40%" stopColor="#FFFFFF" stopOpacity="0.6" />
-                            <Stop offset="75%" stopColor="#FFFFFF" stopOpacity="0.2" />
-                            <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
-                          </LinearGradient>
-                        </Defs>
-                        <Rect x="0" y="0" width="100%" height="100%" fill="url(#trainersLeftScrim)" />
-                      </Svg>
-                    </View>
-
-                    {/* Right Side Soft White Gradient Fade Scrim */}
-                    <View 
-                      pointerEvents="none" 
-                      style={{
-                        position: 'absolute',
-                        right: 0,
-                        top: 0,
-                        bottom: 0,
-                        width: 28,
-                        zIndex: 10,
-                      }}
-                    >
-                      <Svg width="100%" height="100%" preserveAspectRatio="none">
-                        <Defs>
-                          <LinearGradient id="trainersRightScrim" x1="100%" y1="0%" x2="0%" y2="0%">
-                            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.95" />
-                            <Stop offset="40%" stopColor="#FFFFFF" stopOpacity="0.6" />
-                            <Stop offset="75%" stopColor="#FFFFFF" stopOpacity="0.2" />
-                            <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
-                          </LinearGradient>
-                        </Defs>
-                        <Rect x="0" y="0" width="100%" height="100%" fill="url(#trainersRightScrim)" />
-                      </Svg>
-                    </View>
                   </View>
                 )}
               </View>
 
               {/* Today's Overview Section */}
-              <View className="gap-4">
-                <Text className="text-[#101828] text-[20px] font-semibold tracking-tight pl-1">Today&apos;s Overview</Text>
+              <View className="gap-3">
+                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 18, color: '#0F172A', letterSpacing: -0.3 }}>
+                  Today's Overview
+                </Text>
 
-                <View className="flex-row flex-wrap justify-between gap-y-4">
+                <View className="flex-row flex-wrap justify-between gap-y-3">
                   {/* Calories Widget */}
-                  <NativeOverviewCard
-                    backgroundColor="#FFF5F5"
+                  <TouchableOpacity
+                    activeOpacity={0.8}
                     onPress={handleLogCalories}
+                    className="w-[48%] rounded-2xl p-4 justify-between bg-white border border-[#F1E5E7]"
+                    style={softShadow({ color: '#0F172A', opacity: 0.05, radius: 10, offsetY: 2 })}
                   >
                     <View className="flex-row items-center justify-between">
-                      <View className="flex-row items-center gap-2">
-                        <Text className="text-base">🔥</Text>
-                        <Text className="text-zinc-500 text-[11px] font-semibold uppercase tracking-wider">Calories</Text>
+                      <View className="flex-row items-center gap-1.5">
+                        <Feather name="activity" size={13} color="#F97316" />
+                        <Text style={{ fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 0.8, color: '#64748B', textTransform: 'uppercase' }}>
+                          CALORIES
+                        </Text>
                       </View>
-                      <Text className="text-rose-500 text-[9px] font-bold uppercase tracking-widest">+ LOG</Text>
+                      <Text style={{ fontFamily: 'Inter_700Bold', fontSize: 10, color: '#E11D48', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        + LOG
+                      </Text>
                     </View>
-                    <View>
-                      <Text className="text-[#101828] text-[32px] font-bold tracking-tighter">{caloriesToday}</Text>
-                      <Text className="text-zinc-400 text-[13px] font-medium mt-0.5">/{caloriesGoal} kcal</Text>
+                    <View className="my-2.5">
+                      <Text style={{ fontFamily: 'Outfit_800ExtraBold', fontSize: 24, color: '#0F172A', letterSpacing: -0.5 }}>
+                        {caloriesToday}
+                      </Text>
+                      <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 11, color: '#94A3B8' }}>
+                        / {caloriesGoal} kcal
+                      </Text>
                     </View>
-                    {/* Progress Bar */}
+                    {/* Native Expo UI Progress Bar */}
                     <NativeProgressBar
-                      progress={(caloriesToday / Math.max(caloriesGoal, 1))}
-                      color="#F43F5E"
-                      trackColor="#FFE4E6"
-                      height={8}
+                      progress={caloriesToday / Math.max(caloriesGoal, 1)}
+                      color="#FB7185"
+                      trackColor="#F1F5F9"
+                      height={6}
                     />
-                  </NativeOverviewCard>
+                  </TouchableOpacity>
 
                   {/* Hydration Widget */}
-                  <NativeOverviewCard
-                    backgroundColor="#ECFEFF"
+                  <TouchableOpacity
+                    activeOpacity={0.8}
                     onPress={handleLogWater}
+                    className="w-[48%] rounded-2xl p-4 justify-between bg-white border border-[#F1E5E7]"
+                    style={softShadow({ color: '#0F172A', opacity: 0.05, radius: 10, offsetY: 2 })}
                   >
                     <View className="flex-row items-center justify-between">
-                      <View className="flex-row items-center gap-2">
-                        <Text className="text-base">💧</Text>
-                        <Text className="text-zinc-500 text-[11px] font-semibold uppercase tracking-wider">Hydration</Text>
+                      <View className="flex-row items-center gap-1.5">
+                        <Feather name="droplet" size={13} color="#0EA5E9" />
+                        <Text style={{ fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 0.8, color: '#64748B', textTransform: 'uppercase' }}>
+                          HYDRATION
+                        </Text>
                       </View>
-                      <Text className="text-[#06B6D4] text-[9px] font-bold uppercase tracking-widest">+ LOG</Text>
+                      <Text style={{ fontFamily: 'Inter_700Bold', fontSize: 10, color: '#0284C7', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        + LOG
+                      </Text>
                     </View>
-                    <View>
-                      <Text className="text-[#101828] text-[32px] font-bold tracking-tighter">{waterMl}</Text>
-                      <Text className="text-zinc-400 text-[13px] font-medium mt-0.5">/{waterGoal} ml</Text>
+                    <View className="my-2.5">
+                      <Text style={{ fontFamily: 'Outfit_800ExtraBold', fontSize: 24, color: '#0F172A', letterSpacing: -0.5 }}>
+                        {waterMl}
+                      </Text>
+                      <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 11, color: '#94A3B8' }}>
+                        / {waterGoal} ml
+                      </Text>
                     </View>
-                    {/* Progress Bar */}
+                    {/* Native Expo UI Progress Bar */}
                     <NativeProgressBar
-                      progress={(waterMl / Math.max(waterGoal, 1))}
-                      color="#06B6D4"
-                      trackColor="#CFFAFE"
-                      height={8}
+                      progress={waterMl / Math.max(waterGoal, 1)}
+                      color="#38BDF8"
+                      trackColor="#F1F5F9"
+                      height={6}
                     />
-                  </NativeOverviewCard>
+                  </TouchableOpacity>
 
                   {/* Wallet Credits Widget */}
-                  <NativeOverviewCard
-                    backgroundColor="#F5F3FF"
+                  <TouchableOpacity
+                    activeOpacity={0.8}
                     onPress={() => navigateSafely('/membership')}
+                    className="w-[48%] rounded-2xl p-4 justify-between bg-white border border-[#F1E5E7]"
+                    style={softShadow({ color: '#0F172A', opacity: 0.05, radius: 10, offsetY: 2 })}
                   >
-                    <View className="flex-row items-center gap-2">
-                      <Text className="text-base">💳</Text>
-                      <Text className="text-zinc-500 text-[11px] font-semibold uppercase tracking-wider">Wallet Credits</Text>
+                    <View className="flex-row items-center gap-1.5">
+                      <Feather name="credit-card" size={13} color="#F59E0B" />
+                      <Text style={{ fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 0.8, color: '#64748B', textTransform: 'uppercase' }}>
+                        WALLET CREDITS
+                      </Text>
                     </View>
-                    <View>
-                      <Text className="text-[#101828] text-[32px] font-bold tracking-tighter">{membership.availableCredits}</Text>
-                      <Text className="text-zinc-400 text-[13px] font-medium mt-0.5">Credits Available</Text>
+                    <View className="my-2.5">
+                      <Text style={{ fontFamily: 'Outfit_800ExtraBold', fontSize: 24, color: '#0F172A', letterSpacing: -0.5 }}>
+                        {membership.availableCredits}
+                      </Text>
+                      <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 11, color: '#64748B' }}>
+                        Credits Available
+                      </Text>
                     </View>
-                    {/* Progress Bar */}
+                    {/* Native Expo UI Progress Bar */}
                     <NativeProgressBar
-                      progress={(membership.availableCredits / Math.max(membership.totalCredits, membership.availableCredits, 1))}
-                      color="#7C3AED"
-                      trackColor="#EDE9FE"
-                      height={8}
+                      progress={membership.availableCredits / Math.max(membership.totalCredits, membership.availableCredits, 1)}
+                      color="#6366F1"
+                      trackColor="#F1F5F9"
+                      height={6}
                     />
-                  </NativeOverviewCard>
+                  </TouchableOpacity>
 
                   {/* Workout Streak Widget */}
-                  <NativeOverviewCard
-                    backgroundColor="#FFFBEB"
+                  <TouchableOpacity
+                    activeOpacity={0.8}
                     onPress={() => navigateSafely('/(tabs)/progress')}
+                    className="w-[48%] rounded-2xl p-4 justify-between bg-white border border-[#F1E5E7]"
+                    style={softShadow({ color: '#0F172A', opacity: 0.05, radius: 10, offsetY: 2 })}
                   >
                     <View className="flex-row items-center justify-between">
-                      <View className="flex-row items-center gap-2">
-                        <Text className="text-base">⚡</Text>
-                        <Text className="text-zinc-500 text-[11px] font-semibold uppercase tracking-wider">Workout Streak</Text>
+                      <View className="flex-row items-center gap-1.5">
+                        <Feather name="zap" size={13} color="#F59E0B" />
+                        <Text style={{ fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 0.8, color: '#64748B', textTransform: 'uppercase' }}>
+                          WORKOUT STREAK
+                        </Text>
                       </View>
-                      <Feather name="chevron-right" size={13} color="#F59E0B" />
+                      <Feather name="chevron-right" size={12} color="#F59E0B" />
                     </View>
-                    <View>
-                      <Text className="text-[#101828] text-[32px] font-bold tracking-tighter">{streak}</Text>
-                      <Text className="text-zinc-400 text-[13px] font-medium mt-0.5">/{weeklyStreakGoal} days this week</Text>
+                    <View className="my-2.5">
+                      <Text style={{ fontFamily: 'Outfit_800ExtraBold', fontSize: 24, color: '#0F172A', letterSpacing: -0.5 }}>
+                        {streak}
+                      </Text>
+                      <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 11, color: '#94A3B8' }}>
+                        / {weeklyStreakGoal} days this week
+                      </Text>
                     </View>
-                    {/* Progress Bar */}
+                    {/* Native Expo UI Progress Bar */}
                     <NativeProgressBar
-                      progress={(streak / Math.max(weeklyStreakGoal, 1))}
-                      color="#F59E0B"
-                      trackColor="#FEF3C7"
-                      height={8}
+                      progress={streak / Math.max(weeklyStreakGoal, 1)}
+                      color="#FBBF24"
+                      trackColor="#F1F5F9"
+                      height={6}
                     />
-                  </NativeOverviewCard>
+                  </TouchableOpacity>
                 </View>
               </View>
 
               {/* AI Wellness Coach Section */}
-              <View className="gap-4">
-                <Text className="text-[#101828] text-[20px] font-semibold tracking-tight pl-1">AI Wellness Coach</Text>
+              <View className="gap-3">
+                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 18, color: '#0F172A', letterSpacing: -0.3 }}>
+                  AI Wellness Coach
+                </Text>
                 <View 
                   style={{
-                    backgroundColor: '#1F1135',
-                    borderRadius: 32,
-                    ...softShadow({ color: '#8B5CF6', opacity: 0.15, radius: 20, offsetY: 8 }),
+                    backgroundColor: '#121324',
+                    borderRadius: 24,
+                    borderWidth: 1,
+                    borderColor: 'rgba(255, 255, 255, 0.08)',
+                    ...softShadow({ color: '#0F172A', opacity: 0.15, radius: 20, offsetY: 8 }),
                   }}
                 >
-                  <View className="w-full bg-[#1F1135] rounded-[32px] p-6 relative overflow-hidden border border-zinc-800">
-                  {/* Glowing Abstract Radar Wave on the right */}
-                  <View className="absolute right-[-20px] top-[-10px] bottom-[-10px] w-[50%] z-0 items-center justify-center">
-                    <Svg width="140" height="140" viewBox="0 0 100 100">
-                      <Defs>
-                        <LinearGradient id="waveGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <Stop offset="0%" stopColor="#EC4899" stopOpacity={0.15} />
-                          <Stop offset="50%" stopColor="#8B5CF6" stopOpacity={0.4} />
-                          <Stop offset="100%" stopColor="#EC4899" stopOpacity={0.05} />
-                        </LinearGradient>
-                      </Defs>
-                      <Circle cx="50" cy="50" r="45" stroke="url(#waveGrad)" strokeWidth={0.5} fill="none" strokeDasharray="3 3" />
-                      <Circle cx="50" cy="50" r="35" stroke="url(#waveGrad)" strokeWidth={1} fill="none" />
-                      <Circle cx="50" cy="50" r="25" stroke="url(#waveGrad)" strokeWidth={1.5} fill="none" strokeDasharray="6 2" />
-                      <Circle cx="50" cy="50" r="16" stroke="#EC4899" strokeWidth={2} fill="#8B5CF6" opacity={0.3} />
-                      <Circle cx="50" cy="50" r="10" fill="#EC4899" opacity={0.7} />
-                    </Svg>
-
-                    <View className="absolute z-10 w-9 h-9 rounded-full bg-white/10 items-center justify-center">
-                      <Image
-                        source={AI_COACH_EMBLEM}
-                        style={{ width: 22, height: 22 }}
-                        resizeMode="contain"
-                      />
+                  <View className="w-full bg-[#121324] rounded-[24px] p-5 relative overflow-hidden">
+                  {/* Glowing Radar Rings on right */}
+                  <View className="absolute -right-8 -bottom-8 w-44 h-44 rounded-full border border-purple-500/20 items-center justify-center pointer-events-none">
+                    <View className="w-32 h-32 rounded-full border border-rose-500/25 items-center justify-center">
+                      <View className="w-22 h-22 rounded-full border border-rose-500/40 bg-purple-950/20 items-center justify-center">
+                        <View className="w-12 h-12 rounded-full bg-rose-500/20 border border-rose-400/50 items-center justify-center">
+                          <Feather name="compass" size={16} color="#FDA4AF" />
+                        </View>
+                      </View>
                     </View>
                   </View>
 
                   {/* Left content */}
-                  <View className="z-10 gap-4 pr-16">
-                    <View className="flex-row items-center gap-1.5 pl-0.5">
+                  <View className="z-10 max-w-[72%] gap-2">
+                    <View className="flex-row items-center gap-1.5">
                       <Image
                         source={AI_COACH_EMBLEM}
-                        style={{ width: 14, height: 14 }}
+                        style={{ width: 13, height: 13 }}
                         resizeMode="contain"
                       />
-                      <Text className="text-white/70 text-xs font-bold uppercase">
-                        {savedPlan ? 'My AI Wellness Plan' : 'AI Wellness Coach'}
+                      <Text style={{ fontFamily: 'Inter_700Bold', fontSize: 10, letterSpacing: 1.2, color: '#FDA4AF', textTransform: 'uppercase' }}>
+                        {savedPlan ? 'MY AI WELLNESS PLAN' : 'AI WELLNESS COACH'}
                       </Text>
                     </View>
 
                     {savedPlan ? (
-                      <View className="gap-3.5">
-                        <View className="flex-row justify-between flex-wrap gap-y-2.5">
+                      <View className="gap-2.5 my-1">
+                        <View className="flex-row justify-between flex-wrap gap-y-2">
                           <View className="w-[48%] gap-0.5">
-                            <Text className="text-white/50 text-[10px] font-bold uppercase">Calories Goal</Text>
-                            <Text className="text-white text-xs font-bold">{savedPlan.dailyCalories} kcal</Text>
+                            <Text style={{ fontFamily: 'Inter_700Bold', fontSize: 9, color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase' }}>Calories Goal</Text>
+                            <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#FFFFFF' }}>{savedPlan.dailyCalories} kcal</Text>
                           </View>
                           <View className="w-[48%] gap-0.5">
-                            <Text className="text-white/50 text-[10px] font-bold uppercase">Protein Goal</Text>
-                            <Text className="text-white text-xs font-bold">{savedPlan.proteinTarget}g</Text>
+                            <Text style={{ fontFamily: 'Inter_700Bold', fontSize: 9, color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase' }}>Protein Goal</Text>
+                            <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#FFFFFF' }}>{savedPlan.proteinTarget}g</Text>
                           </View>
                           <View className="w-[48%] gap-0.5">
-                            <Text className="text-white/50 text-[10px] font-bold uppercase">Water Goal</Text>
-                            <Text className="text-white text-xs font-bold" numberOfLines={1}>
+                            <Text style={{ fontFamily: 'Inter_700Bold', fontSize: 9, color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase' }}>Water Goal</Text>
+                            <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#FFFFFF' }} numberOfLines={1}>
                               {savedPlan?.hydrationGoal ? String(savedPlan.hydrationGoal).split(' ')[0] : '2'} L
                             </Text>
                           </View>
                           <View className="w-[48%] gap-0.5">
-                            <Text className="text-white/50 text-[10px] font-bold uppercase">Next Session</Text>
-                            <Text className="text-white text-xs font-bold" numberOfLines={1}>
+                            <Text style={{ fontFamily: 'Inter_700Bold', fontSize: 9, color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase' }}>Next Session</Text>
+                            <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 13, color: '#FFFFFF' }} numberOfLines={1}>
                               {upcomingBookings.length > 0 && upcomingBookings[0]?.date
-                                ? `${formatToDDMMYYYY(upcomingBookings[0].date)} @ ${upcomingBookings[0].time}`
+                                ? `${formatToDDMMYYYY(upcomingBookings[0].date)}`
                                 : 'None scheduled'}
                             </Text>
                           </View>
                         </View>
-                        
-                        <View className="gap-0.5">
-                          <Text className="text-white/50 text-[10px] font-bold uppercase">{"Today's"} Workout</Text>
-                          <Text className="text-white text-xs font-medium leading-relaxed pr-4" numberOfLines={1}>
-                            {savedPlan.workoutRecommendation}
-                          </Text>
-                        </View>
                       </View>
                     ) : (
-                      <View className="gap-1.5">
-                        <Text className="text-white text-base font-bold">
+                      <View className="gap-1 my-0.5">
+                        <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 17, color: '#FFFFFF', letterSpacing: -0.2, lineHeight: 22 }}>
                           Create Your AI Wellness Plan
                         </Text>
-                        <Text className="text-white/75 text-xs font-normal leading-relaxed pr-2">
-                          Answer a few questions so VIRLA AI can create a personalized wellness plan.
+                        <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 12, color: '#CBD5E1', lineHeight: 16 }}>
+                          Answer a few quick questions so VIRLA AI can create a personalized wellness plan.
                         </Text>
                       </View>
                     )}
 
                     <TouchableOpacity
-                      activeOpacity={0.85}
+                      activeOpacity={0.88}
                       onPress={() => navigateSafely('/virla-ai')}
-                      className="bg-[#E11D48] rounded-2xl py-3 px-4 flex-row items-center self-start gap-2.5 mt-1"
-                      style={{
-                        backgroundColor: '#E11D48',
-                        ...softShadow({ color: '#E11D48', opacity: 0.2, radius: 8, offsetY: 4 }),
-                      }}
+                      className="bg-[#E11D48] rounded-full py-2.5 px-4 flex-row items-center self-start gap-2 mt-1.5"
+                      style={softShadow({ color: '#E11D48', opacity: 0.3, radius: 8, offsetY: 3 })}
                     >
-                      <Text className="text-white text-xs font-bold uppercase">
-                        {savedPlan ? 'My AI Wellness Plan' : 'Get Started'}
+                      <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, letterSpacing: 0.8, color: '#FFFFFF', textTransform: 'uppercase' }}>
+                        {savedPlan ? 'View Plan' : 'Get Started'}
                       </Text>
-                      <View className="w-5 h-5 rounded-full bg-white items-center justify-center">
-                        <Feather name="chevron-right" size={12} color="#E11D48" />
-                      </View>
+                      <Feather name="chevron-right" size={11} color="white" />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -2043,30 +2078,26 @@ export default function HomeScreen() {
               </View>
 
               {/* Upcoming Session Section */}
-              <View className="gap-4">
-                <Text className="text-[#101828] text-[20px] font-semibold tracking-tight pl-1">Upcoming Session</Text>
+              <View className="gap-3">
+                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 18, color: '#0F172A', letterSpacing: -0.3 }}>
+                  Upcoming Session
+                </Text>
                 {upcomingBookings.length > 0 ? (() => {
                   const bookingData = upcomingBookings[0];
                   const isTravelling = bookingData.timelineStatus === 'trainer_travelling';
                   const isAccepted = bookingData.timelineStatus !== 'booked' && bookingData.timelineStatus !== 'trainer_assigned';
-                  const isSearching = !bookingData.trainerId || bookingData.trainerId === 'searching' || bookingData.trainerName === 'No Trainer Available';
 
                   return (
                     <View 
-                      className="p-4 rounded-2xl gap-3.5"
-                      style={{
-                        backgroundColor: Platform.OS === 'ios' ? 'rgba(255, 255, 255, 0.92)' : '#FFFFFF',
-                        borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
-                        borderColor: 'rgba(60, 60, 67, 0.12)',
-                        ...softShadow({ color: '#101828', opacity: 0.05, radius: 10, offsetY: 2 }),
-                      }}
+                      className="p-5 rounded-2xl gap-3.5 bg-white border border-[#F1E5E7]"
+                      style={softShadow({ color: '#0F172A', opacity: 0.05, radius: 10, offsetY: 2 })}
                     >
                       {/* Top: Coach avatar, title, and badge */}
                       <View className="flex-row justify-between items-start">
                         <View className="flex-row items-center gap-3">
                           {!isAccepted ? (
-                            <View className="w-14 h-14 rounded-full bg-indigo-50 border border-indigo-100 items-center justify-center">
-                              <Feather name="clock" size={20} color="#4F46E5" />
+                            <View className="w-13 h-13 rounded-full bg-rose-50 border border-rose-100 items-center justify-center" style={{ width: 48, height: 48, borderRadius: 24 }}>
+                              <Feather name="calendar" size={18} color="#E11D48" />
                             </View>
                           ) : (
                             <ExpoImage
@@ -2074,12 +2105,15 @@ export default function HomeScreen() {
                               cachePolicy="memory-disk"
                               contentFit="cover"
                               transition={150}
-                              className="w-14 h-14 rounded-full border border-zinc-150"
+                              style={{ width: 48, height: 48, borderRadius: 24 }}
+                              className="border border-zinc-150"
                             />
                           )}
                           <View>
-                            <Text className="text-zinc-950 text-[15px] font-semibold">{getDisplayWorkoutTitle(bookingData.workoutTitle)}</Text>
-                            <Text className="text-zinc-500 text-[13px] font-normal mt-0.5">
+                            <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 15, color: '#0F172A' }}>
+                              {getDisplayWorkoutTitle(bookingData.workoutTitle)}
+                            </Text>
+                            <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 12, color: '#64748B', marginTop: 1 }}>
                               {!isAccepted 
                                 ? 'Trainer details will be shared soon.' 
                                 : `with ${bookingData.trainerName}`
@@ -2087,74 +2121,72 @@ export default function HomeScreen() {
                             </Text>
                           </View>
                         </View>
-                        {/* Elite coach badge */}
                         {isAccepted && (
-                          <View className="bg-amber-50 border border-amber-100 px-3.5 py-1 rounded-full">
-                            <Text className="text-amber-600 text-[9px] font-bold uppercase tracking-wider">★ ELITE COACH</Text>
+                          <View className="bg-amber-50 border border-amber-200/60 px-2.5 py-0.5 rounded-full">
+                            <Text style={{ fontFamily: 'Inter_700Bold', fontSize: 9, color: '#D97706', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                              ★ ELITE COACH
+                            </Text>
                           </View>
                         )}
                       </View>
 
-                      <View className="h-[1px] bg-zinc-150" />
+                      <View className="h-[1px] bg-[#F1E5E7]" />
 
                       {/* Middle: Timeline path details */}
                       <View className="flex-row justify-between items-center px-1">
                         <View className="flex-row items-stretch gap-3 flex-1 pr-4">
-                          {/* Dotted indicator line */}
                           <View className="items-center justify-between py-1">
                             <View className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                             <View className="w-[1px] flex-1 border-l border-zinc-300 border-dashed my-0.5" />
                             <View className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                           </View>
-                          <View className="gap-3 flex-1">
+                          <View className="gap-2 flex-1">
                             <View>
-                              <Text numberOfLines={1} className="text-zinc-950 text-[13px] font-semibold">{formatToDDMMYYYY(bookingData.date)}</Text>
-                              <Text numberOfLines={1} className="text-zinc-450 text-[11px] font-medium mt-0.5">{bookingData.time ? bookingData.time.split(' - ')[0] : ''}</Text>
+                              <Text numberOfLines={1} style={{ fontFamily: 'Outfit_600SemiBold', fontSize: 13, color: '#0F172A' }}>
+                                {formatToDDMMYYYY(bookingData.date)}
+                              </Text>
+                              <Text numberOfLines={1} style={{ fontFamily: 'Inter_500Medium', fontSize: 11, color: '#64748B', marginTop: 1 }}>
+                                {bookingData.time ? bookingData.time.split(' - ')[0] : ''}
+                              </Text>
                             </View>
                             <View>
-                              <Text numberOfLines={1} className="text-zinc-950 text-[13px] font-semibold">Home</Text>
-                              <Text numberOfLines={1} className="text-zinc-455 text-[11px] font-medium mt-0.5">{bookingData.address ? bookingData.address.split(',')[0] : 'Mumbai, India'}</Text>
+                              <Text numberOfLines={1} style={{ fontFamily: 'Outfit_600SemiBold', fontSize: 13, color: '#0F172A' }}>
+                                Home
+                              </Text>
+                              <Text numberOfLines={1} style={{ fontFamily: 'Inter_500Medium', fontSize: 11, color: '#64748B', marginTop: 1 }}>
+                                {bookingData.address ? bookingData.address.split(',')[0] : 'Doorstep Venue'}
+                              </Text>
                             </View>
                           </View>
                         </View>
 
-                        {/* Right: Status badge & Map action */}
-                        <View className="items-end gap-4">
-                          {/* Status pill */}
-                          <View className="bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-xl flex-row items-center gap-1.5">
+                        {/* Status pill & Map Action */}
+                        <View className="items-end gap-3">
+                          <View className="bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 rounded-xl flex-row items-center gap-1">
                             <Feather 
                               name={isTravelling ? 'truck' : 'check-circle'} 
-                              size={12} 
+                              size={11} 
                               color="#16C784" 
                             />
-                            <Text className="text-emerald-600 text-[9px] font-bold uppercase tracking-wider">
-                              {isTravelling 
-                                ? 'Coach on the way' 
-                                : 'Confirmed'
-                              }
+                            <Text style={{ fontFamily: 'Inter_700Bold', fontSize: 9, color: '#16C784', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                              {isTravelling ? 'Coach on the way' : 'Confirmed'}
                             </Text>
                           </View>
 
-                          {/* Navigation Map Action */}
                           <TouchableOpacity
                             activeOpacity={0.8}
                             onPress={() => navigateSafely({ pathname: '/session-detail', params: { id: bookingData.id } })}
-                            className="w-11 h-11 rounded-full bg-[#16C784] items-center justify-center"
-                            style={{
-                              backgroundColor: '#16C784',
-                              minWidth: 44,
-                              minHeight: 44,
-                              ...softShadow({ color: '#16C784', opacity: 0.25, radius: 12, offsetY: 6 }),
-                            }}
+                            className="w-10 h-10 rounded-full bg-[#16C784] items-center justify-center"
+                            style={softShadow({ color: '#16C784', opacity: 0.25, radius: 10, offsetY: 4 })}
                           >
-                            <Feather name="navigation" size={16} color="white" />
+                            <Feather name="navigation" size={15} color="white" />
                           </TouchableOpacity>
                         </View>
                       </View>
 
                       {bookingData.sessionType === 'SINGLE' && bookingData.timelineStatus !== 'otp_verified' && bookingData.timelineStatus !== 'workout_started' && bookingData.timelineStatus !== 'workout_completed' && bookingData.timelineStatus !== 'session_closed' && bookingData.status === 'upcoming' && (
                         <>
-                          <NativeDivider color="#E4E4E7" className="mt-3 mb-1" />
+                          <NativeDivider color="#F1E5E7" className="mt-2 mb-1" />
                           <TouchableOpacity
                             activeOpacity={0.8}
                             onPress={() => {
@@ -2163,19 +2195,21 @@ export default function HomeScreen() {
                             }}
                             className="flex-row items-center justify-center gap-1.5 py-1.5"
                           >
-                            <Feather name="plus-circle" size={14} color="#E11D48" />
-                            <Text className="text-[#E11D48] text-xs font-black uppercase tracking-wider">Add Partner</Text>
+                            <Feather name="plus-circle" size={13} color="#E11D48" />
+                            <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#E11D48', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                              Add Partner
+                            </Text>
                           </TouchableOpacity>
                         </>
                       )}
 
                       {bookingData.sessionType === 'COUPLE' && bookingData.partnerName && (
                         <>
-                          <NativeDivider color="#E4E4E7" className="mt-3 mb-1.5" />
+                          <NativeDivider color="#F1E5E7" className="mt-2 mb-1" />
                           <View className="flex-row items-center justify-center gap-1.5 py-0.5">
                             <Feather name="users" size={12} color="#10B981" />
-                            <Text className="text-zinc-500 text-[10px] font-semibold">
-                              Training with <Text className="font-extrabold text-zinc-800">{bookingData.partnerName}</Text>
+                            <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 11, color: '#64748B' }}>
+                              Training with <Text style={{ fontFamily: 'Outfit_700Bold', color: '#0F172A' }}>{bookingData.partnerName}</Text>
                             </Text>
                           </View>
                         </>
@@ -2184,17 +2218,38 @@ export default function HomeScreen() {
                   );
                 })() : (
                   <View 
-                    className="p-5 rounded-2xl items-center justify-center gap-2.5"
-                    style={{
-                      backgroundColor: '#FFF5F5',
-                      borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
-                      borderColor: 'rgba(60, 60, 67, 0.12)',
-                      ...softShadow({ color: '#101828', opacity: 0.05, radius: 10, offsetY: 2 }),
-                    }}
+                    className="p-6 rounded-2xl items-center justify-center gap-3.5 bg-white border border-[#F1E5E7]"
+                    style={softShadow({ color: '#0F172A', opacity: 0.05, radius: 10, offsetY: 2 })}
                   >
-                    <Text className="text-3xl">🗓️</Text>
-                    <Text className="text-[#101828] text-base font-semibold">No Upcoming Sessions Scheduled</Text>
-                    <Text className="text-zinc-500 text-sm text-center">Schedule your next personal training session today.</Text>
+                    <View 
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 16,
+                        backgroundColor: '#FFF1F2',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Feather name="calendar" size={22} color="#E11D48" />
+                    </View>
+                    <View className="items-center">
+                      <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 16, color: '#0F172A', letterSpacing: -0.2 }}>
+                        No Upcoming Sessions Scheduled
+                      </Text>
+                      <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 12, color: '#64748B', textAlign: 'center', marginTop: 4, maxWidth: 270, lineHeight: 16 }}>
+                        Schedule your next personal training session today.
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      activeOpacity={0.88}
+                      onPress={() => navigateSafely('/booking')}
+                      className="border border-rose-200 bg-rose-50/50 px-5 py-2.5 rounded-xl shadow-sm"
+                    >
+                      <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#E11D48' }}>
+                        Book Doorstep Trainer Now
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 )}
               </View>
@@ -2759,7 +2814,7 @@ export default function HomeScreen() {
           )}
 
         </ReanimatedAnimated.View>
-      </ScrollView>
+      </ReanimatedAnimated.ScrollView>
       </View>
       )}
       <AddPartnerModal

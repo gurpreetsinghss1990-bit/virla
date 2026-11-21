@@ -1,6 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Animated, Easing } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Animated, {
+  useSharedValue,
+  useAnimatedProps,
+  createAnimatedComponent,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
+
+const AnimatedCircle = createAnimatedComponent(Circle);
 
 interface ProgressRingProps {
   progress: number; // Value between 0 and 1
@@ -23,31 +32,19 @@ export function ProgressRing({
   animated = true,
   children,
 }: ProgressRingProps) {
-  const animValue = useRef(new Animated.Value(0)).current;
-  const [displayProgress, setDisplayProgress] = useState(animated ? 0 : progress);
+  const animatedProgress = useSharedValue(animated ? 0 : Math.max(0, Math.min(1, progress)));
 
   useEffect(() => {
     const clamped = Math.max(0, Math.min(1, progress));
     if (!animated) {
-      setDisplayProgress(clamped);
-      return;
+      animatedProgress.value = clamped;
+    } else {
+      animatedProgress.value = withTiming(clamped, {
+        duration: 700,
+        easing: Easing.out(Easing.cubic),
+      });
     }
-
-    const listenerId = animValue.addListener(({ value }) => {
-      setDisplayProgress(value);
-    });
-
-    Animated.timing(animValue, {
-      toValue: clamped,
-      duration: 700,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-
-    return () => {
-      animValue.removeListener(listenerId);
-    };
-  }, [progress, animated]);
+  }, [progress, animated, animatedProgress]);
 
   // Give generous SVG canvas buffer to prevent Android clipping of 3D shadows and pearl caps
   const svgPadding = 8;
@@ -56,21 +53,71 @@ export function ProgressRing({
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
 
-  const clampedProgress = Math.max(0, Math.min(1, displayProgress));
-  const strokeDashoffset = circumference - clampedProgress * circumference;
-
-  // Calculate coordinates for the 3D spherical tip cap
-  // Ring starts at top (-90 degrees / -PI / 2) and sweeps clockwise
-  const angle = clampedProgress * 2 * Math.PI - Math.PI / 2;
-  const tipX = center + radius * Math.cos(angle);
-  const tipY = center + radius * Math.sin(angle);
-
   // Start point (top center)
   const startX = center;
   const startY = center - radius;
 
   // Unique gradient ID per instance
   const gradId = useRef(`ringGrad_${Math.random().toString(36).substring(2, 8)}`).current;
+
+  // 100% UI-Thread animated props for the arc strokeDashoffset and opacity
+  const arcAnimatedProps = useAnimatedProps(() => {
+    'worklet';
+    const clamped = Math.max(0, Math.min(1, animatedProgress.value));
+    const offset = circumference - clamped * circumference;
+    return {
+      strokeDashoffset: offset,
+      opacity: clamped > 0 ? 1 : 0,
+    };
+  });
+
+  // UI-Thread animated props for the moving 3D tip cap (cx, cy)
+  const tipBaseProps = useAnimatedProps(() => {
+    'worklet';
+    const clamped = Math.max(0, Math.min(1, animatedProgress.value));
+    const angle = clamped * 2 * Math.PI - Math.PI / 2;
+    const x = center + radius * Math.cos(angle);
+    const y = center + radius * Math.sin(angle);
+    return {
+      cx: x,
+      cy: y,
+      opacity: clamped > 0.02 ? 1 : 0,
+    };
+  });
+
+  const tipShadowProps = useAnimatedProps(() => {
+    'worklet';
+    const clamped = Math.max(0, Math.min(1, animatedProgress.value));
+    const angle = clamped * 2 * Math.PI - Math.PI / 2;
+    const x = center + radius * Math.cos(angle);
+    const y = center + radius * Math.sin(angle) + 1.2;
+    return {
+      cx: x,
+      cy: y,
+      opacity: clamped > 0.02 ? 1 : 0,
+    };
+  });
+
+  const tipHighlightProps = useAnimatedProps(() => {
+    'worklet';
+    const clamped = Math.max(0, Math.min(1, animatedProgress.value));
+    const angle = clamped * 2 * Math.PI - Math.PI / 2;
+    const x = center + radius * Math.cos(angle) - strokeWidth * 0.16;
+    const y = center + radius * Math.sin(angle) - strokeWidth * 0.16;
+    return {
+      cx: x,
+      cy: y,
+      opacity: clamped > 0.02 ? 0.88 : 0,
+    };
+  });
+
+  const startPointProps = useAnimatedProps(() => {
+    'worklet';
+    const clamped = Math.max(0, Math.min(1, animatedProgress.value));
+    return {
+      opacity: clamped > 0.04 ? 0.7 : 0,
+    };
+  });
 
   return (
     <View style={{ width: size, height: size }} className="justify-center items-center relative">
@@ -146,45 +193,43 @@ export function ProgressRing({
           style={{ transform: [{ rotate: '-90deg' }] }}
         >
           {/* 4. 3D Volumetric Arc Under-Shadow */}
-          {enable3D && clampedProgress > 0 && (
-            <Circle
+          {enable3D && (
+            <AnimatedCircle
               cx={center}
               cy={center}
               r={radius}
               stroke="rgba(15, 23, 42, 0.16)"
               strokeWidth={strokeWidth + 3}
               strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
+              animatedProps={arcAnimatedProps}
               strokeLinecap="round"
               fill="none"
             />
           )}
 
           {/* 5. Primary Active Volumetric Cylinder */}
-          {clampedProgress > 0 && (
-            <Circle
-              cx={center}
-              cy={center}
-              r={radius}
-              stroke={activeColor || `url(#${gradId})`}
-              strokeWidth={strokeWidth}
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-              fill="none"
-            />
-          )}
+          <AnimatedCircle
+            cx={center}
+            cy={center}
+            r={radius}
+            stroke={activeColor || `url(#${gradId})`}
+            strokeWidth={strokeWidth}
+            strokeDasharray={circumference}
+            animatedProps={arcAnimatedProps}
+            strokeLinecap="round"
+            fill="none"
+          />
 
           {/* 6. 3D Cylindrical Specular Glaze (Glassy reflection line along the tube) */}
-          {enable3D && clampedProgress > 0 && (
-            <Circle
+          {enable3D && (
+            <AnimatedCircle
               cx={center}
               cy={center}
               r={radius}
               stroke="rgba(255, 255, 255, 0.52)"
               strokeWidth={Math.max(2, strokeWidth * 0.24)}
               strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
+              animatedProps={arcAnimatedProps}
               strokeLinecap="round"
               fill="none"
             />
@@ -192,40 +237,36 @@ export function ProgressRing({
         </Svg>
 
         {/* 7. 3D Start Point Specular Shine */}
-        {enable3D && clampedProgress > 0.04 && (
-          <Circle
+        {enable3D && (
+          <AnimatedCircle
             cx={startX}
             cy={startY}
             r={Math.max(1.5, strokeWidth * 0.2)}
             fill="#FFFFFF"
-            opacity={0.7}
+            animatedProps={startPointProps}
           />
         )}
 
         {/* 8. 3D Glowing Spherical Jewel Cap at the Moving Tip */}
-        {enable3D && clampedProgress > 0.02 && (
+        {enable3D && (
           <>
             {/* Contact drop shadow under the tip */}
-            <Circle
-              cx={tipX}
-              cy={tipY + 1.2}
+            <AnimatedCircle
               r={strokeWidth / 2}
               fill="rgba(15, 23, 42, 0.24)"
+              animatedProps={tipShadowProps}
             />
             {/* Main 3D Sphere Bead */}
-            <Circle
-              cx={tipX}
-              cy={tipY}
+            <AnimatedCircle
               r={strokeWidth / 2 - 0.4}
               fill={activeColor || '#4F46E5'}
+              animatedProps={tipBaseProps}
             />
             {/* 3D Specular Highlight Dot on the sphere */}
-            <Circle
-              cx={tipX - strokeWidth * 0.16}
-              cy={tipY - strokeWidth * 0.16}
+            <AnimatedCircle
               r={Math.max(1.4, strokeWidth * 0.22)}
               fill="#FFFFFF"
-              opacity={0.88}
+              animatedProps={tipHighlightProps}
             />
           </>
         )}

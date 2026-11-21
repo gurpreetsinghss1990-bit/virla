@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Animated } from 'react-native';
+import { View, Text } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
 import { ProgressRing } from './ProgressRing';
 import { NativeSegmentedRangeControl } from './NativeSegmentedRangeControl';
@@ -8,7 +9,8 @@ import { softShadow } from '../utils/shadows';
 export interface TrainerPerformanceViewProps {
   activeRange: 'weekly' | 'monthly' | 'yearly';
   setActiveRange: (range: 'weekly' | 'monthly' | 'yearly') => void;
-  fadeAnim: Animated.Value;
+  fadeAnim?: any;
+  animatedFadeStyle?: any;
   currentStats: any;
 }
 
@@ -16,8 +18,11 @@ export const TrainerPerformanceView: React.FC<TrainerPerformanceViewProps> = ({
   activeRange,
   setActiveRange,
   fadeAnim,
+  animatedFadeStyle,
   currentStats,
 }) => {
+  const activeAnimStyle = animatedFadeStyle || (fadeAnim && typeof fadeAnim === 'object' && 'value' in fadeAnim ? { opacity: fadeAnim } : fadeAnim) || {};
+
   return (
     <>
       {/* Trainer timeframe indicator */}
@@ -27,7 +32,7 @@ export const TrainerPerformanceView: React.FC<TrainerPerformanceViewProps> = ({
       />
 
       {/* Performance indicators - Seamless on canvas */}
-      <Animated.View style={{ opacity: fadeAnim }} className="gap-4">
+      <Animated.View style={activeAnimStyle} className="gap-4">
         <View className="flex-row justify-between items-center px-1">
           <Text className="text-[#101828] text-xs font-bold uppercase tracking-wider">
             Performance Indicators
@@ -82,7 +87,7 @@ export const TrainerPerformanceView: React.FC<TrainerPerformanceViewProps> = ({
       </Animated.View>
 
       {/* Weekly/Monthly Earnings chart - Seamless on canvas */}
-      <Animated.View style={{ opacity: fadeAnim }} className="gap-4">
+      <Animated.View style={activeAnimStyle} className="gap-4">
         <View className="flex-row justify-between items-center px-1">
           <View>
             <Text className="text-[#101828] text-xs font-bold uppercase tracking-wider">

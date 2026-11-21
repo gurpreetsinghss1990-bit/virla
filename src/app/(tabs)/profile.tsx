@@ -1,13 +1,25 @@
 import { Loading } from '../../components/Loading';
 import { FlashList } from '@shopify/flash-list';
+import { NativeSheet } from '../../components/NativeSheet';
+import AnimatedReanimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  Easing as ReanimatedEasing,
+  runOnJS,
+} from 'react-native-reanimated';
+import { softShadow } from '../../utils/shadows';
 import { NativePressable } from '../../components/NativePressable';
 import { NativeGoalChip } from '../../components/NativeGoalChip';
 import { ClientProfileView } from '../../components/ClientProfileView';
 import { FitnessGoalsModal } from '../../components/FitnessGoalsModal';
 import { NativeAlertDialog } from '../../components/NativeAlertDialog';
 import { NativeSingleChoiceDialog } from '../../components/NativeSingleChoiceDialog';
+import { InlineDatePicker } from '../../components/InlineDatePicker';
+import { NativeFitnessDropdown } from '../../components/NativeFitnessDropdown';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, FlatList, TouchableOpacity, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, BackHandler, Modal, LayoutAnimation, UIManager, Pressable, TouchableWithoutFeedback, StyleSheet, Easing, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, Alert, Platform, KeyboardAvoidingView, BackHandler, Pressable, StyleSheet, Dimensions, Keyboard } from 'react-native';
 import { InteractionManager } from '../../utils/interactionManager';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -191,173 +203,26 @@ export default function ProfileScreen() {
     return () => clearTimeout(timer);
   }, [profile.mobile]);
 
-  const shimmerAnim = useMemo(() => new Animated.Value(0.3), []);
-  useEffect(() => {
-    const shimmerLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmerAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
-        Animated.timing(shimmerAnim, { toValue: 0.3, duration: 1500, useNativeDriver: true })
-      ])
-    );
-    shimmerLoop.start();
-    return () => shimmerLoop.stop();
-  }, [shimmerAnim]);
-
-  // Subtle sparkle intro pulse (1-2 gentle twinkles on screen load and on tap)
-  const sparkleAnim = useMemo(() => new Animated.Value(0), []);
-  const triggerSparkleAnimation = useCallback(() => {
-    sparkleAnim.stopAnimation();
-    sparkleAnim.setValue(0);
-    Animated.sequence([
-      Animated.timing(sparkleAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-      Animated.timing(sparkleAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
-      Animated.timing(sparkleAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-      Animated.timing(sparkleAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
-    ]).start();
-  }, [sparkleAnim]);
-
-  // Sponge/Layers cascading compression animation (layer1 hits layer2, layer2 hits layer3, then returns)
-  const layer1Anim = useMemo(() => new Animated.Value(0), []);
-  const layer2Anim = useMemo(() => new Animated.Value(0), []);
-  const layer3Anim = useMemo(() => new Animated.Value(0), []);
-  const [isLayersAnimating, setIsLayersAnimating] = useState(false);
-
-  const triggerLayersAnimation = useCallback(() => {
-    setIsLayersAnimating(true);
-    layer1Anim.stopAnimation();
-    layer2Anim.stopAnimation();
-    layer3Anim.stopAnimation();
-    layer1Anim.setValue(0);
-    layer2Anim.setValue(0);
-    layer3Anim.setValue(0);
-
-    // Step 1: Top layer 1 drops down to hit layer 2
-    Animated.timing(layer1Anim, {
-      toValue: 3.5,
-      duration: 120,
-      useNativeDriver: true,
-    }).start(() => {
-      // Step 2: Layer 2 receives impact, pushes down to hit layer 3
-      Animated.parallel([
-        Animated.timing(layer1Anim, {
-          toValue: 5,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-        Animated.timing(layer2Anim, {
-          toValue: 2.5,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        // Step 3: Layer 3 compresses slightly under bottom impact
-        Animated.timing(layer3Anim, {
-          toValue: 1.2,
-          duration: 80,
-          useNativeDriver: true,
-        }).start(() => {
-          // Step 4: Spring back up sequentially to stationary positions
-          Animated.parallel([
-            Animated.spring(layer1Anim, {
-              toValue: 0,
-              friction: 5,
-              tension: 100,
-              useNativeDriver: true,
-            }),
-            Animated.spring(layer2Anim, {
-              toValue: 0,
-              friction: 6,
-              tension: 90,
-              useNativeDriver: true,
-            }),
-            Animated.spring(layer3Anim, {
-              toValue: 0,
-              friction: 7,
-              tension: 80,
-              useNativeDriver: true,
-            }),
-          ]).start(() => {
-            setIsLayersAnimating(false);
-          });
-        });
-      });
-    });
-  }, [layer1Anim, layer2Anim, layer3Anim]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      triggerSparkleAnimation();
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [triggerSparkleAnimation]);
-
   // Client Profile Edit local states
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const profileModalBackdropAnim = useMemo(() => new Animated.Value(0), []);
-  const profileModalSheetAnim = useMemo(() => new Animated.Value(1), []);
 
   const openEditProfileModal = useCallback(() => {
     setIsEditingProfile(true);
-    profileModalBackdropAnim.setValue(0);
-    profileModalSheetAnim.setValue(1);
-    Animated.parallel([
-      Animated.timing(profileModalBackdropAnim, {
-        toValue: 1,
-        duration: 320,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-        useNativeDriver: true,
-      }),
-      Animated.timing(profileModalSheetAnim, {
-        toValue: 0,
-        duration: 360,
-        easing: Easing.bezier(0.16, 1, 0.3, 1),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [profileModalBackdropAnim, profileModalSheetAnim]);
+    setEditProfileError(null);
+  }, []);
 
   const closeEditProfileModal = useCallback(() => {
     if (autoCloseTimerRef.current) {
       clearTimeout(autoCloseTimerRef.current);
       autoCloseTimerRef.current = null;
     }
-    Animated.parallel([
-      Animated.timing(profileModalBackdropAnim, {
-        toValue: 0,
-        duration: 220,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-        useNativeDriver: true,
-      }),
-      Animated.timing(profileModalSheetAnim, {
-        toValue: 1,
-        duration: 240,
-        easing: Easing.bezier(0.4, 0, 1, 1),
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setIsEditingProfile(false);
-      setEditProfileError(null);
-    });
-  }, [profileModalBackdropAnim, profileModalSheetAnim]);
+    setIsEditingProfile(false);
+    setEditProfileError(null);
+  }, []);
 
   const [isPersonalInfoExpanded, setIsPersonalInfoExpanded] = useState(false);
 
   const togglePersonalInfoExpansion = useCallback((targetState?: boolean) => {
-    // Clean, controlled native animation without spring bounce or overshoot jitter
-    LayoutAnimation.configureNext({
-      duration: 250,
-      create: {
-        type: LayoutAnimation.Types.easeInEaseOut,
-        property: LayoutAnimation.Properties.opacity,
-      },
-      update: {
-        type: LayoutAnimation.Types.easeInEaseOut,
-      },
-      delete: {
-        type: LayoutAnimation.Types.easeInEaseOut,
-        property: LayoutAnimation.Properties.opacity,
-      },
-    });
     setIsPersonalInfoExpanded(prev => (typeof targetState === 'boolean' ? targetState : !prev));
   }, []);
   const [editName, setEditName] = useState(profile.name || '');
@@ -375,8 +240,33 @@ export default function ProfileScreen() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isGoalsModalVisible, setIsGoalsModalVisible] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showFitnessLevelDialog, setShowFitnessLevelDialog] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => setKeyboardHeight(e.endCoordinates.height)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardHeight(0)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   const [editProfileError, setEditProfileError] = useState<string | null>(null);
   const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleDobSelect = useCallback((date: Date) => {
+    const formatted = formatToDDMMYYYY(date);
+    setEditDob(formatted);
+    setShowDatePicker(false);
+  }, []);
 
   useEffect(() => {
     // Never overwrite in-progress edits when the store refreshes underneath the open form.
@@ -1112,15 +1002,8 @@ export default function ProfileScreen() {
                       <Stop offset="70%" stopColor="#E6F4EA" stopOpacity={0.25} />
                       <Stop offset="100%" stopColor="#F8F9FC" stopOpacity={0} />
                     </RadialGradient>
-                    {/* Top Left Warm Amber Glow from code.html */}
-                    <RadialGradient id="leftAmberGlow" cx="10%" cy="22%" rx="45%" ry="45%">
-                      <Stop offset="0%" stopColor="#FEF3C7" stopOpacity={0.7} />
-                      <Stop offset="55%" stopColor="#FEF3C7" stopOpacity={0.25} />
-                      <Stop offset="100%" stopColor="#F8F9FC" stopOpacity={0} />
-                    </RadialGradient>
                   </Defs>
                   <Rect width="100%" height={460} fill="url(#topRightMint)" />
-                  <Rect width="100%" height={460} fill="url(#leftAmberGlow)" />
                 </Svg>
               </View>
 
@@ -1159,15 +1042,8 @@ export default function ProfileScreen() {
               user={user}
               isWildcardTestAccount={isWildcardTestAccount}
               handleRoleChange={handleRoleChange}
-              triggerSparkleAnimation={triggerSparkleAnimation}
-              sparkleAnim={sparkleAnim}
               creditBalance={creditBalance}
               membership={membership}
-              triggerLayersAnimation={triggerLayersAnimation}
-              layer1Anim={layer1Anim}
-              layer2Anim={layer2Anim}
-              layer3Anim={layer3Anim}
-              isLayersAnimating={isLayersAnimating}
               creditLots={creditLots}
               navigateThrottled={navigateThrottled}
               togglePersonalInfoExpansion={togglePersonalInfoExpansion}
@@ -2270,46 +2146,6 @@ export default function ProfileScreen() {
             zIndex: 35,
           }}
         />
-
-        {/* Top Header: Clean inline title with soft white sunlight-rays radial scrim */}
-        <View 
-          pointerEvents="none" 
-          style={{ 
-            position: 'absolute', 
-            top: insets.top + 12, 
-            left: 24, 
-            zIndex: 40,
-            alignSelf: 'flex-start',
-          }}
-        >
-          <View style={{ position: 'relative', justifyContent: 'center' }}>
-            {/* Soft white sunlight-rays radial scrim behind text (no visible box/pill) */}
-            <View
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                top: -14,
-                left: -22,
-                right: -28,
-                bottom: -14,
-              }}
-            >
-              <Svg width="100%" height="100%" preserveAspectRatio="none">
-                <Defs>
-                  <RadialGradient id="profileTitleSunScrim" cx="45%" cy="50%" rx="55%" ry="55%">
-                    <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.92" />
-                    <Stop offset="45%" stopColor="#F7F8FC" stopOpacity="0.72" />
-                    <Stop offset="80%" stopColor="#F7F8FC" stopOpacity="0.22" />
-                    <Stop offset="100%" stopColor="#F7F8FC" stopOpacity="0" />
-                  </RadialGradient>
-                </Defs>
-                <Ellipse cx="50%" cy="50%" rx="50%" ry="50%" fill="url(#profileTitleSunScrim)" />
-              </Svg>
-            </View>
-
-            {/* Title text removed */}
-          </View>
-        </View>
       </View>
     </KeyboardAvoidingView>
 
@@ -2319,311 +2155,526 @@ export default function ProfileScreen() {
         onConfirm={confirmLogout}
       />
 
-      {/* Edit Personal Information Modal */}
-      <Modal
+      {/* Edit Personal Information Native Bottom Sheet (@expo/ui) */}
+      <NativeSheet
         visible={isEditingProfile}
-        animationType="none"
-        transparent={true}
-        statusBarTranslucent={true}
-        onRequestClose={closeEditProfileModal}
+        onClose={closeEditProfileModal}
+        backgroundColor="#FFFFFF"
+        fullHeight={true}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1, justifyContent: 'flex-end' }}
+        <View
+          style={{
+            height: keyboardHeight > 0 
+              ? Math.max(SCREEN_HEIGHT - keyboardHeight - insets.top - 16, 320)
+              : Math.min(SCREEN_HEIGHT * 0.88, 760),
+            paddingBottom: Platform.OS === 'ios' ? insets.bottom : 0,
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            backgroundColor: '#FFFFFF',
+            overflow: 'hidden',
+            justifyContent: 'space-between',
+          }}
         >
-          {/* Smooth animated backdrop */}
-          <Animated.View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                backgroundColor: '#000000',
-                opacity: profileModalBackdropAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, 0.65],
-                }),
-              },
-            ]}
-          >
-            <Pressable
-              style={StyleSheet.absoluteFill}
-              onPress={closeEditProfileModal}
-              accessibilityLabel="Dismiss modal backdrop"
-              accessibilityRole="button"
-            />
-          </Animated.View>
+          {/* Grab Bar / Notch Indicator from Stitch */}
+          <View style={{ paddingTop: 12, paddingBottom: 6, alignItems: 'center' }}>
+            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0' }} />
+          </View>
 
-          {/* Smooth animated bottom sheet */}
-          <Animated.View
-            style={[
-              {
-                paddingBottom: Math.max(insets.bottom, 24),
-                transform: [
-                  {
-                    translateY: profileModalSheetAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, SCREEN_HEIGHT * 0.9],
-                    }),
-                  },
-                ],
-              },
-            ]}
-            className="bg-white rounded-t-[32px] px-6 pt-6 max-h-[88%] shadow-2xl"
-          >
-            <View className="flex-row justify-between items-center pb-3.5 border-b border-zinc-100">
-              <Text className="text-[#101828] text-base font-black">Edit Personal Information</Text>
-              <TouchableOpacity
-                onPress={closeEditProfileModal}
-                className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center"
-              >
-                <Feather name="x" size={16} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              className="mt-4"
+          {/* Modal Header */}
+          <View className="px-6 py-3 flex-row justify-between items-center border-b border-slate-100 flex-shrink-0">
+            <Text 
+              style={{ fontFamily: 'Outfit_700Bold' }} 
+              className="text-lg font-bold text-[#0F172A] tracking-tight"
             >
-              <View className="gap-4 pb-4">
-                {/* Profile Picture Selection */}
-                <View className="bg-zinc-50 rounded-2xl p-4 gap-3">
-                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Profile Picture</Text>
+              Edit Personal Information
+            </Text>
+            <TouchableOpacity
+              onPress={closeEditProfileModal}
+              activeOpacity={0.7}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: '#F1F5F9',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Feather name="x" size={16} color="#64748B" />
+            </TouchableOpacity>
+          </View>
 
-                  <View className="flex-row items-center gap-4">
-                    {/* Current Selected Avatar */}
-                    <View className="w-16 h-16 rounded-full border-2 border-rose-500 p-0.5 bg-white">
-                      <AvatarImage
-                        uri={editAvatar || profile.avatar || user?.avatar}
-                        gender={(editGender || profile.gender || (user as any)?.gender) as string}
-                        style={{ width: '100%', height: '100%', borderRadius: 999 }}
-                        contentFit="cover"
-                        cachePolicy="memory-disk"
-                        transition={200}
-                      />
-                      {isUploadingAvatar && (
-                        <View className="absolute inset-0 rounded-full bg-black/45 items-center justify-center">
-                          <Loading size="small" color="#FFFFFF" />
-                        </View>
-                      )}
+          {/* Scrollable Form Container - UI Thread Reanimated ScrollView */}
+          <AnimatedReanimated.ScrollView
+            showsVerticalScrollIndicator={false}
+            scrollEventThrottle={16}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+            style={{ flex: 1, paddingHorizontal: 24, paddingTop: 16 }}
+            contentContainerStyle={{ gap: 16, paddingBottom: 24 }}
+          >
+            {/* Profile Picture Card matching Stitch */}
+            <View 
+              style={{
+                backgroundColor: '#F8FAFC',
+                borderRadius: 16,
+                padding: 16,
+                borderWidth: 1,
+                borderColor: '#F1F5F9',
+              }}
+            >
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[11px] font-bold text-slate-500 tracking-wider uppercase mb-3">
+                Profile Picture
+              </Text>
+              <View className="flex-row items-center gap-3.5">
+                {/* Current Selected Avatar with Crimson Ring */}
+                <View style={{ width: 56, height: 56, borderRadius: 28, padding: 2, borderWidth: 2, borderColor: '#E11D48', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
+                  <AvatarImage
+                    uri={editAvatar || profile.avatar || user?.avatar}
+                    gender={(editGender || profile.gender || (user as any)?.gender) as string}
+                    style={{ width: '100%', height: '100%', borderRadius: 999 }}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    transition={200}
+                  />
+                  {isUploadingAvatar && (
+                    <View className="absolute inset-0 rounded-full bg-black/45 items-center justify-center">
+                      <Loading size="small" color="#FFFFFF" />
                     </View>
-
-                    {/* Camera / Gallery Upload Options */}
-                    <View className="flex-1 flex-row gap-2">
-                      <TouchableOpacity
-                        activeOpacity={0.8}
-                        onPress={() => pickAvatarImage('camera')}
-                        className="flex-1 py-2 px-2.5 rounded-xl bg-white items-center justify-center flex-row gap-1.5"
-                      >
-                        <Feather name="camera" size={13} color="#101828" />
-                        <Text className="text-[11px] font-bold text-zinc-800">Camera</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        activeOpacity={0.8}
-                        onPress={() => pickAvatarImage('library')}
-                        className="flex-1 py-2 px-2.5 rounded-xl bg-white items-center justify-center flex-row gap-1.5"
-                      >
-                        <Feather name="image" size={13} color="#101828" />
-                        <Text className="text-[11px] font-bold text-zinc-800">Gallery</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+                  )}
                 </View>
 
-                {/* Full Name */}
-                <View className="gap-1">
-                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Full Name</Text>
-                  <TextInput
-                    maxLength={250}
-                    value={editName}
-                    onChangeText={setEditName}
-                    placeholder="Your Full Name"
-                    placeholderTextColor="#9CA3AF"
-                    className="border border-[#E5E7EB] bg-[#F8F9FA] px-3.5 py-3 rounded-xl text-sm text-zinc-900 font-medium"
-                  />
-                </View>
+                {/* Camera & Gallery Action Buttons */}
+                <View className="flex-1 flex-row gap-2">
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => pickAvatarImage('camera')}
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      paddingVertical: 10,
+                      paddingHorizontal: 12,
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: 'rgba(226, 232, 240, 0.9)',
+                      ...softShadow({ color: '#0F172A', opacity: 0.04, radius: 4, offsetY: 1 }),
+                    }}
+                  >
+                    <Feather name="camera" size={14} color="#64748B" />
+                    <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-xs font-semibold text-slate-700">Camera</Text>
+                  </TouchableOpacity>
 
-                {/* Mobile Number with separate +91 badge */}
-                <View className="gap-1">
-                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Mobile Number</Text>
-                  <View className="flex-row items-center bg-[#F8F9FA] rounded-xl overflow-hidden">
-                    <View className="bg-zinc-200/70 px-3.5 py-3 border-r border-[#E5E7EB] items-center justify-center">
-                      <Text className="text-sm font-bold text-zinc-800 tracking-wider">+91</Text>
-                    </View>
-                    <TextInput
-                      value={editMobile.replace(/^\+?91\s*/, '')}
-                      onChangeText={(val) => {
-                        const cleaned = val.replace(/^\+?91\s*/, '').replace(/[^0-9]/g, '');
-                        setEditMobile(cleaned);
-                      }}
-                      keyboardType="phone-pad"
-                      maxLength={10}
-                      placeholder="9876543210"
-                      placeholderTextColor="#9CA3AF"
-                      className="flex-1 px-3.5 py-3 text-sm text-zinc-900 font-medium"
-                    />
-                  </View>
-                </View>
-
-                {/* Email Address */}
-                <View className="gap-1">
-                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Email address</Text>
-                  <TextInput
-                    maxLength={254}
-                    value={editEmail}
-                    onChangeText={(v) => setEditEmail(cleanEmail(v))}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    placeholder="name@example.com"
-                    placeholderTextColor="#9CA3AF"
-                    className="border border-[#E5E7EB] bg-[#F8F9FA] px-3.5 py-3 rounded-xl text-sm text-zinc-900 font-medium"
-                  />
-                </View>
-
-                {/* Gender Dropdown Selection */}
-                <View className="gap-1">
-                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Gender</Text>
-                  <View className="flex-row gap-2">
-                    {['Male', 'Female', 'Other'].map((g) => {
-                      const isSelected = editGender.toLowerCase() === g.toLowerCase();
-                      return (
-                        <TouchableOpacity
-                          key={g}
-                          onPress={() => {
-                            setEditGender(g);
-                            // Auto-align avatar if user is using default avatars or not customized
-                            const isDefault = !editAvatar || DEFAULT_AVATARS.some(av => av.uri === editAvatar);
-                            if (isDefault) {
-                              setEditAvatar(getDefaultAvatarForGender(g));
-                            }
-                          }}
-                          activeOpacity={0.7}
-                          className={`flex-1 py-2.5 rounded-xl border items-center justify-center flex-row gap-1.5 ${
-                            isSelected
-                              ? 'bg-rose-50 border-rose-500'
-                              : 'bg-[#F8F9FA] border-[#E5E7EB]'
-                          }`}
-                        >
-                          <View className={`w-3.5 h-3.5 rounded-full border items-center justify-center ${
-                            isSelected ? 'border-rose-500 bg-rose-500' : 'border-zinc-300 bg-white'
-                          }`}>
-                            {isSelected && <View className="w-1.5 h-1.5 rounded-full bg-white" />}
-                          </View>
-                          <Text className={`text-xs font-bold ${
-                            isSelected ? 'text-rose-600 font-black' : 'text-zinc-700'
-                          }`}>
-                            {g}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-
-                {/* Date of Birth */}
-                <View className="gap-1">
-                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Date of Birth</Text>
-                  <TextInput
-                    maxLength={250}
-                    value={editDob}
-                    onChangeText={setEditDob}
-                    placeholder="DD/MM/YYYY"
-                    placeholderTextColor="#9CA3AF"
-                    className="border border-[#E5E7EB] bg-[#F8F9FA] px-3.5 py-3 rounded-xl text-sm text-zinc-900 font-medium"
-                  />
-                </View>
-
-                {/* Height & Weight Side by Side */}
-                <View className="flex-row gap-3">
-                  <View className="flex-1 gap-1">
-                    <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Height (cm)</Text>
-                    <TextInput
-                      maxLength={250}
-                      value={editHeight}
-                      onChangeText={setEditHeight}
-                      placeholder="175 cm"
-                      placeholderTextColor="#9CA3AF"
-                      className="border border-[#E5E7EB] bg-[#F8F9FA] px-3.5 py-3 rounded-xl text-sm text-zinc-900 font-medium"
-                    />
-                  </View>
-                  <View className="flex-1 gap-1">
-                    <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Weight (kg)</Text>
-                    <TextInput
-                      maxLength={250}
-                      value={editWeight}
-                      onChangeText={setEditWeight}
-                      placeholder="70 kg"
-                      placeholderTextColor="#9CA3AF"
-                      className="border border-[#E5E7EB] bg-[#F8F9FA] px-3.5 py-3 rounded-xl text-sm text-zinc-900 font-medium"
-                    />
-                  </View>
-                </View>
-
-                {/* Fitness Level */}
-                <View className="gap-1">
-                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Fitness Level</Text>
-                  <TextInput
-                    maxLength={250}
-                    value={editFitnessLevel}
-                    onChangeText={setEditFitnessLevel}
-                    placeholder="Beginner / Intermediate / Advanced"
-                    placeholderTextColor="#9CA3AF"
-                    className="border border-[#E5E7EB] bg-[#F8F9FA] px-3.5 py-3 rounded-xl text-sm text-zinc-900 font-medium"
-                  />
-                </View>
-
-                {/* Area */}
-                <View className="gap-1">
-                  <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Area</Text>
-                  <TextInput
-                    maxLength={250}
-                    value={editCity}
-                    onChangeText={setEditCity}
-                    placeholder="e.g. Koramangala, Indiranagar"
-                    placeholderTextColor="#9CA3AF"
-                    className="border border-[#E5E7EB] bg-[#F8F9FA] px-3.5 py-3 rounded-xl text-sm text-zinc-900 font-medium"
-                  />
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => pickAvatarImage('library')}
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      paddingVertical: 10,
+                      paddingHorizontal: 12,
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: 'rgba(226, 232, 240, 0.9)',
+                      ...softShadow({ color: '#0F172A', opacity: 0.04, radius: 4, offsetY: 1 }),
+                    }}
+                  >
+                    <Feather name="image" size={14} color="#64748B" />
+                    <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-xs font-semibold text-slate-700">Gallery</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
-            </ScrollView>
-
-            {Boolean(editProfileError) && (
-              <View className="py-2.5 items-center justify-center">
-                <Text className="text-rose-600 text-[15px] font-black text-center tracking-wide uppercase">
-                  No changes to save
-                </Text>
-              </View>
-            )}
-
-            <View className="flex-row gap-3 pt-3 border-t border-zinc-100">
-              <NativePressable
-                onPress={closeEditProfileModal}
-                disabled={isSavingProfile}
-                rippleColor="rgba(0,0,0,0.08)"
-                className="flex-1 py-3.5 rounded-xl items-center justify-center bg-white"
-              >
-                <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">Cancel</Text>
-              </NativePressable>
-              <NativePressable
-                onPress={handleSaveProfile}
-                disabled={isSavingProfile}
-                rippleColor="rgba(255,255,255,0.2)"
-                className={`flex-1 py-3.5 rounded-xl items-center justify-center flex-row gap-2 ${
-                  isSavingProfile ? 'bg-zinc-700 opacity-90' : 'bg-[#101828]'
-                }`}
-              >
-                {isSavingProfile ? (
-                  <>
-                    <Loading size="small" color="#FFFFFF" />
-                    <Text className="text-white text-xs font-black uppercase tracking-wider">Saving...</Text>
-                  </>
-                ) : (
-                  <Text className="text-white text-xs font-black uppercase tracking-wider">Save Changes</Text>
-                )}
-              </NativePressable>
             </View>
-          </Animated.View>
-        </KeyboardAvoidingView>
-      </Modal>
+
+            {/* Full Name */}
+            <View style={{ gap: 6 }}>
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[11px] font-bold text-slate-500 tracking-wider uppercase">
+                Full Name
+              </Text>
+              <TextInput
+                maxLength={250}
+                value={editName}
+                onChangeText={setEditName}
+                placeholder="Your Full Name"
+                placeholderTextColor="#94A3B8"
+                style={{
+                  backgroundColor: '#F8FAFC',
+                  borderWidth: 1,
+                  borderColor: 'rgba(226, 232, 240, 0.9)',
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  fontSize: 14,
+                  color: '#0F172A',
+                  fontFamily: 'Outfit_600SemiBold',
+                }}
+              />
+            </View>
+
+            {/* Mobile Number with Country Code + Verified Checkmark */}
+            <View style={{ gap: 6 }}>
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[11px] font-bold text-slate-500 tracking-wider uppercase">
+                Mobile Number
+              </Text>
+              <View className="flex-row items-center gap-2">
+                <View 
+                  style={{
+                    width: 72,
+                    height: 48,
+                    backgroundColor: '#F1F5F9',
+                    borderWidth: 1,
+                    borderColor: '#E2E8F0',
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-sm font-bold text-slate-700">
+                    +91
+                  </Text>
+                </View>
+                <View 
+                  style={{
+                    flex: 1,
+                    height: 48,
+                    backgroundColor: '#F8FAFC',
+                    borderWidth: 1,
+                    borderColor: 'rgba(226, 232, 240, 0.9)',
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <TextInput
+                    value={editMobile.replace(/^\+?91\s*/, '')}
+                    onChangeText={(val) => {
+                      const cleaned = val.replace(/^\+?91\s*/, '').replace(/[^0-9]/g, '');
+                      setEditMobile(cleaned);
+                    }}
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    placeholder="9876543210"
+                    placeholderTextColor="#94A3B8"
+                    style={{
+                      flex: 1,
+                      fontSize: 14,
+                      color: '#0F172A',
+                      fontFamily: 'Outfit_600SemiBold',
+                    }}
+                  />
+                  <Ionicons name="checkmark-circle" size={18} color="#10B981" />
+                </View>
+              </View>
+            </View>
+
+            {/* Email Address */}
+            <View style={{ gap: 6 }}>
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[11px] font-bold text-slate-500 tracking-wider uppercase">
+                Email Address
+              </Text>
+              <TextInput
+                maxLength={254}
+                value={editEmail}
+                onChangeText={(v) => setEditEmail(cleanEmail(v))}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholder="name@example.com"
+                placeholderTextColor="#94A3B8"
+                style={{
+                  backgroundColor: '#F8FAFC',
+                  borderWidth: 1,
+                  borderColor: 'rgba(226, 232, 240, 0.9)',
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  fontSize: 14,
+                  color: '#0F172A',
+                  fontFamily: 'Outfit_500Medium',
+                }}
+              />
+            </View>
+
+            {/* Gender Radio Card Selection matching Stitch */}
+            <View style={{ gap: 6 }}>
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[11px] font-bold text-slate-500 tracking-wider uppercase">
+                Gender
+              </Text>
+              <View className="flex-row gap-2">
+                {['Male', 'Female', 'Other'].map((g) => {
+                  const isSelected = editGender.toLowerCase() === g.toLowerCase();
+                  return (
+                    <TouchableOpacity
+                      key={g}
+                      onPress={() => {
+                        setEditGender(g);
+                        const isDefault = !editAvatar || DEFAULT_AVATARS.some(av => av.uri === editAvatar);
+                        if (isDefault) {
+                          setEditAvatar(getDefaultAvatarForGender(g));
+                        }
+                      }}
+                      activeOpacity={0.7}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 11,
+                        paddingHorizontal: 8,
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: isSelected ? '#E11D48' : '#E2E8F0',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        ...softShadow({ color: isSelected ? '#E11D48' : '#0F172A', opacity: isSelected ? 0.08 : 0.02, radius: 4, offsetY: 1 }),
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 14,
+                          height: 14,
+                          borderRadius: 7,
+                          borderWidth: isSelected ? 2 : 1,
+                          borderColor: isSelected ? '#E11D48' : '#CBD5E1',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {isSelected && (
+                          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#E11D48' }} />
+                        )}
+                      </View>
+                      <Text 
+                        style={{ 
+                          fontFamily: isSelected ? 'Outfit_700Bold' : 'Outfit_500Medium',
+                          color: isSelected ? '#E11D48' : '#475569',
+                          fontSize: 12,
+                        }}
+                      >
+                        {g}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Date of Birth with Calendar Icon */}
+            <View style={{ gap: 6 }}>
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[11px] font-bold text-slate-500 tracking-wider uppercase">
+                Date of Birth
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={() => {
+                  setShowDatePicker(prev => !prev);
+                  setShowFitnessLevelDialog(false);
+                }}
+                style={{
+                  backgroundColor: '#F8FAFC',
+                  borderWidth: 1,
+                  borderColor: showDatePicker ? '#E11D48' : 'rgba(226, 232, 240, 0.9)',
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 13,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Text
+                  style={{
+                    flex: 1,
+                    fontSize: 14,
+                    color: editDob ? '#0F172A' : '#94A3B8',
+                    fontFamily: 'Outfit_600SemiBold',
+                    letterSpacing: editDob ? 0.5 : 0,
+                  }}
+                >
+                  {editDob || 'DD/MM/YYYY'}
+                </Text>
+                <Feather name="calendar" size={16} color={showDatePicker ? '#E11D48' : '#64748B'} />
+              </TouchableOpacity>
+
+              {showDatePicker && (
+                <InlineDatePicker
+                  value={editDob}
+                  onChange={(dStr) => setEditDob(dStr)}
+                  onClose={() => setShowDatePicker(false)}
+                />
+              )}
+            </View>
+
+            {/* Height & Weight Two Column Row */}
+            <View className="flex-row gap-3">
+              <View className="flex-1" style={{ gap: 6 }}>
+                <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[11px] font-bold text-slate-500 tracking-wider uppercase">
+                  Height (CM)
+                </Text>
+                <TextInput
+                  maxLength={250}
+                  value={editHeight}
+                  onChangeText={setEditHeight}
+                  placeholder="189"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="numeric"
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderWidth: 1,
+                    borderColor: 'rgba(226, 232, 240, 0.9)',
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    fontSize: 14,
+                    color: '#0F172A',
+                    fontFamily: 'Outfit_600SemiBold',
+                  }}
+                />
+              </View>
+
+              <View className="flex-1" style={{ gap: 6 }}>
+                <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[11px] font-bold text-slate-500 tracking-wider uppercase">
+                  Weight (KG)
+                </Text>
+                <TextInput
+                  maxLength={250}
+                  value={editWeight}
+                  onChangeText={setEditWeight}
+                  placeholder="85"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="numeric"
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderWidth: 1,
+                    borderColor: 'rgba(226, 232, 240, 0.9)',
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    fontSize: 14,
+                    color: '#0F172A',
+                    fontFamily: 'Outfit_600SemiBold',
+                  }}
+                />
+              </View>
+            </View>
+
+            {/* Fitness Level Native Dropdown via @expo/ui MenuView */}
+            <View style={{ gap: 6 }}>
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[11px] font-bold text-slate-500 tracking-wider uppercase">
+                Fitness Level
+              </Text>
+              <NativeFitnessDropdown
+                value={editFitnessLevel}
+                onSelect={(lvl) => setEditFitnessLevel(lvl)}
+              />
+            </View>
+
+            {/* Area */}
+            <View style={{ gap: 6 }}>
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[11px] font-bold text-slate-500 tracking-wider uppercase">
+                Area
+              </Text>
+              <TextInput
+                maxLength={250}
+                value={editCity}
+                onChangeText={setEditCity}
+                placeholder="e.g. Koramangala, Indiranagar"
+                placeholderTextColor="#94A3B8"
+                style={{
+                  backgroundColor: '#F8FAFC',
+                  borderWidth: 1,
+                  borderColor: 'rgba(226, 232, 240, 0.9)',
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  fontSize: 14,
+                  color: '#334155',
+                  fontFamily: 'Outfit_500Medium',
+                }}
+              />
+            </View>
+          </AnimatedReanimated.ScrollView>
+
+          {Boolean(editProfileError) && (
+            <View className="py-2.5 items-center justify-center">
+              <Text className="text-rose-600 text-xs font-bold text-center tracking-wide uppercase">
+                No changes to save
+              </Text>
+            </View>
+          )}
+
+          {/* Modal Footer Action Buttons matching Stitch code.html */}
+          <View 
+            style={{
+              paddingHorizontal: 24,
+              paddingTop: 12,
+              paddingBottom: 12,
+              borderTopWidth: 1,
+              borderTopColor: '#F1F5F9',
+              backgroundColor: '#FFFFFF',
+            }}
+            className="flex-row items-center justify-between gap-3"
+          >
+            <TouchableOpacity
+              onPress={closeEditProfileModal}
+              disabled={isSavingProfile}
+              activeOpacity={0.7}
+              style={{
+                flex: 1,
+                paddingVertical: 13,
+                paddingHorizontal: 16,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 12,
+                backgroundColor: '#FFFFFF',
+              }}
+            >
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-slate-700 text-xs font-bold uppercase tracking-wider">
+                Cancel
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleSaveProfile}
+              disabled={isSavingProfile}
+              activeOpacity={0.85}
+              style={{
+                flex: 1.4,
+                paddingVertical: 13,
+                paddingHorizontal: 20,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 12,
+                backgroundColor: isSavingProfile ? '#334155' : '#090D16',
+                flexDirection: 'row',
+                gap: 8,
+                ...softShadow({ color: '#090D16', opacity: 0.2, radius: 8, offsetY: 3 }),
+              }}
+            >
+              {isSavingProfile ? (
+                <>
+                  <Loading size="small" color="#FFFFFF" />
+                  <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-white text-xs font-bold uppercase tracking-wider">
+                    Saving...
+                  </Text>
+                </>
+              ) : (
+                <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-white text-xs font-bold uppercase tracking-wider">
+                  Save Changes
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </NativeSheet>
 
       {/* Fitness Goals Native Bottom Sheet Modal */}
       <FitnessGoalsModal

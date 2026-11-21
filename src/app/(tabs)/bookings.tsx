@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useTransition } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, Text, ScrollView, TouchableOpacity, Platform, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Platform, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBookingStore } from '../../store/bookingStore';
 import { BookingCard } from '../../components/BookingCard';
@@ -12,6 +12,7 @@ import { syncAllDomainStores } from '../../store/syncAllStores';
 import { useCoachStore, generateMonthlySlots } from '../../store/coachStore';
 import { normalizeDate, canonicalizeTimeRange, formatToDDMMYYYY, getBookingISTDateRange } from '../../utils/date';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import AnimatedReanimated from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { Booking } from '../../types';
 import { RaiseSupportTicketModal } from '../../components/RaiseSupportTicketModal';
@@ -128,7 +129,7 @@ export default function BookingsScreen() {
   const { bookings } = useBookingStore();
   const { role, user } = useUserStore();
   const [prevRole, setPrevRole] = useState(role);
-  const initialFilter: FilterType = (searchParams.filter as FilterType) || (role === 'trainer' ? 'today' : 'upcoming');
+  const initialFilter: FilterType = (searchParams.filter as FilterType) || (role === 'trainer' ? 'today' : 'completed');
   const [activeFilter, setActiveFilter] = useState<FilterType>(initialFilter);
   const [renderedFilter, setRenderedFilter] = useState<FilterType>(initialFilter);
   const [clientDateFilter, setClientDateFilter] = useState<'all' | 'today' | 'this_week' | 'this_month'>('all');
@@ -667,7 +668,7 @@ export default function BookingsScreen() {
         ) : (
           <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
             {/* Scrollable Content flowing underneath floating compact header */}
-            <ScrollView 
+            <AnimatedReanimated.ScrollView 
               showsVerticalScrollIndicator={false}
               decelerationRate={0.96}
               bounces={true}
@@ -1425,7 +1426,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
               })()}
             </View>
 
-          </ScrollView>
+          </AnimatedReanimated.ScrollView>
 
           {/* Floating Compact Header with integrated Back, Title & Pro Console Tag */}
           <View
@@ -1533,45 +1534,52 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
 
   // Client view
   return (
-    <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
+    <View style={{ flex: 1, backgroundColor: "#F8F9FC" }}>
       {loading ? (
         <SkeletonLoader layout="bookings" />
       ) : (
         <View style={{ flex: 1 }}>
-          {/* Scrollable Content flowing underneath floating top bar */}
-          <ScrollView 
-            showsVerticalScrollIndicator={false}
-            decelerationRate={0.96}
-            bounces={true}
-            alwaysBounceVertical={true}
-            overScrollMode="always"
-            snapToOffsets={[0, 90]}
-            snapToStart={false}
-            snapToEnd={false}
-            nestedScrollEnabled={true}
-            className="flex-1 px-4"
-            contentContainerStyle={{ 
-              paddingTop: insets.top + 60,
-              paddingBottom: Math.max((insets.bottom || 0) + 40, 140)
-            }}
-            scrollEventThrottle={16}
-            onScroll={({ nativeEvent }) => {
-              const collapsed = nativeEvent.contentOffset.y > 90;
-              setIsHeaderCollapsed((prev) => (prev === collapsed ? prev : collapsed));
+          {/* Top Fixed Area: Navigation Bar, MY SCHEDULE Title, UPCOMING/COMPLETED/CANCELLED Switcher & Date Filters */}
+          <View 
+            style={{ 
+              backgroundColor: "#F8F9FC",
+              paddingTop: insets.top + 6,
+              zIndex: 40,
             }}
           >
-            {/* Header Title Section inside page scroll */}
-            <View className="mb-5 pt-1 px-2">
-              <Text className="text-[#E11D48] text-2xl font-black uppercase tracking-tight">
-                MY SCHEDULE
-              </Text>
-              <Text className="text-[#6B7280] text-xs font-semibold leading-relaxed mt-1">
-                Track and manage all your scheduled home wellness visits.
-              </Text>
+            {/* Top Navigation & Page Title matching Progress tab structure */}
+            <View className="flex-row items-start justify-between pt-1 pb-2 px-5">
+              <View className="flex-1 pr-3">
+                <Text 
+                  style={{ fontFamily: "Outfit_800ExtraBold", color: "#E11D48", letterSpacing: -0.5, fontSize: 24 }} 
+                  className="font-extrabold uppercase tracking-tight"
+                >
+                  MY SCHEDULE
+                </Text>
+                <Text 
+                  style={{ fontFamily: "Inter_500Medium", color: "#64748B", fontSize: 11 }} 
+                  className="font-medium leading-relaxed mt-0.5"
+                >
+                  Track and manage all your scheduled home wellness visits.
+                </Text>
+              </View>
+
+              {/* Right Action: Support Tickets Notepad */}
+              <TouchableOpacity
+                activeOpacity={0.6}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                onPress={() => setShowUserTicketsModal(true)}
+                style={{ marginTop: 2 }}
+                className="w-10 h-10 rounded-full bg-white shadow-xs items-center justify-center relative border border-slate-200/80"
+                accessibilityRole="button"
+                accessibilityLabel="My Support Tickets"
+              >
+                <Feather name="file-text" size={17} color="#0F172A" />
+              </TouchableOpacity>
             </View>
 
-            {/* Filter Capsule Selector Tabs */}
-            <View className="mb-4">
+            {/* Upcoming / Completed / Cancelled Segmented Control Tabs */}
+            <View className="px-5 pt-1.5">
               <NativeSegmentedControl
                 items={filterOptions.map((opt) => ({
                   key: opt,
@@ -1581,7 +1589,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                 onChangeKey={(opt) => {
                   if (activeFilter === opt) return;
                   setActiveFilter(opt);
-                  setClientDateFilter('all');
+                  setClientDateFilter("all");
                   setCurrentCursor(null);
                   setCursorHistory([]);
                   setRenderedFilter(opt);
@@ -1590,264 +1598,176 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
               />
             </View>
 
-        {/* Date Filter Pills (All / Today / This Week / This Month) — hidden when the tab is empty */}
-        {activeTabCount > 0 && (
-        <View className="mb-5 -mx-6">
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 8, paddingHorizontal: 24 }}
-          >
-            {(['all', 'today', 'this_week', 'this_month'] as const).map((filterKey) => {
-              const isActive = clientDateFilter === filterKey;
-              const labels = {
-                all: 'All',
-                today: 'Today',
-                this_week: 'This Week',
-                this_month: 'This Month',
-              };
-              return (
-                <TouchableOpacity
-                  key={filterKey}
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    setClientDateFilter(filterKey);
-                    setCurrentCursor(null);
-                    setCursorHistory([]);
-                  }}
-                  className={`px-4 py-2 rounded-full border items-center justify-center flex-row ${
-                    isActive
-                      ? 'bg-[#101828] border-[#101828]'
-                      : 'bg-white border-zinc-200/80'
-                  }`}
-                  style={{ flexShrink: 0 }}
+            {/* Date Filter Pills on pure UI thread */}
+            {activeTabCount > 0 && (
+              <View className="py-2.5">
+                <AnimatedReanimated.ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  decelerationRate="fast"
+                  overScrollMode="always"
+                  bounces={true}
+                  alwaysBounceHorizontal={true}
+                  scrollEventThrottle={16}
+                  contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}
                 >
-                  <Text
-                    numberOfLines={1}
-                    className={`text-xs font-bold ${
-                      isActive ? 'text-white' : 'text-zinc-600'
-                    }`}
-                  >
-                    {labels[filterKey]}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-            </ScrollView>
-          </View>
-          )}
-
-          {/* Bookings Render List */}
-        <View className="min-h-[220px]">
-          {cursorPage.items.length > 0 ? (
-            <>
-              {cursorPage.items.map((booking) => (
-                <BookingCard 
-                  key={booking.id} 
-                  booking={booking} 
-                  onOpenSupport={handleOpenSupport}
-                />
-              ))}
-              {(renderedFilter === 'completed' || renderedFilter === 'cancelled') &&
-                (cursorPage.hasPrevPage || cursorPage.hasNextPage) && (
-                  <View className="flex-row items-center justify-between mt-4 mb-2 pt-3 border-t border-zinc-200/80">
-                    <TouchableOpacity
-                      activeOpacity={0.75}
-                      disabled={!cursorPage.hasPrevPage}
-                      onPress={() => {
-                        if (!cursorPage.hasPrevPage) return;
-                        const prevCursor = cursorHistory[cursorHistory.length - 1] ?? null;
-                        setCursorHistory((prev) => prev.slice(0, -1));
-                        setCurrentCursor(prevCursor);
-                      }}
-                      className={`px-4 py-2.5 rounded-full flex-row items-center gap-1.5 border ${
-                        cursorPage.hasPrevPage
-                          ? 'bg-white border-zinc-300'
-                          : 'bg-zinc-100 border-zinc-200 opacity-40'
-                      }`}
-                    >
-                      <Feather name="chevron-left" size={14} color="#101828" />
-                      <Text className="text-[#101828] text-xs font-bold">Prev</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      activeOpacity={0.75}
-                      disabled={!cursorPage.hasNextPage || !cursorPage.nextCursor}
-                      onPress={() => {
-                        if (!cursorPage.hasNextPage || !cursorPage.nextCursor) return;
-                        setCursorHistory((prev) => [...prev, currentCursor]);
-                        setCurrentCursor(cursorPage.nextCursor);
-                      }}
-                      className={`px-4 py-2.5 rounded-full flex-row items-center gap-1.5 ${
-                        cursorPage.hasNextPage
-                          ? 'bg-[#101828]'
-                          : 'bg-zinc-200 opacity-40'
-                      }`}
-                    >
-                      <Text
-                        className={`text-xs font-bold ${
-                          cursorPage.hasNextPage ? 'text-white' : 'text-zinc-500'
-                        }`}
+                  {(["all", "today", "this_week", "this_month"] as const).map((filterKey) => {
+                    const isActive = clientDateFilter === filterKey;
+                    const labels = {
+                      all: "All",
+                      today: "Today",
+                      this_week: "This Week",
+                      this_month: "This Month",
+                    };
+                    return (
+                      <TouchableOpacity
+                        key={filterKey}
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          setClientDateFilter(filterKey);
+                          setCurrentCursor(null);
+                          setCursorHistory([]);
+                        }}
+                        style={[
+                          {
+                            paddingVertical: 6,
+                            paddingHorizontal: isActive ? 18 : 15,
+                            borderRadius: 9999,
+                            borderWidth: 1,
+                            borderColor: isActive ? "#0F172A" : "rgba(226, 232, 240, 0.9)",
+                            backgroundColor: isActive ? "#0F172A" : "#FFFFFF",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          },
+                          !isActive && softShadow({ color: "#0F172A", opacity: 0.03, radius: 4, offsetY: 1 }),
+                          isActive && softShadow({ color: "#0F172A", opacity: 0.18, radius: 6, offsetY: 2 }),
+                        ]}
                       >
-                        Next
-                      </Text>
-                      <Feather
-                        name="chevron-right"
-                        size={14}
-                        color={cursorPage.hasNextPage ? '#FFFFFF' : '#6B7280'}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                )}
-            </>
-          ) : (
-            <EmptyState 
-              type={renderedFilter === 'completed' || renderedFilter === 'past' ? 'no-sessions' : 'no-bookings'} 
-              title={
-                renderedFilter === 'cancelled' 
-                  ? 'No Cancelled Sessions' 
-                  : renderedFilter === 'completed' 
-                    ? 'No Completed Sessions' 
-                    : 'No Upcoming Sessions'
-              }
-              showCard={false}
-              message={
-                renderedFilter === 'cancelled' && clientDateFilter !== 'all'
-                  ? `No cancelled or missed visits found for this period.`
-                  : renderedFilter === 'upcoming' 
-                    ? 'Schedule your next premium at-home training session from the home dashboard.'
-                    : renderedFilter === 'cancelled'
-                      ? 'You do not have any cancelled sessions logged in your profile.'
-                      : `You do not have any ${renderedFilter} visits logged in your profile.`
-              }
-              actionText={clientDateFilter !== 'all' ? 'Show All' : undefined}
-              onAction={clientDateFilter !== 'all' ? () => setClientDateFilter('all') : undefined}
-            />
-          )}
-        </View>
-        </ScrollView>
-
-        {/* Floating Top Bar (Matching Wallet Detail Page): Left Back Button with SVG Scrim, Center Dynamic Pill, Right Notepad with SVG Scrim */}
-        <View
-          pointerEvents="box-none"
-          style={{
-            position: 'absolute',
-            top: insets.top + 8,
-            left: 16,
-            right: 16,
-            zIndex: 40,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          {/* Localized Pill-shaped Back Button Scrim */}
-          <View pointerEvents="box-none" className="relative flex-row items-center">
-            <View
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                top: -6,
-                left: -8,
-                right: -32,
-                bottom: -6,
-              }}
-            >
-              <Svg width="100%" height="100%" preserveAspectRatio="none">
-                <Defs>
-                  <LinearGradient id="bookingsBackBtnScrim" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <Stop offset="0%" stopColor="#FCF5F5" stopOpacity="0.95" />
-                    <Stop offset="65%" stopColor="#FCF5F5" stopOpacity="0.85" />
-                    <Stop offset="85%" stopColor="#FCF5F5" stopOpacity="0.4" />
-                    <Stop offset="100%" stopColor="#FCF5F5" stopOpacity="0" />
-                  </LinearGradient>
-                </Defs>
-                <Rect x="0" y="0" width="100%" height="100%" rx={25} ry={25} fill="url(#bookingsBackBtnScrim)" />
-              </Svg>
-            </View>
-
-            <TouchableOpacity
-              activeOpacity={0.6}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              onPress={() => {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/(tabs)');
-                }
-              }}
-              className="w-10 h-10 rounded-full bg-white/90 shadow-xs items-center justify-center"
-              accessibilityRole="button"
-              accessibilityLabel="Back"
-            >
-              <Ionicons name="chevron-back" size={22} color="#101828" style={{ marginLeft: -1 }} />
-            </TouchableOpacity>
+                        <Text
+                          numberOfLines={1}
+                          style={{
+                            fontFamily: isActive ? "Outfit_700Bold" : "Outfit_600SemiBold",
+                            fontSize: 12,
+                            color: isActive ? "#FFFFFF" : "#475569",
+                          }}
+                        >
+                          {labels[filterKey]}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </AnimatedReanimated.ScrollView>
+              </View>
+            )}
           </View>
 
-          {/* Center Pill Section: Seamless pill with transparent frosted backdrop */}
-          <View pointerEvents="none" className="absolute left-0 right-0 items-center justify-center">
-            <View 
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.65)',
-                borderColor: 'rgba(226, 232, 240, 0.75)',
-                borderWidth: 1,
-              }}
-              className="flex-row items-center px-4 py-1.5 rounded-full shadow-2xs gap-1.5"
-            >
-              {isHeaderCollapsed ? (
+          {/* Scrollable Content: Pure UI Thread Scrolling for Cards */}
+          <AnimatedReanimated.ScrollView 
+            showsVerticalScrollIndicator={false}
+            decelerationRate={0.96}
+            bounces={true}
+            alwaysBounceVertical={true}
+            overScrollMode="always"
+            nestedScrollEnabled={true}
+            style={{ flex: 1 }}
+            className="flex-1"
+            contentContainerStyle={{ 
+              paddingTop: 8,
+              paddingBottom: Math.max((insets.bottom || 0) + 40, 140),
+              paddingHorizontal: 16
+            }}
+            scrollEventThrottle={16}
+          >
+            {/* Bookings Render List */}
+            <View className="min-h-[220px]">
+              {cursorPage.items.length > 0 ? (
                 <>
-                  <Text className="text-[#E11D48] text-[13.5px] font-black tracking-tight">
-                    {groupedCustomerBookings.completed.length}
-                  </Text>
-                  <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">
-                    Completed
-                  </Text>
+                  {cursorPage.items.map((booking) => (
+                    <BookingCard 
+                      key={booking.id} 
+                      booking={booking} 
+                      onOpenSupport={handleOpenSupport}
+                    />
+                  ))}
+                  {(renderedFilter === "completed" || renderedFilter === "cancelled") &&
+                    (cursorPage.hasPrevPage || cursorPage.hasNextPage) && (
+                      <View className="flex-row items-center justify-between mt-4 mb-2 pt-3 border-t border-zinc-200/80">
+                        <TouchableOpacity
+                          activeOpacity={0.75}
+                          disabled={!cursorPage.hasPrevPage}
+                          onPress={() => {
+                            if (!cursorPage.hasPrevPage) return;
+                            const prevCursor = cursorHistory[cursorHistory.length - 1] ?? null;
+                            setCursorHistory((prev) => prev.slice(0, -1));
+                            setCurrentCursor(prevCursor);
+                          }}
+                          className={`px-4 py-2.5 rounded-full flex-row items-center gap-1.5 border ${
+                            cursorPage.hasPrevPage
+                              ? "bg-white border-zinc-300"
+                              : "bg-zinc-100 border-zinc-200 opacity-40"
+                          }`}
+                        >
+                          <Feather name="chevron-left" size={14} color="#101828" />
+                          <Text className="text-[#101828] text-xs font-bold">Prev</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          activeOpacity={0.75}
+                          disabled={!cursorPage.hasNextPage || !cursorPage.nextCursor}
+                          onPress={() => {
+                            if (!cursorPage.hasNextPage || !cursorPage.nextCursor) return;
+                            setCursorHistory((prev) => [...prev, currentCursor]);
+                            setCurrentCursor(cursorPage.nextCursor);
+                          }}
+                          className={`px-4 py-2.5 rounded-full flex-row items-center gap-1.5 ${
+                            cursorPage.hasNextPage
+                              ? "bg-[#101828]"
+                              : "bg-zinc-200 opacity-40"
+                          }`}
+                        >
+                          <Text
+                            className={`text-xs font-bold ${
+                              cursorPage.hasNextPage ? "text-white" : "text-zinc-500"
+                            }`}
+                          >
+                            Next
+                          </Text>
+                          <Feather
+                            name="chevron-right"
+                            size={14}
+                            color={cursorPage.hasNextPage ? "#FFFFFF" : "#6B7280"}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    )}
                 </>
               ) : (
-                <Text className="text-zinc-950 text-[13px] font-black tracking-tight">
-                  My Schedule
-                </Text>
+                <EmptyState 
+                  type={renderedFilter === "completed" || renderedFilter === "past" ? "no-sessions" : "no-bookings"} 
+                  title={
+                    renderedFilter === "cancelled" 
+                      ? "No Cancelled Sessions" 
+                      : renderedFilter === "completed" 
+                        ? "No Completed Sessions" 
+                        : "No Upcoming Sessions"
+                  }
+                  showCard={false}
+                  message={
+                    renderedFilter === "cancelled" && clientDateFilter !== "all"
+                      ? "No cancelled or missed visits found for this period."
+                      : renderedFilter === "upcoming" 
+                        ? "Schedule your next premium at-home training session from the home dashboard."
+                        : renderedFilter === "cancelled"
+                          ? "You do not have any cancelled sessions logged in your profile."
+                          : `You do not have any ${renderedFilter} visits logged in your profile.`
+                  }
+                  actionText={clientDateFilter !== "all" ? "Show All" : undefined}
+                  onAction={clientDateFilter !== "all" ? () => setClientDateFilter("all") : undefined}
+                />
               )}
             </View>
-          </View>
-
-          {/* Right Action: Support Tickets Notepad with localized Scrim */}
-          <View pointerEvents="box-none" className="relative flex-row items-center">
-            <View
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                top: -6,
-                right: -8,
-                left: -32,
-                bottom: -6,
-              }}
-            >
-              <Svg width="100%" height="100%" preserveAspectRatio="none">
-                <Defs>
-                  <LinearGradient id="bookingsNotepadBtnScrim" x1="100%" y1="0%" x2="0%" y2="0%">
-                    <Stop offset="0%" stopColor="#FCF5F5" stopOpacity="0.95" />
-                    <Stop offset="65%" stopColor="#FCF5F5" stopOpacity="0.85" />
-                    <Stop offset="85%" stopColor="#FCF5F5" stopOpacity="0.4" />
-                    <Stop offset="100%" stopColor="#FCF5F5" stopOpacity="0" />
-                  </LinearGradient>
-                </Defs>
-                <Rect x="0" y="0" width="100%" height="100%" rx={25} ry={25} fill="url(#bookingsNotepadBtnScrim)" />
-              </Svg>
-            </View>
-
-            <TouchableOpacity
-              activeOpacity={0.6}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              onPress={() => setShowUserTicketsModal(true)}
-              className="w-10 h-10 rounded-full bg-white/90 shadow-xs items-center justify-center"
-              accessibilityRole="button"
-              accessibilityLabel="My Support Tickets"
-            >
-              <Feather name="file-text" size={17} color="#101828" />
-            </TouchableOpacity>
-          </View>
-        </View>
+          </AnimatedReanimated.ScrollView>
         </View>
       )}
 

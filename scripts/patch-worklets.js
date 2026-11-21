@@ -102,3 +102,34 @@ target_link_libraries(worklets android log ReactAndroid::reactnative ReactAndroi
       fs.writeFileSync(pkgJsonPath, JSON.stringify(pkg, null, 2));
     }
   }
+
+// Silence upstream React Native 0.88 / NativeWind ImageBackground deprecation warning
+const nodeModulesDir = path.join(__dirname, '..', 'node_modules');
+const cssInteropComponentFiles = [
+  path.join(nodeModulesDir, 'react-native-css-interop', 'dist', 'runtime', 'components.js'),
+];
+
+// Also check any isolated/hardlink directories in node_modules if present
+try {
+  const dirs = fs.readdirSync(nodeModulesDir);
+  for (const dir of dirs) {
+    if (dir.startsWith('.react-native-css-interop-')) {
+      cssInteropComponentFiles.push(
+        path.join(nodeModulesDir, dir, 'dist', 'runtime', 'components.js')
+      );
+    }
+  }
+} catch (e) {}
+
+for (const filePath of cssInteropComponentFiles) {
+  if (fs.existsSync(filePath)) {
+    let content = fs.readFileSync(filePath, 'utf8');
+    if (content.includes('(0, api_1.remapProps)(react_native_1.ImageBackground,')) {
+      content = content.replace(
+        '(0, api_1.remapProps)(react_native_1.ImageBackground,',
+        "(0, api_1.remapProps)(require('react-native/Libraries/Image/ImageBackground'),"
+      );
+      fs.writeFileSync(filePath, content, 'utf8');
+    }
+  }
+}

@@ -347,18 +347,21 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
     return (
       <View
         className={isHistoryRow
-          ? 'mb-3 rounded-2xl border border-zinc-200/80 px-4 py-4'
-          : 'py-4 border-b border-zinc-200/80'}
+          ? 'mb-4 rounded-2xl border border-slate-200/60 px-4 py-4'
+          : 'py-4 border-b border-slate-200/60'}
         style={isHistoryRow ? {
-          backgroundColor: historyBgColor,
-          ...softShadow({ color: '#101828', opacity: 0.04, radius: 8, offsetY: 2 }),
+          backgroundColor: '#FFFFFF',
+          ...softShadow({ color: '#0F172A', opacity: 0.05, radius: 16, offsetY: 3 }),
         } : undefined}
       >
         {/* Status indicator row */}
-        <View className="flex-row items-center justify-between mb-3">
+        <View className="flex-row items-center justify-between pb-3">
           <View className="flex-row items-center gap-1.5">
             <View className={`w-2 h-2 rounded-full ${statusDotColor}`} />
-            <Text className={`text-[10px] font-black uppercase tracking-wider ${statusTextColor}`}>
+            <Text 
+              style={{ fontFamily: 'Outfit_800ExtraBold', color: isCompletedStatus ? '#0F172A' : isCancelledOrMissed ? '#E11D48' : '#0F172A' }} 
+              className={`text-[11px] font-black uppercase tracking-wider`}
+            >
               {statusLabel}
             </Text>
           </View>
@@ -366,10 +369,25 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => onOpenSupport(booking)}
-              className="flex-row items-center gap-1 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full"
+              style={{
+                backgroundColor: '#FFF1F2',
+                borderColor: 'rgba(254, 205, 211, 0.6)',
+                borderWidth: 1,
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: 9999,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+              }}
             >
-              <Feather name="headphones" size={10} color="#E11D48" />
-              <Text className="text-rose-600 text-[10px] font-black uppercase tracking-wider">Support</Text>
+              <Feather name="headphones" size={11} color="#E11D48" />
+              <Text 
+                style={{ fontFamily: 'Outfit_700Bold', color: '#E11D48', fontSize: 10, letterSpacing: 0.5 }} 
+                className="font-bold uppercase tracking-wider"
+              >
+                SUPPORT
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -378,97 +396,148 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={handleViewDetails}
-          className="flex-row items-start gap-3.5"
+          className="flex-row items-start gap-3"
         >
-          {/* Workout Icon Circle */}
-          <View className="w-10 h-10 items-center justify-center flex-shrink-0">
-            <Feather name="layers" size={24} color="#101828" />
+          {/* Workout Icon Square Box - Exact Stitch Style */}
+          <View 
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              backgroundColor: '#F1F5F9',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: 'rgba(226, 232, 240, 0.6)',
+            }}
+            className="flex-shrink-0"
+          >
+            <Feather name="layers" size={20} color="#0F172A" />
           </View>
 
           {/* Details Column */}
           <View className="flex-1 pr-1">
             {/* Title and Solo/Couple badge */}
             <View className="flex-row items-center justify-between">
-              <Text className="text-[#101828] text-base font-extrabold tracking-tight flex-1 pr-2">
+              <Text 
+                style={{ fontFamily: 'Outfit_700Bold', color: '#0F172A' }} 
+                className="text-base font-bold tracking-tight flex-1 pr-2 leading-tight"
+              >
                 {getDisplayWorkoutTitle(booking.workoutTitle)}
               </Text>
-              <View className="bg-zinc-100 px-2.5 py-0.5 rounded-full">
-                <Text className="text-zinc-700 text-[11px] font-semibold">
+              <View 
+                style={{
+                  backgroundColor: '#F1F5F9',
+                  paddingHorizontal: 10,
+                  paddingVertical: 2,
+                  borderRadius: 9999,
+                }}
+              >
+                <Text 
+                  style={{ fontFamily: 'Inter_600SemiBold', color: '#475569', fontSize: 11 }}
+                >
                   {booking.sessionType === 'COUPLE' ? 'Couple' : 'Solo'}
                 </Text>
               </View>
             </View>
 
             {/* Session Subtitle */}
-            <Text className="text-[#6B7280] text-xs font-semibold mt-0.5">
+            <Text 
+              style={{ fontFamily: 'Inter_500Medium', color: '#64748B' }} 
+              className="text-xs font-medium mt-0.5"
+            >
               Concierge Wellness Session
             </Text>
 
             {/* Date & Time Row with chevron */}
-            <View className="flex-row items-center justify-between mt-2.5">
-              <View className="flex-row items-center gap-4 flex-1">
+            <View className="flex-row items-center justify-between mt-3">
+              <View className="flex-row items-center gap-3 flex-1">
                 <View className="flex-row items-center gap-1.5">
-                  <Feather name="calendar" size={13} color="#6B7280" />
-                  <Text className="text-zinc-600 text-xs font-semibold">
+                  <Feather name="calendar" size={13} color="#94A3B8" />
+                  <Text 
+                    style={{ fontFamily: 'Inter_500Medium', color: '#334155', fontSize: 12 }}
+                  >
                     {formatToDayMonthYear(booking.date)}
                   </Text>
                 </View>
                 <View className="flex-row items-center gap-1.5">
-                  <Feather name="clock" size={13} color="#6B7280" />
-                  <Text className="text-zinc-600 text-xs font-semibold">
+                  <Feather name="clock" size={13} color="#94A3B8" />
+                  <Text 
+                    style={{ fontFamily: 'Inter_500Medium', color: '#334155', fontSize: 12 }}
+                  >
                     {booking.time}
                   </Text>
                 </View>
               </View>
-              <Feather name="chevron-right" size={18} color="#9CA3AF" />
+              <Feather name="chevron-right" size={16} color="#94A3B8" />
             </View>
 
             {/* Address Row */}
             <View className="flex-row items-center gap-1.5 mt-2">
-              <Feather name="map-pin" size={12} color="#6B7280" />
-              <Text className="text-zinc-600 text-xs font-semibold flex-1 leading-snug" numberOfLines={1}>
+              <Feather name="map-pin" size={12} color="#94A3B8" />
+              <Text 
+                style={{ fontFamily: 'Inter_400Regular', color: '#475569', fontSize: 11 }} 
+                className="flex-1 leading-relaxed" 
+                numberOfLines={1}
+              >
                 {getBookingDisplayAddress(booking.address, 'Session Venue')}
               </Text>
             </View>
           </View>
         </TouchableOpacity>
 
-        {/* Coach Row (for upcoming and completed sessions) */}
-        {(isUpcoming || isCompletedStatus) && (
+        {/* Separator Line */}
+        <View style={{ height: 1, backgroundColor: '#F1F5F9', marginVertical: 12 }} />
+
+        {/* Coach Row (for upcoming, completed, and cancelled sessions if trainer was assigned) */}
+        {(isUpcoming || isCompletedStatus || (isCancelledOrMissed && !!booking.trainerName)) && (
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={handleViewDetails}
-            className="flex-row items-center justify-between mt-3.5 pt-3 border-t border-zinc-100/80 pl-1"
+            className="flex-row items-center justify-between"
           >
-            <View className="flex-row items-center gap-3 flex-1 pr-2">
-              <AvatarImage
-                uri={booking.trainerPhoto}
-                className="w-10 h-10 rounded-full border border-zinc-200"
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                transition={150}
-              />
-              <View className="flex-1">
-                <Text className="text-[#101828] text-xs font-bold">
-                  Coach: {booking.trainerName || 'Assigned Coach'}
-                </Text>
-                <Text className="text-[#6B7280] text-[11px] font-semibold mt-0.5">
-                  {isCompletedStatus
-                    ? 'Session completed with your coach.'
-                    : (isAccepted ? 'Your coach has been assigned.' : 'Matching in progress...')}
-                </Text>
-              </View>
+            <View className="flex-1 pr-2">
+              <Text 
+                style={{ fontFamily: 'Inter_700Bold', color: '#0F172A', fontSize: 12 }}
+              >
+                Coach: <Text style={{ fontFamily: 'Inter_800ExtraBold', color: '#0F172A' }}>{booking.trainerName || 'Assigned Coach'}</Text>
+              </Text>
+              <Text 
+                style={{ fontFamily: 'Inter_400Regular', color: '#64748B', fontSize: 11, marginTop: 2 }}
+              >
+                {isCompletedStatus
+                  ? 'Session completed with your coach.'
+                  : isCancelledOrMissed
+                  ? 'Session was cancelled.'
+                  : (isAccepted ? 'Your coach has been assigned.' : 'Matching in progress...')}
+              </Text>
             </View>
-            <Feather name="chevron-right" size={16} color="#9CA3AF" />
+            <Feather name="chevron-right" size={16} color="#94A3B8" />
           </TouchableOpacity>
         )}
 
-        {/* Modal attachments for customer flow */}
-        {(booking.sessionType === 'COUPLE' || isCompletedStatus) && !!(booking.trainerName || booking.partnerName) && (
-          <View className="bg-emerald-50 border border-emerald-100 px-4 py-2.5 rounded-xl mt-3 flex-row items-center gap-2">
-            <Feather name="users" size={12} color="#10B981" />
-            <Text className="text-zinc-500 text-[10px] font-semibold flex-1 leading-snug">
-              Training with: <Text className="font-extrabold text-zinc-800">{booking.trainerName ? `Coach ${booking.trainerName}` : booking.partnerName}</Text>
+        {/* Dedicated Verified Trainer Pill - Exact Stitch Style */}
+        {(booking.sessionType === 'COUPLE' || isCompletedStatus || (isCancelledOrMissed && !!booking.trainerName)) && !!(booking.trainerName || booking.partnerName) && (
+          <View 
+            style={{
+              marginTop: 10,
+              backgroundColor: '#F0FDF4',
+              borderColor: '#DCFCE7',
+              borderWidth: 1,
+              borderRadius: 12,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <Feather name="users" size={14} color="#15803D" />
+            <Text 
+              style={{ fontFamily: 'Inter_500Medium', color: '#166534', fontSize: 12 }} 
+              className="flex-1 leading-snug"
+            >
+              Training with: <Text style={{ fontFamily: 'Inter_800ExtraBold', color: '#0F172A' }}>{booking.trainerName ? `Coach ${booking.trainerName}` : booking.partnerName}</Text>
             </Text>
           </View>
         )}
