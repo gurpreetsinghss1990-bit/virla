@@ -12,7 +12,6 @@ import Reanimated, {
   FadeIn,
   FadeOut
 } from 'react-native-reanimated';
-import { FlashList } from '@shopify/flash-list';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Svg, { Path, Polygon, Polyline, Defs, LinearGradient, RadialGradient, Stop, Rect, Circle } from 'react-native-svg';
@@ -148,36 +147,21 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
   }, [playCreditsLayerBounce]);
 
   return (
-    <FlashList
-      data={[1]}
-      keyExtractor={() => 'client-profile'}
+    <Reanimated.ScrollView
       showsVerticalScrollIndicator={false}
       overScrollMode="never"
-      scrollEventThrottle={32}
-      removeClippedSubviews={false}
+      scrollEventThrottle={16}
+      decelerationRate={0.96}
+      bounces={true}
+      alwaysBounceVertical={true}
       onScroll={(e) => {
         const collapsed = e.nativeEvent.contentOffset.y > 60;
         if (collapsed !== isHeaderCollapsed) setIsHeaderCollapsed(collapsed);
       }}
       className="flex-1 bg-transparent"
       contentContainerStyle={{ paddingHorizontal: 20, paddingTop: insetsTop + 14, paddingBottom: 140 }}
-      ListFooterComponent={
-        <View className="pt-2 pb-6 items-center">
-          <TouchableOpacity
-            onPress={handleLogout}
-            activeOpacity={0.8}
-            className="flex-row items-center gap-1.5 px-4 py-2 rounded-full hover:bg-rose-50"
-          >
-            <Feather name="log-out" size={15} color="#E11D48" style={{ transform: [{ rotate: '-90deg' }] }} />
-            <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#E11D48] text-xs font-bold uppercase tracking-wider">
-              SIGN OUT
-            </Text>
-          </TouchableOpacity>
-        </View>
-      }
-      renderItem={() => (
-        <>
-          {/* Top Navigation Bar from Stitch code.html */}
+    >
+      {/* Top Navigation Bar from Stitch code.html */}
           <View className="flex-row items-center justify-between pb-3 pt-1 z-20">
             <View className="flex-row items-center gap-1.5">
               <Text 
@@ -1209,9 +1193,21 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
               </LuxuryCard>
             </View>
           )}
-        </>
-      )}
-    />
+
+          {/* Sign Out Button */}
+          <View className="pt-2 pb-6 items-center">
+            <TouchableOpacity
+              onPress={handleLogout}
+              activeOpacity={0.8}
+              className="flex-row items-center gap-1.5 px-4 py-2 rounded-full hover:bg-rose-50"
+            >
+              <Feather name="log-out" size={15} color="#E11D48" style={{ transform: [{ rotate: '-90deg' }] }} />
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#E11D48] text-xs font-bold uppercase tracking-wider">
+                SIGN OUT
+              </Text>
+            </TouchableOpacity>
+          </View>
+    </Reanimated.ScrollView>
   );
 });
 

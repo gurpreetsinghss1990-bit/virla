@@ -1054,20 +1054,20 @@ export default function ProfileScreen() {
               userApplication={userApplication}
             />
           ) : (
-            <FlashList
-              data={[1]}
-              keyExtractor={() => 'trainer-profile'}
+            <AnimatedReanimated.ScrollView
               showsVerticalScrollIndicator={false}
               overScrollMode="never"
-              scrollEventThrottle={32}
+              scrollEventThrottle={16}
+              decelerationRate={0.96}
+              bounces={true}
+              alwaysBounceVertical={true}
               onScroll={(e) => {
                 const collapsed = e.nativeEvent.contentOffset.y > 60;
                 if (collapsed !== isHeaderCollapsed) setIsHeaderCollapsed(collapsed);
               }}
               className="flex-1 bg-transparent"
               contentContainerStyle={{ paddingHorizontal: 24, paddingTop: insets.top + 62, paddingBottom: 140 }}
-              renderItem={() => (
-                <>
+            >
               {/* Trainer Profile Header Summary Card */}
               <View className="items-center mb-6">
                 <View className="relative">
@@ -2126,9 +2126,7 @@ export default function ProfileScreen() {
             <Text className="text-rose-600 text-xs font-bold uppercase tracking-wider">Sign Out</Text>
           </TouchableOpacity>
 
-        </>
-              )}
-            />
+            </AnimatedReanimated.ScrollView>
           )}
 
         {/* Semi-transparent white status bar strip for smooth frosted glass / translucent edge-to-edge feel */}
