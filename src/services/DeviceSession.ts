@@ -1,7 +1,7 @@
 import * as Device from 'expo-device';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { setClientDeviceToken, setClientSessionToken, supabase } from '../database/supabaseClient';
+import { setClientDeviceToken, setClientSessionToken, setSessionTokenProvider, supabase } from '../database/supabaseClient';
 
 const DEVICE_ID_KEY = 'virla.device.id';
 const DEVICE_TOKEN_KEY = 'virla.device.token';
@@ -135,6 +135,22 @@ export async function getSessionToken(): Promise<string | null> {
 }
 
 /** Rotates the token when the server no longer accepts it. */
+// Called by the Supabase client when a request is about to go out without a token.
+async function ensureSessionToken(userId: string): Promise<string | null> {
+  const cached = await getSessionToken();
+  if (cached) return cached;
+  try {
+    const [deviceId, deviceToken] = await Promise.all([getDeviceId(), getDeviceToken()]);
+    if (!deviceToken) return null;
+    await issueSessionToken(userId, deviceId, deviceToken);
+  } catch {
+    return null;
+  }
+  return getSessionToken();
+}
+
+setSessionTokenProvider(ensureSessionToken);
+
 export async function refreshSessionToken(userId: string): Promise<boolean> {
   try {
     const [deviceId, deviceToken] = await Promise.all([getDeviceId(), getDeviceToken()]);
