@@ -31,6 +31,7 @@ import { LegalWebViewModal } from '../components/LegalWebViewModal';
 import { NativePrimaryButton } from '../components/NativePrimaryButton';
 import { NativeAlertDialog } from '../components/NativeAlertDialog';
 import { cleanOtp, clampInt } from '../utils/inputSafety';
+import { claimDeviceSession } from '../services/DeviceSession';
 
 import { softShadow } from '../utils/shadows';
 export default function GetStartedScreen() {
@@ -344,7 +345,7 @@ export default function GetStartedScreen() {
 
         if (regStatus === 'complete') {
           console.log('[DEBUG] Existing complete user detected. Triggering success animation...');
-          await finalizeUserSession(userObj);
+          if (!(await finalizeUserSession(userObj))) return;
 
           // Trigger 6 boxes -> circle -> 3x spin -> dumbbell success animation
           setIsOtpSuccessAnimating(true);
@@ -363,7 +364,7 @@ export default function GetStartedScreen() {
           console.log(`[DEBUG] Incomplete registration detected (status: ${regStatus}). Redirecting new user to user-metrics landing page...`);
           setTempUserObj(userObj);
           setNewUserIdToRegister(userObj.id || "");
-          await finalizeUserSession(userObj);
+          if (!(await finalizeUserSession(userObj))) return;
 
           // For brand new / incomplete users, route directly to the user-metrics onboarding page
           router.replace('/user-metrics' as any);
@@ -426,7 +427,7 @@ export default function GetStartedScreen() {
           setNewUserIdToRegister(registeredUser.id);
 
           // Seed local user profile record and initialize session
-          await finalizeUserSession(registeredUser);
+          if (!(await finalizeUserSession(registeredUser))) return;
 
           console.log('[DEBUG] Step 0 complete: Name registered.');
           setSetupStep(1); // Proceed to Gender Selection
@@ -474,7 +475,7 @@ export default function GetStartedScreen() {
           }
 
           const completedUserObj = { ...tempUserObj, registrationStatus: 'complete' };
-          await finalizeUserSession(completedUserObj);
+          if (!(await finalizeUserSession(completedUserObj))) return;
 
           Alert.alert('Welcome', `Successfully authenticated as ${completedUserObj.name}!`);
           router.replace('/(tabs)');
@@ -492,7 +493,18 @@ export default function GetStartedScreen() {
     }
   };
 
-  const finalizeUserSession = async (userObj: any) => {
+  const finalizeUserSession = async (userObj: any): Promise<boolean> => {
+    const claim = await claimDeviceSession(userObj.id);
+    if (!claim.ok && claim.reason === 'active_elsewhere') {
+      setIsLoading(false);
+      Alert.alert(
+        'Already logged in',
+        `This account is currently logged in on ${claim.deviceName || 'another device'}. Please log out from that device first, then try again.`,
+        [{ text: 'OK' }]
+      );
+      return false;
+    }
+
     // Sync store states with user details
     setRole(userObj.role || 'customer');
     Database.setCurrentUserId(userObj.id);
@@ -507,6 +519,7 @@ export default function GetStartedScreen() {
     await useWalletStore.getState().syncFromDB();
     useAddressStore.getState().syncFromDB();
     console.log('[DEBUG] Store synchronization completed successfully.');
+    return true;
   };
 
   const handleSendOtp = async () => {
@@ -591,6 +604,17 @@ export default function GetStartedScreen() {
       console.log(`[DEBUG] OAuth request started for ${provider}`);
       const userObj = await Database.oauthLogin(provider, providerId, name, email, role);
       console.log(`[DEBUG] Provider response received successfully. Authenticated user ID: ${userObj.id}, Role: ${userObj.role}`);
+
+      const claim = await claimDeviceSession(userObj.id);
+      if (!claim.ok && claim.reason === 'active_elsewhere') {
+        setIsLoading(false);
+        Alert.alert(
+          'Already logged in',
+          `This account is currently logged in on ${claim.deviceName || 'another device'}. Please log out from that device first, then try again.`,
+          [{ text: 'OK' }]
+        );
+        return;
+      }
 
       Database.setCurrentUserId(userObj.id);
       await setLoggedIn(true);

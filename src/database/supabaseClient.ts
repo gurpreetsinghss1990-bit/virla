@@ -13,11 +13,21 @@ const SUPABASE_ANON_KEY =
     : 'sb_publishable_qAKxXPFGSpMxz-7jZyHm0A_dIJfpVll');
 
 let clientUserId: string | null = null;
+let clientDeviceToken: string | null = null;
+let clientSessionToken: string | null = null;
 
 export function setClientUserId(userId: string | null) {
   if (clientUserId === userId) return;
   clientUserId = userId;
   console.log(`[Supabase Client] Set x-user-id header cache: ${userId}`);
+}
+
+export function setClientDeviceToken(token: string | null) {
+  clientDeviceToken = token;
+}
+
+export function setClientSessionToken(token: string | null) {
+  clientSessionToken = token;
 }
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -32,6 +42,22 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
           headers.set('x-user-id', clientUserId);
         } else {
           headers['x-user-id'] = clientUserId;
+        }
+      }
+
+      if (clientSessionToken) {
+        if (headers instanceof Headers) {
+          headers.set('x-session-token', clientSessionToken);
+        } else {
+          headers['x-session-token'] = clientSessionToken;
+        }
+      }
+
+      if (clientDeviceToken) {
+        if (headers instanceof Headers) {
+          headers.set('x-device-token', clientDeviceToken);
+        } else {
+          headers['x-device-token'] = clientDeviceToken;
         }
       }
       return fetch(url, { ...options, headers });
