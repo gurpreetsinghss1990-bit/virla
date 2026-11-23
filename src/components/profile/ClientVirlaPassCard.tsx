@@ -7,6 +7,7 @@ import Reanimated, {
   withTiming,
   withSequence,
   Easing,
+  ReduceMotion,
 } from 'react-native-reanimated';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Polygon, Polyline, Defs, LinearGradient, Stop, Rect, Circle } from 'react-native-svg';
@@ -41,10 +42,10 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
 
   const handleSparklePress = useCallback(() => {
     sparkleProgress.value = withSequence(
-      withTiming(1, { duration: 250, easing: Easing.out(Easing.quad) }),
-      withTiming(0, { duration: 200, easing: Easing.in(Easing.quad) }),
-      withTiming(1, { duration: 250, easing: Easing.out(Easing.quad) }),
-      withSpring(0, { damping: 10, stiffness: 180 })
+      withTiming(1, { duration: 250, easing: Easing.out(Easing.quad), reduceMotion: ReduceMotion.Never }),
+      withTiming(0, { duration: 200, easing: Easing.in(Easing.quad), reduceMotion: ReduceMotion.Never }),
+      withTiming(1, { duration: 250, easing: Easing.out(Easing.quad), reduceMotion: ReduceMotion.Never }),
+      withSpring(0, { damping: 10, stiffness: 180, reduceMotion: ReduceMotion.Never })
     );
   }, [sparkleProgress]);
 
@@ -64,30 +65,30 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
     transform: [{ scale: creditsScale.value }],
   }));
 
-  // Pure UI-thread bounce on tap
+  // Pure UI-thread bounce on tap with ReduceMotion.Never so iOS never drops/snaps frames
   const playCreditsLayerBounce = useCallback(() => {
     layer1Y.value = withSequence(
-      withTiming(4, { duration: 110, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }),
-      withTiming(5.5, { duration: 80 }),
-      withSpring(0, { damping: 9, stiffness: 180, mass: 0.7 })
+      withTiming(4, { duration: 110, easing: Easing.bezier(0.25, 0.1, 0.25, 1), reduceMotion: ReduceMotion.Never }),
+      withTiming(5.5, { duration: 80, reduceMotion: ReduceMotion.Never }),
+      withSpring(0, { damping: 9, stiffness: 180, mass: 0.7, reduceMotion: ReduceMotion.Never })
     );
 
     layer2Y.value = withSequence(
-      withTiming(0, { duration: 70 }),
-      withTiming(3, { duration: 110, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }),
-      withSpring(0, { damping: 10, stiffness: 170, mass: 0.7 })
+      withTiming(0, { duration: 70, reduceMotion: ReduceMotion.Never }),
+      withTiming(3, { duration: 110, easing: Easing.bezier(0.25, 0.1, 0.25, 1), reduceMotion: ReduceMotion.Never }),
+      withSpring(0, { damping: 10, stiffness: 170, mass: 0.7, reduceMotion: ReduceMotion.Never })
     );
 
     layer3Y.value = withSequence(
-      withTiming(0, { duration: 120 }),
-      withTiming(1.5, { duration: 80 }),
-      withSpring(0, { damping: 11, stiffness: 160, mass: 0.7 })
+      withTiming(0, { duration: 120, reduceMotion: ReduceMotion.Never }),
+      withTiming(1.5, { duration: 80, reduceMotion: ReduceMotion.Never }),
+      withSpring(0, { damping: 11, stiffness: 160, mass: 0.7, reduceMotion: ReduceMotion.Never })
     );
 
     creditsScale.value = withSequence(
-      withTiming(0.95, { duration: 90 }),
-      withSpring(1.04, { damping: 10, stiffness: 220 }),
-      withSpring(1, { damping: 12, stiffness: 180 })
+      withTiming(0.95, { duration: 90, reduceMotion: ReduceMotion.Never }),
+      withSpring(1.04, { damping: 10, stiffness: 220, reduceMotion: ReduceMotion.Never }),
+      withSpring(1, { damping: 12, stiffness: 180, reduceMotion: ReduceMotion.Never })
     );
   }, [layer1Y, layer2Y, layer3Y, creditsScale]);
 

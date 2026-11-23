@@ -6,6 +6,7 @@ import Animated, {
   withSpring,
   withTiming,
   Easing,
+  ReduceMotion,
 } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
 import { softShadow } from '../utils/shadows';
@@ -23,10 +24,12 @@ interface NativeSegmentedControlProps<T extends string> {
 }
 
 // Highly tuned physical spring for natural glide on both iOS and Android UI thread
+// reduceMotion: ReduceMotion.Never forces the spring to ALWAYS run smoothly on iOS
 const SPRING_CONFIG = {
   damping: 22,
   stiffness: 240,
   mass: 0.6,
+  reduceMotion: ReduceMotion.Never,
 };
 
 /**
@@ -38,8 +41,17 @@ function AnimatedCheckmark() {
   const checkOpacity = useSharedValue(0);
 
   useEffect(() => {
-    checkScale.value = withSpring(1, { damping: 14, stiffness: 240, mass: 0.6 });
-    checkOpacity.value = withTiming(1, { duration: 150, easing: Easing.out(Easing.quad) });
+    checkScale.value = withSpring(1, {
+      damping: 14,
+      stiffness: 240,
+      mass: 0.6,
+      reduceMotion: ReduceMotion.Never,
+    });
+    checkOpacity.value = withTiming(1, {
+      duration: 150,
+      easing: Easing.out(Easing.quad),
+      reduceMotion: ReduceMotion.Never,
+    });
   }, [checkScale, checkOpacity]);
 
   const animatedStyle = useAnimatedStyle(() => ({
