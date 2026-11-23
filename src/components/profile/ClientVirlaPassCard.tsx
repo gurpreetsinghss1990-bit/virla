@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, TouchableOpacity, Platform } from 'react-native';
 import Reanimated, {
   useSharedValue,
   useAnimatedStyle,
@@ -40,7 +40,6 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
   }));
 
   const handleSparklePress = useCallback(() => {
-    'worklet';
     sparkleProgress.value = withSequence(
       withTiming(1, { duration: 250, easing: Easing.out(Easing.quad) }),
       withTiming(0, { duration: 200, easing: Easing.in(Easing.quad) }),
@@ -65,9 +64,8 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
     transform: [{ scale: creditsScale.value }],
   }));
 
-  // Pure UI-thread bounce on tap: no React setState, no JS thread delays
+  // Pure UI-thread bounce on tap
   const playCreditsLayerBounce = useCallback(() => {
-    'worklet';
     layer1Y.value = withSequence(
       withTiming(4, { duration: 110, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }),
       withTiming(5.5, { duration: 80 }),
@@ -112,6 +110,9 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
     passTier = status && status !== 'STANDARD' && status !== 'NONE' ? status : 'PREMIUM';
     passColor = '#F59E0B';
   }
+
+  // Use TouchableOpacity on iOS for reliable touch-responder triggering with nested SVGs; Pressable on Android
+  const CreditsButton = Platform.OS === 'ios' ? TouchableOpacity : Pressable;
 
   return (
     <View
@@ -223,7 +224,11 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
       />
 
       <View className="flex-row justify-between items-end z-10 pt-0.5">
-        <Pressable onPress={playCreditsLayerBounce} className="flex-row items-center">
+        <CreditsButton
+          onPress={playCreditsLayerBounce}
+          activeOpacity={Platform.OS === 'ios' ? 0.75 : undefined}
+          className="flex-row items-center"
+        >
           <Reanimated.View
             style={[
               { flexDirection: 'row', alignItems: 'center' },
@@ -295,7 +300,7 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
               </Text>
             </View>
           </Reanimated.View>
-        </Pressable>
+        </CreditsButton>
 
         <View className="items-end">
           <Text

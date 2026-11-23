@@ -32,7 +32,6 @@ const SPRING_CONFIG = {
 /**
  * Pure Reanimated UI-thread Checkmark.
  * Uses Animated.View + Feather icon driven strictly by UI-thread transforms (scale + opacity).
- * No SVG useAnimatedProps or strokeDashoffset that fail on iOS Fabric.
  */
 function AnimatedCheckmark() {
   const checkScale = useSharedValue(0.2);
@@ -62,32 +61,30 @@ export function NativeSegmentedControl<T extends string>({
   onChangeKey,
   marginVertical = 4,
 }: NativeSegmentedControlProps<T>) {
-  const [containerWidth, setContainerWidth] = useState(0);
   const activeIndex = items.findIndex((i) => i.key === activeKey);
   const validIndex = activeIndex >= 0 ? activeIndex : 0;
 
-  // Available width for segments (containerWidth minus 8px: 4px padding left + 4px padding right)
-  const tabWidth = containerWidth > 0 ? (containerWidth - 8) / items.length : 0;
-
-  // Shared value running 100% on native Reanimated UI thread
+  // Shared values running 100% on native Reanimated UI thread (iOS Fabric + Android)
+  const tabWidthShared = useSharedValue(0);
   const translateX = useSharedValue(0);
 
   useEffect(() => {
-    if (tabWidth > 0) {
-      translateX.value = withSpring(validIndex * tabWidth, SPRING_CONFIG);
+    if (tabWidthShared.value > 0) {
+      translateX.value = withSpring(validIndex * tabWidthShared.value, SPRING_CONFIG);
     }
-  }, [validIndex, tabWidth, translateX]);
+  }, [validIndex, translateX, tabWidthShared]);
 
   const animatedIndicatorStyle = useAnimatedStyle(() => ({
+    width: tabWidthShared.value,
     transform: [{ translateX: translateX.value }],
-    width: tabWidth,
+    opacity: tabWidthShared.value > 0 ? 1 : 0,
   }));
 
   const onLayout = (e: LayoutChangeEvent) => {
     const width = Math.round(e.nativeEvent.layout.width);
-    if (width > 0 && width !== containerWidth) {
-      setContainerWidth(width);
+    if (width > 0) {
       const computedTabWidth = (width - 8) / items.length;
+      tabWidthShared.value = computedTabWidth;
       translateX.value = validIndex * computedTabWidth;
     }
   };
@@ -111,23 +108,21 @@ export function NativeSegmentedControl<T extends string>({
       }}
     >
       {/* 🚀 Physical Gliding Active Obsidian Pill (100% UI Thread Reanimated on iOS & Android) */}
-      {tabWidth > 0 && (
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            {
-              position: 'absolute',
-              top: 4,
-              left: 4,
-              bottom: 4,
-              backgroundColor: '#0D0F17',
-              borderRadius: 9999,
-              ...softShadow({ color: '#0D0F17', opacity: 0.28, radius: 6, offsetY: 2 }),
-            },
-            animatedIndicatorStyle,
-          ]}
-        />
-      )}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          {
+            position: 'absolute',
+            top: 4,
+            left: 4,
+            bottom: 4,
+            backgroundColor: '#0D0F17',
+            borderRadius: 9999,
+            ...softShadow({ color: '#0D0F17', opacity: 0.28, radius: 6, offsetY: 2 }),
+          },
+          animatedIndicatorStyle,
+        ]}
+      />
 
       {/* Segment Buttons Row */}
       {items.map(({ key: r, label }, idx) => {
@@ -137,8 +132,8 @@ export function NativeSegmentedControl<T extends string>({
             key={r}
             activeOpacity={0.75}
             onPress={() => {
-              if (tabWidth > 0) {
-                translateX.value = withSpring(idx * tabWidth, SPRING_CONFIG);
+              if (tabWidthShared.value > 0) {
+                translateX.value = withSpring(idx * tabWidthShared.value, SPRING_CONFIG);
               }
               onChangeKey(r);
             }}
