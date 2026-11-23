@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, Platform, ViewStyle, StyleProp } from 'react-native';
+import { View, Pressable, Platform, ViewStyle, StyleProp } from 'react-native';
 
 import { softShadow } from '../utils/shadows';
 interface NativeOverviewCardProps {
@@ -18,8 +18,7 @@ export const NativeOverviewCard: React.FC<NativeOverviewCardProps> = ({
   children,
 }) => {
   return (
-    <TouchableOpacity
-      activeOpacity={0.8}
+    <Pressable
       onPress={onPress}
       disabled={!onPress}
       className="w-[47%] h-[142px] p-4 rounded-3xl justify-between"
@@ -36,6 +35,6 @@ export const NativeOverviewCard: React.FC<NativeOverviewCardProps> = ({
       ]}
     >
       {children}
-    </TouchableOpacity>
+    </Pressable>
   );
 };

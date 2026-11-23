@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useMembershipStore } from '../store/membershipStore';
 import { ProgressRing } from './ProgressRing';
 import { useRouter } from 'expo-router';
@@ -15,8 +15,7 @@ export function MembershipCard() {
   };
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.9}
+    <Pressable
       onPress={handlePress}
       className="w-full bg-zinc-900 border border-zinc-800 p-6 rounded-[24px] flex-row justify-between items-center shadow-md relative overflow-hidden"
     >
@@ -55,6 +54,6 @@ export function MembershipCard() {
           </Text>
         </View>
       </ProgressRing>
-    </TouchableOpacity>
+    </Pressable>
   );
 }

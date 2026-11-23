@@ -19,7 +19,7 @@ import { NativeSingleChoiceDialog } from '../../components/NativeSingleChoiceDia
 import { InlineDatePicker } from '../../components/InlineDatePicker';
 import { NativeFitnessDropdown } from '../../components/NativeFitnessDropdown';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, TextInput, Alert, Platform, KeyboardAvoidingView, BackHandler, Pressable, StyleSheet, Dimensions, Keyboard } from 'react-native';
+import { View, Text, TextInput, Alert, Platform, KeyboardAvoidingView, BackHandler, Pressable, StyleSheet, Dimensions, Keyboard } from 'react-native';
 import { InteractionManager } from '../../utils/interactionManager';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -1081,8 +1081,7 @@ export default function ProfileScreen() {
                     />
                   </View>
                   {/* Bottom Right Edit Pencil Icon */}
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <Pressable
                     onPress={handlePickTrainerAvatar}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     className="absolute bottom-2 right-0 bg-[#E11D48] w-8 h-8 rounded-full border-2 border-white shadow-md items-center justify-center"
@@ -1092,7 +1091,7 @@ export default function ProfileScreen() {
                     ) : (
                       <Feather name="edit-2" size={13} color="#FFFFFF" />
                     )}
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
                 <Text className="text-[#101828] text-2xl font-black tracking-tight">{coach?.name || user?.name || 'User'}</Text>
                 <Text className="text-[#4B5563] text-xs font-bold mt-1 tracking-wide uppercase">
@@ -1107,8 +1106,7 @@ export default function ProfileScreen() {
 
                 {/* Go to Client Mode Button */}
                 {isWildcardTestAccount(user, profile?.mobile) && (
-                  <TouchableOpacity
-                    activeOpacity={0.85}
+                  <Pressable
                     onPress={() => handleRoleChange('customer')}
                     className="mt-3.5 bg-zinc-900 border border-zinc-700 px-4 py-2 rounded-xl flex-row items-center gap-2"
                   >
@@ -1116,7 +1114,7 @@ export default function ProfileScreen() {
                     <Text className="text-white text-xs font-black uppercase tracking-wider">
                       Go to Client Mode
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
               </View>
 
@@ -1135,14 +1133,13 @@ export default function ProfileScreen() {
                       <View className="w-2 h-2 rounded-full bg-[#E11D48]" />
                       <Text className="text-zinc-500 text-[11px] font-bold uppercase tracking-widest">Coach Information</Text>
                     </View>
-                    <TouchableOpacity
-                      activeOpacity={0.8}
+                    <Pressable
                       onPress={() => { if (isEditingTrainer) { handleSaveTrainer(); } else { setIsEditingTrainer(true); } }}
                       className="px-3.5 py-1.5 bg-zinc-900 rounded-lg flex-row items-center gap-1.5"
                     >
                       <Feather name={isEditingTrainer ? "check" : "edit-2"} size={11} color="#FFFFFF" />
                       <Text className="text-white text-xs font-bold">{isEditingTrainer ? 'Save' : 'Edit'}</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
 
                   {isEditingTrainer ? (
@@ -1318,8 +1315,7 @@ export default function ProfileScreen() {
                         </View>
 
                         {!showSpecialtyForm && (
-                          <TouchableOpacity
-                            activeOpacity={0.8}
+                          <Pressable
                             onPress={() => {
                               setSelectedSpecialties(getApprovedSpecialtyKeys());
                               setShowSpecialtyForm(true);
@@ -1330,7 +1326,7 @@ export default function ProfileScreen() {
                             <Text className="text-zinc-900 text-xs font-semibold">
                               Request Workout Specialties Change
                             </Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         )}
 
                         {showSpecialtyForm && (
@@ -1340,9 +1336,8 @@ export default function ProfileScreen() {
                               {DB_CATEGORIES.map((cat, idx) => {
                                 const isChecked = selectedSpecialties.includes(cat.key);
                                 return (
-                                  <TouchableOpacity
+                                  <Pressable
                                     key={idx}
-                                    activeOpacity={0.8}
                                     onPress={() => {
                                       if (isChecked) {
                                         setSelectedSpecialties(selectedSpecialties.filter(s => s !== cat.key));
@@ -1355,7 +1350,7 @@ export default function ProfileScreen() {
                                     }`}
                                   >
                                     <Text className={`text-xs font-semibold ${isChecked ? 'text-white' : 'text-zinc-700'}`}>{cat.display}</Text>
-                                  </TouchableOpacity>
+                                  </Pressable>
                                 );
                               })}
                             </View>
@@ -1371,18 +1366,18 @@ export default function ProfileScreen() {
                               />
                             </View>
                             <View className="flex-row gap-2 mt-1">
-                              <TouchableOpacity
+                              <Pressable
                                 onPress={() => setShowSpecialtyForm(false)}
                                 className="flex-1 py-2.5 rounded-xl items-center bg-white"
                               >
                                 <Text className="text-zinc-600 text-xs font-semibold">Cancel</Text>
-                              </TouchableOpacity>
-                              <TouchableOpacity
+                              </Pressable>
+                              <Pressable
                                 onPress={handleSpecialtySubmit}
                                 className="flex-1 bg-zinc-900 py-2.5 rounded-xl items-center"
                               >
                                 <Text className="text-white text-xs font-semibold">Submit Request</Text>
-                              </TouchableOpacity>
+                              </Pressable>
                             </View>
                           </View>
                         )}
@@ -1448,8 +1443,7 @@ export default function ProfileScreen() {
                     )}
 
                     {!coach?.preferences?.addressChangeRequest && !showAddressForm && (
-                      <TouchableOpacity
-                        activeOpacity={0.8}
+                      <Pressable
                         onPress={() => {
                           setAddressInput(coach?.preferences?.operatingAddress || '');
                           setRadiusInput(trainerServiceRadiusKm(coach?.preferences?.radiusKm as number));
@@ -1461,22 +1455,21 @@ export default function ProfileScreen() {
                         <Text className="text-zinc-900 text-xs font-semibold">
                           Request Address Change
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     )}
 
                     {showAddressForm && (
                       <View className="bg-white p-4 rounded-2xl gap-3.5 mt-1">
                         <Text className="text-zinc-900 text-xs font-bold uppercase tracking-wide">Configure Base address</Text>
 
-                        <TouchableOpacity
-                          activeOpacity={0.8}
+                        <Pressable
                           onPress={handleUseCurrentLocation}
                           disabled={isSearchingLocation}
                           className="bg-zinc-100 p-3 rounded-xl flex-row justify-center items-center gap-2"
                         >
                           <Feather name="navigation" size={13} color="#18181B" />
                           <Text className="text-zinc-900 text-xs font-semibold">Use Current Location</Text>
-                        </TouchableOpacity>
+                        </Pressable>
 
                         <View className="gap-1.5">
                           <Text className="text-zinc-600 text-xs font-semibold">Search address</Text>
@@ -1493,14 +1486,14 @@ export default function ProfileScreen() {
                         {searchSuggestions.length > 0 && (
                           <View className="bg-white rounded-xl max-h-40 overflow-hidden py-1">
                             {searchSuggestions.map((item, idx) => (
-                              <TouchableOpacity
+                              <Pressable
                                 key={idx}
                                 onPress={() => handleSelectSuggestion(item)}
                                 className="p-3 border-b border-zinc-100 flex-row items-center gap-2"
                               >
                                 <Feather name="map-pin" size={12} color="#71717A" />
                                 <Text className="text-zinc-800 text-xs font-medium flex-1" numberOfLines={2}>{item.description}</Text>
-                              </TouchableOpacity>
+                              </Pressable>
                             ))}
                           </View>
                         )}
@@ -1512,8 +1505,7 @@ export default function ProfileScreen() {
                               <Text className="text-emerald-800 text-xs font-bold">Location Selected</Text>
                             </View>
                             <Text className="text-zinc-800 text-xs font-normal leading-relaxed">{selectedLocation.address}</Text>
-                            <TouchableOpacity
-                              activeOpacity={0.8}
+                            <Pressable
                               onPress={() => setIsLocationConfirmed(!isLocationConfirmed)}
                               className="flex-row items-center gap-2 border-t border-emerald-200/60 pt-2"
                             >
@@ -1523,7 +1515,7 @@ export default function ProfileScreen() {
                                 {isLocationConfirmed && <Feather name="check" size={11} color="white" />}
                               </View>
                               <Text className="text-zinc-800 text-xs font-semibold">This is my operating base.</Text>
-                            </TouchableOpacity>
+                            </Pressable>
                           </View>
                         )}
 
@@ -1531,22 +1523,21 @@ export default function ProfileScreen() {
                           <Text className="text-zinc-600 text-xs font-semibold">Service Radius Limit (Max 5 km)</Text>
                           <View className="flex-row gap-2 mt-0.5">
                             {[1, 2, 3, 4, 5].map((r) => (
-                              <TouchableOpacity
+                              <Pressable
                                 key={r}
-                                activeOpacity={0.8}
                                 onPress={() => setRadiusInput(r)}
                                 className={`flex-1 py-2.5 border rounded-xl items-center ${
                                   radiusInput === r ? 'bg-zinc-900 border-zinc-900' : 'bg-zinc-50 border-zinc-200'
                                 }`}
                               >
                                 <Text className={`text-xs font-bold ${radiusInput === r ? 'text-white' : 'text-zinc-700'}`}>{r} km</Text>
-                              </TouchableOpacity>
+                              </Pressable>
                             ))}
                           </View>
                         </View>
 
                         <View className="flex-row gap-2 mt-1">
-                          <TouchableOpacity
+                          <Pressable
                             onPress={() => {
                               setShowAddressForm(false);
                               setSearchSuggestions([]);
@@ -1556,8 +1547,8 @@ export default function ProfileScreen() {
                             className="flex-1 py-2.5 rounded-xl items-center bg-white"
                           >
                             <Text className="text-zinc-600 text-xs font-semibold">Cancel</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
+                          </Pressable>
+                          <Pressable
                             onPress={handleSubmitAddressRequest}
                             disabled={!selectedLocation || !isLocationConfirmed}
                             className={`flex-1 py-2.5 rounded-xl items-center ${
@@ -1567,7 +1558,7 @@ export default function ProfileScreen() {
                             <Text className={`text-xs font-semibold ${selectedLocation && isLocationConfirmed ? 'text-white' : 'text-zinc-400'}`}>
                               Submit Request
                             </Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         </View>
                       </View>
                     )}
@@ -1586,9 +1577,8 @@ export default function ProfileScreen() {
                       <Text className="text-zinc-500 text-xs font-medium">Availability Mode</Text>
                       <View className="flex-row gap-2 mt-0.5">
                         {['weekly_fixed', 'monthly_flexible'].map((mode) => (
-                          <TouchableOpacity
+                          <Pressable
                             key={mode}
-                            activeOpacity={0.8}
                             onPress={() => setAvailMode(mode as any)}
                             className={`flex-1 py-2.5 border rounded-xl items-center ${
                               availMode === mode ? 'bg-zinc-900 border-zinc-900' : 'bg-white border-zinc-200'
@@ -1599,7 +1589,7 @@ export default function ProfileScreen() {
                             }`}>
                               {mode === 'weekly_fixed' ? 'Fixed Weekly' : 'Flexible Monthly'}
                             </Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         ))}
                       </View>
                     </View>
@@ -1607,19 +1597,19 @@ export default function ProfileScreen() {
                     <View className="gap-1.5">
                       <Text className="text-zinc-500 text-xs font-medium">Max Daily Sessions Policy</Text>
                       <View className="flex-row items-center gap-4 mt-0.5 bg-white p-2.5 rounded-xl justify-between">
-                        <TouchableOpacity
+                        <Pressable
                           onPress={() => setMaxSessions(Math.max(1, maxSessions - 1))}
                           className="w-8 h-8 rounded-lg bg-zinc-100 items-center justify-center"
                         >
                           <Feather name="minus" size={14} color="#18181B" />
-                        </TouchableOpacity>
+                        </Pressable>
                         <Text className="text-zinc-900 text-xs font-bold">{maxSessions} sessions max / day</Text>
-                        <TouchableOpacity
+                        <Pressable
                           onPress={() => setMaxSessions(Math.min(10, maxSessions + 1))}
                           className="w-8 h-8 rounded-lg bg-zinc-100 items-center justify-center"
                         >
                           <Feather name="plus" size={14} color="#18181B" />
-                        </TouchableOpacity>
+                        </Pressable>
                       </View>
                     </View>
 
@@ -1629,28 +1619,26 @@ export default function ProfileScreen() {
                         {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => {
                           const isChecked = weeklyDays[day];
                           return (
-                            <TouchableOpacity
+                            <Pressable
                               key={day}
-                              activeOpacity={0.8}
                               onPress={() => setWeeklyDays({ ...weeklyDays, [day]: !isChecked })}
                               className={`px-3 py-1.5 border rounded-xl ${
                                 isChecked ? 'bg-zinc-900 border-zinc-900' : 'bg-white border-zinc-200'
                               }`}
                             >
                               <Text className={`text-xs font-semibold ${isChecked ? 'text-white' : 'text-zinc-600'}`}>{day.slice(0, 3)}</Text>
-                            </TouchableOpacity>
+                            </Pressable>
                           );
                         })}
                       </View>
                     </View>
 
-                    <TouchableOpacity
-                      activeOpacity={0.8}
+                    <Pressable
                       onPress={handleSaveAvailabilitySettings}
                       className="bg-zinc-900 py-3 rounded-xl items-center justify-center mt-1"
                     >
                       <Text className="text-white text-xs font-semibold">Save Availability Preferences</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 </AccordionCard>
 
@@ -1689,12 +1677,12 @@ export default function ProfileScreen() {
                     <View className="border-t border-zinc-200/60 pt-3">
                       <View className="flex-row justify-between items-center mb-2.5">
                         <Text className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">Bank Account details</Text>
-                        <TouchableOpacity
+                        <Pressable
                           onPress={() => setIsEditingTrainer(!isEditingTrainer)}
                           className="px-2.5 py-1 bg-zinc-100 rounded-lg"
                         >
                           <Text className="text-zinc-800 text-xs font-semibold">{isEditingTrainer ? 'Close' : 'Update Details'}</Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       </View>
 
                       {isEditingTrainer ? (
@@ -1748,12 +1736,12 @@ export default function ProfileScreen() {
                               className="border border-zinc-200 bg-zinc-50 p-3 rounded-xl text-xs text-zinc-900 font-medium"
                             />
                           </View>
-                          <TouchableOpacity
+                          <Pressable
                             onPress={handleSaveTrainer}
                             className="bg-zinc-900 py-3 rounded-xl items-center mt-1"
                           >
                             <Text className="text-white text-xs font-semibold">Save Account details</Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         </View>
                       ) : (
                         <View className="gap-1 bg-white p-3.5 rounded-2xl">
@@ -1820,12 +1808,12 @@ export default function ProfileScreen() {
                     <View className="flex-row justify-between items-center mb-1">
                       <Text className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">Report support tickets</Text>
                       {!showDisputeForm && (
-                        <TouchableOpacity
+                        <Pressable
                           onPress={() => setShowDisputeForm(true)}
                           className="bg-zinc-900 px-3 py-1.5 rounded-lg"
                         >
                           <Text className="text-white text-xs font-semibold">Raise Ticket</Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       )}
                     </View>
 
@@ -1836,7 +1824,7 @@ export default function ProfileScreen() {
                           <Text className="text-zinc-600 text-xs font-semibold">Category</Text>
                           <View className="flex-row flex-wrap gap-2 mt-0.5">
                             {['payment', 'safety', 'behavior', 'cancellation_dispute'].map((cat) => (
-                              <TouchableOpacity
+                              <Pressable
                                 key={cat}
                                 onPress={() => setDisputeCategory(cat as any)}
                                 className={`px-3 py-1.5 border rounded-xl flex-row items-center gap-1.5 ${
@@ -1849,7 +1837,7 @@ export default function ProfileScreen() {
                                 <Text className={`text-xs font-semibold capitalize ${disputeCategory === cat ? 'text-white' : 'text-zinc-700'}`}>
                                   {cat.replace('_', ' ')}
                                 </Text>
-                              </TouchableOpacity>
+                              </Pressable>
                             ))}
                           </View>
                         </View>
@@ -1878,19 +1866,19 @@ export default function ProfileScreen() {
                           />
                         </View>
                         <View className="flex-row gap-2 mt-1">
-                          <TouchableOpacity
+                          <Pressable
                             onPress={() => setShowDisputeForm(false)}
                             className="flex-1 py-2.5 rounded-xl items-center bg-white"
                           >
                             <Text className="text-zinc-600 text-xs font-semibold">Cancel</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
+                          </Pressable>
+                          <Pressable
                             onPress={handleDisputeSubmit}
                             disabled={isSubmittingDispute}
                             className={`flex-1 bg-zinc-900 py-2.5 rounded-xl items-center ${isSubmittingDispute ? 'opacity-60' : ''}`}
                           >
                             <Text className="text-white text-xs font-semibold">{isSubmittingDispute ? 'Submitting...' : 'Submit Ticket'}</Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         </View>
                       </View>
                     )}
@@ -1904,14 +1892,14 @@ export default function ProfileScreen() {
                             <DisputeHistoryRow key={d.id} dispute={d} />
                           ))}
                           {disputesList.length > DISPUTES_PAGE_SIZE && (
-                            <TouchableOpacity
+                            <Pressable
                               onPress={() => setShowAllDisputes(prev => !prev)}
                               className="py-2 items-center"
                             >
                               <Text className="text-zinc-500 text-[11px] font-semibold">
                                 {showAllDisputes ? 'Show less' : `Show all ${disputesList.length} cases`}
                               </Text>
-                            </TouchableOpacity>
+                            </Pressable>
                           )}
                         </View>
                       ) : (
@@ -1970,12 +1958,12 @@ export default function ProfileScreen() {
                     <View className="flex-row justify-between items-center mb-1">
                       <Text className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">VIRLA Partner Accessories</Text>
                       {!showKitForm && (
-                        <TouchableOpacity
+                        <Pressable
                           onPress={() => setShowKitForm(true)}
                           className="bg-zinc-900 px-3 py-1.5 rounded-lg"
                         >
                           <Text className="text-white text-xs font-semibold">Order Kit</Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       )}
                     </View>
                     {showKitForm && (
@@ -1987,7 +1975,7 @@ export default function ProfileScreen() {
                             <View key={item} className="flex-row items-center justify-between border-b border-zinc-100 pb-2.5">
                               <Text className="text-zinc-800 text-xs font-semibold">{item}</Text>
                               <View className="flex-row items-center gap-3">
-                                <TouchableOpacity
+                                <Pressable
                                   onPress={() => {
                                     const current = kitQuantities[item] || 0;
                                     if (current > 0) {
@@ -1997,9 +1985,9 @@ export default function ProfileScreen() {
                                   className="w-7 h-7 bg-zinc-100 rounded-lg justify-center items-center"
                                 >
                                   <Feather name="minus" size={12} color="#18181B" />
-                                </TouchableOpacity>
+                                </Pressable>
                                 <Text className="text-zinc-900 text-xs font-bold w-6 text-center">{kitQuantities[item] || 0}</Text>
-                                <TouchableOpacity
+                                <Pressable
                                   onPress={() => {
                                     const current = kitQuantities[item] || 0;
                                     setKitQuantities({ ...kitQuantities, [item]: current + 1 });
@@ -2007,7 +1995,7 @@ export default function ProfileScreen() {
                                   className="w-7 h-7 bg-zinc-100 rounded-lg justify-center items-center"
                                 >
                                   <Feather name="plus" size={12} color="#18181B" />
-                                </TouchableOpacity>
+                                </Pressable>
                               </View>
                             </View>
                           ))}
@@ -2017,7 +2005,7 @@ export default function ProfileScreen() {
                               <Text className="text-[#E11D48] text-xs font-bold uppercase tracking-wider">Select T-Shirt Size (*one size per order)</Text>
                               <View className="flex-row gap-1.5 mt-1">
                                 {(['S', 'M', 'L', 'XL', 'XXL'] as const).map((sz) => (
-                                  <TouchableOpacity
+                                  <Pressable
                                     key={sz}
                                     onPress={() => setSelectedTshirtSize(sz)}
                                     className={`flex-1 py-2 border rounded-xl items-center ${
@@ -2025,7 +2013,7 @@ export default function ProfileScreen() {
                                     }`}
                                   >
                                     <Text className={`text-xs font-bold ${selectedTshirtSize === sz ? 'text-white' : 'text-zinc-600'}`}>{sz}</Text>
-                                  </TouchableOpacity>
+                                  </Pressable>
                                 ))}
                               </View>
                             </View>
@@ -2033,19 +2021,19 @@ export default function ProfileScreen() {
                         </View>
 
                         <View className="flex-row gap-2 mt-1">
-                          <TouchableOpacity
+                          <Pressable
                             onPress={() => setShowKitForm(false)}
                             className="flex-1 py-2.5 rounded-xl items-center bg-white"
                           >
                             <Text className="text-zinc-600 text-xs font-semibold">Cancel</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
+                          </Pressable>
+                          <Pressable
                             onPress={handleKitSubmit}
                             disabled={isSubmittingKit}
                             className={`flex-1 bg-zinc-900 py-2.5 rounded-xl items-center ${isSubmittingKit ? 'opacity-60' : ''}`}
                           >
                             <Text className="text-white text-xs font-semibold">{isSubmittingKit ? 'Submitting...' : 'Submit Request'}</Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         </View>
                       </View>
                     )}
@@ -2059,14 +2047,14 @@ export default function ProfileScreen() {
                             <KitRequestRow key={item.id} item={item} />
                           ))}
                           {kitRequestsList.length > KITS_PAGE_SIZE && (
-                            <TouchableOpacity
+                            <Pressable
                               onPress={() => setShowAllKits(prev => !prev)}
                               className="py-2 items-center"
                             >
                               <Text className="text-zinc-500 text-[11px] font-semibold">
                                 {showAllKits ? 'Show less' : `Show all ${kitRequestsList.length} requests`}
                               </Text>
-                            </TouchableOpacity>
+                            </Pressable>
                           )}
                         </View>
                       ) : (
@@ -2104,27 +2092,25 @@ export default function ProfileScreen() {
                       )}
                     </View>
 
-                    <TouchableOpacity
-                      activeOpacity={0.8}
+                    <Pressable
                       onPress={() => router.push('/wallet' as any)}
                       className="bg-zinc-900 py-3 rounded-xl items-center justify-center mt-2"
                     >
                       <Text className="text-white text-xs font-semibold">Open Wallet Options</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 </AccordionCard>
 
               </View>
 
           {/* Sign Out button */}
-          <TouchableOpacity
+          <Pressable
             onPress={handleLogout}
-            activeOpacity={0.8}
             className="bg-rose-50 border border-rose-200/70 px-8 py-3.5 rounded-full flex-row justify-center items-center self-center mt-6 mb-24 gap-2"
           >
             <Feather name="log-out" size={15} color="#E11D48" style={{ transform: [{ rotate: '-90deg' }] }} />
             <Text className="text-rose-600 text-xs font-bold uppercase tracking-wider">Sign Out</Text>
-          </TouchableOpacity>
+          </Pressable>
 
             </AnimatedReanimated.ScrollView>
           )}
@@ -2186,9 +2172,8 @@ export default function ProfileScreen() {
             >
               Edit Personal Information
             </Text>
-            <TouchableOpacity
+            <Pressable
               onPress={closeEditProfileModal}
-              activeOpacity={0.7}
               style={{
                 width: 32,
                 height: 32,
@@ -2199,7 +2184,7 @@ export default function ProfileScreen() {
               }}
             >
               <Feather name="x" size={16} color="#64748B" />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Scrollable Form Container - UI Thread Reanimated ScrollView */}
@@ -2244,8 +2229,7 @@ export default function ProfileScreen() {
 
                 {/* Camera & Gallery Action Buttons */}
                 <View className="flex-1 flex-row gap-2">
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <Pressable
                     onPress={() => pickAvatarImage('camera')}
                     style={{
                       flex: 1,
@@ -2264,10 +2248,9 @@ export default function ProfileScreen() {
                   >
                     <Feather name="camera" size={14} color="#64748B" />
                     <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-xs font-semibold text-slate-700">Camera</Text>
-                  </TouchableOpacity>
+                  </Pressable>
 
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <Pressable
                     onPress={() => pickAvatarImage('library')}
                     style={{
                       flex: 1,
@@ -2286,7 +2269,7 @@ export default function ProfileScreen() {
                   >
                     <Feather name="image" size={14} color="#64748B" />
                     <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-xs font-semibold text-slate-700">Gallery</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </View>
             </View>
@@ -2410,7 +2393,7 @@ export default function ProfileScreen() {
                 {['Male', 'Female', 'Other'].map((g) => {
                   const isSelected = editGender.toLowerCase() === g.toLowerCase();
                   return (
-                    <TouchableOpacity
+                    <Pressable
                       key={g}
                       onPress={() => {
                         setEditGender(g);
@@ -2419,7 +2402,6 @@ export default function ProfileScreen() {
                           setEditAvatar(getDefaultAvatarForGender(g));
                         }
                       }}
-                      activeOpacity={0.7}
                       style={{
                         flex: 1,
                         paddingVertical: 11,
@@ -2459,7 +2441,7 @@ export default function ProfileScreen() {
                       >
                         {g}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 })}
               </View>
@@ -2470,8 +2452,7 @@ export default function ProfileScreen() {
               <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[11px] font-bold text-slate-500 tracking-wider uppercase">
                 Date of Birth
               </Text>
-              <TouchableOpacity
-                activeOpacity={0.75}
+              <Pressable
                 onPress={() => {
                   setShowDatePicker(prev => !prev);
                   setShowFitnessLevelDialog(false);
@@ -2500,7 +2481,7 @@ export default function ProfileScreen() {
                   {editDob || 'DD/MM/YYYY'}
                 </Text>
                 <Feather name="calendar" size={16} color={showDatePicker ? '#E11D48' : '#64748B'} />
-              </TouchableOpacity>
+              </Pressable>
 
               {showDatePicker && (
                 <InlineDatePicker
@@ -2621,10 +2602,9 @@ export default function ProfileScreen() {
             }}
             className="flex-row items-center justify-between gap-3"
           >
-            <TouchableOpacity
+            <Pressable
               onPress={closeEditProfileModal}
               disabled={isSavingProfile}
-              activeOpacity={0.7}
               style={{
                 flex: 1,
                 paddingVertical: 13,
@@ -2638,12 +2618,11 @@ export default function ProfileScreen() {
               <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-slate-700 text-xs font-bold uppercase tracking-wider">
                 Cancel
               </Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
+            <Pressable
               onPress={handleSaveProfile}
               disabled={isSavingProfile}
-              activeOpacity={0.85}
               style={{
                 flex: 1.4,
                 paddingVertical: 13,
@@ -2669,7 +2648,7 @@ export default function ProfileScreen() {
                   Save Changes
                 </Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </NativeSheet>
@@ -2782,8 +2761,7 @@ function AccordionCard({ title, icon, expanded, onToggle, children, rightText, r
     <View
       className="bg-white rounded-[24px] overflow-hidden"
     >
-      <TouchableOpacity
-        activeOpacity={0.75}
+      <Pressable
         onPress={onToggle}
         className={`p-4 flex-row justify-between items-center w-full bg-white ${expanded ? 'border-b border-zinc-100' : ''}`}
       >
@@ -2803,7 +2781,7 @@ function AccordionCard({ title, icon, expanded, onToggle, children, rightText, r
             <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={15} color="#52525B" />
           </View>
         </View>
-      </TouchableOpacity>
+      </Pressable>
 
       {expanded && (
         <View className="p-4 bg-zinc-50/70">

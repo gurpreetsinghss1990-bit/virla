@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, Pressable, View } from 'react-native';
 
 import { softShadow } from '../utils/shadows';
 export interface Plan {
@@ -100,8 +100,7 @@ function PlanCardBase({ plan, isExpanded, buddyNotice, hasCredits, onPress, onBl
         )}
 
         {/* Card Collapsed/Expanded Top Summary Bar */}
-        <TouchableOpacity
-          activeOpacity={isBuddyDisabled ? 0.95 : 0.85}
+        <Pressable
           onPress={isBuddyDisabled ? onBlocked : () => onPress(plan)}
           style={{
             padding: 18,
@@ -180,7 +179,7 @@ function PlanCardBase({ plan, isExpanded, buddyNotice, hasCredits, onPress, onBl
               />
             </View>
           </View>
-        </TouchableOpacity>
+        </Pressable>
 
         {/* Expanded Details Section */}
         {isExpanded && (

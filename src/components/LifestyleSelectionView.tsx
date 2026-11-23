@@ -7,7 +7,6 @@ import {
   Pressable,
   ScrollView,
   Text,
-  TouchableOpacity,
   Vibration,
   View,
 } from 'react-native';
@@ -223,8 +222,7 @@ export function LifestyleTagCard({ tag, isSelected, onToggle, index = 0 }: Lifes
         ],
       }}
     >
-      <TouchableOpacity
-        activeOpacity={0.9}
+      <Pressable
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={handlePress}
@@ -288,7 +286,7 @@ export function LifestyleTagCard({ tag, isSelected, onToggle, index = 0 }: Lifes
             <Ionicons name="checkmark-circle" size={19} color="#E11D48" />
           </Animated.View>
         </Animated.View>
-      </TouchableOpacity>
+      </Pressable>
     </Animated.View>
   );
 }
@@ -556,8 +554,7 @@ export function LifestyleSelectionView({
                   >
                     {parsedWakeTime.time}
                   </Text>
-                  <TouchableOpacity
-                    activeOpacity={0.7}
+                  <Pressable
                     onPress={() => togglePeriod('wake')}
                     style={{
                       backgroundColor: '#FEF3C7',
@@ -575,7 +572,7 @@ export function LifestyleSelectionView({
                     >
                       {parsedWakeTime.period}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
 
                 {/* Stepper with - and + */}
@@ -720,8 +717,7 @@ export function LifestyleSelectionView({
                   >
                     {parsedSleepTime.time}
                   </Text>
-                  <TouchableOpacity
-                    activeOpacity={0.7}
+                  <Pressable
                     onPress={() => togglePeriod('sleep')}
                     style={{
                       backgroundColor: '#EEF2FF',
@@ -739,7 +735,7 @@ export function LifestyleSelectionView({
                     >
                       {parsedSleepTime.period}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
 
                 {/* Stepper with - and + */}
@@ -874,8 +870,7 @@ export function LifestyleSelectionView({
       <LifestyleFadeIn delay={360}>
         <View style={{ marginTop: 18 }}>
           <Animated.View style={{ transform: [{ scale: continueScaleAnim }] }}>
-            <TouchableOpacity
-              activeOpacity={0.92}
+            <Pressable
               onPressIn={handlePressIn}
               onPressOut={handlePressOut}
               onPress={handleContinuePress}
@@ -903,7 +898,7 @@ export function LifestyleSelectionView({
                 CONTINUE
               </Text>
               <Feather name="arrow-right" size={17} color="#FFFFFF" />
-            </TouchableOpacity>
+            </Pressable>
           </Animated.View>
         </View>
       </LifestyleFadeIn>
@@ -925,9 +920,8 @@ export function LifestyleSelectionView({
       {/* Top Header */}
       <View style={{ paddingTop: insets.top, backgroundColor: '#FFFFFF' }} className="z-10">
         <View className="h-14 flex-row items-center px-4 justify-between">
-          <TouchableOpacity
+          <Pressable
             onPress={onBack || (() => router.back())}
-            activeOpacity={0.6}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             style={{
               width: 40,
@@ -941,7 +935,7 @@ export function LifestyleSelectionView({
             }}
           >
             <Ionicons name="chevron-back" size={20} color="#0F172A" />
-          </TouchableOpacity>
+          </Pressable>
 
           <View className="flex-1 items-center px-2">
             <Text className="text-[#0F172A] text-base font-bold text-center">

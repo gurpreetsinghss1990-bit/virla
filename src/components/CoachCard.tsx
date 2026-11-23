@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { Coach } from '../types';
 import { AvatarImage } from './AvatarImage';
 
@@ -10,8 +10,7 @@ interface CoachCardProps {
 
 export function CoachCard({ coach, onPress }: CoachCardProps) {
   return (
-    <TouchableOpacity
-      activeOpacity={0.8}
+    <Pressable
       onPress={onPress}
       className="bg-white p-4 rounded-[20px] shadow-sm flex-row items-center w-72 mr-4"
     >
@@ -48,6 +47,6 @@ export function CoachCard({ coach, onPress }: CoachCardProps) {
           </Text>
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }

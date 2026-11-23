@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { Loading } from '../components/Loading';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Animated, Modal, KeyboardAvoidingView, Platform, Share, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Pressable, ScrollView, TextInput, Alert, Animated, Modal, KeyboardAvoidingView, Platform, Share, StyleSheet, Dimensions } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -2418,9 +2418,8 @@ export default function BookingScreen() {
                     {EXPERIENCES.map((exp) => {
                       const isSelected = selectedExperience?.id === exp.id;
                       return (
-                        <TouchableOpacity
+                        <Pressable
                           key={exp.id}
-                          activeOpacity={0.75}
                           onPress={() => {
                             if (isSelected) {
                               setSelectedExperience(null);
@@ -2481,7 +2480,7 @@ export default function BookingScreen() {
                           ) : (
                             <View className="w-6 h-6 rounded-full bg-zinc-50" />
                           )}
-                        </TouchableOpacity>
+                        </Pressable>
                       );
                     })}
                   </View>
@@ -2507,9 +2506,8 @@ export default function BookingScreen() {
                     {TRAINER_PREFERENCES.map((pref) => {
                       const isSelected = trainerPref === pref.id;
                       return (
-                        <TouchableOpacity
+                        <Pressable
                           key={pref.id}
-                          activeOpacity={0.8}
                           onPress={() => {
                             setTrainerPref(pref.id as any);
                             if (pref.id !== 'favourite') {
@@ -2546,7 +2544,7 @@ export default function BookingScreen() {
                               {pref.desc}
                             </Text>
                           </View>
-                        </TouchableOpacity>
+                        </Pressable>
                       );
                     })}
                   </View>
@@ -2589,9 +2587,8 @@ export default function BookingScreen() {
                               // Image source matching trainer's own profile page (handles master trainer profile image correctly)
 
                               return (
-                                <TouchableOpacity
+                                <Pressable
                                   key={coach.id}
-                                  activeOpacity={0.8}
                                   onPress={() => {
                                     if (isSelected) {
                                       setSelectedTrainerId('');
@@ -2633,7 +2630,7 @@ export default function BookingScreen() {
                                   >
                                     {coach.name}
                                   </Text>
-                                </TouchableOpacity>
+                                </Pressable>
                               );
                             })}
                           </ScrollView>
@@ -2666,9 +2663,8 @@ export default function BookingScreen() {
                       const isCovered = (addr.lat && addr.lng) ? isAreaCoveredByTrainer(addr.lat, addr.lng) : false;
 
                       return (
-                        <TouchableOpacity
+                        <Pressable
                           key={addr.id}
-                          activeOpacity={0.9}
                           onPress={() => {
                             setSelectedAddressId(addr.id);
                             // Yahan turant check karo
@@ -2723,7 +2719,7 @@ export default function BookingScreen() {
                               <View className="w-5 h-5 rounded-full bg-zinc-100" />
                             )}
                           </View>
-                        </TouchableOpacity>
+                        </Pressable>
                       );
                     })}
 
@@ -2763,15 +2759,14 @@ export default function BookingScreen() {
                       </View>
 
                       {/* Touch strictly on Enable button */}
-                      <TouchableOpacity
-                        activeOpacity={0.8}
+                      <Pressable
                         onPress={() => openAddressModal()}
                         className="bg-zinc-900 px-4 py-2 rounded-full"
                       >
                         <Text className="text-white text-[10.5px] font-bold uppercase tracking-wider">
                           Enable
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                   </View>
 
@@ -2813,14 +2808,13 @@ export default function BookingScreen() {
                           className="bg-white border-b border-zinc-100 shadow-xs"
                         >
                           <View className="h-14 flex-row items-center px-5 justify-between">
-                            <TouchableOpacity 
+                            <Pressable 
                               onPress={() => setAddAddressStep(1)} 
-                              activeOpacity={0.7}
                               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                               className="w-9 h-9 items-center justify-center rounded-full"
                             >
                               <Ionicons name="arrow-back" size={20} color="#09090B" />
-                            </TouchableOpacity>
+                            </Pressable>
                             <View className="items-center flex-1 mx-2">
                               <View className="flex-row items-center gap-1.5">
                                 <View className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
@@ -3025,14 +3019,13 @@ export default function BookingScreen() {
                             >
                               {/* Back button and clean title */}
                               <View className="flex-row items-center justify-between mb-2.5">
-                                <TouchableOpacity 
+                                <Pressable 
                                   onPress={() => setIsAddAddressModalVisible(false)} 
-                                  activeOpacity={0.7}
                                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                   className="w-8 h-8 items-center justify-center rounded-full"
                                 >
                                   <Ionicons name="arrow-back" size={19} color="#18181B" />
-                                </TouchableOpacity>
+                                </Pressable>
                                 <View className="items-center flex-1 mx-2">
                                   <Text className="text-zinc-900 text-xs font-bold tracking-tight">
                                     Set Training Location
@@ -3053,12 +3046,12 @@ export default function BookingScreen() {
                                   className="flex-1 text-xs font-medium text-zinc-900 ml-2 py-0"
                                 />
                                 {searchQuery.trim().length > 0 && (
-                                  <TouchableOpacity 
+                                  <Pressable 
                                     onPress={() => handleSearchTextChange('')}
                                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                                   >
                                     <Feather name="x" size={14} color="#A1A1AA" />
-                                  </TouchableOpacity>
+                                  </Pressable>
                                 )}
                               </View>
 
@@ -3071,7 +3064,7 @@ export default function BookingScreen() {
                                   className="mt-2 border-t border-zinc-100"
                                 >
                                   {googleSuggestions.map((item, idx) => (
-                                    <TouchableOpacity
+                                    <Pressable
                                       key={idx}
                                       onPress={() => handleSelectGoogleSuggestion(item)}
                                       className="py-3 border-b border-zinc-100 flex-row justify-between items-center bg-white"
@@ -3087,15 +3080,14 @@ export default function BookingScreen() {
                                         )}
                                       </View>
                                       <Feather name="arrow-up-left" size={12} color="#9CA3AF" />
-                                    </TouchableOpacity>
+                                    </Pressable>
                                   ))}
                                 </ScrollView>
                               )}
                             </View>
 
                             {/* Floating Current Location Button */}
-                            <TouchableOpacity
-                              activeOpacity={0.8}
+                            <Pressable
                               onPress={handleUseCurrentGps}
                               style={{
                                 position: 'absolute',
@@ -3114,7 +3106,7 @@ export default function BookingScreen() {
                               }}
                             >
                               <Feather name="navigation" size={18} color="#4F46E5" />
-                            </TouchableOpacity>
+                            </Pressable>
 
                             {/* Bottom Sheet Address Panel: Soft translucent & lightweight */}
                             <View 
@@ -3159,8 +3151,7 @@ export default function BookingScreen() {
                               )}
 
                               {/* Slim, elegant confirm button */}
-                              <TouchableOpacity
-                                activeOpacity={0.8}
+                              <Pressable
                                 disabled={isReverseGeocoding || isLocationOutsideCoverage || (!hasConfirmedSearchSelection && !isPinSelectionAuthoritative)}
                                 onPress={() => {
                                   if (isLocationOutsideCoverage) {
@@ -3197,7 +3188,7 @@ export default function BookingScreen() {
                                     Confirm Location
                                   </Text>
                                 )}
-                              </TouchableOpacity>
+                              </Pressable>
                             </View>
                           </View>
                         )}
@@ -3224,14 +3215,14 @@ export default function BookingScreen() {
                                     <Text className="text-zinc-500 text-[10px] font-bold uppercase tracking-[1.5px] pl-0.5">
                                       Confirmed Location
                                     </Text>
-                                    <TouchableOpacity 
+                                    <Pressable 
                                       onPress={() => setAddAddressStep(1)} 
                                       className="flex-row items-center gap-1"
                                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                                     >
                                       <Feather name="edit-2" size={11} color="#E11D48" />
                                       <Text className="text-[#E11D48] text-[10px] font-bold uppercase tracking-wider">Change</Text>
-                                    </TouchableOpacity>
+                                    </Pressable>
                                   </View>
                                   <View className="bg-zinc-50 p-3.5 rounded-2xl flex-row items-start gap-3">
                                     <View className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 items-center justify-center mt-0.5">
@@ -3404,9 +3395,8 @@ export default function BookingScreen() {
                                     ].map((item) => {
                                       const isSel = newAddressLabelType === item.id;
                                       return (
-                                        <TouchableOpacity
+                                        <Pressable
                                           key={item.id}
-                                          activeOpacity={0.8}
                                           onPress={() => setNewAddressLabelType(item.id as any)}
                                           className={`flex-1 py-3.5 rounded-xl border items-center justify-center flex-row gap-1.5 ${
                                             isSel ? 'bg-zinc-950 border-zinc-950' : 'bg-zinc-50 border-zinc-200/90'
@@ -3414,7 +3404,7 @@ export default function BookingScreen() {
                                         >
                                           <Text className="text-xs">{item.emoji}</Text>
                                           <Text className={`text-[10px] font-black uppercase ${isSel ? 'text-white' : 'text-zinc-800'}`}>{item.id}</Text>
-                                        </TouchableOpacity>
+                                        </Pressable>
                                       );
                                     })}
                                   </View>
@@ -3496,8 +3486,7 @@ export default function BookingScreen() {
                                 )}
 
                                 {/* Save Button */}
-                                <TouchableOpacity
-                                  activeOpacity={0.8}
+                                <Pressable
                                   onPress={async () => {
                                     setAddressFormAttempted(true);
 
@@ -3588,7 +3577,7 @@ export default function BookingScreen() {
                                   <Text className="text-xs font-black uppercase tracking-wider text-white">
                                     Save Location
                                   </Text>
-                                </TouchableOpacity>
+                                </Pressable>
                               </View>
                             </ScrollView>
                           </KeyboardAvoidingView>
@@ -3637,9 +3626,8 @@ export default function BookingScreen() {
                     })(getCurrentServerTime()).map((capsule) => {
                       const isSelected = dateSelectionType === capsule.id;
                       return (
-                        <TouchableOpacity
+                        <Pressable
                           key={capsule.id}
-                          activeOpacity={0.8}
                           onPress={async () => {
                             if (capsule.id === 'calendar') {
                               setDateSelectionType('calendar');
@@ -3690,7 +3678,7 @@ export default function BookingScreen() {
                           >
                             {capsule.sub}
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       );
                     })}
                   </View>
@@ -3723,9 +3711,8 @@ export default function BookingScreen() {
                             const isPicked = selectedDate === item.dateString;
                             const isAvailable = calendarAvailability[item.dateString] === true;
                             return (
-                              <TouchableOpacity
+                              <Pressable
                                 key={item.key}
-                                activeOpacity={0.8}
                                 onPress={() => {
                                   setSelectedDate(item.dateString);
                                   setSelectedTime('');
@@ -3756,7 +3743,7 @@ export default function BookingScreen() {
                                       : (isAvailable ? 'bg-emerald-500' : 'bg-red-500')
                                   }`} 
                                 />
-                              </TouchableOpacity>
+                              </Pressable>
                             );
                           })}
                       </ScrollView>
@@ -3837,13 +3824,12 @@ export default function BookingScreen() {
                                 The selected address does not have valid GPS coordinates. Please select or edit your address with a valid location.
                               </Text>
                             </View>
-                            <TouchableOpacity
-                              activeOpacity={0.8}
+                            <Pressable
                               onPress={() => triggerTransition(3)}
                               className="bg-[#101828] py-4 px-8 rounded-xl items-center justify-center w-full"
                             >
                               <Text className="text-white text-xs font-black uppercase tracking-wider">Select Location</Text>
-                            </TouchableOpacity>
+                            </Pressable>
                           </View>
                         );
                       }
@@ -3955,32 +3941,29 @@ export default function BookingScreen() {
                               </Text>
                             </View>
                             <View className="w-full gap-3">
-                              <TouchableOpacity
-                                activeOpacity={0.8}
+                              <Pressable
                                 onPress={() => {
                                   Alert.alert('Notification Set 🔔', `We will alert you as soon as a coach for ${selectedExperience?.title || 'this workout'} becomes available on this date.`);
                                 }}
                                 className="bg-[#101828] py-4 rounded-xl items-center justify-center"
                               >
                                 <Text className="text-white text-xs font-black uppercase tracking-wider">Notify Me</Text>
-                              </TouchableOpacity>
+                              </Pressable>
                               
-                              <TouchableOpacity
-                                activeOpacity={0.8}
+                              <Pressable
                                 onPress={() => triggerTransition(1)}
                                 className="bg-zinc-50 py-4 rounded-xl items-center justify-center"
                               >
                                 <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Try Another Workout</Text>
-                              </TouchableOpacity>
+                              </Pressable>
 
                               {trainerPref === 'favourite' && (
-                                <TouchableOpacity
-                                  activeOpacity={0.8}
+                                <Pressable
                                   onPress={() => triggerTransition(2)}
                                   className="bg-zinc-50 py-4 rounded-xl items-center justify-center"
                                 >
                                   <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Change Trainer Preference</Text>
-                                </TouchableOpacity>
+                                </Pressable>
                               )}
                             </View>
                           </View>
@@ -3995,10 +3978,9 @@ export default function BookingScreen() {
                             const displayTime = getCustomerDisplayTime(slotObj.time);
 
                             return (
-                              <TouchableOpacity
+                              <Pressable
                                 key={idx}
                                 disabled={isDisabled}
-                                activeOpacity={isDisabled ? 1 : 0.8}
                                 onPress={() => {
                                   if (isPicked) {
                                     setSelectedTime('');
@@ -4065,7 +4047,7 @@ export default function BookingScreen() {
                                     <View className="w-6 h-6 rounded-full bg-zinc-50" />
                                   )}
                                 </View>
-                              </TouchableOpacity>
+                              </Pressable>
                             );
                           })}
                         </View>
@@ -4124,9 +4106,8 @@ export default function BookingScreen() {
                       ].map((opt) => {
                         const isSelected = workoutFrequency === opt;
                         return (
-                          <TouchableOpacity
+                          <Pressable
                             key={opt}
-                            activeOpacity={0.75}
                             onPress={() => {
                               setWorkoutFrequency(opt);
                               if (healthValidationErrors.workoutFrequency) {
@@ -4161,7 +4142,7 @@ export default function BookingScreen() {
                                 <View className="w-2 h-2 rounded-full bg-white" />
                               )}
                             </View>
-                          </TouchableOpacity>
+                          </Pressable>
                         );
                       })}
                     </View>
@@ -4198,9 +4179,8 @@ export default function BookingScreen() {
                       ].map((opt) => {
                         const isSelected = injuriesOrPain.includes(opt);
                         return (
-                          <TouchableOpacity
+                          <Pressable
                             key={opt}
-                            activeOpacity={0.75}
                             onPress={() => {
                               if (healthValidationErrors.injuriesOrPain) {
                                 setHealthValidationErrors(prev => {
@@ -4253,7 +4233,7 @@ export default function BookingScreen() {
                                 <Feather name="check" size={13} color="#FFFFFF" />
                               )}
                             </View>
-                          </TouchableOpacity>
+                          </Pressable>
                         );
                       })}
                     </View>
@@ -4326,9 +4306,8 @@ export default function BookingScreen() {
                       ].map((opt) => {
                         const isSelected = healthConditions.includes(opt);
                         return (
-                          <TouchableOpacity
+                          <Pressable
                             key={opt}
-                            activeOpacity={0.75}
                             onPress={() => {
                               if (healthValidationErrors.healthConditions) {
                                 setHealthValidationErrors(prev => {
@@ -4381,7 +4360,7 @@ export default function BookingScreen() {
                                 <Feather name="check" size={13} color="#FFFFFF" />
                               )}
                             </View>
-                          </TouchableOpacity>
+                          </Pressable>
                         );
                       })}
                     </View>
@@ -4452,9 +4431,8 @@ export default function BookingScreen() {
                       ].map((opt) => {
                         const isSelected = doctorAdvice === opt;
                         return (
-                          <TouchableOpacity
+                          <Pressable
                             key={opt}
-                            activeOpacity={0.75}
                             onPress={() => {
                               setDoctorAdvice(opt);
                               if (healthValidationErrors.doctorAdvice) {
@@ -4489,7 +4467,7 @@ export default function BookingScreen() {
                                 <View className="w-2 h-2 rounded-full bg-white" />
                               )}
                             </View>
-                          </TouchableOpacity>
+                          </Pressable>
                         );
                       })}
                     </View>
@@ -4553,8 +4531,7 @@ export default function BookingScreen() {
                   </View>
 
                   {/* Save & Continue Primary Action */}
-                  <TouchableOpacity
-                    activeOpacity={0.85}
+                  <Pressable
                     onPress={handleNext}
                     style={{
                       backgroundColor: '#E11D48',
@@ -4568,7 +4545,7 @@ export default function BookingScreen() {
                       SAVE & CONTINUE
                     </Text>
                     <Feather name="arrow-right" size={15} color="#FFFFFF" />
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               )}
 
@@ -4605,15 +4582,14 @@ export default function BookingScreen() {
                         </View>
                         <Text className="text-zinc-900 text-sm font-bold tracking-tight">Booking Summary</Text>
                       </View>
-                      <TouchableOpacity
-                        activeOpacity={0.8}
+                      <Pressable
                         onPress={() => triggerTransition(1)}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         className="bg-rose-50 border border-rose-100 rounded-xl px-3 py-1.5 flex-row items-center gap-1.5"
                       >
                         <Feather name="edit-2" size={12} color="#E11D48" />
                         <Text className="text-[#E11D48] text-xs font-semibold">Edit</Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
 
                     {/* Workout Info: Thumbnail, Title, Solo Badge */}
@@ -4706,15 +4682,14 @@ export default function BookingScreen() {
                           About your health
                         </Text>
                       </View>
-                      <TouchableOpacity
-                        activeOpacity={0.7}
+                      <Pressable
                         onPress={() => setShowHealthDetailsModal(true)}
                         className="px-2.5 py-1 rounded-full bg-rose-50 border border-rose-100"
                       >
                         <Text className="text-[#E11D48] text-[11px] font-black uppercase tracking-wider">
                           View All
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                     <Text className="text-zinc-500 text-xs font-normal leading-relaxed">
                       Workout: {workoutFrequency} • Pain: {injuriesOrPain.join(', ')}
@@ -4748,9 +4723,8 @@ export default function BookingScreen() {
                       ].map((chip) => {
                         const isSelected = trainerNote.includes(chip.label);
                         return (
-                          <TouchableOpacity
+                          <Pressable
                             key={chip.label}
-                            activeOpacity={0.8}
                             onPress={() => handleChipPress(chip.label)}
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             className={`px-3.5 py-2 rounded-full border flex-row items-center gap-1.5 ${
@@ -4759,7 +4733,7 @@ export default function BookingScreen() {
                           >
                             <Feather name={chip.icon as any} size={12} color="#E11D48" />
                             <Text className="text-[#E11D48] text-xs font-semibold">{chip.label}</Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         );
                       })}
                     </ScrollView>
@@ -4806,15 +4780,14 @@ export default function BookingScreen() {
                           <Text className="text-zinc-500 text-xs font-normal mt-0.5">Cancellation, safety & session rules</Text>
                         </View>
                       </View>
-                      <TouchableOpacity
-                        activeOpacity={0.8}
+                      <Pressable
                         onPress={() => router.push('/legal-center')}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         className="bg-zinc-50 rounded-xl px-3 py-1.5 flex-row items-center gap-1"
                       >
                         <Text className="text-zinc-700 text-xs font-semibold">View Details</Text>
                         <Feather name="chevron-right" size={12} color="#6B7280" />
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
 
                     {/* 2x2 Highlights Grid */}
@@ -4866,8 +4839,7 @@ export default function BookingScreen() {
                   </View>
 
                   {/* Confirm Booking Primary Action */}
-                  <TouchableOpacity
-                    activeOpacity={0.85}
+                  <Pressable
                     onPress={handleConfirmBooking}
                     disabled={isConfirming}
                     className="w-full bg-[#E11D48] items-center justify-center flex-row gap-2 mt-4"
@@ -4885,7 +4857,7 @@ export default function BookingScreen() {
                         <Feather name="chevron-right" size={18} color="white" />
                       </>
                     )}
-                  </TouchableOpacity>
+                  </Pressable>
 
                   {/* Secure booking guarantee lock label */}
                   <View className="flex-row items-center justify-center gap-1.5 mt-1.5">
@@ -4908,13 +4880,12 @@ export default function BookingScreen() {
                           Health & Safety Details
                         </Text>
                       </View>
-                      <TouchableOpacity
-                        activeOpacity={0.7}
+                      <Pressable
                         onPress={() => setShowHealthDetailsModal(false)}
                         className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center"
                       >
                         <Feather name="x" size={16} color="#71717A" />
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
 
                     {/* Modal Content */}
@@ -4966,8 +4937,7 @@ export default function BookingScreen() {
                         </View>
                       ) : null}
 
-                      <TouchableOpacity
-                        activeOpacity={0.85}
+                      <Pressable
                         onPress={() => {
                           setShowHealthDetailsModal(false);
                           triggerTransition(5);
@@ -4977,7 +4947,7 @@ export default function BookingScreen() {
                         <Text className="text-zinc-800 text-xs font-bold">
                           Edit Safety Details
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     </ScrollView>
                   </View>
               </NativeSheet>
@@ -5029,8 +4999,7 @@ export default function BookingScreen() {
             ],
           }}
         >
-          <TouchableOpacity
-            activeOpacity={0.85}
+          <Pressable
             onPress={handleNext}
             style={{
               backgroundColor: '#E11D48', // Virla signature primary red
@@ -5045,7 +5014,7 @@ export default function BookingScreen() {
               Continue
             </Text>
             <Feather name="arrow-right" size={14} color="#FFFFFF" />
-          </TouchableOpacity>
+          </Pressable>
         </Animated.View>
       )}
 
@@ -5091,8 +5060,7 @@ export default function BookingScreen() {
             </Svg>
           </View>
 
-          <TouchableOpacity
-            activeOpacity={0.6}
+          <Pressable
             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
             onPress={() => {
               console.log('[BOOKING] Back button pressed, current step:', step);
@@ -5108,7 +5076,7 @@ export default function BookingScreen() {
             accessibilityLabel="Back"
           >
             <Ionicons name="chevron-back" size={22} color="#101828" style={{ marginLeft: -1 }} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Center Pill Section: Same styling as Credit Details, dynamically switches on scroll */}
@@ -5151,14 +5119,13 @@ export default function BookingScreen() {
             </Text>
           </View>
         ) : step === 7 ? (
-          <TouchableOpacity
+          <Pressable
             onPress={handleShareBooking}
-            activeOpacity={0.8}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             className="w-10 h-10 items-center justify-center rounded-full bg-white/90 shadow-xs"
           >
             <Feather name="share-2" size={16} color="#09090B" />
-          </TouchableOpacity>
+          </Pressable>
         ) : (
           <View style={{ width: 40 }} pointerEvents="none" />
         )}

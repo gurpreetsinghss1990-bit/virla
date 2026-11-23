@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, Pressable, Animated } from 'react-native';
 import Svg, { Circle, Path, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 import { softShadow } from '../utils/shadows';
@@ -213,8 +213,7 @@ export function EmptyState({ type, onAction, actionText, message, title, showCar
         {message || content.description}
       </Text>
       {onAction && (
-        <TouchableOpacity
-          activeOpacity={0.8}
+        <Pressable
           onPress={onAction}
           className="mt-6 bg-[#111827] px-6 py-3.5 rounded-2xl"
           style={{
@@ -224,7 +223,7 @@ export function EmptyState({ type, onAction, actionText, message, title, showCar
           <Text className="text-white text-xs font-extrabold tracking-wide uppercase">
             {actionText || content.defaultActionText}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       )}
     </Animated.View>
   );

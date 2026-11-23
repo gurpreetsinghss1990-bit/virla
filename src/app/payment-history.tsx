@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, Pressable, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useWalletStore } from '../store/walletStore';
@@ -66,8 +66,7 @@ export default function PaymentHistoryScreen() {
                   </View>
 
                   {/* Transaction content card */}
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <Pressable
                     disabled={isFailed}
                     onPress={() => handleInvoiceClick(pay.id)}
                     className="flex-1 bg-white p-4.5 rounded-[24px] shadow-xs flex-row justify-between items-center"
@@ -96,7 +95,7 @@ export default function PaymentHistoryScreen() {
                         </Text>
                       </View>
                     </View>
-                  </TouchableOpacity>
+                  </Pressable>
 
                 </View>
               );

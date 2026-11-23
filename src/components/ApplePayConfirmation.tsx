@@ -1,6 +1,6 @@
 import { Loading } from './Loading';
 import React, { useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, Pressable, Animated } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 import { softShadow } from '../utils/shadows';
@@ -64,8 +64,7 @@ export function ApplePayConfirmation({ onConfirm, priceText = '₹1,200', credit
 
       {/* Tap to Confirm Button */}
       <Animated.View style={{ transform: [{ scale: scaleAnim }] }} className="w-full">
-        <TouchableOpacity
-          activeOpacity={0.9}
+        <Pressable
           onPress={handleConfirm}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
@@ -94,7 +93,7 @@ export function ApplePayConfirmation({ onConfirm, priceText = '₹1,200', credit
               <Feather name="arrow-right" size={14} color="#09090B" />
             </View>
           )}
-        </TouchableOpacity>
+        </Pressable>
       </Animated.View>
 
       <Text className="text-center text-[9px] text-zinc-500 font-bold uppercase tracking-wider mt-3.5">

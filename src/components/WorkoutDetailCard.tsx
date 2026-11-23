@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, LayoutAnimation, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, LayoutAnimation, Platform } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Workout } from '../types';
 import { Ionicons } from '@expo/vector-icons';
@@ -164,8 +164,7 @@ export function WorkoutDetailCard({ workout }: WorkoutDetailCardProps) {
                 const isExpanded = expandedFaq === i;
                 return (
                   <View key={i} className="border border-zinc-100 rounded-2xl overflow-hidden">
-                    <TouchableOpacity
-                      activeOpacity={0.7}
+                    <Pressable
                       onPress={() => toggleFaq(i)}
                       className="bg-zinc-50/50 px-4 py-4 flex-row justify-between items-center"
                     >
@@ -175,7 +174,7 @@ export function WorkoutDetailCard({ workout }: WorkoutDetailCardProps) {
                         size={16}
                         color="#71717A"
                       />
-                    </TouchableOpacity>
+                    </Pressable>
                     {isExpanded && (
                       <View className="bg-white px-4 py-3.5 border-t border-zinc-100">
                         <Text className="text-zinc-500 text-xs font-medium leading-relaxed">

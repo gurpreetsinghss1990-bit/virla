@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import Reanimated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
 
@@ -104,16 +104,15 @@ export const InlineDatePicker: React.FC<InlineDatePickerProps> = React.memo(({
             const m = idx + 1;
             const isSelected = selectedMonth === m;
             return (
-              <TouchableOpacity
+              <Pressable
                 key={name}
-                activeOpacity={0.7}
                 onPress={() => updateMonth(m)}
                 style={[styles.pill, isSelected && styles.pillSelected]}
               >
                 <Text style={[styles.pillText, isSelected && styles.pillTextSelected]}>
                   {name}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             );
           })}
         </ScrollView>
@@ -130,16 +129,15 @@ export const InlineDatePicker: React.FC<InlineDatePickerProps> = React.memo(({
           {daysList.map((d) => {
             const isSelected = selectedDay === d;
             return (
-              <TouchableOpacity
+              <Pressable
                 key={d}
-                activeOpacity={0.7}
                 onPress={() => updateDay(d)}
                 style={[styles.dayPill, isSelected && styles.pillSelected]}
               >
                 <Text style={[styles.pillText, isSelected && styles.pillTextSelected]}>
                   {d}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             );
           })}
         </ScrollView>
@@ -156,16 +154,15 @@ export const InlineDatePicker: React.FC<InlineDatePickerProps> = React.memo(({
           {yearsList.map((y) => {
             const isSelected = selectedYear === y;
             return (
-              <TouchableOpacity
+              <Pressable
                 key={y}
-                activeOpacity={0.7}
                 onPress={() => updateYear(y)}
                 style={[styles.pill, isSelected && styles.pillSelected]}
               >
                 <Text style={[styles.pillText, isSelected && styles.pillTextSelected]}>
                   {y}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             );
           })}
         </ScrollView>
@@ -174,14 +171,13 @@ export const InlineDatePicker: React.FC<InlineDatePickerProps> = React.memo(({
       {/* Footer / Confirm */}
       {onClose && (
         <View style={styles.footer}>
-          <TouchableOpacity
-            activeOpacity={0.8}
+          <Pressable
             onPress={onClose}
             style={styles.doneButton}
           >
             <Feather name="check" size={14} color="#FFFFFF" />
             <Text style={styles.doneButtonText}>Done</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )}
     </Reanimated.View>

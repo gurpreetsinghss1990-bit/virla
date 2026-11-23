@@ -1,6 +1,6 @@
 import { Loading } from './Loading';
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, KeyboardAvoidingView, Platform, Keyboard, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, TextInput, ScrollView, KeyboardAvoidingView, Platform, Keyboard, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -180,12 +180,12 @@ export function SupportChatModal({
         {/* Header */}
         <View className="h-16 px-5 border-b border-zinc-150 flex-row items-center justify-between bg-white">
           <View className="flex-row items-center gap-3 flex-1 mr-2">
-            <TouchableOpacity
+            <Pressable
               onPress={onClose}
               className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center active:opacity-70"
             >
               <Ionicons name="arrow-back" size={20} color="#18181B" />
-            </TouchableOpacity>
+            </Pressable>
             <View className="flex-1">
               <View className="flex-row items-center gap-1.5">
                 <View className={`w-2 h-2 rounded-full ${ticket.status === 'OPEN' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
@@ -312,8 +312,7 @@ export function SupportChatModal({
 
                     {/* Admin option to view session details attached below the issue report card */}
                     {isTicketSummary && currentRole === 'admin' && ticket.booking_id && (
-                      <TouchableOpacity
-                        activeOpacity={0.8}
+                      <Pressable
                         onPress={() => {
                           onClose();
                           router.push({
@@ -330,7 +329,7 @@ export function SupportChatModal({
                           </Text>
                         </View>
                         <Feather name="chevron-right" size={12} color="#E11D48" />
-                      </TouchableOpacity>
+                      </Pressable>
                     )}
                   </View>
                 );
@@ -371,7 +370,7 @@ export function SupportChatModal({
                 className="flex-1 bg-zinc-100 border border-zinc-200/80 rounded-2xl px-4 py-3 text-xs font-semibold text-zinc-900 max-h-24"
                 multiline
               />
-              <TouchableOpacity
+              <Pressable
                 onPress={handleSend}
                 disabled={!inputText.trim() || isSending}
                 className={`w-11 h-11 rounded-2xl items-center justify-center ${
@@ -383,7 +382,7 @@ export function SupportChatModal({
                 ) : (
                   <Feather name="arrow-up" size={18} color={inputText.trim() ? '#FFFFFF' : '#9CA3AF'} />
                 )}
-              </TouchableOpacity>
+              </Pressable>
             </View>
           )}
         </KeyboardAvoidingView>

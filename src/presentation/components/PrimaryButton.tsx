@@ -1,6 +1,6 @@
 import { Loading } from '../../components/Loading';
 import React, { useRef, useState } from 'react';
-import { Animated, TouchableOpacity, Text, View, StyleSheet } from 'react-native';
+import { Animated, Pressable, Text, View, StyleSheet } from 'react-native';
 import Svg, { Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 import { softShadow } from '../../utils/shadows';
@@ -43,8 +43,7 @@ export function PrimaryButton({
 
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }} className="w-full">
-      <TouchableOpacity
-        activeOpacity={0.9}
+      <Pressable
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
@@ -79,7 +78,7 @@ export function PrimaryButton({
             </Text>
           </View>
         )}
-      </TouchableOpacity>
+      </Pressable>
     </Animated.View>
   );
 }

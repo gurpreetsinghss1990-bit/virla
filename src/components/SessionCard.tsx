@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, Pressable, Alert } from 'react-native';
 import { Booking } from '../types';
 import { useBookingStore } from '../store/bookingStore';
 import { AvatarImage } from './AvatarImage';
@@ -104,20 +104,18 @@ export function SessionCard({ booking }: SessionCardProps) {
 
       {/* Actions */}
       <View className="flex-row gap-3">
-        <TouchableOpacity
-          activeOpacity={0.7}
+        <Pressable
           onPress={handleReschedule}
           className="flex-1 bg-zinc-50 py-3 rounded-xl items-center justify-center"
         >
           <Text className="text-primary text-xs font-bold">Reschedule</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          activeOpacity={0.7}
+        </Pressable>
+        <Pressable
           onPress={handleCancel}
           className="flex-1 bg-red-50 border border-red-100 py-3 rounded-xl items-center justify-center"
         >
           <Text className="text-red-500 text-xs font-bold">Cancel</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );

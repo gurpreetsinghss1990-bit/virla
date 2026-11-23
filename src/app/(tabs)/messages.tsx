@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -306,11 +306,11 @@ export default function MessagesScreen() {
             clearButtonMode="while-editing"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Pressable onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <View className="w-4 h-4 rounded-full bg-zinc-300 items-center justify-center">
                 <Feather name="x" size={10} color="white" />
               </View>
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
       </View>

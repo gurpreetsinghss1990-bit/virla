@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Animated, PanResponder, Easing, Platform, Dimensions, Image } from 'react-native';
+import { View, Text, Pressable, Animated, PanResponder, Easing, Platform, Dimensions, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -501,8 +501,7 @@ export default function OnboardingScreen() {
             <PageIndicator activeIndex={0} total={3} />
 
             {/* NEXT BUTTON: Styled with White background, Black text, Thick border & bold uppercase */}
-            <TouchableOpacity
-              activeOpacity={0.85}
+            <Pressable
               onPress={() => goToSlide(1)}
               style={{
                 flexDirection: 'row',
@@ -531,7 +530,7 @@ export default function OnboardingScreen() {
               <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <Path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="#000000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
               </Svg>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       ) : (
@@ -623,8 +622,7 @@ export default function OnboardingScreen() {
                   transform: [{ scale: buttonScaleAnim }],
                 }}
               >
-                <TouchableOpacity
-                  activeOpacity={0.85}
+                <Pressable
                   onPress={handleFinishOnboarding}
                   style={{
                     flexDirection: 'row',
@@ -653,11 +651,10 @@ export default function OnboardingScreen() {
                   <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                     <Path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="#000000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                   </Svg>
-                </TouchableOpacity>
+                </Pressable>
               </Animated.View>
             ) : (
-              <TouchableOpacity
-                activeOpacity={0.85}
+              <Pressable
                 onPress={() => goToSlide(2)}
                 style={{
                   flexDirection: 'row',
@@ -686,7 +683,7 @@ export default function OnboardingScreen() {
                 <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                   <Path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="#000000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                 </Svg>
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
         </View>

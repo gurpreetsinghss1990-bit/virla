@@ -1,7 +1,7 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Animated, Dimensions, StyleSheet, Text, Pressable, View, Platform } from 'react-native';
 import Svg, { Defs, LinearGradient, RadialGradient, Stop, Rect, Line } from 'react-native-svg';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,11 +33,10 @@ const TabButton = React.memo(({ route, isFocused, onPress, getIcon, getLabel, ha
   }, [isFocused]);
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.75}
+    <Pressable
       onPress={onPress}
       className="items-center justify-center flex-1 py-1 z-10 relative"
-      style={{ minHeight: 42, zIndex: 10 }}
+      style={({ pressed }) => [{ minHeight: 42, zIndex: 10, opacity: pressed ? 0.75 : 1 }]}
     >
       <View className="items-center justify-center">
         {/* Animated Icon Wrapper with spring pop on switch */}
@@ -63,7 +62,7 @@ const TabButton = React.memo(({ route, isFocused, onPress, getIcon, getLabel, ha
           {getLabel(route.name)}
         </Text>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 });
 
@@ -244,8 +243,7 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
             return (
               <React.Fragment key="group-center">
                 <View className="items-center justify-center px-1 py-0.5 z-20 relative" style={{ minHeight: 42 }}>
-                  <TouchableOpacity
-                    activeOpacity={0.9}
+                  <Pressable
                     onPress={handlePlusPress}
                     className="w-10 h-10 rounded-full bg-[#E11D48] items-center justify-center"
                     style={{
@@ -256,7 +254,7 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
                     }}
                   >
                     <Feather name="plus" size={20} color="white" />
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
                 {tabElement}
               </React.Fragment>

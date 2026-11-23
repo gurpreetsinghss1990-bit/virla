@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, Pressable } from 'react-native';
 import { NativeSheet } from './NativeSheet';
 import { DatePicker, Host } from '@expo/ui/swift-ui';
 
@@ -33,18 +33,18 @@ export const NativeDatePickerDialog: React.FC<NativeDatePickerDialogProps> = ({
     <NativeSheet visible={visible} onClose={onDismiss} backgroundColor="#FFFFFF">
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={onDismiss}>
+          <Pressable onPress={onDismiss}>
             <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
+          </Pressable>
           <Text style={styles.title}>Select Date of Birth</Text>
-          <TouchableOpacity
+          <Pressable
             onPress={() => {
               onDateSelected(selectedDate);
               onDismiss();
             }}
           >
             <Text style={styles.doneText}>Done</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
         <Host style={styles.pickerHost}>
           <DatePicker

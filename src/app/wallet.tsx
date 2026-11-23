@@ -1,6 +1,6 @@
 import { Loading } from '../components/Loading';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, TouchableOpacity, TextInput, Alert, Linking, Share, Platform } from 'react-native';
+import { View, Text, Pressable, TextInput, Alert, Linking, Share, Platform } from 'react-native';
 import Animated, { useSharedValue, useAnimatedScrollHandler, runOnJS } from 'react-native-reanimated';
 import { InteractionManager } from '../utils/interactionManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -538,22 +538,24 @@ export default function WalletScreen() {
                     </Text>
                   </View>
                 </View>
-                <TouchableOpacity
-                  activeOpacity={0.85}
+                <Pressable
                   onPress={() => router.push('/membership' as any)}
-                  style={{
-                    backgroundColor: '#FFF1F2',
-                    borderColor: '#FECDD3',
-                    borderWidth: 1,
-                    paddingHorizontal: 13,
-                    paddingVertical: 7,
-                    borderRadius: 9999,
-                  }}
+                  style={({ pressed }) => [
+                    {
+                      backgroundColor: '#FFF1F2',
+                      borderColor: '#FECDD3',
+                      borderWidth: 1,
+                      paddingHorizontal: 13,
+                      paddingVertical: 7,
+                      borderRadius: 9999,
+                      opacity: pressed ? 0.85 : 1,
+                    },
+                  ]}
                 >
                   <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#BE123C] text-[11px] tracking-wider uppercase">
                     RECHARGE
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             ) : role !== 'trainer' && creditBalance <= 2 ? (
               <View 
@@ -585,22 +587,24 @@ export default function WalletScreen() {
                     </Text>
                   </View>
                 </View>
-                <TouchableOpacity
-                  activeOpacity={0.85}
+                <Pressable
                   onPress={() => router.push('/membership' as any)}
-                  style={{
-                    backgroundColor: '#FFF1F2',
-                    borderColor: '#FECDD3',
-                    borderWidth: 1,
-                    paddingHorizontal: 13,
-                    paddingVertical: 7,
-                    borderRadius: 9999,
-                  }}
+                  style={({ pressed }) => [
+                    {
+                      backgroundColor: '#FFF1F2',
+                      borderColor: '#FECDD3',
+                      borderWidth: 1,
+                      paddingHorizontal: 13,
+                      paddingVertical: 7,
+                      borderRadius: 9999,
+                      opacity: pressed ? 0.85 : 1,
+                    },
+                  ]}
                 >
                   <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#BE123C] text-[11px] tracking-wider uppercase">
                     RECHARGE
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             ) : approachingLots.length > 0 ? (
               <View 
@@ -630,25 +634,26 @@ export default function WalletScreen() {
                   </View>
                 </View>
                 <View className="flex-row items-center gap-2">
-                  <TouchableOpacity
-                    activeOpacity={0.85}
+                  <Pressable
                     onPress={() => router.push('/membership' as any)}
-                    style={{
-                      backgroundColor: '#E11D48',
-                      paddingHorizontal: 12,
-                      paddingVertical: 6,
-                      borderRadius: 9999,
-                    }}
+                    style={({ pressed }) => [
+                      {
+                        backgroundColor: '#E11D48',
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 9999,
+                        opacity: pressed ? 0.85 : 1,
+                      },
+                    ]}
                   >
                     <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-white text-[10px] uppercase">EXTEND</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    activeOpacity={0.7}
+                  </Pressable>
+                  <Pressable
                     onPress={() => setDismissPriorityNotice(true)}
                     className="p-1"
                   >
                     <Feather name="x" size={16} color="#64748B" />
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </View>
             ) : null
@@ -756,10 +761,37 @@ export default function WalletScreen() {
             {/* Primary Dual Action Buttons (Dark Obsidian #090D16) */}
             <View className="flex-row gap-3 w-full mt-5 px-1">
               {role !== 'trainer' && (
-                <TouchableOpacity
-                  activeOpacity={0.88}
+                <Pressable
                   onPress={() => router.push('/membership' as any)}
-                  style={{
+                  style={({ pressed }) => [
+                    {
+                      backgroundColor: '#090D16',
+                      borderRadius: 14,
+                      paddingVertical: 14,
+                      paddingHorizontal: 16,
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      opacity: pressed ? 0.88 : 1,
+                      ...softShadow({ color: '#090D16', opacity: 0.18, radius: 8, offsetY: 3 }),
+                    },
+                  ]}
+                >
+                  <Feather name="plus-circle" size={16} color="#FFFFFF" />
+                  <Text 
+                    style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8 }}
+                    className="text-white text-xs uppercase"
+                  >
+                    Recharge Wallet
+                  </Text>
+                </Pressable>
+              )}
+              <Pressable
+                onPress={() => setActiveTab('transfer')}
+                style={({ pressed }) => [
+                  {
                     backgroundColor: '#090D16',
                     borderRadius: 14,
                     paddingVertical: 14,
@@ -769,33 +801,10 @@ export default function WalletScreen() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 8,
+                    opacity: pressed ? 0.88 : 1,
                     ...softShadow({ color: '#090D16', opacity: 0.18, radius: 8, offsetY: 3 }),
-                  }}
-                >
-                  <Feather name="plus-circle" size={16} color="#FFFFFF" />
-                  <Text 
-                    style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8 }}
-                    className="text-white text-xs uppercase"
-                  >
-                    Recharge Wallet
-                  </Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                activeOpacity={0.88}
-                onPress={() => setActiveTab('transfer')}
-                style={{
-                  backgroundColor: '#090D16',
-                  borderRadius: 14,
-                  paddingVertical: 14,
-                  paddingHorizontal: 16,
-                  flex: 1,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  ...softShadow({ color: '#090D16', opacity: 0.18, radius: 8, offsetY: 3 }),
-                }}
+                  },
+                ]}
               >
                 <Feather name="send" size={15} color="#FFFFFF" style={{ transform: [{ rotate: '-12deg' }] }} />
                 <Text 
@@ -804,7 +813,7 @@ export default function WalletScreen() {
                 >
                   Transfer Credits
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
 
@@ -855,8 +864,7 @@ export default function WalletScreen() {
             <View className="h-9 w-[1px] bg-slate-100" />
 
             {/* Col 3: Next */}
-            <TouchableOpacity
-              activeOpacity={0.7}
+            <Pressable
               onPress={handleUpcomingBookingsPress}
               className="flex-1 items-center justify-center px-1"
             >
@@ -869,13 +877,12 @@ export default function WalletScreen() {
               <Text style={{ fontFamily: 'Outfit_400Regular' }} className="text-[11px] text-slate-400">
                 {upcomingCount} Upcoming
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Category Tabs Navigation: LEDGER | TRANSFER | LOTS */}
           <View className="flex-row border-b border-slate-200/80 mt-1">
-            <TouchableOpacity
-              activeOpacity={0.75}
+            <Pressable
               onPress={() => setActiveTab('ledger')}
               className={`flex-1 pb-3 items-center justify-center border-b-2 ${
                 activeTab === 'ledger' ? 'border-slate-900 -mb-[1px]' : 'border-transparent'
@@ -890,10 +897,9 @@ export default function WalletScreen() {
               >
                 LEDGER
               </Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
-              activeOpacity={0.75}
+            <Pressable
               onPress={() => setActiveTab('transfer')}
               className={`flex-1 pb-3 items-center justify-center border-b-2 ${
                 activeTab === 'transfer' ? 'border-slate-900 -mb-[1px]' : 'border-transparent'
@@ -908,10 +914,9 @@ export default function WalletScreen() {
               >
                 TRANSFER
               </Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
-              activeOpacity={0.75}
+            <Pressable
               onPress={() => setActiveTab('lots')}
               className={`flex-1 pb-3 items-center justify-center border-b-2 ${
                 activeTab === 'lots' ? 'border-slate-900 -mb-[1px]' : 'border-transparent'
@@ -926,7 +931,7 @@ export default function WalletScreen() {
               >
                 LOTS
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Tab 1: Credit Lots */}
@@ -1026,15 +1031,15 @@ export default function WalletScreen() {
 
                     {activeLots.length > 3 && (
                       <View style={{ marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderColor: '#F1F4F9' }}>
-                        <TouchableOpacity
-                          activeOpacity={0.7}
+                        <Pressable
                           onPress={() => setShowAllLots(!showAllLots)}
                           className="items-center justify-center py-1"
+                          style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
                         >
                           <Text style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.6 }} className="text-slate-600 text-[11px] uppercase">
                             {showAllLots ? 'Show Less' : `View All ${activeLots.length} Packs`}
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
 
                         {showAllLots && (
                           <View className="gap-2.5 mt-3">
@@ -1211,22 +1216,24 @@ export default function WalletScreen() {
                           color: '#0F172A',
                         }}
                       />
-                      <TouchableOpacity
-                        activeOpacity={0.85}
+                      <Pressable
                         onPress={handleVerifyRecipient}
-                        style={{
-                          backgroundColor: '#090D16',
-                          paddingHorizontal: 16,
-                          borderRadius: 12,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          ...softShadow({ color: '#090D16', opacity: 0.15, radius: 6, offsetY: 2 }),
-                        }}
+                        style={({ pressed }) => [
+                          {
+                            backgroundColor: '#090D16',
+                            paddingHorizontal: 16,
+                            borderRadius: 12,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            opacity: pressed ? 0.85 : 1,
+                            ...softShadow({ color: '#090D16', opacity: 0.15, radius: 6, offsetY: 2 }),
+                          },
+                        ]}
                       >
                         <Text style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.6 }} className="text-white text-[11px] uppercase">
                           Verify
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
 
                     {/* Recipient status confirmations */}
@@ -1258,8 +1265,7 @@ export default function WalletScreen() {
                         </View>
                         
                         <View className="flex-row gap-2">
-                          <TouchableOpacity
-                            activeOpacity={0.85}
+                          <Pressable
                             onPress={handleInviteWhatsApp}
                             style={{
                               flex: 1,
@@ -1277,10 +1283,9 @@ export default function WalletScreen() {
                             <Text style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.5 }} className="text-white text-[11px] uppercase">
                               {isInviteSent ? t('wallet.invited_whatsapp', 'Invited on WhatsApp ✓') : t('wallet.invite_whatsapp', 'Invite via WhatsApp')}
                             </Text>
-                          </TouchableOpacity>
+                          </Pressable>
 
-                          <TouchableOpacity
-                            activeOpacity={0.8}
+                          <Pressable
                             onPress={handleShareMoreOptions}
                             style={{
                               backgroundColor: '#FFFFFF',
@@ -1299,7 +1304,7 @@ export default function WalletScreen() {
                             <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-slate-700 text-[11px]">
                               {t('wallet.more_options', 'More')}
                             </Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         </View>
                       </View>
                     )}
@@ -1358,20 +1363,22 @@ export default function WalletScreen() {
                     />
                   </View>
 
-                  <TouchableOpacity
-                    activeOpacity={0.88}
+                  <Pressable
                     onPress={handleTransfer}
                     disabled={recipientStatus !== 'found'}
-                    style={{
-                      width: '100%',
-                      paddingVertical: 14,
-                      borderRadius: 14,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginTop: 4,
-                      backgroundColor: recipientStatus === 'found' ? '#090D16' : '#F1F5F9',
-                      ...(recipientStatus === 'found' ? softShadow({ color: '#090D16', opacity: 0.2, radius: 8, offsetY: 3 }) : {}),
-                    }}
+                    style={({ pressed }) => [
+                      {
+                        width: '100%',
+                        paddingVertical: 14,
+                        borderRadius: 14,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginTop: 4,
+                        backgroundColor: recipientStatus === 'found' ? '#090D16' : '#F1F5F9',
+                        opacity: pressed && recipientStatus === 'found' ? 0.88 : 1,
+                        ...(recipientStatus === 'found' ? softShadow({ color: '#090D16', opacity: 0.2, radius: 8, offsetY: 3 }) : {}),
+                      },
+                    ]}
                   >
                     <Text 
                       style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8 }}
@@ -1379,7 +1386,7 @@ export default function WalletScreen() {
                     >
                       Transfer Credits
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </View>
             </View>
@@ -1411,22 +1418,24 @@ export default function WalletScreen() {
                   const isActive = ledgerFilter === filter;
                   const label = filter === 'booking' ? 'Sessions' : filter === 'purchase' ? 'Purchases' : filter === 'refund' ? 'Refunds' : 'All';
                   return (
-                    <TouchableOpacity
+                    <Pressable
                       key={filter}
-                      activeOpacity={0.75}
                       onPress={() => {
                         setLedgerFilter(filter);
                         setVisibleLedgerCount(8);
                       }}
-                      style={{
-                        backgroundColor: isActive ? '#0F172A' : '#FFFFFF',
-                        borderColor: isActive ? '#0F172A' : '#E2E8F0',
-                        borderWidth: 1,
-                        borderRadius: 9999,
-                        paddingHorizontal: isActive && filter === 'all' ? 18 : 14,
-                        paddingVertical: 6,
-                        ...softShadow({ color: '#0F172A', opacity: isActive ? 0.12 : 0.03, radius: 4, offsetY: 1 }),
-                      }}
+                      style={({ pressed }) => [
+                        {
+                          backgroundColor: isActive ? '#0F172A' : '#FFFFFF',
+                          borderColor: isActive ? '#0F172A' : '#E2E8F0',
+                          borderWidth: 1,
+                          borderRadius: 9999,
+                          paddingHorizontal: isActive && filter === 'all' ? 18 : 14,
+                          paddingVertical: 6,
+                          opacity: pressed ? 0.75 : 1,
+                          ...softShadow({ color: '#0F172A', opacity: isActive ? 0.12 : 0.03, radius: 4, offsetY: 1 }),
+                        },
+                      ]}
                     >
                       <Text 
                         style={{ fontFamily: isActive ? 'Outfit_700Bold' : 'Outfit_500Medium' }}
@@ -1434,7 +1443,7 @@ export default function WalletScreen() {
                       >
                         {label}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 })}
               </View>
@@ -1512,15 +1521,14 @@ export default function WalletScreen() {
                     })}
 
                     {filteredLedger.length > visibleLedgerCount && (
-                      <TouchableOpacity
-                        activeOpacity={0.8}
+                      <Pressable
                         onPress={() => setVisibleLedgerCount(prev => Math.min(prev + 8, filteredLedger.length))}
                         className="py-3 mt-2 rounded-2xl bg-white border border-slate-200/80 items-center justify-center shadow-xs"
                       >
                         <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-slate-800 text-xs uppercase tracking-wider">
                           Load More ({filteredLedger.length - visibleLedgerCount} remaining)
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     )}
                   </>
                 )}
@@ -1569,20 +1577,18 @@ export default function WalletScreen() {
             </View>
 
             <View className="flex-row gap-3.5 mt-2">
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Pressable
                 onPress={() => setShowConfirmModal(false)}
                 className="flex-1 bg-zinc-100 py-3.5 rounded-xl items-center justify-center"
               >
                 <Text className="text-zinc-700 text-xs font-bold uppercase">Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.85}
+              </Pressable>
+              <Pressable
                 onPress={handleTransferConfirm}
                 className="flex-1 bg-[#E11D48] py-3.5 rounded-xl items-center justify-center shadow-sm"
               >
                 <Text className="text-white text-xs font-bold uppercase">Confirm</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -1627,8 +1633,7 @@ export default function WalletScreen() {
             </Svg>
           </View>
 
-          <TouchableOpacity
-            activeOpacity={0.6}
+          <Pressable
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             onPress={() => {
               if (router.canGoBack()) {
@@ -1642,7 +1647,7 @@ export default function WalletScreen() {
             accessibilityLabel="Back"
           >
             <Ionicons name="chevron-back" size={22} color="#101828" style={{ marginLeft: -1 }} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Center Pill Section: Lightweight, seamless pill with ultra-subtle transparent frosted backdrop */}

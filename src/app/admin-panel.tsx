@@ -1,7 +1,7 @@
 import { Loading } from '../components/Loading';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Platform, TextInput, Linking } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert, Platform, TextInput, Linking } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -651,12 +651,12 @@ export default function AdminPanelScreen() {
           <Text className="text-zinc-500 text-xs font-semibold text-center mt-2 leading-relaxed">
             You do not have administrative permissions to view this control panel.
           </Text>
-          <TouchableOpacity
+          <Pressable
             onPress={() => router.replace('/(tabs)/profile' as any)}
             className="mt-6 bg-[#101828] py-3.5 px-6 rounded-xl shadow-md"
           >
             <Text className="text-white text-xs font-black uppercase tracking-wider">Return to Profile</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </SafeAreaViewWrapper>
     );
@@ -667,7 +667,7 @@ export default function AdminPanelScreen() {
       <View className="flex-1 bg-[#FCF5F5]">
         {/* Header */}
         <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
-          <TouchableOpacity 
+          <Pressable 
             onPress={() => {
               if (router.canGoBack()) {
                 router.back();
@@ -678,13 +678,13 @@ export default function AdminPanelScreen() {
             className="w-8 h-8 items-center justify-center"
           >
             <Ionicons name="arrow-back" size={20} color="#101828" />
-          </TouchableOpacity>
+          </Pressable>
           <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">
             Admin Control Panel
           </Text>
-          <TouchableOpacity onPress={refreshAllAdminData} className="w-8 h-8 items-center justify-center">
+          <Pressable onPress={refreshAllAdminData} className="w-8 h-8 items-center justify-center">
             <Feather name="refresh-cw" size={16} color="#101828" />
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Navigation Tabs Header */}
@@ -694,56 +694,56 @@ export default function AdminPanelScreen() {
             showsHorizontalScrollIndicator={false} 
             contentContainerStyle={{ paddingHorizontal: 8, paddingVertical: 6, gap: 8 }}
           >
-            <TouchableOpacity
+            <Pressable
               onPress={() => setActiveTab('applications')}
               className={`px-4 py-2 rounded-xl items-center justify-center ${activeTab === 'applications' ? 'bg-zinc-950' : 'bg-zinc-50 border border-zinc-200/50'}`}
             >
               <Text className={`text-[9px] font-black uppercase tracking-wider ${activeTab === 'applications' ? 'text-white' : 'text-zinc-500'}`}>Onboarding</Text>
-            </TouchableOpacity>
+            </Pressable>
             
-            <TouchableOpacity
+            <Pressable
               onPress={() => router.push('/admin-workout-approvals')}
               className="px-4 py-2 rounded-xl items-center justify-center bg-zinc-50"
             >
               <Text className="text-[9px] font-black uppercase tracking-wider text-zinc-500 font-extrabold">Workouts</Text>
-            </TouchableOpacity>
+            </Pressable>
             
-            <TouchableOpacity
+            <Pressable
               onPress={() => setActiveTab('locations')}
               className={`px-4 py-2 rounded-xl items-center justify-center ${activeTab === 'locations' ? 'bg-zinc-950' : 'bg-zinc-50 border border-zinc-200/50'}`}
             >
               <Text className={`text-[9px] font-black uppercase tracking-wider ${activeTab === 'locations' ? 'text-white' : 'text-zinc-500'}`}>Locations</Text>
-            </TouchableOpacity>
+            </Pressable>
             
-            <TouchableOpacity
+            <Pressable
               onPress={() => setActiveTab('live')}
               className={`px-4 py-2 rounded-xl items-center justify-center ${activeTab === 'live' ? 'bg-zinc-950' : 'bg-zinc-50 border border-zinc-200/50'}`}
             >
               <Text className={`text-[9px] font-black uppercase tracking-wider ${activeTab === 'live' ? 'text-white' : 'text-zinc-500'}`}>Live Console</Text>
-            </TouchableOpacity>
+            </Pressable>
             
-            <TouchableOpacity
+            <Pressable
               onPress={() => setActiveTab('acceptance')}
               className={`px-4 py-2 rounded-xl items-center justify-center ${activeTab === 'acceptance' ? 'bg-zinc-950' : 'bg-zinc-50 border border-zinc-200/50'}`}
             >
               <Text className={`text-[9px] font-black uppercase tracking-wider ${activeTab === 'acceptance' ? 'text-white' : 'text-zinc-500'}`}>Acceptance</Text>
-            </TouchableOpacity>
+            </Pressable>
             
-            <TouchableOpacity
+            <Pressable
               onPress={() => setActiveTab('disputes')}
               className={`px-4 py-2 rounded-xl items-center justify-center ${activeTab === 'disputes' ? 'bg-zinc-950' : 'bg-zinc-50 border border-zinc-200/50'}`}
             >
               <Text className={`text-[9px] font-black uppercase tracking-wider ${activeTab === 'disputes' ? 'text-white' : 'text-zinc-500'}`}>Disputes</Text>
-            </TouchableOpacity>
+            </Pressable>
             
-            <TouchableOpacity
+            <Pressable
               onPress={() => setActiveTab('kits')}
               className={`px-4 py-2 rounded-xl items-center justify-center ${activeTab === 'kits' ? 'bg-zinc-950' : 'bg-zinc-50 border border-zinc-200/50'}`}
             >
               <Text className={`text-[9px] font-black uppercase tracking-wider ${activeTab === 'kits' ? 'text-white' : 'text-zinc-500'}`}>Kits</Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
+            <Pressable
               onPress={() => setActiveTab('enquiries')}
               className={`px-4 py-2 rounded-xl items-center justify-center flex-row gap-1.5 ${activeTab === 'enquiries' ? 'bg-indigo-600' : 'bg-indigo-50 border border-indigo-200/60'}`}
             >
@@ -758,9 +758,9 @@ export default function AdminPanelScreen() {
                   </Text>
                 </View>
               )}
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
+            <Pressable
               onPress={() => setActiveTab('support')}
               className={`px-4 py-2 rounded-xl items-center justify-center flex-row gap-1.5 ${activeTab === 'support' ? 'bg-rose-600' : 'bg-rose-50 border border-rose-200/60'}`}
             >
@@ -775,7 +775,7 @@ export default function AdminPanelScreen() {
                   </Text>
                 </View>
               )}
-            </TouchableOpacity>
+            </Pressable>
           </ScrollView>
         </View>
 
@@ -905,8 +905,7 @@ export default function AdminPanelScreen() {
                             {/* Selfie and Certificates Links */}
                             <View className="flex-row gap-2.5">
                               {/* Selfie View */}
-                              <TouchableOpacity
-                                activeOpacity={0.8}
+                              <Pressable
                                 onPress={() => handleViewDocument(app.documentSelfie || app.avatar)}
                                 className="flex-1 bg-zinc-50 p-3 rounded-xl items-center justify-center flex-row gap-2"
                               >
@@ -915,7 +914,7 @@ export default function AdminPanelScreen() {
                                   <Text className="text-zinc-500 text-[8px] font-bold uppercase">Profile Selfie</Text>
                                   <Text className="text-zinc-900 text-[10px] font-black">View Photo ↗</Text>
                                 </View>
-                              </TouchableOpacity>
+                              </Pressable>
 
                               {/* Certificates View */}
                               {(() => {
@@ -936,8 +935,7 @@ export default function AdminPanelScreen() {
                                 const hasCert = !!certUrl && certUrl.trim() !== '' && certUrl !== '[]' && certUrl !== '[""]';
 
                                 return (
-                                  <TouchableOpacity
-                                    activeOpacity={hasCert ? 0.8 : 1}
+                                  <Pressable
                                     disabled={!hasCert}
                                     onPress={() => hasCert && handleViewDocument(certUrl)}
                                     className={`flex-1 p-3 rounded-xl border items-center justify-center flex-row gap-2 ${
@@ -953,7 +951,7 @@ export default function AdminPanelScreen() {
                                         {hasCert ? 'View File ↗' : 'Not Uploaded'}
                                       </Text>
                                     </View>
-                                  </TouchableOpacity>
+                                  </Pressable>
                                 );
                               })()}
                             </View>
@@ -978,9 +976,8 @@ export default function AdminPanelScreen() {
                                         Uploaded Qualification Certificates ({mapEntries.length}):
                                       </Text>
                                       {mapEntries.map(([qualName, cUrl], idx) => (
-                                        <TouchableOpacity
+                                        <Pressable
                                           key={idx}
-                                          activeOpacity={0.7}
                                           onPress={() => handleViewDocument(cUrl)}
                                           className="flex-row items-center justify-between p-2.5 bg-white rounded-lg shadow-2xs"
                                         >
@@ -993,7 +990,7 @@ export default function AdminPanelScreen() {
                                           <View className="flex-row items-center gap-1 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
                                             <Text className="text-emerald-700 text-[9px] font-black uppercase">View Doc ↗</Text>
                                           </View>
-                                        </TouchableOpacity>
+                                        </Pressable>
                                       ))}
                                     </View>
                                   );
@@ -1011,9 +1008,8 @@ export default function AdminPanelScreen() {
                                         Uploaded Certificates ({list.length}):
                                       </Text>
                                       {list.map((cUrl: string, idx: number) => (
-                                        <TouchableOpacity
+                                        <Pressable
                                           key={idx}
-                                          activeOpacity={0.7}
                                           onPress={() => handleViewDocument(cUrl)}
                                           className="flex-row items-center justify-between p-2.5 bg-white rounded-lg shadow-2xs"
                                         >
@@ -1026,7 +1022,7 @@ export default function AdminPanelScreen() {
                                           <View className="flex-row items-center gap-1 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200">
                                             <Text className="text-emerald-700 text-[9px] font-black uppercase">View Doc ↗</Text>
                                           </View>
-                                        </TouchableOpacity>
+                                        </Pressable>
                                       ))}
                                     </View>
                                   );
@@ -1054,9 +1050,8 @@ export default function AdminPanelScreen() {
                               <View className="gap-2 mt-1">
                                 <View className="flex-row gap-2">
                                   {/* 1. Physical Interview Button: Disables once clicked */}
-                                  <TouchableOpacity
+                                  <Pressable
                                     disabled={app.status === 'interview_scheduled'}
-                                    activeOpacity={0.8}
                                     onPress={() => handlePhysicalInterviewApp(app.id)}
                                     className={`flex-1 py-3 rounded-lg items-center justify-center ${
                                       app.status === 'interview_scheduled'
@@ -1069,12 +1064,11 @@ export default function AdminPanelScreen() {
                                     }`}>
                                       {app.status === 'interview_scheduled' ? 'Interview Called ✓' : 'Physical Interview'}
                                     </Text>
-                                  </TouchableOpacity>
+                                  </Pressable>
 
                                   {/* 2. Fill Interview Form Button (Appears once Physical Interview is clicked) */}
                                   {app.status === 'interview_scheduled' && (
-                                    <TouchableOpacity
-                                      activeOpacity={0.8}
+                                    <Pressable
                                       onPress={() => {
                                         setInterviewFormApp(app);
                                         setInterviewIdDocUri(app.documentAadhaar || app.documentPan || '');
@@ -1098,7 +1092,7 @@ export default function AdminPanelScreen() {
                                       }`}>
                                         {(interviewCompletedMap[app.id] || (app.documentAadhaar || app.documentPan)) ? 'Edit Form' : 'Fill Interview Form'}
                                       </Text>
-                                    </TouchableOpacity>
+                                    </Pressable>
                                   )}
                                 </View>
 
@@ -1110,9 +1104,8 @@ export default function AdminPanelScreen() {
                                     );
 
                                     return (
-                                      <TouchableOpacity
+                                      <Pressable
                                         disabled={!isFormCompleted}
-                                        activeOpacity={0.8}
                                         onPress={() => handleApproveApp(app.id)}
                                         className={`flex-1 py-3 rounded-lg items-center justify-center ${
                                           isFormCompleted ? 'bg-emerald-600' : 'bg-zinc-200 opacity-60'
@@ -1123,25 +1116,23 @@ export default function AdminPanelScreen() {
                                         }`}>
                                           Approve
                                         </Text>
-                                      </TouchableOpacity>
+                                      </Pressable>
                                     );
                                   })()}
                                   
-                                  <TouchableOpacity
-                                    activeOpacity={0.8}
+                                  <Pressable
                                     onPress={() => handleRequestInfoApp(app.id)}
                                     className="flex-1 py-3 bg-blue-600 rounded-lg items-center justify-center"
                                   >
                                     <Text className="text-white text-[9px] font-black uppercase tracking-widest">Req Info</Text>
-                                  </TouchableOpacity>
+                                  </Pressable>
 
-                                  <TouchableOpacity
-                                    activeOpacity={0.8}
+                                  <Pressable
                                     onPress={() => handleRejectApp(app.id)}
                                     className="flex-1 py-3 bg-rose-600 rounded-lg items-center justify-center"
                                   >
                                     <Text className="text-white text-[9px] font-black uppercase tracking-widest">Reject</Text>
-                                  </TouchableOpacity>
+                                  </Pressable>
                                 </View>
                               </View>
                             </>
@@ -1218,7 +1209,7 @@ export default function AdminPanelScreen() {
                     <Text className="text-zinc-500 text-[9px] font-black uppercase tracking-wider">Status</Text>
                     <View className="flex-row bg-[#F1F3F5] p-1 rounded-xl">
                       {(['all', 'verified', 'pending', 'rejected'] as const).map((st) => (
-                        <TouchableOpacity
+                        <Pressable
                           key={st}
                           onPress={() => setStatusFilter(st)}
                           className={`flex-1 py-1.5 rounded-lg items-center ${statusFilter === st ? 'bg-white shadow-xs' : ''}`}
@@ -1226,7 +1217,7 @@ export default function AdminPanelScreen() {
                           <Text className={`text-[8px] font-black uppercase ${statusFilter === st ? 'text-zinc-950' : 'text-zinc-500'}`}>
                             {st}
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       ))}
                     </View>
                   </View>
@@ -1236,7 +1227,7 @@ export default function AdminPanelScreen() {
                     <Text className="text-zinc-500 text-[9px] font-black uppercase tracking-wider">Radius Limit</Text>
                     <View className="flex-row bg-[#F1F3F5] p-1 rounded-xl">
                       {(['all', '3', '5'] as const).map((rd) => (
-                        <TouchableOpacity
+                        <Pressable
                           key={rd}
                           onPress={() => setRadiusFilter(rd as any)}
                           className={`flex-1 py-1.5 rounded-lg items-center ${radiusFilter === rd ? 'bg-white shadow-xs' : ''}`}
@@ -1244,7 +1235,7 @@ export default function AdminPanelScreen() {
                           <Text className={`text-[8px] font-black uppercase ${radiusFilter === rd ? 'text-zinc-950' : 'text-zinc-500'}`}>
                             {rd === 'all' ? 'All' : `${rd}km`}
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       ))}
                     </View>
                   </View>
@@ -1357,18 +1348,18 @@ export default function AdminPanelScreen() {
                             </View>
 
                             <View className="flex-row gap-2 mt-1">
-                              <TouchableOpacity
+                              <Pressable
                                 onPress={() => handleRejectLocation(coach.id)}
                                 className="flex-1 border border-rose-200 bg-white py-2.5 rounded-xl items-center"
                               >
                                 <Text className="text-rose-600 text-[9px] font-black uppercase tracking-wider">Reject Request</Text>
-                              </TouchableOpacity>
-                              <TouchableOpacity
+                              </Pressable>
+                              <Pressable
                                 onPress={() => handleApproveLocation(coach.id)}
                                 className="flex-1 bg-emerald-600 py-2.5 rounded-xl items-center shadow-xs"
                               >
                                 <Text className="text-white text-[9px] font-black uppercase tracking-wider">Approve Base</Text>
-                              </TouchableOpacity>
+                              </Pressable>
                             </View>
                           </View>
                         )}
@@ -1376,21 +1367,21 @@ export default function AdminPanelScreen() {
                         {/* Admin Action Buttons */}
                         <View className="flex-row gap-2 pt-1 border-t border-zinc-100">
                           {status !== 'verified' && (
-                            <TouchableOpacity
+                            <Pressable
                               onPress={() => handleQuickVerifyLocation(coach.id)}
                               className="flex-1 py-2.5 bg-emerald-600 rounded-xl items-center justify-center flex-row gap-1.5"
                             >
                               <Feather name="check" size={13} color="#FFFFFF" />
                               <Text className="text-white text-[9px] font-black uppercase tracking-wider">Mark Verified</Text>
-                            </TouchableOpacity>
+                            </Pressable>
                           )}
-                          <TouchableOpacity
+                          <Pressable
                             onPress={() => handleOpenEditLocation(coach)}
                             className="flex-1 py-2.5 bg-zinc-900 rounded-xl items-center justify-center flex-row gap-1.5"
                           >
                             <Feather name="edit-2" size={13} color="#FFFFFF" />
                             <Text className="text-white text-[9px] font-black uppercase tracking-wider">Edit Base & Radius</Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         </View>
                       </LuxuryCard>
                     );
@@ -1411,8 +1402,7 @@ export default function AdminPanelScreen() {
 
               {/* LIVE BOOKINGS STREAM: User, Session Name & Latest Real-time Update */}
               <View className="gap-3">
-                <TouchableOpacity
-                  activeOpacity={0.7}
+                <Pressable
                   onPress={() => toggleSection('liveStream')}
                   className="bg-white p-4 rounded-2xl flex-row items-center justify-between"
                 >
@@ -1437,7 +1427,7 @@ export default function AdminPanelScreen() {
                       color="#4B5563" 
                     />
                   </View>
-                </TouchableOpacity>
+                </Pressable>
 
                 {expandedSections.liveStream && (
                   <View className="gap-2.5">
@@ -1520,7 +1510,7 @@ export default function AdminPanelScreen() {
                           })}
 
                         {bookings.length > (sectionLimits.liveStream || 7) && (
-                          <TouchableOpacity
+                          <Pressable
                             onPress={() => loadMoreForSection('liveStream')}
                             className="bg-zinc-100 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
                           >
@@ -1528,7 +1518,7 @@ export default function AdminPanelScreen() {
                             <Text className="text-zinc-800 text-[10px] font-black uppercase tracking-wider">
                               Load Next 7 Bookings (Showing {Math.min(sectionLimits.liveStream || 7, bookings.length)} of {bookings.length})
                             </Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         )}
                       </>
                     )}
@@ -1583,12 +1573,12 @@ export default function AdminPanelScreen() {
                           <Text className="text-zinc-950 text-xs font-black">Coach {ls.trainerName} ↔ {ls.clientName || 'Client'}</Text>
                           <Text className="text-zinc-400 text-[8px] font-bold uppercase">Status: Live Monitoring ({ls.timelineStatus || 'In Progress'})</Text>
                         </View>
-                        <TouchableOpacity 
+                        <Pressable 
                           onPress={() => Alert.alert('Safety Check', `Emergency channels for booking ${ls.id} are operational.`)} 
                           className="bg-zinc-800 px-3 py-1.5 rounded-lg"
                         >
                           <Text className="text-white text-[7px] font-black uppercase">Check SOS</Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       </View>
                     ))}
                   </View>
@@ -1623,8 +1613,7 @@ export default function AdminPanelScreen() {
                   <>
                     {/* TODAY'S BOOKED */}
                     <View className="gap-3">
-                      <TouchableOpacity
-                        activeOpacity={0.7}
+                      <Pressable
                         onPress={() => toggleSection('todayBooked')}
                         className="bg-white p-4 rounded-2xl flex-row items-center justify-between"
                       >
@@ -1641,7 +1630,7 @@ export default function AdminPanelScreen() {
                           size={18} 
                           color="#4B5563" 
                         />
-                      </TouchableOpacity>
+                      </Pressable>
 
                       {expandedSections.todayBooked && (
                         <View className="gap-3">
@@ -1675,17 +1664,17 @@ export default function AdminPanelScreen() {
                                       <Text className="text-zinc-650 text-xs font-medium">Accepted At: <Text className="font-bold text-zinc-900">{new Date(Number(b.autoAcceptedAt || b.trainerAcceptedAt)).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</Text></Text>
                                     )}
                                   </View>
-                                  <TouchableOpacity
+                                  <Pressable
                                     onPress={() => setSelectedAuditSession(b)}
                                     className="bg-zinc-800 py-3 rounded-xl items-center justify-center"
                                   >
                                     <Text className="text-white text-xs font-black uppercase tracking-wider">View Audit Timeline</Text>
-                                  </TouchableOpacity>
+                                  </Pressable>
                                 </LuxuryCard>
                               ))}
 
                               {todayBooked.length > (sectionLimits.todayBooked || 7) && (
-                                <TouchableOpacity
+                                <Pressable
                                   onPress={() => loadMoreForSection('todayBooked')}
                                   className="bg-zinc-100 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
                                 >
@@ -1693,7 +1682,7 @@ export default function AdminPanelScreen() {
                                   <Text className="text-zinc-800 text-[10px] font-black uppercase tracking-wider">
                                     Load Next 7 Sessions (Showing {Math.min(sectionLimits.todayBooked || 7, todayBooked.length)} of {todayBooked.length})
                                   </Text>
-                                </TouchableOpacity>
+                                </Pressable>
                               )}
                             </>
                           )}
@@ -1703,8 +1692,7 @@ export default function AdminPanelScreen() {
 
                     {/* UPCOMING BOOKED SESSIONS */}
                     <View className="gap-3 mt-1">
-                      <TouchableOpacity
-                        activeOpacity={0.7}
+                      <Pressable
                         onPress={() => toggleSection('upcomingBooked')}
                         className="bg-white p-4 rounded-2xl flex-row items-center justify-between"
                       >
@@ -1721,7 +1709,7 @@ export default function AdminPanelScreen() {
                           size={18} 
                           color="#4B5563" 
                         />
-                      </TouchableOpacity>
+                      </Pressable>
 
                       {expandedSections.upcomingBooked && (
                         <View className="gap-3">
@@ -1755,17 +1743,17 @@ export default function AdminPanelScreen() {
                                       <Text className="text-zinc-650 text-xs font-medium">Accepted At: <Text className="font-bold text-zinc-900">{new Date(Number(b.autoAcceptedAt || b.trainerAcceptedAt)).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</Text></Text>
                                     )}
                                   </View>
-                                  <TouchableOpacity
+                                  <Pressable
                                     onPress={() => setSelectedAuditSession(b)}
                                     className="bg-indigo-600 py-3 rounded-xl items-center justify-center"
                                   >
                                     <Text className="text-white text-xs font-black uppercase tracking-wider">View Audit Timeline</Text>
-                                  </TouchableOpacity>
+                                  </Pressable>
                                 </LuxuryCard>
                               ))}
 
                               {upcomingBooked.length > (sectionLimits.upcomingBooked || 7) && (
-                                <TouchableOpacity
+                                <Pressable
                                   onPress={() => loadMoreForSection('upcomingBooked')}
                                   className="bg-zinc-100 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
                                 >
@@ -1773,7 +1761,7 @@ export default function AdminPanelScreen() {
                                   <Text className="text-zinc-800 text-[10px] font-black uppercase tracking-wider">
                                     Load Next 7 Sessions (Showing {Math.min(sectionLimits.upcomingBooked || 7, upcomingBooked.length)} of {upcomingBooked.length})
                                   </Text>
-                                </TouchableOpacity>
+                                </Pressable>
                               )}
                             </>
                           )}
@@ -1786,8 +1774,7 @@ export default function AdminPanelScreen() {
 
               {/* Live Session List */}
               <View className="gap-3">
-                <TouchableOpacity
-                  activeOpacity={0.7}
+                <Pressable
                   onPress={() => toggleSection('liveOngoing')}
                   className="bg-white p-4 rounded-2xl flex-row items-center justify-between"
                 >
@@ -1804,7 +1791,7 @@ export default function AdminPanelScreen() {
                     size={18} 
                     color="#4B5563" 
                   />
-                </TouchableOpacity>
+                </Pressable>
 
                 {expandedSections.liveOngoing && (
                   <View className="gap-3">
@@ -1835,14 +1822,14 @@ export default function AdminPanelScreen() {
                             </View>
 
                             <View className="flex-row gap-2 mt-1">
-                              <TouchableOpacity
+                              <Pressable
                                 onPress={() => router.push({ pathname: '/session-detail' as any, params: { id: b.id } })}
                                 className="flex-1 bg-zinc-950 py-2 rounded-lg items-center justify-center"
                               >
                                 <Text className="text-white text-[8px] font-black uppercase">Inspect Session</Text>
-                              </TouchableOpacity>
+                              </Pressable>
                               
-                              <TouchableOpacity
+                              <Pressable
                                 onPress={async () => {
                                   try {
                                     await updateTimelineStatus(b.id, 'trainer_arrived');
@@ -1854,13 +1841,13 @@ export default function AdminPanelScreen() {
                                 className="flex-1 bg-zinc-100 py-2 rounded-lg items-center justify-center"
                               >
                                 <Text className="text-zinc-950 text-[8px] font-black uppercase">Force Arrived</Text>
-                              </TouchableOpacity>
+                              </Pressable>
                             </View>
                           </LuxuryCard>
                         ))}
 
                         {liveSessions.length > (sectionLimits.liveOngoing || 7) && (
-                          <TouchableOpacity
+                          <Pressable
                             onPress={() => loadMoreForSection('liveOngoing')}
                             className="bg-zinc-100 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
                           >
@@ -1868,7 +1855,7 @@ export default function AdminPanelScreen() {
                             <Text className="text-zinc-800 text-[10px] font-black uppercase tracking-wider">
                               Load Next 7 Sessions (Showing {Math.min(sectionLimits.liveOngoing || 7, liveSessions.length)} of {liveSessions.length})
                             </Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         )}
                       </>
                     )}
@@ -1878,8 +1865,7 @@ export default function AdminPanelScreen() {
 
               {/* Sessions History & Audit */}
               <View className="gap-3 mt-1">
-                <TouchableOpacity
-                  activeOpacity={0.7}
+                <Pressable
                   onPress={() => toggleSection('historyAudit')}
                   className="bg-white p-4 rounded-2xl flex-row items-center justify-between"
                 >
@@ -1896,7 +1882,7 @@ export default function AdminPanelScreen() {
                     size={18} 
                     color="#4B5563" 
                   />
-                </TouchableOpacity>
+                </Pressable>
 
                 {expandedSections.historyAudit && (
                   <View className="gap-3">
@@ -1933,18 +1919,18 @@ export default function AdminPanelScreen() {
                             </View>
 
                             <View className="flex-row gap-2 mt-1">
-                              <TouchableOpacity
+                              <Pressable
                                 onPress={() => setSelectedAuditSession(b)}
                                 className="flex-1 bg-zinc-900 py-2 rounded-lg items-center justify-center"
                               >
                                 <Text className="text-white text-[8px] font-black uppercase">View Audit Details</Text>
-                              </TouchableOpacity>
+                              </Pressable>
                             </View>
                           </LuxuryCard>
                         ))}
 
                         {missedOrEndedSessions.length > (sectionLimits.historyAudit || 7) && (
-                          <TouchableOpacity
+                          <Pressable
                             onPress={() => loadMoreForSection('historyAudit')}
                             className="bg-zinc-100 py-2.5 rounded-xl items-center justify-center mt-1 flex-row gap-2"
                           >
@@ -1952,7 +1938,7 @@ export default function AdminPanelScreen() {
                             <Text className="text-zinc-800 text-[10px] font-black uppercase tracking-wider">
                               Load Next 7 Sessions (Showing {Math.min(sectionLimits.historyAudit || 7, missedOrEndedSessions.length)} of {missedOrEndedSessions.length})
                             </Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         )}
                       </>
                     )}
@@ -2012,12 +1998,12 @@ export default function AdminPanelScreen() {
                           <Text className="text-zinc-650 text-xs font-medium">Assigned Trainer: <Text className="font-bold text-zinc-900">{b.trainerId === 'searching' || !b.trainerId ? 'Searching for Trainer...' : b.trainerName}</Text></Text>
                           <Text className="text-zinc-650 text-xs font-medium">Booked Time: <Text className="font-bold text-zinc-900">{formatToDDMMYYYY(b.date)} @ {b.time}</Text></Text>
                         </View>
-                        <TouchableOpacity
+                        <Pressable
                           onPress={() => setSelectedAuditSession(b)}
                           className="bg-indigo-600 py-3 rounded-xl items-center justify-center"
                         >
                           <Text className="text-white text-xs font-black uppercase tracking-wider">View Audit Timeline</Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       </LuxuryCard>
                     ))
                   )}
@@ -2056,12 +2042,12 @@ export default function AdminPanelScreen() {
                             <Text className="text-zinc-650 text-xs font-medium">Acceptance Method: <Text className="font-bold text-zinc-900">AUTO AFTER 30 MINUTES</Text></Text>
                             <Text className="text-zinc-650 text-xs font-medium">Trainer Acknowledgement: <Text className="font-bold text-amber-700">PENDING</Text></Text>
                           </View>
-                          <TouchableOpacity
+                          <Pressable
                             onPress={() => setSelectedAuditSession(b)}
                             className="bg-amber-600 py-3 rounded-xl items-center justify-center"
                           >
                             <Text className="text-white text-xs font-black uppercase tracking-wider">View Audit & Call Trainer</Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         </LuxuryCard>
                       ))}
                     </View>
@@ -2094,12 +2080,12 @@ export default function AdminPanelScreen() {
                           <Text className="text-rose-900/80 text-xs font-medium">Booked Time: <Text className="font-bold text-rose-900">{formatToDDMMYYYY(b.date)} @ {b.time}</Text></Text>
                           <Text className="text-rose-900/80 text-xs font-medium">Trainer Acknowledgement: <Text className="font-bold text-rose-900">{b.trainerAcknowledgement === 'pending' ? 'PENDING' : 'COMPLETED'}</Text></Text>
                         </View>
-                        <TouchableOpacity
+                        <Pressable
                           onPress={() => setSelectedAuditSession(b)}
                           className="bg-rose-600 py-3 rounded-xl items-center justify-center"
                         >
                           <Text className="text-white text-xs font-black uppercase tracking-wider">View Auto-Accept Audit</Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       </LuxuryCard>
                     ))
                   )}
@@ -2130,12 +2116,12 @@ export default function AdminPanelScreen() {
                           <Text className="text-zinc-650 text-xs font-medium">Assigned Trainer: <Text className="font-bold text-zinc-900">{b.trainerName}</Text> (Accepted manually)</Text>
                           <Text className="text-zinc-650 text-xs font-medium">Booked Time: <Text className="font-bold text-zinc-900">{formatToDDMMYYYY(b.date)} @ {b.time}</Text></Text>
                         </View>
-                        <TouchableOpacity
+                        <Pressable
                           onPress={() => setSelectedAuditSession(b)}
                           className="bg-zinc-800 py-3 rounded-xl items-center justify-center"
                         >
                           <Text className="text-white text-xs font-black uppercase tracking-wider">View Audit Timeline</Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       </LuxuryCard>
                     ))
                   )}
@@ -2164,18 +2150,18 @@ export default function AdminPanelScreen() {
               <View className="gap-6">
                 <View className="flex-row justify-between items-center">
                   <Text className="text-zinc-900 text-xl font-black tracking-tight uppercase">Dispute Management</Text>
-                  <TouchableOpacity 
+                  <Pressable 
                     onPress={loadDisputesAndKits} 
                     className="bg-indigo-50 border border-indigo-150 px-3 py-1.5 rounded-xl flex-row items-center gap-1.5"
                   >
                     <Feather name="refresh-cw" size={10} color="#4F46E5" />
                     <Text className="text-indigo-650 text-[10px] font-black uppercase">Sync</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
 
                 {/* Section Toggle: User vs Trainer */}
                 <View className="flex-row bg-zinc-100 p-1 rounded-2xl">
-                  <TouchableOpacity
+                  <Pressable
                     onPress={() => setDisputeSection('user')}
                     className={`flex-1 py-2.5 rounded-xl items-center justify-center flex-row gap-2 ${
                       disputeSection === 'user' ? 'bg-white shadow-sm' : 'bg-transparent'
@@ -2187,9 +2173,9 @@ export default function AdminPanelScreen() {
                     }`}>
                       User Tickets ({userDisputes.length})
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
 
-                  <TouchableOpacity
+                  <Pressable
                     onPress={() => setDisputeSection('trainer')}
                     className={`flex-1 py-2.5 rounded-xl items-center justify-center flex-row gap-2 ${
                       disputeSection === 'trainer' ? 'bg-white shadow-sm' : 'bg-transparent'
@@ -2201,7 +2187,7 @@ export default function AdminPanelScreen() {
                     }`}>
                       Trainer Tickets ({trainerDisputes.length})
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
 
                 {isLoadingDisputesAndKits ? (
@@ -2267,7 +2253,7 @@ export default function AdminPanelScreen() {
                           <Text className="text-zinc-450 text-[8px] font-black uppercase">Update Status</Text>
                           <View className="flex-row gap-1.5 flex-wrap">
                             {['OPEN', 'IN REVIEW', 'RESOLVED', 'CLOSED'].map((st) => (
-                              <TouchableOpacity
+                              <Pressable
                                 key={st}
                                 onPress={async () => {
                                   try {
@@ -2283,7 +2269,7 @@ export default function AdminPanelScreen() {
                                 }`}
                               >
                                 <Text className={`text-[8px] font-black ${d.status === st ? 'text-white' : 'text-zinc-650'}`}>{st}</Text>
-                              </TouchableOpacity>
+                              </Pressable>
                             ))}
                           </View>
                         </View>
@@ -2303,13 +2289,13 @@ export default function AdminPanelScreen() {
             <View className="gap-6">
               <View className="flex-row justify-between items-center">
                 <Text className="text-zinc-900 text-xl font-black tracking-tight uppercase">Kit Order Requests</Text>
-                <TouchableOpacity 
+                <Pressable 
                   onPress={loadDisputesAndKits} 
                   className="bg-indigo-50 border border-indigo-150 px-3 py-1.5 rounded-xl flex-row items-center gap-1.5"
                 >
                   <Feather name="refresh-cw" size={10} color="#4F46E5" />
                   <Text className="text-indigo-650 text-[10px] font-black uppercase">Sync</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
 
               {isLoadingDisputesAndKits ? (
@@ -2387,7 +2373,7 @@ export default function AdminPanelScreen() {
                         <Text className="text-zinc-455 text-[8px] font-black uppercase">Update Order Status</Text>
                         <View className="flex-row flex-wrap gap-1.5">
                           {['SUBMITTED', 'UNDER REVIEW', 'APPROVED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'].map((st) => (
-                            <TouchableOpacity
+                            <Pressable
                               key={st}
                               onPress={async () => {
                                 try {
@@ -2403,7 +2389,7 @@ export default function AdminPanelScreen() {
                               }`}
                             >
                               <Text className={`text-[9px] font-black ${k.status === st ? 'text-white' : 'text-zinc-650'}`}>{st}</Text>
-                            </TouchableOpacity>
+                            </Pressable>
                           ))}
                         </View>
                       </View>
@@ -2426,22 +2412,20 @@ export default function AdminPanelScreen() {
                     Direct leads received from external website and landing pages.
                   </Text>
                 </View>
-                <TouchableOpacity
-                  activeOpacity={0.7}
+                <Pressable
                   onPress={loadEnquiries}
                   className="p-2.5 bg-zinc-100 rounded-xl flex-row items-center gap-1.5"
                 >
                   <Feather name="refresh-cw" size={12} color="#101828" />
                   <Text className="text-[10px] font-black uppercase text-zinc-900">Refresh</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
 
               {/* Status Filter Tabs */}
               <View className="flex-row gap-2 flex-wrap">
                 {(['all', 'pending', 'contacted', 'converted', 'closed'] as const).map((st) => (
-                  <TouchableOpacity
+                  <Pressable
                     key={st}
-                    activeOpacity={0.7}
                     onPress={() => setEnquiryStatusFilter(st)}
                     className={`px-3.5 py-1.5 rounded-full border ${
                       enquiryStatusFilter === st
@@ -2456,7 +2440,7 @@ export default function AdminPanelScreen() {
                     >
                       {st} {st !== 'all' ? `(${enquiries.filter(e => (e.status || 'pending').toLowerCase() === st).length})` : `(${enquiries.length})`}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 ))}
               </View>
 
@@ -2519,16 +2503,14 @@ export default function AdminPanelScreen() {
                                   <Text className="text-[#101828] text-xs font-black">{enq.phone}</Text>
                                 </View>
                                 <View className="flex-row items-center gap-2">
-                                  <TouchableOpacity
-                                    activeOpacity={0.7}
+                                  <Pressable
                                     onPress={() => Linking.openURL(`tel:${enq.phone.replace(/[^0-9+]/g, '')}`)}
                                     className="px-2.5 py-1 bg-white border border-zinc-200 rounded-lg flex-row items-center gap-1"
                                   >
                                     <Feather name="phone-call" size={10} color="#059669" />
                                     <Text className="text-[9px] font-bold text-emerald-700">Call</Text>
-                                  </TouchableOpacity>
-                                  <TouchableOpacity
-                                    activeOpacity={0.7}
+                                  </Pressable>
+                                  <Pressable
                                     onPress={() => {
                                       const cleanPhone = enq.phone.replace(/[^0-9]/g, '');
                                       const fullNum = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
@@ -2538,7 +2520,7 @@ export default function AdminPanelScreen() {
                                   >
                                     <Ionicons name="logo-whatsapp" size={10} color="#FFFFFF" />
                                     <Text className="text-[9px] font-bold text-white">WhatsApp</Text>
-                                  </TouchableOpacity>
+                                  </Pressable>
                                 </View>
                               </View>
 
@@ -2548,12 +2530,11 @@ export default function AdminPanelScreen() {
                                     <Feather name="mail" size={13} color="#6B7280" />
                                     <Text className="text-zinc-700 text-xs font-medium">{enq.email}</Text>
                                   </View>
-                                  <TouchableOpacity
-                                    activeOpacity={0.7}
+                                  <Pressable
                                     onPress={() => Linking.openURL(`mailto:${enq.email}`)}
                                   >
                                     <Text className="text-[9px] font-bold text-indigo-600">Email</Text>
-                                  </TouchableOpacity>
+                                  </Pressable>
                                 </View>
                               ) : null}
                             </View>
@@ -2606,9 +2587,8 @@ export default function AdminPanelScreen() {
                                 {(['pending', 'contacted', 'converted', 'closed'] as const).map((stage) => {
                                   const isCurrent = (enq.status || 'pending').toLowerCase() === stage;
                                   return (
-                                    <TouchableOpacity
+                                    <Pressable
                                       key={stage}
-                                      activeOpacity={0.7}
                                       onPress={() => handleUpdateEnquiryStatus(enq.id, stage)}
                                       className={`flex-1 min-w-[70px] py-2 border rounded-xl items-center ${
                                         isCurrent ? 'bg-zinc-950 border-zinc-950' : 'bg-white border-zinc-200'
@@ -2617,7 +2597,7 @@ export default function AdminPanelScreen() {
                                       <Text className={`text-[8px] font-black uppercase ${isCurrent ? 'text-white' : 'text-zinc-600'}`}>
                                         {stage}
                                       </Text>
-                                    </TouchableOpacity>
+                                    </Pressable>
                                   );
                                 })}
                               </View>
@@ -2652,13 +2632,13 @@ export default function AdminPanelScreen() {
                     Live tickets & real-time chat with users.
                   </Text>
                 </View>
-                <TouchableOpacity 
+                <Pressable 
                   onPress={loadSupportTickets} 
                   className="bg-rose-50 border border-rose-150 px-3 py-1.5 rounded-xl flex-row items-center gap-1.5"
                 >
                   <Feather name="refresh-cw" size={10} color="#E11D48" />
                   <Text className="text-rose-650 text-[10px] font-black uppercase">Sync</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
 
               {isLoadingSupportTickets ? (
@@ -2728,8 +2708,7 @@ export default function AdminPanelScreen() {
 
                       {/* Action Row: Open Real-time Chat & Status Toggle */}
                       <View className="border-t border-zinc-100 pt-3 gap-3">
-                        <TouchableOpacity
-                          activeOpacity={0.8}
+                        <Pressable
                           onPress={() => setSelectedSupportChatTicket(t)}
                           className="w-full bg-[#101828] py-3 rounded-xl items-center justify-center flex-row gap-2"
                         >
@@ -2737,13 +2716,13 @@ export default function AdminPanelScreen() {
                           <Text className="text-white text-xs font-black uppercase tracking-wider">
                             Open Realtime Support Chat
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
 
                         <View className="gap-1.5">
                           <Text className="text-zinc-450 text-[8px] font-black uppercase">Update Ticket Status</Text>
                           <View className="flex-row gap-1.5">
                             {(['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'] as const).map((st) => (
-                              <TouchableOpacity
+                              <Pressable
                                 key={st}
                                 onPress={async () => {
                                   try {
@@ -2761,7 +2740,7 @@ export default function AdminPanelScreen() {
                                 <Text className={`text-[8px] font-black ${t.status === st ? 'text-white' : 'text-zinc-650'}`}>
                                   {st}
                                 </Text>
-                              </TouchableOpacity>
+                              </Pressable>
                             ))}
                           </View>
                         </View>
@@ -2796,12 +2775,12 @@ export default function AdminPanelScreen() {
           <View className="w-full p-6 pb-8">
             <View className="flex-row justify-between items-center border-b border-zinc-100 pb-4 mb-4">
               <Text className="text-[#101828] text-base font-black uppercase tracking-wider">Session Audit Log</Text>
-              <TouchableOpacity 
+              <Pressable 
                 onPress={() => setSelectedAuditSession(null)}
                 className="w-8 h-8 rounded-full bg-zinc-50 items-center justify-center"
               >
                 <Feather name="x" size={16} color="#101828" />
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             {selectedAuditSession && (() => {
@@ -2988,12 +2967,12 @@ export default function AdminPanelScreen() {
                   Interview Form: {interviewFormApp?.fullName}
                 </Text>
               </View>
-              <TouchableOpacity
+              <Pressable
                 onPress={() => setInterviewFormApp(null)}
                 className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center"
               >
                 <Feather name="x" size={16} color="#71717A" />
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} className="max-h-[460px]">
@@ -3007,7 +2986,7 @@ export default function AdminPanelScreen() {
                   {/* Selector tabs */}
                   <View className="flex-row bg-zinc-100 p-1 rounded-xl">
                     {(['aadhaar', 'pan'] as const).map(t => (
-                      <TouchableOpacity
+                      <Pressable
                         key={t}
                         onPress={() => setInterviewIdType(t)}
                         className={`flex-1 py-2 items-center rounded-lg ${
@@ -3019,7 +2998,7 @@ export default function AdminPanelScreen() {
                         }`}>
                           {t === 'aadhaar' ? 'Aadhaar Card' : 'PAN Card'}
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     ))}
                   </View>
 
@@ -3049,21 +3028,21 @@ export default function AdminPanelScreen() {
                     )}
 
                     <View className="flex-row gap-2">
-                      <TouchableOpacity
+                      <Pressable
                         onPress={() => handleCaptureInterviewPhoto('id')}
                         className="flex-1 py-2.5 bg-zinc-950 rounded-xl items-center justify-center flex-row gap-1.5"
                       >
                         <Feather name="camera" size={13} color="#FFFFFF" />
                         <Text className="text-white text-[10px] font-black uppercase">Take Photo</Text>
-                      </TouchableOpacity>
+                      </Pressable>
 
-                      <TouchableOpacity
+                      <Pressable
                         onPress={() => handlePickInterviewGallery('id')}
                         className="flex-1 py-2.5 bg-white rounded-xl items-center justify-center flex-row gap-1.5"
                       >
                         <Feather name="image" size={13} color="#18181B" />
                         <Text className="text-zinc-800 text-[10px] font-black uppercase">Pick Gallery</Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                   </View>
                 </View>
@@ -3091,21 +3070,21 @@ export default function AdminPanelScreen() {
                     )}
 
                     <View className="flex-row gap-2">
-                      <TouchableOpacity
+                      <Pressable
                         onPress={() => handleCaptureInterviewPhoto('profile')}
                         className="flex-1 py-2.5 bg-zinc-950 rounded-xl items-center justify-center flex-row gap-1.5"
                       >
                         <Feather name="camera" size={13} color="#FFFFFF" />
                         <Text className="text-white text-[10px] font-black uppercase">Take Photo</Text>
-                      </TouchableOpacity>
+                      </Pressable>
 
-                      <TouchableOpacity
+                      <Pressable
                         onPress={() => handlePickInterviewGallery('profile')}
                         className="flex-1 py-2.5 bg-white rounded-xl items-center justify-center flex-row gap-1.5"
                       >
                         <Feather name="image" size={13} color="#18181B" />
                         <Text className="text-zinc-800 text-[10px] font-black uppercase">Pick Gallery</Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                   </View>
                 </View>
@@ -3113,7 +3092,7 @@ export default function AdminPanelScreen() {
             </ScrollView>
 
             {/* Save Button */}
-            <TouchableOpacity
+            <Pressable
               disabled={isSavingInterviewForm}
               onPress={handleSaveInterviewForm}
               className={`w-full py-4 rounded-xl items-center justify-center ${
@@ -3127,7 +3106,7 @@ export default function AdminPanelScreen() {
                   Save Interview Details & Enable Approval
                 </Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
       </View>
     </NativeSheet>
 
@@ -3144,12 +3123,12 @@ export default function AdminPanelScreen() {
                   Coach {editingCoachLocation?.name} ({editingCoachLocation?.id})
                 </Text>
               </View>
-              <TouchableOpacity 
+              <Pressable 
                 onPress={() => setEditingCoachLocation(null)}
                 className="w-8 h-8 rounded-full bg-zinc-50 items-center justify-center"
               >
                 <Feather name="x" size={16} color="#101828" />
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} className="gap-4">
@@ -3191,7 +3170,7 @@ export default function AdminPanelScreen() {
                 </View>
                 <View className="flex-row gap-2 mt-1">
                   {[1, 2, 3, 4, 5].map((r) => (
-                    <TouchableOpacity
+                    <Pressable
                       key={r}
                       onPress={() => setOverrideRadius(r)}
                       className={`flex-1 py-3 rounded-2xl border items-center justify-center flex-row gap-1.5 ${
@@ -3203,7 +3182,7 @@ export default function AdminPanelScreen() {
                       <Text className={`text-xs font-black ${overrideRadius === r ? 'text-white' : 'text-zinc-700'}`}>
                         {r} km
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   ))}
                 </View>
               </View>
@@ -3215,7 +3194,7 @@ export default function AdminPanelScreen() {
                 </Text>
                 <View className="flex-row gap-2 mt-1">
                   {(['verified', 'pending', 'rejected'] as const).map((st) => (
-                    <TouchableOpacity
+                    <Pressable
                       key={st}
                       onPress={() => setOverrideStatus(st)}
                       className={`flex-1 py-2.5 rounded-xl border items-center justify-center ${
@@ -3233,22 +3212,22 @@ export default function AdminPanelScreen() {
                       }`}>
                         {st}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   ))}
                 </View>
               </View>
 
               {/* Action Buttons */}
               <View className="flex-row gap-2.5 mt-4 pt-3 border-t border-zinc-100">
-                <TouchableOpacity
+                <Pressable
                   onPress={() => setEditingCoachLocation(null)}
                   disabled={isSavingLocation}
                   className="flex-1 py-3.5 rounded-2xl items-center justify-center bg-white"
                 >
                   <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">Cancel</Text>
-                </TouchableOpacity>
+                </Pressable>
 
-                <TouchableOpacity
+                <Pressable
                   onPress={handleSaveLocationOverride}
                   disabled={isSavingLocation}
                   className="flex-1 py-3.5 bg-zinc-950 rounded-2xl items-center justify-center flex-row gap-2 shadow-sm"
@@ -3261,7 +3240,7 @@ export default function AdminPanelScreen() {
                       <Text className="text-white text-xs font-black uppercase tracking-wider">Save Changes</Text>
                     </>
                   )}
-                </TouchableOpacity>
+                </Pressable>
               </View>
             </ScrollView>
       </View>

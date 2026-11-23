@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   Animated,
   Vibration,
   Image,
@@ -377,8 +377,7 @@ export function SelectableGridCard({
         ],
       }}
     >
-      <TouchableOpacity
-        activeOpacity={0.9}
+      <Pressable
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={handlePress}
@@ -485,7 +484,7 @@ export function SelectableGridCard({
             </Text>
           ) : null}
         </Animated.View>
-      </TouchableOpacity>
+      </Pressable>
     </Animated.View>
   );
 }
@@ -592,8 +591,7 @@ export function SelectableBannerCard({
         ],
       }}
     >
-      <TouchableOpacity
-        activeOpacity={0.9}
+      <Pressable
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={handlePress}
@@ -690,7 +688,7 @@ export function SelectableBannerCard({
             </Animated.View>
           </View>
         </Animated.View>
-      </TouchableOpacity>
+      </Pressable>
     </Animated.View>
   );
 }

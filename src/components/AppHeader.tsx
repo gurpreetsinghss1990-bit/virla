@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useUserStore } from '../store/userStore';
 import { useNotificationStore } from '../store/notificationStore';
@@ -32,7 +32,7 @@ export function AppHeader({ onNotificationPress, onAvatarPress }: AppHeaderProps
     <View className="flex-row items-center justify-between px-6 py-4 bg-white border-b border-zinc-100">
       {/* Profile Greeting Section */}
       <View className="flex-row items-center gap-3">
-        <TouchableOpacity activeOpacity={0.8} onPress={onAvatarPress}>
+        <Pressable onPress={onAvatarPress}>
           <ExpoImage
             source={resolveAvatarSource(user.avatar, user.gender)}
             style={{ width: 48, height: 48, borderRadius: 24 }}
@@ -40,7 +40,7 @@ export function AppHeader({ onNotificationPress, onAvatarPress }: AppHeaderProps
             cachePolicy="memory-disk"
             transition={200}
           />
-        </TouchableOpacity>
+        </Pressable>
         <View>
           <View className="flex-row items-center gap-1.5">
             <Text className="text-zinc-500 text-xs font-semibold tracking-wide">
@@ -60,14 +60,13 @@ export function AppHeader({ onNotificationPress, onAvatarPress }: AppHeaderProps
       </View>
 
       {/* Notification Icon */}
-      <TouchableOpacity
-        activeOpacity={0.7}
+      <Pressable
         onPress={handlePress}
         className="w-10 h-10 rounded-full items-center justify-center relative bg-zinc-50/50"
       >
         <Ionicons name="notifications-outline" size={20} color="#111111" />
         <NotificationBadge count={unreadCount} />
-      </TouchableOpacity>
+      </Pressable>
 
       <CommunicationCenterModal
         visible={modalVisible}

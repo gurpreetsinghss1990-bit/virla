@@ -1,6 +1,6 @@
 import { Loading } from './Loading';
 import React from 'react';
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { NativeSheet } from './NativeSheet';
 
@@ -73,8 +73,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
 
             {/* Actions (48dp min touch targets) */}
             <View className="flex-row items-center gap-3">
-              <TouchableOpacity
-                activeOpacity={0.7}
+              <Pressable
                 disabled={isLoading}
                 onPress={onCancel}
                 className="flex-1 min-h-[48px] rounded-2xl bg-[#F0ECE1] items-center justify-center active:bg-[#E5E0D5]"
@@ -84,10 +83,9 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                 <Text className="text-[#5C5954] text-xs font-bold uppercase tracking-wider">
                   {cancelText}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
 
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Pressable
                 disabled={isLoading}
                 onPress={onConfirm}
                 className={`flex-1 min-h-[48px] rounded-2xl items-center justify-center shadow-xs ${
@@ -110,7 +108,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
                     {confirmText}
                   </Text>
                 )}
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
     </NativeSheet>

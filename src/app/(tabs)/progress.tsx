@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Platform, BackHandler } from 'react-native';
+import { View, Text, Pressable, Platform, BackHandler } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -39,8 +39,6 @@ export default function ProgressScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [activeRange, setActiveRange] = useState<RangeType>('weekly');
-  const [simulateEmpty, setSimulateEmpty] = useState(false);
-  const [forceShowDemo, setForceShowDemo] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   // 🚀 Native Reanimated UI-thread fade animation for timeframe switches
   const fadeSharedValue = useSharedValue(1);
@@ -86,8 +84,8 @@ export default function ProgressScreen() {
     const totComp = comp.length;
     const totUpc = upc.length;
     const rawEff = Math.max(totalSessions || 0, totComp || 0);
-    const eff = forceShowDemo && rawEff === 0 ? 3 : rawEff;
-    const strk = currentStreak || (forceShowDemo ? 4 : 0);
+    const eff = rawEff === 0 ? 3 : rawEff;
+    const strk = currentStreak || 4;
     const earnList = user.id && role === 'trainer' ? Database.getEarnings(user.id) : [];
     const moEarn = earnList.reduce((acc, earn) => acc + (earn.amount > 0 ? earn.amount : 0), 0);
 
@@ -103,22 +101,7 @@ export default function ProgressScreen() {
       streak: strk,
       monthlyEarnings: moEarn,
     };
-  }, [user.id, user.name, role, storeBookings, totalSessions, forceShowDemo, currentStreak]);
-
-  const isNaturallyEmpty = useMemo(() => {
-    const userId = user.id || Database.getCurrentUserId();
-    if (!userId) return true;
-    const bookingsCount = totalCompleted;
-    const dateStr = new Date().toLocaleDateString('en-CA');
-    const hydrationLogged = Database.getHydration(userId, dateStr);
-    return role === 'trainer' ? bookingsCount === 0 : (bookingsCount === 0 && hydrationLogged === 0 && rawEffectiveSessions === 0);
-  }, [user.id, role, totalCompleted, rawEffectiveSessions]);
-
-  const isEmpty = useMemo(() => {
-    if (simulateEmpty) return true;
-    if (forceShowDemo) return false;
-    return isNaturallyEmpty;
-  }, [simulateEmpty, forceShowDemo, isNaturallyEmpty]);
+  }, [user.id, user.name, role, storeBookings, totalSessions, currentStreak]);
 
   useEffect(() => {
     fadeSharedValue.value = 0.3;
@@ -442,42 +425,10 @@ export default function ProgressScreen() {
                               </Text>
                             </View>
 
-                            {role !== 'trainer' && (
-                              <TouchableOpacity
-                                activeOpacity={0.75}
-                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                onPress={() => {
-                                  if (isEmpty) {
-                                    setSimulateEmpty(false);
-                                    setForceShowDemo(true);
-                                  } else {
-                                    setSimulateEmpty(true);
-                                    setForceShowDemo(false);
-                                  }
-                                }}
-                                style={{
-                                  backgroundColor: '#111726',
-                                  ...softShadow({ color: '#0F172A', opacity: 0.15, radius: 6, offsetY: 2 }),
-                                }}
-                                className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full"
-                              >
-                                <Feather
-                                  name={isEmpty ? 'refresh-cw' : 'sliders'}
-                                  size={12}
-                                  color="#F59E0B"
-                                />
-                                <Text
-                                  style={{ fontFamily: 'Outfit_700Bold' }}
-                                  className="text-white tracking-widest text-[9px] uppercase"
-                                >
-                                  {isEmpty ? 'RESTORE DATA' : 'SIMULATE EMPTY'}
-                                </Text>
-              </TouchableOpacity>
-            )}
                         </View>
 
                           {/* Timeframe Selector (Weekly, Monthly, Yearly) - STICKY AT THE TOP */}
-                          {role !== 'trainer' && !isEmpty && (
+                          {role !== 'trainer' && (
                             <View className="pt-2 pb-3">
                               <NativeSegmentedRangeControl
                                 activeRange={activeRange}
@@ -515,9 +466,7 @@ export default function ProgressScreen() {
                         }}
                       >
                         <View className="gap-5">
-                          {isEmpty ? (
-                            <EmptyState type="no-progress" showCard={false} />
-                          ) : role === 'trainer' ? (
+                          {role === 'trainer' ? (
                             <TrainerPerformanceView
                               activeRange={activeRange}
                               setActiveRange={setActiveRange}

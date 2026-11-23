@@ -1,6 +1,6 @@
 import { Loading } from '../components/Loading';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Platform, KeyboardAvoidingView, Linking } from 'react-native';
+import { View, Text, Pressable, ScrollView, TextInput, Alert, Platform, KeyboardAvoidingView, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -152,8 +152,7 @@ export default function HelpSupportScreen() {
           {/* Quick Support Channels (Call & Email) */}
           <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
             {/* Call Support Card */}
-            <TouchableOpacity
-              activeOpacity={0.85}
+            <Pressable
               onPress={handleCallSupport}
               style={{
                 flex: 1,
@@ -177,11 +176,10 @@ export default function HelpSupportScreen() {
               <View style={{ marginTop: 8, alignSelf: 'flex-start', backgroundColor: '#EEF2FF', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 }}>
                 <Text style={{ fontSize: 10, fontWeight: '700', color: '#4F46E5' }}>Instant</Text>
               </View>
-            </TouchableOpacity>
+            </Pressable>
 
             {/* Email Support Card */}
-            <TouchableOpacity
-              activeOpacity={0.85}
+            <Pressable
               onPress={handleEmailSupport}
               style={{
                 flex: 1,
@@ -205,13 +203,12 @@ export default function HelpSupportScreen() {
               <View style={{ marginTop: 8, alignSelf: 'flex-start', backgroundColor: '#ECFDF5', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 }}>
                 <Text style={{ fontSize: 10, fontWeight: '700', color: '#059669' }}>&lt; 15 mins</Text>
               </View>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Raise Support Ticket Toggle Card */}
           <View style={{ marginBottom: 20 }}>
-            <TouchableOpacity
-              activeOpacity={0.9}
+            <Pressable
               onPress={() => setShowTicketForm(!showTicketForm)}
               style={{
                 backgroundColor: '#121214',
@@ -239,7 +236,7 @@ export default function HelpSupportScreen() {
               <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' }}>
                 <Feather name={showTicketForm ? 'chevron-up' : 'chevron-down'} size={15} color="#FFFFFF" />
               </View>
-            </TouchableOpacity>
+            </Pressable>
 
             {/* Ticket Submission Form */}
             {showTicketForm && (
@@ -264,9 +261,8 @@ export default function HelpSupportScreen() {
                     {categories.map((cat) => {
                       const isCatSelected = ticketCategory === cat;
                       return (
-                        <TouchableOpacity
+                        <Pressable
                           key={cat}
-                          activeOpacity={0.8}
                           onPress={() => setTicketCategory(cat)}
                           style={{
                             paddingHorizontal: 12,
@@ -278,7 +274,7 @@ export default function HelpSupportScreen() {
                           <Text style={{ fontSize: 11.5, fontWeight: isCatSelected ? '700' : '500', color: isCatSelected ? '#FFFFFF' : '#52525B' }}>
                             {cat}
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       );
                     })}
                   </View>
@@ -339,8 +335,7 @@ export default function HelpSupportScreen() {
                 </View>
 
                 {/* Submit Button */}
-                <TouchableOpacity
-                  activeOpacity={0.88}
+                <Pressable
                   onPress={handleRaiseTicket}
                   disabled={isSubmittingTicket}
                   style={{
@@ -365,7 +360,7 @@ export default function HelpSupportScreen() {
                       <Feather name="arrow-right" size={15} color="#FFFFFF" />
                     </>
                   )}
-                </TouchableOpacity>
+                </Pressable>
               </View>
             )}
           </View>
@@ -412,8 +407,7 @@ export default function HelpSupportScreen() {
                       overflow: 'hidden',
                     }}
                   >
-                    <TouchableOpacity
-                      activeOpacity={0.8}
+                    <Pressable
                       onPress={() => setExpandedFaq(isOpen ? null : idx)}
                       style={{
                         paddingHorizontal: 14,
@@ -429,7 +423,7 @@ export default function HelpSupportScreen() {
                       <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: isOpen ? '#E4E4E7' : '#F4F4F5', alignItems: 'center', justifyContent: 'center' }}>
                         <Feather name={isOpen ? 'minus' : 'plus'} size={12} color="#52525B" />
                       </View>
-                    </TouchableOpacity>
+                    </Pressable>
 
                     {isOpen && (
                       <View style={{ paddingHorizontal: 14, paddingBottom: 14, paddingTop: 2 }}>
@@ -474,8 +468,7 @@ export default function HelpSupportScreen() {
               If you experience any cardiac symptoms, severe breathlessness, or immediate acute injury during your home training session, trigger dispatch immediately.
             </Text>
 
-            <TouchableOpacity
-              activeOpacity={0.85}
+            <Pressable
               onPress={handleSosCall}
               style={{
                 backgroundColor: '#E11D48',
@@ -492,7 +485,7 @@ export default function HelpSupportScreen() {
               <Text style={{ color: '#FFFFFF', fontSize: 12.5, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 Emergency Dispatch SOS
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Footer Note */}

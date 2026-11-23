@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, Pressable, Platform } from 'react-native';
 import Reanimated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -189,8 +189,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
 
           {/* User Hero Section */}
           <View className="flex-row items-center gap-4 mb-5 z-10">
-            <TouchableOpacity
-              activeOpacity={0.85}
+            <Pressable
               onPress={openEditProfileModal}
               className="relative"
             >
@@ -243,7 +242,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
               >
                 <Feather name="camera" size={11} color="#FFFFFF" />
               </View>
-            </TouchableOpacity>
+            </Pressable>
 
             <View className="flex-1">
               <View className="flex-row items-center gap-2 flex-wrap">
@@ -311,8 +310,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
 
               {/* Go to Trainer Mode Button for Wildcard Accounts */}
               {user?.role !== 'admin' && (user?.role === 'trainer' || isWildcardTestAccount(user, profile?.mobile)) && (
-                <TouchableOpacity
-                  activeOpacity={0.85}
+                <Pressable
                   onPress={() => handleRoleChange('trainer')}
                   className="mt-2.5 bg-[#101828] border border-zinc-800 px-3 py-1.5 rounded-xl flex-row items-center gap-1.5 self-start"
                 >
@@ -320,7 +318,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                   <Text className="text-white text-[10px] font-black uppercase tracking-wider">
                     Go to Trainer Mode
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               )}
             </View>
           </View>
@@ -389,8 +387,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
 
             {/* Header: Pass Title + QR scan trigger */}
             <View className="flex-row justify-between items-start z-10">
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Pressable
                 onPress={handleSparklePress}
               >
                 <View className="flex-row items-center gap-1.5">
@@ -437,11 +434,10 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                     </Text>
                   );
                 })()}
-              </TouchableOpacity>
+              </Pressable>
 
               {/* QR Code button matching Stitch code.html */}
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Pressable
                 onPress={() => navigateThrottled('/wallet')}
                 style={{
                   width: 44,
@@ -461,7 +457,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                   <Rect x={14} y={14} width={7} height={7} rx={1.8} stroke="#0F172A" strokeWidth={2.4} />
                   <Path d="M3 14h3v3H3zM7 17h3v3H7zM3 18h1v3H3zM10 14h1v1h-1zM18 10v1h1v-1z" stroke="#0F172A" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
                 </Svg>
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             {/* Hairline Divider with gradient feel from code.html */}
@@ -476,8 +472,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
 
             {/* Bottom Credits & Validity Row */}
             <View className="flex-row justify-between items-end z-10 pt-0.5">
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Pressable
                 onPress={handleCreditsPress}
                 className="flex-row items-center"
               >
@@ -588,7 +583,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                     </Text>
                   </View>
                 </Reanimated.View>
-              </TouchableOpacity>
+              </Pressable>
 
               <View className="items-end">
                 <Text 
@@ -613,8 +608,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                       : 'Active';
                   })()}
                 </Text>
-                <TouchableOpacity
-                  activeOpacity={0.7}
+                <Pressable
                   onPress={() => navigateThrottled('/wallet')}
                   className="flex-row items-center gap-1 mt-1"
                 >
@@ -625,7 +619,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                     View Wallet
                   </Text>
                   <Feather name="arrow-right" size={13} color="#E11D48" />
-                </TouchableOpacity>
+                </Pressable>
               </View>
             </View>
           </View>
@@ -642,8 +636,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
               ...softShadow({ color: '#0F172A', opacity: 0.04, radius: 10, offsetY: 2 }),
             }}
           >
-            <TouchableOpacity
-              activeOpacity={0.7}
+            <Pressable
               onPress={() => togglePersonalInfoExpansion()}
               className={`flex-row justify-between items-center ${isPersonalInfoExpanded ? 'mb-2 pb-3 border-b border-slate-100' : ''}`}
             >
@@ -664,7 +657,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
               <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center' }}>
                 <Feather name={isPersonalInfoExpanded ? "chevron-up" : "chevron-down"} size={16} color="#94A3B8" />
               </View>
-            </TouchableOpacity>
+            </Pressable>
 
             {isPersonalInfoExpanded && (
               <Reanimated.View 
@@ -676,17 +669,16 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                 {/* Sub-header inside Dropdown with Edit button */}
                 <View className="flex-row justify-between items-center pb-2.5 border-b border-zinc-100">
                   <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-zinc-500 text-xs uppercase tracking-wider">Profile Details</Text>
-                  <TouchableOpacity
-                    activeOpacity={0.7}
+                  <Pressable
                     onPress={openEditProfileModal}
                     className="flex-row items-center gap-1.5 bg-zinc-900 px-3 py-1 rounded-lg"
                   >
                     <Feather name="edit-2" size={11} color="#FFFFFF" />
                     <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-white text-xs">Edit</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
                 {/* Full Name */}
-                <TouchableOpacity activeOpacity={0.6} onPress={openEditProfileModal} className="flex-row items-center justify-between py-2 border-b border-zinc-100">
+                <Pressable onPress={openEditProfileModal} className="flex-row items-center justify-between py-2 border-b border-zinc-100">
                   <View className="flex-row items-center gap-3">
                     <Feather name="user" size={15} color="#71717A" />
                     <Text className="text-zinc-500 text-xs font-medium">Full Name</Text>
@@ -695,10 +687,10 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                     <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-zinc-900 text-xs">{profile.name || user?.name || 'Not set'}</Text>
                     <Feather name="chevron-right" size={14} color="#A1A1AA" />
                   </View>
-                </TouchableOpacity>
+                </Pressable>
 
                 {/* Mobile Number */}
-                <TouchableOpacity activeOpacity={0.6} onPress={openEditProfileModal} className="flex-row items-center justify-between py-2 border-b border-zinc-100">
+                <Pressable onPress={openEditProfileModal} className="flex-row items-center justify-between py-2 border-b border-zinc-100">
                   <View className="flex-row items-center gap-3">
                     <Feather name="phone" size={15} color="#71717A" />
                     <Text className="text-zinc-500 text-xs font-medium">Mobile Number</Text>
@@ -709,10 +701,10 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                     </Text>
                     <Feather name="chevron-right" size={14} color="#A1A1AA" />
                   </View>
-                </TouchableOpacity>
+                </Pressable>
 
                 {/* Email address */}
-                <TouchableOpacity activeOpacity={0.6} onPress={openEditProfileModal} className="flex-row items-center justify-between py-2 border-b border-zinc-100">
+                <Pressable onPress={openEditProfileModal} className="flex-row items-center justify-between py-2 border-b border-zinc-100">
                   <View className="flex-row items-center gap-3">
                     <Feather name="mail" size={15} color="#71717A" />
                     <Text className="text-zinc-500 text-xs font-medium">Email address</Text>
@@ -721,10 +713,10 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                     <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-zinc-900 text-xs">{profile.email || user?.email || 'Not set'}</Text>
                     <Feather name="chevron-right" size={14} color="#A1A1AA" />
                   </View>
-                </TouchableOpacity>
+                </Pressable>
 
                 {/* Gender */}
-                <TouchableOpacity activeOpacity={0.6} onPress={openEditProfileModal} className="flex-row items-center justify-between py-2 border-b border-zinc-100">
+                <Pressable onPress={openEditProfileModal} className="flex-row items-center justify-between py-2 border-b border-zinc-100">
                   <View className="flex-row items-center gap-3">
                     <Ionicons name="male-female-outline" size={15} color="#71717A" />
                     <Text className="text-zinc-500 text-xs font-medium">Gender</Text>
@@ -733,10 +725,10 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                     <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-zinc-900 text-xs capitalize">{profile.gender || 'Not set'}</Text>
                     <Feather name="chevron-right" size={14} color="#A1A1AA" />
                   </View>
-                </TouchableOpacity>
+                </Pressable>
 
                 {/* Date of Birth */}
-                <TouchableOpacity activeOpacity={0.6} onPress={openEditProfileModal} className="flex-row items-center justify-between py-2 border-b border-zinc-100">
+                <Pressable onPress={openEditProfileModal} className="flex-row items-center justify-between py-2 border-b border-zinc-100">
                   <View className="flex-row items-center gap-3">
                     <Feather name="calendar" size={15} color="#71717A" />
                     <Text className="text-zinc-500 text-xs font-medium">Date of Birth</Text>
@@ -745,10 +737,10 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                     <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-zinc-900 text-xs">{profile.dob || 'Not set'}</Text>
                     <Feather name="chevron-right" size={14} color="#A1A1AA" />
                   </View>
-                </TouchableOpacity>
+                </Pressable>
 
                 {/* Height */}
-                <TouchableOpacity activeOpacity={0.6} onPress={openEditProfileModal} className="flex-row items-center justify-between py-2 border-b border-zinc-100">
+                <Pressable onPress={openEditProfileModal} className="flex-row items-center justify-between py-2 border-b border-zinc-100">
                   <View className="flex-row items-center gap-3">
                     <Ionicons name="resize-outline" size={15} color="#71717A" />
                     <Text className="text-zinc-500 text-xs font-medium">Height</Text>
@@ -759,10 +751,10 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                     </Text>
                     <Feather name="chevron-right" size={14} color="#A1A1AA" />
                   </View>
-                </TouchableOpacity>
+                </Pressable>
 
                 {/* Weight */}
-                <TouchableOpacity activeOpacity={0.6} onPress={openEditProfileModal} className="flex-row items-center justify-between py-2 border-b border-zinc-100">
+                <Pressable onPress={openEditProfileModal} className="flex-row items-center justify-between py-2 border-b border-zinc-100">
                   <View className="flex-row items-center gap-3">
                     <Ionicons name="barbell-outline" size={15} color="#71717A" />
                     <Text className="text-zinc-500 text-xs font-medium">Weight</Text>
@@ -773,10 +765,10 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                     </Text>
                     <Feather name="chevron-right" size={14} color="#A1A1AA" />
                   </View>
-                </TouchableOpacity>
+                </Pressable>
 
                 {/* Fitness Level */}
-                <TouchableOpacity activeOpacity={0.6} onPress={openEditProfileModal} className="flex-row items-center justify-between py-2 border-b border-zinc-100">
+                <Pressable onPress={openEditProfileModal} className="flex-row items-center justify-between py-2 border-b border-zinc-100">
                   <View className="flex-row items-center gap-3">
                     <Feather name="trending-up" size={15} color="#71717A" />
                     <Text className="text-zinc-500 text-xs font-medium">Fitness Level</Text>
@@ -785,10 +777,10 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                     <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-zinc-900 text-xs">{profile.fitnessLevel || 'Not set'}</Text>
                     <Feather name="chevron-right" size={14} color="#A1A1AA" />
                   </View>
-                </TouchableOpacity>
+                </Pressable>
 
                 {/* Area */}
-                <TouchableOpacity activeOpacity={0.6} onPress={openEditProfileModal} className="flex-row items-center justify-between py-2 border-b border-zinc-100">
+                <Pressable onPress={openEditProfileModal} className="flex-row items-center justify-between py-2 border-b border-zinc-100">
                   <View className="flex-row items-center gap-3">
                     <Feather name="map-pin" size={15} color="#71717A" />
                     <Text className="text-zinc-500 text-xs font-medium">Area</Text>
@@ -797,7 +789,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                     <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-zinc-900 text-xs">{profile.city || 'Not set'}</Text>
                     <Feather name="chevron-right" size={14} color="#A1A1AA" />
                   </View>
-                </TouchableOpacity>
+                </Pressable>
 
                 {/* Member Since */}
                 <View className="flex-row items-center justify-between py-2 border-b border-zinc-100">
@@ -836,14 +828,13 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                 </View>
 
                 {/* Bottom Collapse Toggle */}
-                <TouchableOpacity
-                  activeOpacity={0.7}
+                <Pressable
                   onPress={() => togglePersonalInfoExpansion(false)}
                   className="flex-row items-center justify-center gap-1.5 py-2.5 mt-2 border-t border-zinc-100"
                 >
                   <Feather name="chevron-up" size={14} color="#71717A" />
                   <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-zinc-600 text-xs">Wrap / Collapse</Text>
-                </TouchableOpacity>
+                </Pressable>
               </Reanimated.View>
             )}
           </View>
@@ -869,8 +860,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                   Personalized workout programming
                 </Text>
               </View>
-              <TouchableOpacity
-                activeOpacity={0.7}
+              <Pressable
                 onPress={() => setIsGoalsModalVisible(true)}
                 style={{
                   flexDirection: 'row',
@@ -886,7 +876,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                 <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-slate-700 text-xs font-semibold">
                   Edit
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             {/* Goal Chips */}
@@ -916,8 +906,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
             })()}
 
             {/* Highlight Inspiration Banner */}
-            <TouchableOpacity
-              activeOpacity={0.8}
+            <Pressable
               onPress={() => setIsGoalsModalVisible(true)}
               style={{
                 backgroundColor: '#ECFDF5',
@@ -946,13 +935,12 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                 </View>
               </View>
               <Feather name="chevron-right" size={16} color="#059669" />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* 3. Become a VIRLA Trainer Option */}
           {user?.role !== 'trainer' && !hasApplied && (
-            <TouchableOpacity
-              activeOpacity={0.85}
+            <Pressable
               onPress={() => navigateThrottled('/trainer-application')}
               style={{
                 backgroundColor: '#090D16',
@@ -992,7 +980,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
               <Text style={{ fontFamily: 'Outfit_400Regular' }} className="text-xs text-slate-400 mt-2 leading-relaxed">
                 Train on your schedule. Grow your client base. Keep more of what you earn with our elite clientele.
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           )}
 
           {/* Trainer Application Tracker */}
@@ -1068,8 +1056,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
             }}
           >
             {/* Item 1: Workout History & Metrics */}
-            <TouchableOpacity
-              activeOpacity={0.7}
+            <Pressable
               onPress={() => navigateThrottled('/personal-statistics')}
               style={{
                 flexDirection: 'row',
@@ -1088,13 +1075,12 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                 </Text>
               </View>
               <Feather name="chevron-right" size={16} color="#94A3B8" />
-            </TouchableOpacity>
+            </Pressable>
 
             <View style={{ height: 1, backgroundColor: '#F1F5F9', marginHorizontal: 8 }} />
 
             {/* Item 2: Saved Workout Locations */}
-            <TouchableOpacity
-              activeOpacity={0.7}
+            <Pressable
               onPress={() => navigateThrottled('/address-management')}
               style={{
                 flexDirection: 'row',
@@ -1115,13 +1101,12 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
               <Text style={{ fontFamily: 'Outfit_500Medium' }} className="text-[11px] text-slate-400">
                 Home, Office
               </Text>
-            </TouchableOpacity>
+            </Pressable>
 
             <View style={{ height: 1, backgroundColor: '#F1F5F9', marginHorizontal: 8 }} />
 
             {/* Item 3: Dedicated Concierge Support */}
-            <TouchableOpacity
-              activeOpacity={0.7}
+            <Pressable
               onPress={() => navigateThrottled('/help-support')}
               style={{
                 flexDirection: 'row',
@@ -1144,7 +1129,7 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
                   24/7 Priority
                 </Text>
               </View>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Trainer Application Tracker */}
@@ -1209,16 +1194,15 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
 
           {/* Sign Out Button */}
           <View className="pt-2 pb-6 items-center">
-            <TouchableOpacity
+            <Pressable
               onPress={handleLogout}
-              activeOpacity={0.8}
               className="flex-row items-center gap-1.5 px-4 py-2 rounded-full hover:bg-rose-50"
             >
               <Feather name="log-out" size={15} color="#E11D48" style={{ transform: [{ rotate: '-90deg' }] }} />
               <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#E11D48] text-xs font-bold uppercase tracking-wider">
                 SIGN OUT
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
     </Reanimated.ScrollView>
   );

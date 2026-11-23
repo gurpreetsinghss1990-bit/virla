@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, Pressable, View } from 'react-native';
 
 interface LocationCardProps {
   icon: string;
@@ -10,8 +10,7 @@ interface LocationCardProps {
 
 export function LocationCard({ icon, title, isSelected, onPress }: LocationCardProps) {
   return (
-    <TouchableOpacity
-      activeOpacity={0.7}
+    <Pressable
       onPress={onPress}
       className={`w-full flex-row items-center justify-between p-5 rounded-2xl border-2 mb-3.5 transition-all ${
         isSelected 
@@ -36,6 +35,6 @@ export function LocationCard({ icon, title, isSelected, onPress }: LocationCardP
           <View className="w-2 h-2 rounded-full bg-white" />
         )}
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }

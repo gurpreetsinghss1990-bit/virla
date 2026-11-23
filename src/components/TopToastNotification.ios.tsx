@@ -4,7 +4,7 @@ import {
   PanResponder,
   Platform,
   Text,
-  TouchableOpacity,
+  Pressable,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -181,8 +181,7 @@ export function TopToastNotification() {
       }}
       {...panResponder.panHandlers}
     >
-      <TouchableOpacity
-        activeOpacity={0.92}
+      <Pressable
         onPress={handlePress}
         style={{
           borderRadius: 24,
@@ -235,8 +234,7 @@ export function TopToastNotification() {
           </View>
 
           {/* Close button */}
-          <TouchableOpacity
-            activeOpacity={0.7}
+          <Pressable
             onPress={(e) => {
               e.stopPropagation();
               handleDismiss();
@@ -245,7 +243,7 @@ export function TopToastNotification() {
             className="w-7 h-7 rounded-full bg-white/5 items-center justify-center"
           >
             <Ionicons name="close" size={14} color="#A1A1AA" />
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Animated Progress Bar at Bottom */}
@@ -259,7 +257,7 @@ export function TopToastNotification() {
           />
         </View>
         </View>
-      </TouchableOpacity>
+      </Pressable>
     </Animated.View>
   );
 }

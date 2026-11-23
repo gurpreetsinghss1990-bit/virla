@@ -1,6 +1,6 @@
 import { Loading } from '../components/Loading';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -234,13 +234,13 @@ export default function TrainerAvailabilityScreen() {
         <Text className="text-zinc-500 text-xs font-bold text-center mt-4">
           Unable to load availability
         </Text>
-        <TouchableOpacity 
+        <Pressable 
           onPress={() => syncFromDB()} 
           className="mt-6 bg-zinc-950 py-3 px-6 rounded-xl"
           style={{ ...softShadow({ color: '#000', opacity: 0.1, radius: 4, offsetY: 2 }) }}
         >
           <Text className="text-white text-xs font-black uppercase tracking-wider">Retry</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     );
   }
@@ -495,9 +495,9 @@ export default function TrainerAvailabilityScreen() {
     <View style={{ flex: 1, backgroundColor: '#F7F8FC', paddingTop: insets.top }}>
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white">
-        <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
+        <Pressable onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
           <Ionicons name="arrow-back" size={20} color="#101828" />
-        </TouchableOpacity>
+        </Pressable>
         <Text className="flex-1 text-center text-[#101828] text-sm font-black uppercase tracking-wider mr-8">
           Monthly Availability
         </Text>
@@ -537,9 +537,8 @@ export default function TrainerAvailabilityScreen() {
 
             <View className="gap-3">
               {/* Online/Offline Toggle */}
-              <TouchableOpacity
+              <Pressable
                 onPress={toggleOnline}
-                activeOpacity={0.8}
                 className="flex-row justify-between items-center py-2 border-b border-zinc-50"
               >
                 <View className="flex-1 pr-3">
@@ -551,12 +550,11 @@ export default function TrainerAvailabilityScreen() {
                     {prefs.online ? 'Online' : 'Offline'}
                   </Text>
                 </View>
-              </TouchableOpacity>
+              </Pressable>
 
               {/* Service Radius */}
-              <TouchableOpacity
+              <Pressable
                 onPress={handleUpdateRadius}
-                activeOpacity={0.8}
                 className="flex-row justify-between items-center py-2 border-b border-zinc-50"
               >
                 <View className="flex-1 pr-3">
@@ -564,12 +562,11 @@ export default function TrainerAvailabilityScreen() {
                   <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Maximum travel distance in Mumbai</Text>
                 </View>
                 <Text className="text-[#4F46E5] text-xs font-black">{trainerServiceRadiusKm(prefs.radiusKm)} km</Text>
-              </TouchableOpacity>
+              </Pressable>
 
               {/* Max Daily Sessions */}
-              <TouchableOpacity
+              <Pressable
                 onPress={handleUpdateMaxSessions}
-                activeOpacity={0.8}
                 className="flex-row justify-between items-center py-2 border-b border-zinc-50"
               >
                 <View className="flex-1 pr-3">
@@ -577,12 +574,11 @@ export default function TrainerAvailabilityScreen() {
                   <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">Prevents fatigue capping bookings</Text>
                 </View>
                 <Text className="text-[#4F46E5] text-xs font-black">{prefs.maxDailySessions || 5} sessions</Text>
-              </TouchableOpacity>
+              </Pressable>
 
               {/* Workout Categories */}
-              <TouchableOpacity
+              <Pressable
                 onPress={() => router.push('/trainer-workouts')}
-                activeOpacity={0.8}
                 className="flex-row justify-between items-center py-2"
               >
                 <View className="flex-1 pr-3">
@@ -592,29 +588,29 @@ export default function TrainerAvailabilityScreen() {
                 <Text className="text-[#4F46E5] text-[10px] font-black uppercase">
                   Manage Workouts
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
 
           {/* Month Navigation Control */}
           <View className="bg-zinc-950 border border-zinc-800 p-4.5 rounded-[24px] flex-row justify-between items-center">
-            <TouchableOpacity 
+            <Pressable 
               onPress={handlePrevMonth} 
               disabled={!prevMonthAvailable}
               className={`w-8 h-8 items-center justify-center bg-zinc-800 rounded-full ${!prevMonthAvailable ? 'opacity-30' : ''}`}
             >
               <Feather name="chevron-left" size={16} color="white" />
-            </TouchableOpacity>
+            </Pressable>
             <Text className="text-white text-xs font-black uppercase tracking-wider">
               {monthsNames[selectedMonth]} {selectedYear}
             </Text>
-            <TouchableOpacity 
+            <Pressable 
               onPress={handleNextMonth} 
               disabled={!nextMonthAvailable}
               className={`w-8 h-8 items-center justify-center bg-zinc-800 rounded-full ${!nextMonthAvailable ? 'opacity-30' : ''}`}
             >
               <Feather name="chevron-right" size={16} color="white" />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Redesigned 7-column Month Grid Calendar */}
@@ -660,9 +656,8 @@ export default function TrainerAvailabilityScreen() {
                       const states = dayStates[dayNum] || { hasBookings: false, hasAvailability: false, isFullyBooked: false };
 
                       return (
-                        <TouchableOpacity
+                        <Pressable
                           key={colIdx}
-                          activeOpacity={isDisabled ? 1 : 0.8}
                           disabled={isDisabled}
                           onPress={() => setSelectedDay(dayNum)}
                           className="flex-1 items-center justify-center py-2.5"
@@ -706,7 +701,7 @@ export default function TrainerAvailabilityScreen() {
                               <View className="w-1 h-1 bg-transparent" />
                             ) : null}
                           </View>
-                        </TouchableOpacity>
+                        </Pressable>
                       );
                     })}
                     {/* Pad end of week if row length is less than 7 */}
@@ -731,9 +726,8 @@ export default function TrainerAvailabilityScreen() {
                 const isSelected = selectedDay === day.dayNum && selectedMonth === day.month && selectedYear === day.year;
                 const isDisabled = !isDateInAllowedRange(day.year, day.month, day.dayNum, today);
                 return (
-                  <TouchableOpacity
+                  <Pressable
                     key={idx}
-                    activeOpacity={isDisabled ? 1 : 0.8}
                     disabled={isDisabled}
                     onPress={() => {
                       setSelectedYear(day.year);
@@ -758,7 +752,7 @@ export default function TrainerAvailabilityScreen() {
                     }`}>
                       {day.dayNum}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 );
               })}
             </ScrollView>
@@ -776,8 +770,7 @@ export default function TrainerAvailabilityScreen() {
 
           {/* Bulk Controls */}
           <View className="flex-row gap-3">
-            <TouchableOpacity
-              activeOpacity={isSelectedDateOutOfRange ? 1 : 0.8}
+            <Pressable
               disabled={isSelectedDateOutOfRange}
               onPress={() => {
                 disableAllSlotsForDay(coach.id, dateStr);
@@ -792,10 +785,9 @@ export default function TrainerAvailabilityScreen() {
               }`}>
                 Disable Entire Day
               </Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
-              activeOpacity={isSelectedDateOutOfRange ? 1 : 0.8}
+            <Pressable
               disabled={isSelectedDateOutOfRange}
               onPress={() => {
                 enableAllSlotsForDay(coach.id, dateStr);
@@ -810,7 +802,7 @@ export default function TrainerAvailabilityScreen() {
               }`}>
                 Enable Entire Day
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Availability Planner Slots grid */}
@@ -823,8 +815,7 @@ export default function TrainerAvailabilityScreen() {
                     slot.isAvailable ? 'bg-white border-zinc-200' : 'bg-zinc-100 border-zinc-150'
                   }`}
                 >
-                  <TouchableOpacity
-                    activeOpacity={slot.isBooked || isSelectedDateOutOfRange ? 1 : 0.8}
+                  <Pressable
                     disabled={slot.isBooked || isSelectedDateOutOfRange}
                     onPress={() => {
                       console.log('[DEBUG-AVAIL] TouchableRow pressed for slot:', slot.time, 'date:', dateStr);
@@ -869,17 +860,16 @@ export default function TrainerAvailabilityScreen() {
                         )}
                       </View>
                     </View>
-                  </TouchableOpacity>
+                  </Pressable>
 
                   {/* Configure category trigger */}
                   {!slot.isBooked && slot.isAvailable && !isSelectedDateOutOfRange && (
-                    <TouchableOpacity
-                      activeOpacity={0.8}
+                    <Pressable
                       onPress={() => handleEditTimeSlot(slot.time, slot.category)}
                       className="bg-zinc-50 border border-zinc-150 w-8 h-8 rounded-full items-center justify-center"
                     >
                       <Feather name="edit-2" size={12} color="#6B7280" />
-                    </TouchableOpacity>
+                    </Pressable>
                   )}
                 </View>
               );

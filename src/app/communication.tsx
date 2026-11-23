@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Animated, KeyboardAvoidingView, Platform, Keyboard, Share, Linking } from 'react-native';
+import { View, Text, Pressable, ScrollView, TextInput, Alert, Animated, KeyboardAvoidingView, Platform, Keyboard, Share, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useBookingStore } from '../store/bookingStore';
@@ -256,9 +256,9 @@ export default function CommunicationScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: 'white', paddingTop: insets.top }} className="justify-center items-center">
         <Text className="text-zinc-400 font-semibold">No booking details found.</Text>
-        <TouchableOpacity onPress={() => router.back()} className="mt-4 bg-zinc-900 px-6 py-2 rounded-full">
+        <Pressable onPress={() => router.back()} className="mt-4 bg-zinc-900 px-6 py-2 rounded-full">
           <Text className="text-white font-bold text-xs">Go Back</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     );
   }
@@ -434,13 +434,13 @@ export default function CommunicationScreen() {
       >
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-3 flex-1">
-            <TouchableOpacity 
+            <Pressable 
               onPress={() => router.back()} 
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               className="w-9 h-9 items-center justify-center"
             >
               <Feather name="arrow-left" size={18} color="#1F1E1D" />
-            </TouchableOpacity>
+            </Pressable>
 
             {/* Avatar & Title (no presence dot — Live is text-gated, not faked) */}
             <View className="flex-row items-center gap-2.5 flex-1">
@@ -462,14 +462,13 @@ export default function CommunicationScreen() {
           </View>
 
           {/* Header overflow menu (SOS removed — Call / Share / Cancel live here) */}
-          <TouchableOpacity
+          <Pressable
             onPress={() => setIsMenuVisible(true)}
-            activeOpacity={0.7}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             className="w-9 h-9 rounded-full bg-[#F2EFE8] items-center justify-center active:bg-[#E8E4DC]"
           >
             <Feather name="more-vertical" size={17} color="#1F1E1D" />
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
 
@@ -567,8 +566,7 @@ export default function CommunicationScreen() {
                           .trim()}
                       </Text>
                       {msg.text.includes('maps.google.com') && (
-                        <TouchableOpacity
-                          activeOpacity={0.7}
+                        <Pressable
                           onPress={() => {
                             const match = msg.text.match(/https?:\/\/maps\.google\.com\S+/);
                             if (match) {
@@ -583,7 +581,7 @@ export default function CommunicationScreen() {
                           <Text className={`text-xs font-semibold ${isMe ? 'text-[#FAF9F5]' : 'text-[#CC785C]'}`}>
                             Open in Google Maps
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       )}
                     </View>
                   ) : (
@@ -631,9 +629,8 @@ export default function CommunicationScreen() {
             "Ready for workout!",
             "Do you need special equipment?"
           ].map((msgText, idx) => (
-            <TouchableOpacity
+            <Pressable
               key={idx}
-              activeOpacity={0.7}
               disabled={isChatLocked || !booking}
               onPress={() => {
                 if (!booking || isChatLocked) return;
@@ -650,7 +647,7 @@ export default function CommunicationScreen() {
               <Text className={`text-xs font-semibold ${isChatLocked ? 'text-[#A8A29E]' : 'text-[#3D3A35]'}`}>
                 {msgText}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           ))}
         </ScrollView>
       </View>
@@ -700,10 +697,9 @@ export default function CommunicationScreen() {
             />
 
             {/* Claude-style Terracotta Circular Send Button */}
-            <TouchableOpacity
+            <Pressable
               onPress={handleSendMessage}
               disabled={!messageText.trim()}
-              activeOpacity={0.8}
               className={`w-9 h-9 rounded-full items-center justify-center mb-0.5 transition-all ${
                 messageText.trim() 
                   ? 'bg-[#CC785C] active:bg-[#B6664C] shadow-xs' 
@@ -715,7 +711,7 @@ export default function CommunicationScreen() {
                 size={18} 
                 color={messageText.trim() ? '#FFFFFF' : '#9E9B93'} 
               />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       )}
@@ -726,21 +722,20 @@ export default function CommunicationScreen() {
             {/* Header / Title */}
             <View className="px-3 pt-2 pb-2.5 flex-row items-center justify-between border-b border-[#F0ECE1]">
               <Text className="text-[#1F1E1D] text-sm font-bold tracking-tight">Session Actions</Text>
-              <TouchableOpacity 
+              <Pressable 
                 onPress={() => setIsMenuVisible(false)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 className="w-6 h-6 rounded-full bg-[#F5F2EC] items-center justify-center"
               >
                 <Feather name="x" size={13} color="#716F6A" />
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             <View className="py-1">
               {!isCompletedSession && (
                 <>
-                  <TouchableOpacity 
+                  <Pressable 
                     onPress={handleCall} 
-                    activeOpacity={0.7} 
                     className="flex-row items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-[#F5F2EC]"
                   >
                     <View className="w-8 h-8 rounded-xl bg-[#FAF9F5] items-center justify-center">
@@ -754,11 +749,10 @@ export default function CommunicationScreen() {
                         {isCallLocked ? 'Unlocks 60m before session' : 'Encrypted line with coach'}
                       </Text>
                     </View>
-                  </TouchableOpacity>
+                  </Pressable>
 
-                  <TouchableOpacity 
+                  <Pressable 
                     onPress={handleShareRoute} 
-                    activeOpacity={0.7} 
                     className="flex-row items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-[#F5F2EC]"
                   >
                     <View className="w-8 h-8 rounded-xl bg-[#FAF9F5] items-center justify-center">
@@ -768,7 +762,7 @@ export default function CommunicationScreen() {
                       <Text className="text-[#1F1E1D] text-sm font-semibold">Share Live Location</Text>
                       <Text className="text-[#716F6A] text-[11px]">Send real-time GPS location in this chat</Text>
                     </View>
-                  </TouchableOpacity>
+                  </Pressable>
                 </>
               )}
 
@@ -784,9 +778,8 @@ export default function CommunicationScreen() {
                 <>
                   <View className="h-px bg-[#F0ECE1] mx-2 my-1" />
 
-                  <TouchableOpacity 
+                  <Pressable 
                     onPress={() => { setIsMenuVisible(false); handleCancelBooking(); }} 
-                    activeOpacity={0.7} 
                     className="flex-row items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-rose-50"
                   >
                     <View className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-200/80 items-center justify-center">
@@ -800,7 +793,7 @@ export default function CommunicationScreen() {
                         Refund or forfeit policy apply
                       </Text>
                     </View>
-                  </TouchableOpacity>
+                  </Pressable>
                 </>
               )}
             </View>

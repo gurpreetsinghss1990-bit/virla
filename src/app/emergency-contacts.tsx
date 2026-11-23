@@ -1,6 +1,6 @@
 import { NativeSwitch } from '../components/NativeSwitch';
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore, EmergencyContact } from '../store/userProfileStore';
@@ -98,14 +98,14 @@ export default function EmergencyContactsScreen() {
         category="VIRLA SAFETY" 
         accentColor="#E11D48"
         rightElement={
-          <TouchableOpacity 
+          <Pressable 
             onPress={() => { if (isAdding) { resetForm(); } else { setIsAdding(true); } }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Text className="text-indigo-600 text-xs font-black uppercase tracking-wider">
               {isAdding ? 'Cancel' : 'Add New'}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         }
       />
 
@@ -192,14 +192,14 @@ export default function EmergencyContactsScreen() {
                 <NativeSwitch value={isPrimary} onValueChange={setIsPrimary} />
               </View>
 
-              <TouchableOpacity
+              <Pressable
                 onPress={handleAdd}
                 className="w-full bg-[#4F46E5] py-4 rounded-2xl items-center justify-center mt-2 shadow-xs"
               >
                 <Text className="text-white text-xs font-black uppercase">
                   {editingId ? 'Update Contact' : 'Save Emergency Contact'}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           ) : (
             /* Contacts List */
@@ -230,30 +230,30 @@ export default function EmergencyContactsScreen() {
                   <NativeDivider color="#F4F4F5" />
 
                   <View className="flex-row gap-3">
-                    <TouchableOpacity
+                    <Pressable
                       onPress={() => handleEdit(contact)}
                       className="flex-1 bg-zinc-50 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
                     >
                       <Feather name="edit" size={11} color="#101828" />
                       <Text className="text-zinc-950 text-[8px] font-black uppercase">Edit</Text>
-                    </TouchableOpacity>
+                    </Pressable>
 
                     {!contact.isPrimary && (
-                      <TouchableOpacity
+                      <Pressable
                         onPress={() => setPrimaryEmergencyContact(contact.id)}
                         className="flex-1 bg-zinc-50 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
                       >
                         <Feather name="shield" size={11} color="#4F46E5" />
                         <Text className="text-[#4F46E5] text-[8px] font-black uppercase">Set Primary</Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     )}
 
-                    <TouchableOpacity
+                    <Pressable
                       onPress={() => handleDelete(contact.id)}
                       className="w-10 bg-rose-50 border border-rose-100 py-2.5 rounded-xl items-center justify-center"
                     >
                       <Feather name="trash-2" size={12} color="#EF4444" />
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 </View>
               ))}

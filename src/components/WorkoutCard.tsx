@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { Workout } from '../types';
 
 interface WorkoutCardProps {
@@ -9,8 +9,7 @@ interface WorkoutCardProps {
 
 export function WorkoutCard({ workout, onPress }: WorkoutCardProps) {
   return (
-    <TouchableOpacity
-      activeOpacity={0.7}
+    <Pressable
       onPress={onPress}
       className="bg-white p-5 rounded-[20px] shadow-sm flex-col justify-between w-64 mr-4"
     >
@@ -44,6 +43,6 @@ export function WorkoutCard({ workout, onPress }: WorkoutCardProps) {
           </Text>
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }

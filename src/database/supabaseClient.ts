@@ -16,6 +16,20 @@ let clientUserId: string | null = null;
 let clientDeviceToken: string | null = null;
 let clientSessionToken: string | null = null;
 
+// Database reads the signed token first and ignores x-user-id once strict mode is on.
+// The header stays only so builds that have not received a token keep working.
+let legacyUserIdHeader = true;
+let sessionTokenProvider: ((userId: string) => Promise<string | null>) | null = null;
+let tokenFetchInFlight = false;
+
+export function setLegacyUserIdHeader(enabled: boolean) {
+  legacyUserIdHeader = enabled;
+}
+
+export function setSessionTokenProvider(provider: (userId: string) => Promise<string | null>) {
+  sessionTokenProvider = provider;
+}
+
 export function setClientUserId(userId: string | null) {
   if (clientUserId === userId) return;
   clientUserId = userId;
@@ -37,7 +51,18 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         ? new Headers(options.headers)
         : { ...(options.headers || {}) } as any;
 
-      if (clientUserId) {
+      if (clientUserId && !clientSessionToken && sessionTokenProvider && !tokenFetchInFlight) {
+        tokenFetchInFlight = true;
+        try {
+          const token = await sessionTokenProvider(clientUserId);
+          if (token) setClientSessionToken(token);
+        } catch {
+        } finally {
+          tokenFetchInFlight = false;
+        }
+      }
+
+      if (clientUserId && legacyUserIdHeader) {
         if (headers instanceof Headers) {
           headers.set('x-user-id', clientUserId);
         } else {

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   ScrollView,
   Platform,
   Alert,
@@ -469,10 +469,9 @@ export const ActivePlanView: React.FC<ActivePlanViewProps> = ({
               snacks: 'Snacks',
             };
             return (
-              <TouchableOpacity
+              <Pressable
                 key={mealKey}
                 onPress={() => setSelectedMealTab(mealKey)}
-                activeOpacity={0.7}
                 style={{
                   flex: 1,
                   paddingVertical: 8,
@@ -492,7 +491,7 @@ export const ActivePlanView: React.FC<ActivePlanViewProps> = ({
                 >
                   {labelMap[mealKey]}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             );
           })}
         </View>
@@ -541,10 +540,9 @@ export const ActivePlanView: React.FC<ActivePlanViewProps> = ({
           {/* Food items list (each tappable to swap or log) */}
           <View style={{ gap: 8 }}>
             {currentMealItems.map((item, idx) => (
-              <TouchableOpacity
+              <Pressable
                 key={idx}
                 onPress={() => handleFoodItemPress(item)}
-                activeOpacity={0.65}
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -571,7 +569,7 @@ export const ActivePlanView: React.FC<ActivePlanViewProps> = ({
                   </Text>
                 </View>
                 <Feather name="more-horizontal" size={16} color={ZONES.nutrition.base} />
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </View>
 
@@ -739,10 +737,9 @@ export const ActivePlanView: React.FC<ActivePlanViewProps> = ({
           {(plan.weeklyProgressGoals || []).map((goal, idx) => {
             const isDone = completedGoals.has(idx);
             return (
-              <TouchableOpacity
+              <Pressable
                 key={idx}
                 onPress={() => toggleGoal(idx)}
-                activeOpacity={0.75}
                 style={{
                   backgroundColor: ZONES.goals.tint,
                   borderColor: isDone ? ZONES.goals.base : ZONES.goals.border,
@@ -792,7 +789,7 @@ export const ActivePlanView: React.FC<ActivePlanViewProps> = ({
                     {goal}
                   </Text>
                 </View>
-              </TouchableOpacity>
+              </Pressable>
             );
           })}
         </View>
@@ -806,8 +803,7 @@ export const ActivePlanView: React.FC<ActivePlanViewProps> = ({
       {/* ==================================================================== */}
       <View style={{ gap: SPACING.internal }}>
         {!isSaved && (
-          <TouchableOpacity
-            activeOpacity={0.85}
+          <Pressable
             onPress={onSavePlan}
             style={{
               backgroundColor: '#0F172A',
@@ -831,12 +827,11 @@ export const ActivePlanView: React.FC<ActivePlanViewProps> = ({
             >
               Save & Activate Plan
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
 
         {/* Retake Questionnaire: Proper secondary button with visible border */}
-        <TouchableOpacity
-          activeOpacity={0.7}
+        <Pressable
           onPress={onRegenerate}
           style={{
             backgroundColor: '#FFFFFF',
@@ -858,7 +853,7 @@ export const ActivePlanView: React.FC<ActivePlanViewProps> = ({
           >
             Retake Questionnaire
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </ScrollView>
   );

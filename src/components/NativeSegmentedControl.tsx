@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text as RNText, TouchableOpacity, LayoutChangeEvent } from 'react-native';
+import { View, Text as RNText, Pressable, LayoutChangeEvent } from 'react-native';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -123,9 +123,8 @@ export function NativeSegmentedControl<T extends string>({
       {items.map(({ key: r, label }, idx) => {
         const isActive = activeKey === r;
         return (
-          <TouchableOpacity
+          <Pressable
             key={r}
-            activeOpacity={0.75}
             onPress={() => {
               if (tabWidth > 0) {
                 translateX.value = withSpring(idx * tabWidth, SPRING_CONFIG);
@@ -136,16 +135,19 @@ export function NativeSegmentedControl<T extends string>({
               }
               onChangeKey(r);
             }}
-            style={{
-              flex: 1,
-              paddingVertical: 8,
-              borderRadius: 9999,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 5,
-              zIndex: 2,
-            }}
+            style={({ pressed }) => [
+              {
+                flex: 1,
+                paddingVertical: 8,
+                borderRadius: 9999,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 5,
+                zIndex: 2,
+                opacity: pressed ? 0.75 : 1,
+              },
+            ]}
           >
             {isActive && (
               <Animated.View style={animatedCheckStyle}>
@@ -163,7 +165,7 @@ export function NativeSegmentedControl<T extends string>({
             >
               {label}
             </RNText>
-          </TouchableOpacity>
+          </Pressable>
         );
       })}
     </View>

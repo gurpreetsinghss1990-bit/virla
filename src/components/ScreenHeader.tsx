@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, Pressable, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -52,9 +52,8 @@ export function ScreenHeader({
       >
         <View className="h-14 flex-row items-center px-5 justify-between">
           {showBack ? (
-            <TouchableOpacity 
+            <Pressable 
               onPress={handleBack} 
-              activeOpacity={0.7}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               className={`w-9 h-9 items-center justify-center ${
                 backButtonBg 
@@ -63,7 +62,7 @@ export function ScreenHeader({
               }`}
             >
               <Ionicons name="arrow-back" size={22} color="#09090B" />
-            </TouchableOpacity>
+            </Pressable>
           ) : (
             <View className="w-9" />
           )}

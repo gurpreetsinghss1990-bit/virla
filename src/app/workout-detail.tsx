@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useWorkoutStore } from '../store/workoutStore';
@@ -44,13 +44,12 @@ export default function WorkoutDetailScreen() {
     <View className="flex-1 bg-white">
       {/* Floating Header back button */}
       <View style={{ top: insets.top + 12 }} className="absolute left-6 z-10">
-        <TouchableOpacity
-          activeOpacity={0.8}
+        <Pressable
           onPress={() => router.back()}
           className="w-10 h-10 rounded-full bg-white items-center justify-center shadow-md"
         >
           <Ionicons name="arrow-back" size={20} color="#111111" />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       {/* Detail Content */}
@@ -58,15 +57,14 @@ export default function WorkoutDetailScreen() {
 
       {/* Fixed Booking Footer */}
       <View style={{ paddingBottom: Math.max(insets.bottom, 24), paddingTop: 16, paddingHorizontal: 24 }} className="bg-white border-t border-zinc-100">
-        <TouchableOpacity
-          activeOpacity={0.8}
+        <Pressable
           onPress={handleStartBooking}
           className="w-full py-4 bg-zinc-900 rounded-[20px] items-center justify-center shadow-sm"
         >
           <Text className="text-white text-base font-extrabold tracking-wide">
             Book Home Session
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );

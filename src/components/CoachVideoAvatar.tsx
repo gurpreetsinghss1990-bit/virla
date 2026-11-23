@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AppState, TouchableOpacity, StyleSheet, View } from 'react-native';
+import { AppState, Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useFocusEffect, useIsFocused } from 'expo-router';
 import { Asset } from 'expo-asset';
@@ -157,8 +157,7 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
     : { uri: DEFAULT_POSTER_URL };
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.9}
+    <Pressable
       onPress={togglePlaybackAndVoice}
       style={{
         width: frameWidth,
@@ -299,6 +298,6 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
           color={shouldPlay ? '#FFFFFF' : '#6B7280'}
         />
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };

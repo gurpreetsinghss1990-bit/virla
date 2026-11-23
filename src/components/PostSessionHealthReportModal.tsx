@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Alert,  } from 'react-native';
+import { View, Text, Pressable, ScrollView, TextInput, KeyboardAvoidingView, Platform, Alert,  } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { Booking } from '../types';
 import { NativeSheet } from './NativeSheet';
@@ -159,12 +159,12 @@ export function PostSessionHealthReportModal({
                     Client: <Text className="font-bold text-zinc-800">{clientName || 'Client'}</Text>
                   </Text>
                 </View>
-                <TouchableOpacity
+                <Pressable
                   onPress={onClose}
                   className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center active:opacity-70"
                 >
                   <Ionicons name="close" size={20} color="#3F3F46" />
-                </TouchableOpacity>
+                </Pressable>
               </View>
 
               {/* Form Body */}
@@ -189,9 +189,8 @@ export function PostSessionHealthReportModal({
                     {HEALTH_STATUS_OPTIONS.map((opt) => {
                       const isSelected = selectedHealthStatus.includes(opt);
                       return (
-                        <TouchableOpacity
+                        <Pressable
                           key={opt}
-                          activeOpacity={0.7}
                           onPress={() => toggleHealthStatus(opt)}
                           className={`flex-row items-center gap-3 p-3 rounded-xl border ${
                             isSelected
@@ -215,7 +214,7 @@ export function PostSessionHealthReportModal({
                           >
                             {opt}
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       );
                     })}
                   </View>
@@ -233,9 +232,8 @@ export function PostSessionHealthReportModal({
                     ].map((btn) => {
                       const isSelected = hasInjury === btn.value;
                       return (
-                        <TouchableOpacity
+                        <Pressable
                           key={btn.label}
-                          activeOpacity={0.7}
                           onPress={() => setHasInjury(btn.value)}
                           className={`flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl border ${
                             isSelected
@@ -259,7 +257,7 @@ export function PostSessionHealthReportModal({
                           >
                             {btn.label}
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       );
                     })}
                   </View>
@@ -274,9 +272,8 @@ export function PostSessionHealthReportModal({
                         {AFFECTED_AREAS_OPTIONS.map((area) => {
                           const isSel = selectedAffectedAreas.includes(area);
                           return (
-                            <TouchableOpacity
+                            <Pressable
                               key={area}
-                              activeOpacity={0.7}
                               onPress={() => toggleAffectedArea(area)}
                               className={`px-3 py-2 rounded-lg border ${
                                 isSel
@@ -291,7 +288,7 @@ export function PostSessionHealthReportModal({
                               >
                                 {area}
                               </Text>
-                            </TouchableOpacity>
+                            </Pressable>
                           );
                         })}
                       </View>
@@ -327,9 +324,8 @@ export function PostSessionHealthReportModal({
                     ].map((btn) => {
                       const isSelected = hasModifications === btn.value;
                       return (
-                        <TouchableOpacity
+                        <Pressable
                           key={btn.label}
-                          activeOpacity={0.7}
                           onPress={() => setHasModifications(btn.value)}
                           className={`flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl border ${
                             isSelected
@@ -353,7 +349,7 @@ export function PostSessionHealthReportModal({
                           >
                             {btn.label}
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       );
                     })}
                   </View>
@@ -386,9 +382,8 @@ export function PostSessionHealthReportModal({
                     {HEALTH_CHANGE_OPTIONS.map((opt) => {
                       const isSelected = healthChangeStatus === opt;
                       return (
-                        <TouchableOpacity
+                        <Pressable
                           key={opt}
-                          activeOpacity={0.7}
                           onPress={() => setHealthChangeStatus(opt)}
                           className={`flex-row items-center gap-3 p-3 rounded-xl border ${
                             isSelected
@@ -412,7 +407,7 @@ export function PostSessionHealthReportModal({
                           >
                             {opt}
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       );
                     })}
                   </View>
@@ -462,8 +457,7 @@ export function PostSessionHealthReportModal({
                 </View>
 
                 {/* 6. Trainer Confirmation */}
-                <TouchableOpacity
-                  activeOpacity={0.8}
+                <Pressable
                   onPress={() => setConfirmed(!confirmed)}
                   className={`p-4 rounded-2xl border flex-row items-start gap-3 ${
                     confirmed
@@ -483,11 +477,10 @@ export function PostSessionHealthReportModal({
                   <Text className="text-zinc-800 text-xs font-bold flex-1 leading-relaxed">
                     I have recorded the client&apos;s reported health concerns accurately and highlighted any relevant physical limitations for the next trainer.
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
 
                 {/* Submit Button */}
-                <TouchableOpacity
-                  activeOpacity={0.85}
+                <Pressable
                   disabled={isSubmitting}
                   onPress={handleSubmit}
                   className="w-full bg-[#E11D48] py-4 rounded-2xl items-center justify-center shadow-md active:opacity-90"
@@ -495,7 +488,7 @@ export function PostSessionHealthReportModal({
                   <Text className="text-white text-sm font-black uppercase tracking-wider">
                     {isSubmitting ? 'Saving Health Update...' : 'Submit Health Update'}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               </ScrollView>
             </KeyboardAvoidingView>
     </NativeSheet>

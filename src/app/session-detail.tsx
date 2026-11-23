@@ -5,7 +5,7 @@ import { requestForegroundLocationWithDisclosure } from '../utils/locationDisclo
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Animated, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, Text, TextInput, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AddPartnerModal } from '../components/AddPartnerModal';
 import { PostSessionHealthReportModal } from '../components/PostSessionHealthReportModal';
@@ -757,9 +757,9 @@ export default function SessionDetailScreen() {
     return (
       <View style={{ flex: 1, backgroundColor, paddingTop: insets.top }} className="justify-center items-center">
         <Text className="text-zinc-400 font-semibold">No booking details found.</Text>
-        <TouchableOpacity onPress={handleSafeBack} className="mt-4 bg-zinc-900 px-6 py-2 rounded-full">
+        <Pressable onPress={handleSafeBack} className="mt-4 bg-zinc-900 px-6 py-2 rounded-full">
           <Text className="text-white font-bold text-xs">Go Back</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     );
   }
@@ -1005,9 +1005,9 @@ export default function SessionDetailScreen() {
         {/* Header */}
         <View style={{ paddingTop: insets.top }} className="border-b border-[#E5E7EB] bg-white">
           <View className="h-14 flex-row items-center px-6 justify-between">
-            <TouchableOpacity onPress={handleSafeBack} className="w-8 h-8 items-center justify-center">
+            <Pressable onPress={handleSafeBack} className="w-8 h-8 items-center justify-center">
               <Ionicons name="arrow-back" size={20} color="#101828" />
-            </TouchableOpacity>
+            </Pressable>
             <Text className="text-[#101828] text-xs font-black uppercase tracking-widest">
               Booking Details
             </Text>
@@ -1186,15 +1186,14 @@ export default function SessionDetailScreen() {
                   </Text>
                 </View>
               </View>
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Pressable
                 onPress={() => router.push('/legal-center')}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 className="border border-rose-200 px-3.5 py-1.5 rounded-full flex-row items-center bg-white shadow-sm"
               >
                 <Text className="text-[#E11D48] text-[9px] font-black uppercase tracking-wide">View Details</Text>
                 <Feather name="chevron-right" size={10} color="#E11D48" />
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             {/* Privacy Warning Banner */}
@@ -1241,7 +1240,7 @@ export default function SessionDetailScreen() {
             ...softShadow({ color: '#101828', opacity: 0.05, radius: 12, offsetY: -4 }),
           }}
         >
-          <TouchableOpacity
+          <Pressable
             disabled={isAccepting || isConfirmed}
             onPress={() => {
               const handleAccept = async () => {
@@ -1316,7 +1315,7 @@ export default function SessionDetailScreen() {
             ) : (
               <Text className="text-white text-sm font-black uppercase">Accept Booking</Text>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     );
@@ -1342,13 +1341,12 @@ export default function SessionDetailScreen() {
         }}
       >
         <View className="h-14 flex-row items-center px-5 justify-between">
-          <TouchableOpacity
+          <Pressable
             onPress={handleSafeBack}
-            activeOpacity={0.6}
             className="w-9 h-9 items-center justify-center active:opacity-60"
           >
             <Ionicons name="arrow-back" size={18} color="#09090B" />
-          </TouchableOpacity>
+          </Pressable>
 
           {/* Header Title */}
           <View className="items-center flex-1 mx-2">
@@ -1362,15 +1360,14 @@ export default function SessionDetailScreen() {
 
           <View className="flex-row items-center gap-2">
             {role === 'customer' && (
-              <TouchableOpacity
+              <Pressable
                 onPress={handleOpenSupport}
-                activeOpacity={0.8}
                 className="bg-rose-50 px-3 py-1.5 rounded-full border border-rose-200/90 flex-row items-center gap-1.5"
                 accessibilityLabel="Customer Support"
               >
                 <Feather name="headphones" size={13} color="#E11D48" />
                 <Text className="text-rose-700 text-xs font-black uppercase tracking-wider">Support</Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
         </View>
@@ -1391,8 +1388,7 @@ export default function SessionDetailScreen() {
               <Text className="text-amber-400 text-xs font-bold uppercase tracking-wider pl-2">Developer Push Simulator</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 8, gap: 8 }}>
                 {currentStatus === 'trainer_assigned' && role === 'trainer' && (
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <Pressable
                     onPress={async () => {
                       try {
                         markSelfUpdate();
@@ -1405,12 +1401,11 @@ export default function SessionDetailScreen() {
                     className="px-3.5 py-2 bg-indigo-600 rounded-xl items-center justify-center"
                   >
                     <Text className="text-white text-xs font-semibold">Simulate Accept</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
 
                 {currentStatus === 'trainer_accepted' && role === 'trainer' && (
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <Pressable
                     onPress={async () => {
                       try {
                         markSelfUpdate();
@@ -1423,22 +1418,20 @@ export default function SessionDetailScreen() {
                     className="px-3.5 py-2 bg-indigo-600 rounded-xl items-center justify-center"
                   >
                     <Text className="text-white text-xs font-semibold">Simulate Prep Gear</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
 
                 {currentStatus === 'trainer_preparing' && role === 'trainer' && (
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <Pressable
                     onPress={startTravelSimulation}
                     className="px-3.5 py-2 bg-emerald-600 rounded-xl items-center justify-center"
                   >
                     <Text className="text-white text-xs font-semibold">Simulate Start Journey</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
 
                 {currentStatus === 'trainer_travelling' && (
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <Pressable
                     onPress={async () => {
                       if (simIntervalId) clearInterval(simIntervalId);
                       setJourneyProgress(1.0);
@@ -1453,24 +1446,22 @@ export default function SessionDetailScreen() {
                     className="px-3.5 py-2 bg-emerald-600 rounded-xl items-center justify-center"
                   >
                     <Text className="text-white text-xs font-semibold">Skip to Arrived</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
 
-                <TouchableOpacity
-                  activeOpacity={0.8}
+                <Pressable
                   onPress={() => triggerClientNoShow(booking.id)}
                   className="px-3.5 py-2 bg-rose-600 rounded-xl items-center justify-center"
                 >
                   <Text className="text-white text-xs font-semibold">Client No-Show</Text>
-                </TouchableOpacity>
+                </Pressable>
 
-                <TouchableOpacity
-                  activeOpacity={0.8}
+                <Pressable
                   onPress={() => triggerTrainerNoShow(booking.id)}
                   className="px-3.5 py-2 bg-rose-600 rounded-xl items-center justify-center"
                 >
                   <Text className="text-white text-xs font-semibold">Trainer No-Show</Text>
-                </TouchableOpacity>
+                </Pressable>
               </ScrollView>
             </View>
           )}
@@ -1689,7 +1680,7 @@ export default function SessionDetailScreen() {
                           </View>
 
                           {/* Toggle limitation resolved */}
-                          <TouchableOpacity
+                          <Pressable
                             onPress={async () => {
                               try {
                                 const current = Boolean(assessments[0].healthData?.isLimitationResolved);
@@ -1709,7 +1700,7 @@ export default function SessionDetailScreen() {
                             <Text className="text-[10px] font-bold text-zinc-800">
                               {assessments[0].healthData?.isLimitationResolved ? 'Mark Active' : 'Mark Resolved ✓'}
                             </Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         </View>
 
                         {assessments[0].healthData?.injuryDetails ? (
@@ -1760,13 +1751,12 @@ export default function SessionDetailScreen() {
                     </Text>
                   </View>
                 </View>
-                <TouchableOpacity
-                  activeOpacity={0.8}
+                <Pressable
                   onPress={() => setShowPartnerModal(true)}
                   className="w-full bg-[#E11D48] py-3.5 rounded-xl items-center justify-center mt-1"
                 >
                   <Text className="text-white text-sm font-bold uppercase tracking-wider">+ Add Partner</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             )}
 
@@ -1811,14 +1801,13 @@ export default function SessionDetailScreen() {
                         : 'Coach arrived at your gate'}
                     </Text>
                   </View>
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <Pressable
                     onPress={() => setIsNavigationMapVisible(true)}
                     className="bg-emerald-500/15 px-3 py-1.5 rounded-full border border-emerald-500/30 flex-row items-center gap-1.5"
                   >
                     <View className="w-2 h-2 rounded-full bg-emerald-400" />
                     <Text className="text-emerald-400 text-xs font-bold uppercase tracking-wider">LIVE ROUTE</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
 
                 {/* Real Live Map with Polyline & Mota Marker */}
@@ -1927,7 +1916,7 @@ export default function SessionDetailScreen() {
 
                 <View className="flex-row gap-3">
                   {/* Secure Message */}
-                  <TouchableOpacity
+                  <Pressable
                     onPress={
                       isMissed
                         ? () => Alert.alert('Session Missed', 'This session has been marked as missed and communications are closed.')
@@ -1942,12 +1931,12 @@ export default function SessionDetailScreen() {
                   >
                     <Feather name="message-square" size={16} color={isMissed || isCancelled ? '#6B7280' : 'white'} />
                     <Text className={`text-sm font-black tracking-wide ${isMissed || isCancelled ? 'text-zinc-500' : 'text-white'}`}>Message Coach</Text>
-                  </TouchableOpacity>
+                  </Pressable>
 
                   {/* Secure Call */}
                   {currentStatus !== 'session_closed' && booking?.status !== 'completed' && (
                     <View className="flex-1">
-                      <TouchableOpacity
+                      <Pressable
                         onPress={
                           isMissed
                             ? () => Alert.alert('Session Missed', 'This session has been marked as missed and communications are closed.')
@@ -1957,13 +1946,12 @@ export default function SessionDetailScreen() {
                                 ? () => Alert.alert('Security Lock', 'Waiting for Trainer Acceptance. Secure communications will unlock after a coach confirms.')
                                 : (getMinutesToSession() <= 60 ? handleCall : undefined)
                         }
-                        activeOpacity={!isAccepted || isMissed || isCancelled ? 0.8 : (getMinutesToSession() <= 60 ? 0.8 : 1)}
                         className={`py-4 rounded-2xl items-center justify-center flex-row gap-2.5 shadow-sm ${(!isMissed && !isCancelled && isAccepted && getMinutesToSession() <= 60) ? 'bg-zinc-950 border border-zinc-900' : 'bg-zinc-100 border border-zinc-200 opacity-60'
                           }`}
                       >
                         <Feather name="phone" size={16} color={(!isMissed && !isCancelled && isAccepted && getMinutesToSession() <= 60) ? 'white' : '#6B7280'} />
                         <Text className={`text-sm font-black tracking-wide ${(!isMissed && !isCancelled && isAccepted && getMinutesToSession() <= 60) ? 'text-white' : 'text-zinc-500'}`}>Direct Call</Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                   )}
                 </View>
@@ -2001,7 +1989,7 @@ export default function SessionDetailScreen() {
             {role === 'customer' && isAccepted && !isMissed && !isCancelled && booking?.status === 'upcoming' &&
               ['trainer_accepted', 'trainer_preparing', 'trainer_travelling'].includes(currentStatus) && (
               <View className="mt-2 mb-4">
-                <TouchableOpacity
+                <Pressable
                   onPress={() => {
                     const mins = getMinutesToSession();
                     const policy = mins >= 60
@@ -2032,11 +2020,10 @@ export default function SessionDetailScreen() {
                       },
                     ]);
                   }}
-                  activeOpacity={0.8}
                   className="py-4 rounded-2xl items-center justify-center bg-white border border-rose-200"
                 >
                   <Text className="text-rose-600 text-sm font-black tracking-wide">Cancel Booking</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             )}
 
@@ -2049,31 +2036,31 @@ export default function SessionDetailScreen() {
 
                 <View className="flex-row justify-between">
                   {currentStatus !== 'session_closed' && booking?.status !== 'completed' && (
-                    <TouchableOpacity
+                    <Pressable
                       onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Communication channel opens 5 hours prior to session.') : handleCall}
                       className="w-[30%] bg-zinc-950 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5 shadow-sm"
                     >
                       <Feather name="phone" size={14} color="white" />
                       <Text className="text-white text-xs font-bold uppercase">Call Client</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   )}
 
-                  <TouchableOpacity
+                  <Pressable
                     onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Communication channel opens 5 hours prior to session.') : handleMessage}
                     className={`${(currentStatus === 'session_closed' || booking?.status === 'completed') ? 'w-full' : 'w-[30%]'} bg-zinc-950 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5 shadow-sm`}
                   >
                     <Feather name="message-square" size={14} color="white" />
                     <Text className="text-white text-xs font-bold uppercase">Chat Board</Text>
-                  </TouchableOpacity>
+                  </Pressable>
 
                   {currentStatus !== 'session_closed' && booking?.status !== 'completed' && (
-                    <TouchableOpacity
+                    <Pressable
                       onPress={isPendingDetails ? () => Alert.alert('Security Lock', 'Live tracking GPS details lock opens 5 hours prior.') : handleShareLocation}
                       className="w-[30%] bg-zinc-950 py-3.5 rounded-2xl items-center justify-center flex-row gap-1.5 shadow-sm"
                     >
                       <Feather name="map-pin" size={14} color="white" />
                       <Text className="text-white text-xs font-bold uppercase">Share GPS</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   )}
                 </View>
 
@@ -2089,7 +2076,7 @@ export default function SessionDetailScreen() {
                               App uses background location permission to share your live travel route with the client until you reach their venue.
                             </Text>
                           </View>
-                          <TouchableOpacity
+                          <Pressable
                             onPress={async () => {
                               try {
                                 const started = await locationTrackerService.startTracking(booking.id, true);
@@ -2109,7 +2096,7 @@ export default function SessionDetailScreen() {
                           >
                             <Feather name="navigation" size={14} color="white" />
                             <Text className="text-white text-xs font-black uppercase">Start Navigation</Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         </View>
                       ) : (
                         <View className="bg-zinc-950 p-4 rounded-xl items-center justify-center border border-zinc-800">
@@ -2123,15 +2110,15 @@ export default function SessionDetailScreen() {
 
                     {currentStatus === 'trainer_travelling' && (
                       <View className="gap-2.5">
-                        <TouchableOpacity
+                        <Pressable
                           onPress={handleNavigateAddress}
                           className="w-full bg-slate-900 border border-slate-800 py-3.5 rounded-[18px] items-center justify-center flex-row gap-2 shadow-sm"
                         >
                           <Feather name="map" size={14} color="#10B981" />
                           <Text className="text-white text-xs font-black uppercase">View Full Route Map</Text>
-                        </TouchableOpacity>
+                        </Pressable>
 
-                        <TouchableOpacity
+                        <Pressable
                           onPress={async () => {
                             if (!SessionEngine.canCheckIn(booking)) {
                               Alert.alert('Check-In Locked', 'You can check in 30 minutes before the scheduled session.');
@@ -2152,12 +2139,12 @@ export default function SessionDetailScreen() {
                         >
                           <Feather name="check-circle" size={14} color="white" />
                           <Text className="text-white text-xs font-black uppercase">Check In (Reached Venue)</Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       </View>
                     )}
 
                     {currentStatus === 'otp_verified' && (
-                      <TouchableOpacity
+                      <Pressable
                         onPress={async () => {
                           try {
                             markSelfUpdate();
@@ -2177,7 +2164,7 @@ export default function SessionDetailScreen() {
                       >
                         <Feather name="play" size={14} color="white" />
                         <Text className="text-white text-xs font-black uppercase">Start Workout</Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     )}
                   </View>
                 )}
@@ -2194,12 +2181,12 @@ export default function SessionDetailScreen() {
                 <Text className="text-white text-base font-bold">Your trainer has arrived. Please begin your session.</Text>
 
                 {!showCustomerOtpInput ? (
-                  <TouchableOpacity
+                  <Pressable
                     onPress={() => setShowCustomerOtpInput(true)}
                     className="w-full bg-[#E11D48] py-4 rounded-[20px] items-center justify-center shadow-sm"
                   >
                     <Text className="text-white text-sm font-black uppercase">Start Session</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 ) : (
                   <View className="gap-4 border-t border-zinc-900 pt-4">
                     <View className="items-center justify-center bg-zinc-900/40 p-4 rounded-2xl gap-1">
@@ -2222,19 +2209,19 @@ export default function SessionDetailScreen() {
                         className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-center text-white text-2xl font-black tracking-widest"
                       />
                       <View className="flex-row gap-2 mt-1">
-                        <TouchableOpacity
+                        <Pressable
                           onPress={() => setShowCustomerOtpInput(false)}
                           className="flex-1 bg-zinc-800 py-3.5 rounded-xl items-center justify-center"
                         >
                           <Text className="text-zinc-400 text-xs font-black uppercase">Back</Text>
-                        </TouchableOpacity>
+                        </Pressable>
 
-                        <TouchableOpacity
+                        <Pressable
                           onPress={handleVerifyCustomerOtp}
                           className="flex-[1.5] bg-[#E11D48] py-3.5 rounded-xl items-center justify-center"
                         >
                           <Text className="text-white text-xs font-black uppercase">Verify & Start</Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       </View>
                     </View>
                   </View>
@@ -2266,12 +2253,12 @@ export default function SessionDetailScreen() {
                       maxLength={6}
                       className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-center text-white text-2xl font-black tracking-widest"
                     />
-                    <TouchableOpacity
+                    <Pressable
                       onPress={handleVerifyOtp}
                       className="w-full bg-[#E11D48] py-3.5 rounded-xl items-center justify-center"
                     >
                       <Text className="text-white text-xs font-black uppercase">Verify Check-In</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 ) : (
                   <View className="gap-4">
@@ -2283,7 +2270,7 @@ export default function SessionDetailScreen() {
                       </Text>
                     </View>
                     <View className="flex-row gap-3">
-                      <TouchableOpacity
+                      <Pressable
                         onPress={() => {
                           triggerClientNoShow(booking.id);
                           Alert.alert('Customer No-Show', 'Report logged successfully.');
@@ -2292,13 +2279,13 @@ export default function SessionDetailScreen() {
                         className="flex-1 bg-rose-950 border border-rose-900 py-3.5 rounded-xl items-center justify-center"
                       >
                         <Text className="text-rose-400 text-xs font-black uppercase">Customer No Show</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
+                      </Pressable>
+                      <Pressable
                         onPress={() => Alert.alert('Contact Support', 'Connecting to VIRLA partner coordinator...')}
                         className="flex-1 bg-zinc-900 border border-zinc-800 py-3.5 rounded-xl items-center justify-center"
                       >
                         <Text className="text-white text-xs font-black uppercase">Contact Support</Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                   </View>
                 )}
@@ -2343,7 +2330,7 @@ export default function SessionDetailScreen() {
                   Activity tracker is active. Warm-up drills & conditioning underway.
                 </Text>
                 {role === 'trainer' && (
-                  <TouchableOpacity
+                  <Pressable
                     disabled={workoutTimeLeft > 0}
                     onPress={async () => {
                       try {
@@ -2362,7 +2349,7 @@ export default function SessionDetailScreen() {
                     <Text className="text-white text-xs font-bold uppercase tracking-wider">
                       {workoutTimeLeft > 0 ? 'Workout in Progress' : 'Complete Session'}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
               </View>
             )}
@@ -2385,14 +2372,13 @@ export default function SessionDetailScreen() {
                   Record client health status, ongoing injuries, and notes for the next trainer before authorizing session closure.
                 </Text>
 
-                <TouchableOpacity
-                  activeOpacity={0.85}
+                <Pressable
                   onPress={() => setShowHealthReportModal(true)}
                   className="w-full bg-[#E11D48] py-4 rounded-2xl items-center justify-center flex-row gap-2 shadow-md active:opacity-90 mt-1"
                 >
                   <Feather name="clipboard" size={16} color="white" />
                   <Text className="text-white text-xs font-black uppercase tracking-wider">Open Health Update Form</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             )}
 
@@ -2510,9 +2496,9 @@ export default function SessionDetailScreen() {
 
                     <View className="flex-row justify-around py-1">
                       {[1, 2, 3, 4, 5].map(s => (
-                        <TouchableOpacity key={s} onPress={() => setOverallRating(s)}>
+                        <Pressable key={s} onPress={() => setOverallRating(s)}>
                           <Text className={`text-2xl ${overallRating === s ? 'scale-125' : 'opacity-35'}`}>⭐</Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       ))}
                     </View>
 
@@ -2524,27 +2510,27 @@ export default function SessionDetailScreen() {
                       className="border border-[#E5E7EB] bg-zinc-50 p-3.5 rounded-xl text-xs h-16 font-semibold"
                     />
 
-                    <TouchableOpacity onPress={handleClientFeedbackSubmit} className="w-full bg-zinc-950 py-3.5 rounded-xl items-center justify-center">
+                    <Pressable onPress={handleClientFeedbackSubmit} className="w-full bg-zinc-950 py-3.5 rounded-xl items-center justify-center">
                       <Text className="text-white text-xs font-black uppercase">Submit review</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 )}
 
                 {currentStatus === 'session_closed' && (
                   <View className="gap-2.5 mt-2 flex-row">
-                    <TouchableOpacity
+                    <Pressable
                       onPress={() => router.push('/booking')}
                       className="flex-1 bg-zinc-950 py-3 rounded-xl items-center justify-center"
                     >
                       <Text className="text-white text-[9px] font-black uppercase tracking-widest">Book Again</Text>
-                    </TouchableOpacity>
+                    </Pressable>
 
-                    <TouchableOpacity
+                    <Pressable
                       onPress={() => Alert.alert('Share Achievement', 'Achievement badge graphics shared successfully!')}
                       className="flex-1 bg-zinc-100 py-3 rounded-xl items-center justify-center"
                     >
                       <Text className="text-zinc-950 text-[9px] font-black uppercase tracking-widest">Share achievements</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 )}
               </View>
@@ -2709,12 +2695,12 @@ export default function SessionDetailScreen() {
         <View style={{ flex: 1, backgroundColor: '#0F172A', paddingTop: insets.top }}>
           {/* Header */}
           <View className="h-16 flex-row items-center px-6 border-b border-zinc-800 bg-slate-900 justify-between">
-            <TouchableOpacity
+            <Pressable
               onPress={() => setIsNavigationMapVisible(false)}
               className="w-10 h-10 items-center justify-center rounded-full bg-slate-800"
             >
               <Ionicons name="arrow-back" size={20} color="white" />
-            </TouchableOpacity>
+            </Pressable>
             <View className="items-center">
               <Text className="text-white text-sm font-black uppercase tracking-wider">
                 {role === 'trainer' ? 'Live Route Navigation' : 'Coach Live Tracking'}
@@ -2800,8 +2786,7 @@ export default function SessionDetailScreen() {
 
               <View className="flex-row gap-2.5">
                 {role === 'trainer' && parsedAddress?.lat && parsedAddress?.lng && (
-                  <TouchableOpacity
-                    activeOpacity={0.85}
+                  <Pressable
                     onPress={() => {
                       const dest = `${parsedAddress.lat},${parsedAddress.lng}`;
                       const url = Platform.select({
@@ -2814,17 +2799,16 @@ export default function SessionDetailScreen() {
                   >
                     <Ionicons name="navigate-circle-outline" size={18} color="white" />
                     <Text className="text-white text-xs font-black uppercase tracking-wider">Turn-by-Turn</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
 
-                <TouchableOpacity
-                  activeOpacity={0.85}
+                <Pressable
                   onPress={() => setIsNavigationMapVisible(false)}
                   className="flex-1 h-12 bg-slate-800 rounded-2xl items-center justify-center flex-row gap-2 border border-zinc-700 shadow-md"
                 >
                   <Ionicons name="close-circle" size={16} color="white" />
                   <Text className="text-white text-xs font-black uppercase tracking-wider">Close Map</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             </View>
           </View>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, StyleSheet, Text as RNText, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text as RNText, Pressable, View } from 'react-native';
 
 import { NativeSheet } from './NativeSheet';
 import { softShadow } from '../utils/shadows';
@@ -49,9 +49,8 @@ export const NativeSingleChoiceDialog: React.FC<NativeSingleChoiceDialogProps> =
 
               if (Platform.OS === 'ios') {
                 return (
-                  <TouchableOpacity
+                  <Pressable
                     key={opt}
-                    activeOpacity={0.7}
                     onPress={() => {
                       onSelect(opt);
                       onDismiss();
@@ -68,15 +67,14 @@ export const NativeSingleChoiceDialog: React.FC<NativeSingleChoiceDialogProps> =
                       {opt}
                     </RNText>
                     {isSelected && <RNText style={styles.iosCheckmark}>✓</RNText>}
-                  </TouchableOpacity>
+                  </Pressable>
                 );
               }
 
               // Material 3 Dialog Option Row for Android
               return (
-                <TouchableOpacity
+                <Pressable
                   key={opt}
-                  activeOpacity={0.65}
                   onPress={() => {
                     onSelect(opt);
                     onDismiss();
@@ -89,7 +87,7 @@ export const NativeSingleChoiceDialog: React.FC<NativeSingleChoiceDialogProps> =
                   <RNText style={[styles.androidOptionText, isSelected && styles.androidOptionTextSelected]}>
                     {opt}
                   </RNText>
-                </TouchableOpacity>
+                </Pressable>
               );
             })}
           </View>
@@ -98,25 +96,23 @@ export const NativeSingleChoiceDialog: React.FC<NativeSingleChoiceDialogProps> =
           {Platform.OS === 'ios' ? (
             <>
               <View style={styles.iosDivider} />
-              <TouchableOpacity
-                activeOpacity={0.7}
+              <Pressable
                 onPress={onDismiss}
                 style={styles.iosCancelButton}
               >
                 <RNText style={styles.iosCancelText}>Cancel</RNText>
-              </TouchableOpacity>
+              </Pressable>
             </>
           ) : (
             <View style={styles.androidActionsRow}>
-              <TouchableOpacity
-                activeOpacity={0.7}
+              <Pressable
                 onPress={onDismiss}
                 style={styles.androidTextButton}
               >
                 <RNText style={styles.androidCancelButtonText}>
                   CANCEL
                 </RNText>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           )}
         </View>

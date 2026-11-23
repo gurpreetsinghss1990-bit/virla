@@ -1,6 +1,6 @@
 import { NativeSwitch } from '../components/NativeSwitch';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert, Platform, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore } from '../store/userProfileStore';
@@ -153,12 +153,12 @@ export default function PrivacySecurityScreen() {
                       <Text className="text-zinc-500 text-xs font-normal mt-0.5 leading-snug">{device.model}</Text>
                     </View>
                     {!device.current && (
-                      <TouchableOpacity
+                      <Pressable
                         onPress={() => handleDisconnectDevice(device.id, device.name)}
                         className="bg-red-50 px-3 py-1.5 rounded-xl border border-red-100"
                       >
                         <Text className="text-red-600 text-xs font-semibold">Revoke</Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     )}
                   </View>
                 ))}
@@ -214,21 +214,19 @@ export default function PrivacySecurityScreen() {
                 Danger Zone
               </Text>
               
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Pressable
                 onPress={handleLogout}
                 className="bg-zinc-50 py-3.5 rounded-2xl items-center"
               >
                 <Text className="text-zinc-800 text-xs font-bold uppercase tracking-wider">Sign Out of Account</Text>
-              </TouchableOpacity>
+              </Pressable>
 
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Pressable
                 onPress={handleDeleteAccount}
                 className="bg-rose-50 border border-rose-100 py-3.5 rounded-2xl items-center mt-1"
               >
                 <Text className="text-rose-600 text-xs font-bold uppercase tracking-wider">Delete Account Permanently</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
           </View>
