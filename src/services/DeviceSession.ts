@@ -182,7 +182,7 @@ export function claimDeviceSession(userId: string): Promise<ClaimResult> {
 
       const row: any = data || {};
       if (row.ok === false) {
-        if (__DEV__ || (row.device_name && row.device_name.includes('sdk_gphone'))) {
+        if (__DEV__) {
           claimedUserId = userId;
           await SecureStore.setItemAsync(EPOCH_KEY, DEVICE_EPOCH).catch(() => {});
           await issueSessionToken(userId, deviceId, token);
