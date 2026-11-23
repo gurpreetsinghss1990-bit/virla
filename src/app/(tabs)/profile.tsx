@@ -16,7 +16,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import Svg, { Path, Defs, LinearGradient, RadialGradient, Stop, Polygon, Polyline, Rect, Ellipse } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient, RadialGradient, Stop, Rect } from 'react-native-svg';
 import { useUserStore } from '../../store/userStore';
 import { useMembershipStore } from '../../store/membershipStore';
 import { useCoachStore } from '../../store/coachStore';
@@ -25,7 +25,6 @@ import { useUserProfileStore } from '../../store/userProfileStore';
 import { Database, TrainerApplication } from '../../database/Database';
 import { syncAllDomainStores } from '../../store/syncAllStores';
 import { AutocompleteSuggestion, fetchGooglePlacesAutocomplete, fetchGooglePlaceDetails, isValidServiceCoord, reverseGeocodeCoords, trainerServiceRadiusKm } from '../../utils/distance';
-import { LuxuryCard } from '../../components/LuxuryCard';
 import { SignOutConfirmationModal } from '../../components/SignOutConfirmationModal';
 import * as Location from 'expo-location';
 import { requestForegroundLocationWithDisclosure } from '../../utils/locationDisclosure';
@@ -34,7 +33,6 @@ import { formatToDDMMYYYY } from '../../utils/date';
 import { Image as ExpoImage } from 'expo-image';
 import { resolveAvatarSource } from '../../components/AvatarImage';
 import { uploadAvatarToStorage } from '../../utils/uploadAvatar';
-import { AvatarImage } from '../../components/AvatarImage';
 import { digitsOnly, cleanEmail, cleanIfsc, cleanUpi, isValidPhone, isValidEmail, isValidIfsc, isValidUpi } from '../../utils/inputSafety';
 
 const ALL_FITNESS_GOALS = [
