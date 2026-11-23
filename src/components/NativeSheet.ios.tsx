@@ -1,27 +1,40 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { BottomSheet, Host, RNHostView } from '@expo/ui/swift-ui';
+import { Modal, Pressable, View } from 'react-native';
 import type { NativeSheetProps } from './nativeSheetShared';
 
 export type { NativeSheetProps } from './nativeSheetShared';
 
+/**
+ * iOS Crisp Native Bottom Sheet
+ * Uses standard Modal + Backdrop + Sheet surface.
+ * Eliminates @expo/ui/swift-ui RNHostView snapshot rasterization artifacts.
+ */
 export function NativeSheet({ visible, onClose, backgroundColor = '#FFFFFF', fullHeight, children }: NativeSheetProps) {
   if (!visible) return null;
 
   return (
-    <Host style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      <BottomSheet
-        isPresented
-        fitToContents={!fullHeight}
-        onIsPresentedChange={(presented) => {
-          if (!presented) onClose();
-        }}
-      >
-        <RNHostView matchContents>
-          <View style={{ width: '100%', backgroundColor }}>{children}</View>
-        </RNHostView>
-      </BottomSheet>
-    </Host>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <View style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.45)', justifyContent: 'flex-end' }}>
+        {/* Tap backdrop to dismiss */}
+        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        <View
+          style={{
+            backgroundColor,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            ...(fullHeight ? { maxHeight: '92%' } : {}),
+            overflow: 'hidden',
+          }}
+        >
+          {children}
+        </View>
+      </View>
+    </Modal>
   );
 }
 
