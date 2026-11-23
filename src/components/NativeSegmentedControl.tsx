@@ -89,7 +89,6 @@ export function NativeSegmentedControl<T extends string>({
   const animatedIndicatorStyle = useAnimatedStyle(() => ({
     width: tabWidthShared.value,
     transform: [{ translateX: translateX.value }],
-    opacity: tabWidthShared.value > 0 ? 1 : 0,
   }));
 
   const onLayout = (e: LayoutChangeEvent) => {
@@ -142,7 +141,7 @@ export function NativeSegmentedControl<T extends string>({
         return (
           <TouchableOpacity
             key={r}
-            activeOpacity={0.75}
+            activeOpacity={1}
             onPress={() => {
               if (tabWidthShared.value > 0) {
                 translateX.value = withSpring(idx * tabWidthShared.value, SPRING_CONFIG);
