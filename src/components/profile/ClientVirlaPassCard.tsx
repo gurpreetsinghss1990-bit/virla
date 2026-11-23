@@ -8,6 +8,7 @@ import Reanimated, {
   withSequence,
   Easing,
   runOnJS,
+  runOnUI,
 } from 'react-native-reanimated';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Polygon, Polyline, Defs, LinearGradient, Stop, Rect, Circle } from 'react-native-svg';
@@ -97,13 +98,43 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
     setIsReanimatedLayersActive(true);
   }, [layer1Y, layer2Y, layer3Y, creditsScale]);
 
-  // Entrance bounce on mount so the user experiences the credits layer animation on iOS & Android
+  // Entrance bounce on mount — runOnUI ensures animations run on the
+  // Reanimated UI thread from the very first frame on both iOS (Fabric/JSI)
+  // and Android, avoiding the silent-failure that plagued JS-thread useEffect.
   useEffect(() => {
     const timer = setTimeout(() => {
-      playCreditsLayerBounce();
+      runOnUI(() => {
+        'worklet';
+        layer1Y.value = withSequence(
+          withTiming(4, { duration: 110, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }),
+          withTiming(5.5, { duration: 80 }),
+          withSpring(0, { damping: 9, stiffness: 180, mass: 0.7 })
+        );
+        layer2Y.value = withSequence(
+          withTiming(0, { duration: 70 }),
+          withTiming(3, { duration: 110, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }),
+          withSpring(0, { damping: 10, stiffness: 170, mass: 0.7 })
+        );
+        layer3Y.value = withSequence(
+          withTiming(0, { duration: 120 }),
+          withTiming(1.5, { duration: 80 }),
+          withSpring(0, { damping: 11, stiffness: 160, mass: 0.7 }, (finished) => {
+            'worklet';
+            if (finished) {
+              runOnJS(setIsReanimatedLayersActive)(false);
+            }
+          })
+        );
+        creditsScale.value = withSequence(
+          withTiming(0.95, { duration: 90 }),
+          withSpring(1.04, { damping: 10, stiffness: 220 }),
+          withSpring(1, { damping: 12, stiffness: 180 })
+        );
+        runOnJS(setIsReanimatedLayersActive)(true);
+      })();
     }, 450);
     return () => clearTimeout(timer);
-  }, [playCreditsLayerBounce]);
+  }, []);
 
   let passTier = 'STANDARD';
   let passColor = '#F59E0B';

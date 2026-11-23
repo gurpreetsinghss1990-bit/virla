@@ -1,17 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text as RNText, TouchableOpacity, LayoutChangeEvent } from 'react-native';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  useAnimatedProps,
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
   withSpring,
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import Svg, { Path } from 'react-native-svg';
+import { Feather } from '@expo/vector-icons';
 import { softShadow } from '../utils/shadows';
-
-const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 export interface SegmentItem<T extends string> {
   key: T;
@@ -32,61 +29,35 @@ const SPRING_CONFIG = {
   mass: 0.6,
 };
 
-// SVG path total length for 'M3 8.5L6.5 12L13 4' is approximately 17 units
-const CHECK_PATH_LENGTH = 18;
-
-function AnimatedCheckmark({ isActive }: { isActive: boolean }) {
-  const drawProgress = useSharedValue(isActive ? 1 : 0);
-  const checkScale = useSharedValue(isActive ? 1 : 0.4);
+/**
+ * Pure Reanimated animated checkmark — NO SVG animatedProps.
+ * Uses only useAnimatedStyle (View + Feather icon) which works
+ * identically on iOS (Fabric) and Android.
+ * Keyed on `instanceKey` so it always remounts fresh when the tab changes,
+ * which guarantees useSharedValue starts at 0 and the entrance animation fires.
+ */
+function AnimatedCheckmark() {
+  const scale = useSharedValue(0.3);
+  const opacity = useSharedValue(0);
 
   useEffect(() => {
-    if (isActive) {
-      drawProgress.value = 0;
-      checkScale.value = 0.5;
-      // Draw path forward smoothly
-      drawProgress.value = withTiming(1, { 
-        duration: 260, 
-        easing: Easing.bezier(0.16, 1, 0.3, 1) 
-      });
-      // Micro spring bounce on appearance
-      checkScale.value = withSpring(1, { 
-        damping: 14, 
-        stiffness: 220, 
-        mass: 0.6 
-      });
-    } else {
-      drawProgress.value = 0;
-      checkScale.value = 0.4;
-    }
-  }, [isActive]);
+    // Both run on the UI thread via Reanimated — works on iOS & Android
+    scale.value = withSpring(1, { damping: 14, stiffness: 220, mass: 0.6 });
+    opacity.value = withTiming(1, {
+      duration: 180,
+      easing: Easing.out(Easing.quad),
+    });
+  }, []);
 
-  const animatedPathProps = useAnimatedProps(() => {
-    return {
-      strokeDashoffset: CHECK_PATH_LENGTH * (1 - drawProgress.value),
-    };
-  });
-
-  const animatedContainerStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: checkScale.value }],
-      opacity: drawProgress.value > 0.05 ? 1 : 0,
-      marginRight: 5,
-    };
-  });
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+    marginRight: 5,
+  }));
 
   return (
-    <Animated.View style={animatedContainerStyle}>
-      <Svg width={14} height={14} viewBox="0 0 16 16" fill="none">
-        <AnimatedPath
-          d="M3 8.5L6.5 12L13 4"
-          stroke="#FFFFFF"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeDasharray={CHECK_PATH_LENGTH}
-          animatedProps={animatedPathProps}
-        />
-      </Svg>
+    <Animated.View style={animStyle}>
+      <Feather name="check" size={13} color="#FFFFFF" />
     </Animated.View>
   );
 }
@@ -97,14 +68,16 @@ export function NativeSegmentedControl<T extends string>({
   onChangeKey,
   marginVertical = 4,
 }: NativeSegmentedControlProps<T>) {
+  // useRef for width so changes don't re-mount child components
+  const containerWidthRef = useRef(0);
   const [containerWidth, setContainerWidth] = useState(0);
+
   const activeIndex = items.findIndex((i) => i.key === activeKey);
   const validIndex = activeIndex >= 0 ? activeIndex : 0;
 
-  // Available width for segments (containerWidth minus 8px: 4px padding left + 4px padding right)
   const tabWidth = containerWidth > 0 ? (containerWidth - 8) / items.length : 0;
 
-  // Shared value running 100% on native Reanimated UI thread
+  // Shared value lives on the UI thread — spring runs at 120fps on both platforms
   const translateX = useSharedValue(0);
 
   useEffect(() => {
@@ -113,24 +86,24 @@ export function NativeSegmentedControl<T extends string>({
     }
   }, [validIndex, tabWidth]);
 
-  const animatedIndicatorStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateX: translateX.value }],
-      width: tabWidth,
-    };
-  });
+  const animatedIndicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+    width: tabWidth,
+  }));
 
   const onLayout = (e: LayoutChangeEvent) => {
     const width = Math.round(e.nativeEvent.layout.width);
-    if (width > 0 && width !== containerWidth) {
-      setContainerWidth(width);
+    if (width > 0 && width !== containerWidthRef.current) {
+      containerWidthRef.current = width;
       const computedTabWidth = (width - 8) / items.length;
+      // Snap pill immediately on first layout (no spring) then update state to re-render
       translateX.value = validIndex * computedTabWidth;
+      setContainerWidth(width);
     }
   };
 
   return (
-    <View 
+    <View
       collapsable={false}
       onLayout={onLayout}
       style={{
@@ -147,7 +120,7 @@ export function NativeSegmentedControl<T extends string>({
         ...softShadow({ color: '#0F172A', opacity: 0.05, radius: 8, offsetY: 2 }),
       }}
     >
-      {/* 🚀 Physical Gliding Active Obsidian Pill (100% UI Thread Reanimated on iOS & Android) */}
+      {/* 🚀 Physical Gliding Active Obsidian Pill — 100% UI Thread on iOS & Android */}
       {tabWidth > 0 && (
         <Animated.View
           pointerEvents="none"
@@ -190,7 +163,12 @@ export function NativeSegmentedControl<T extends string>({
               zIndex: 2,
             }}
           >
-            {isActive && <AnimatedCheckmark isActive={isActive} />}
+            {/*
+             * Key forces remount on every activeKey change so the
+             * AnimatedCheckmark's useSharedValue always starts at 0
+             * and the entrance spring fires on iOS and Android alike.
+             */}
+            {isActive && <AnimatedCheckmark key={`check-${r}-${activeKey}`} />}
             <RNText
               numberOfLines={1}
               style={{
