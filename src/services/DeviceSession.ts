@@ -1,3 +1,4 @@
+import * as Application from 'expo-application';
 import * as Device from 'expo-device';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
@@ -16,6 +17,7 @@ export type ClaimResult = {
 };
 
 let deviceIdCache: string | null = null;
+let hardwareIdCache: string | null = null;
 let deviceTokenCache: string | null = null;
 let claimInFlight: Promise<ClaimResult> | null = null;
 let claimedUserId: string | null = null;
@@ -78,6 +80,26 @@ async function getDeviceId(): Promise<string> {
   }
   deviceIdCache = id;
   return id;
+}
+
+/**
+ * Identity of the physical phone. Survives app-data-clear and reinstall, which is
+ * what the install id cannot do, so the same phone always re-claims its own slot.
+ */
+async function getHardwareId(): Promise<string | null> {
+  if (hardwareIdCache) return hardwareIdCache;
+  try {
+    const id =
+      Platform.OS === 'android'
+        ? Application.getAndroidId()
+        : Platform.OS === 'ios'
+        ? await Application.getIosIdForVendorAsync()
+        : null;
+    hardwareIdCache = id || null;
+  } catch {
+    hardwareIdCache = null;
+  }
+  return hardwareIdCache;
 }
 
 async function getDeviceToken(): Promise<string> {
@@ -166,7 +188,11 @@ export function claimDeviceSession(userId: string): Promise<ClaimResult> {
 
   claimInFlight = (async (): Promise<ClaimResult> => {
     try {
-      const [deviceId, token] = await Promise.all([getDeviceId(), getDeviceToken()]);
+      const [deviceId, token, hardwareId] = await Promise.all([
+        getDeviceId(),
+        getDeviceToken(),
+        getHardwareId(),
+      ]);
       setClientDeviceToken(token);
 
       const { data, error } = await supabase.rpc('claim_device', {
@@ -174,6 +200,7 @@ export function claimDeviceSession(userId: string): Promise<ClaimResult> {
         p_device_id: deviceId,
         p_device_name: getDeviceName(),
         p_token: token,
+        p_hardware_id: hardwareId,
       });
 
       if (error) {
