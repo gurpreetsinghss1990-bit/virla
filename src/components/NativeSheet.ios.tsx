@@ -1,68 +1,72 @@
-import React, { useEffect, useRef } from 'react';
-import { Modal, Pressable, View, Animated, StyleSheet } from 'react-native';
+import React, { useEffect } from 'react';
+import { Modal, Pressable, View, StyleSheet } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  runOnJS,
+  ReduceMotion,
+} from 'react-native-reanimated';
 import type { NativeSheetProps } from './nativeSheetShared';
 
 export type { NativeSheetProps } from './nativeSheetShared';
 
 /**
  * iOS Crisp Native Bottom Sheet
- * Backdrop smoothly fades in with a gentle dim (rgba(0,0,0,0.38)),
- * while the sheet surface slides up naturally.
- * Eliminates the jarring black block sliding up with the modal.
+ * 100% react-native-reanimated UI-thread driven.
+ * Backdrop smoothly fades in with a gentle dim,
+ * while the sheet surface springs up naturally.
  */
 export function NativeSheet({ visible, onClose, backgroundColor = '#FFFFFF', fullHeight, children }: NativeSheetProps) {
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(500)).current;
+  const backdropOpacity = useSharedValue(0);
+  const translateY = useSharedValue(500);
 
   useEffect(() => {
     if (visible) {
-      Animated.parallel([
-        Animated.timing(backdropOpacity, {
-          toValue: 1,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          damping: 26,
-          stiffness: 280,
-          mass: 0.8,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      backdropOpacity.value = withTiming(1, {
+        duration: 220,
+        reduceMotion: ReduceMotion.Never,
+      });
+      translateY.value = withSpring(0, {
+        damping: 26,
+        stiffness: 280,
+        mass: 0.8,
+        reduceMotion: ReduceMotion.Never,
+      });
     } else {
-      Animated.parallel([
-        Animated.timing(backdropOpacity, {
-          toValue: 0,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 500,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      backdropOpacity.value = 0;
+      translateY.value = 500;
     }
-  }, [visible, backdropOpacity, slideAnim]);
+  }, [visible, backdropOpacity, translateY]);
+
+  const animatedBackdropStyle = useAnimatedStyle(() => ({
+    opacity: backdropOpacity.value,
+  }));
+
+  const animatedSheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
 
   if (!visible) return null;
 
   const handleDismiss = () => {
-    Animated.parallel([
-      Animated.timing(backdropOpacity, {
-        toValue: 0,
-        duration: 180,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 500,
-        duration: 180,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      onClose();
+    backdropOpacity.value = withTiming(0, {
+      duration: 180,
+      reduceMotion: ReduceMotion.Never,
     });
+    translateY.value = withTiming(
+      500,
+      {
+        duration: 180,
+        reduceMotion: ReduceMotion.Never,
+      },
+      (finished) => {
+        if (finished) {
+          runOnJS(onClose)();
+        }
+      }
+    );
   };
 
   return (
@@ -73,29 +77,29 @@ export function NativeSheet({ visible, onClose, backgroundColor = '#FFFFFF', ful
       onRequestClose={handleDismiss}
     >
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-        {/* Backdrop: Soft fade-in dim overlay (does NOT slide up from bottom) */}
+        {/* Backdrop: Soft fade-in dim overlay via react-native-reanimated */}
         <Animated.View
           style={[
             StyleSheet.absoluteFill,
-            {
-              backgroundColor: 'rgba(0, 0, 0, 0.36)',
-              opacity: backdropOpacity,
-            },
+            { backgroundColor: 'rgba(0, 0, 0, 0.36)' },
+            animatedBackdropStyle,
           ]}
         >
           <Pressable style={StyleSheet.absoluteFill} onPress={handleDismiss} />
         </Animated.View>
 
-        {/* Sheet: Slides up gracefully over the soft backdrop */}
+        {/* Sheet: Slides up gracefully over the backdrop via react-native-reanimated */}
         <Animated.View
-          style={{
-            transform: [{ translateY: slideAnim }],
-            backgroundColor,
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            ...(fullHeight ? { maxHeight: '92%' } : {}),
-            overflow: 'hidden',
-          }}
+          style={[
+            {
+              backgroundColor,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              ...(fullHeight ? { maxHeight: '92%' } : {}),
+              overflow: 'hidden',
+            },
+            animatedSheetStyle,
+          ]}
         >
           {children}
         </Animated.View>
