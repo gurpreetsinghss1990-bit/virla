@@ -759,39 +759,11 @@ export default function WalletScreen() {
             </View>
 
             {/* Primary Dual Action Buttons (Dark Obsidian #090D16) */}
-            <View className="flex-row gap-3 w-full mt-5 px-1">
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 20, paddingHorizontal: 4 }}>
               {role !== 'trainer' && (
                 <Pressable
                   onPress={() => router.push('/membership' as any)}
-                  style={({ pressed }) => [
-                    {
-                      backgroundColor: '#090D16',
-                      borderRadius: 14,
-                      paddingVertical: 14,
-                      paddingHorizontal: 16,
-                      flex: 1,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      opacity: pressed ? 0.88 : 1,
-                      ...softShadow({ color: '#090D16', opacity: 0.18, radius: 8, offsetY: 3 }),
-                    },
-                  ]}
-                >
-                  <Feather name="plus-circle" size={16} color="#FFFFFF" />
-                  <Text 
-                    style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8 }}
-                    className="text-white text-xs uppercase"
-                  >
-                    Recharge Wallet
-                  </Text>
-                </Pressable>
-              )}
-              <Pressable
-                onPress={() => setActiveTab('transfer')}
-                style={({ pressed }) => [
-                  {
+                  style={({ pressed }) => ({
                     backgroundColor: '#090D16',
                     borderRadius: 14,
                     paddingVertical: 14,
@@ -802,14 +774,44 @@ export default function WalletScreen() {
                     justifyContent: 'center',
                     gap: 8,
                     opacity: pressed ? 0.88 : 1,
-                    ...softShadow({ color: '#090D16', opacity: 0.18, radius: 8, offsetY: 3 }),
-                  },
-                ]}
+                    elevation: 3,
+                    shadowColor: '#090D16',
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowOpacity: 0.18,
+                    shadowRadius: 8,
+                  })}
+                >
+                  <Feather name="plus-circle" size={16} color="#FFFFFF" />
+                  <Text 
+                    style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8, color: '#FFFFFF', fontSize: 12, textTransform: 'uppercase' }}
+                  >
+                    Recharge Wallet
+                  </Text>
+                </Pressable>
+              )}
+              <Pressable
+                onPress={() => setActiveTab('transfer')}
+                style={({ pressed }) => ({
+                  backgroundColor: '#090D16',
+                  borderRadius: 14,
+                  paddingVertical: 14,
+                  paddingHorizontal: 16,
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  opacity: pressed ? 0.88 : 1,
+                  elevation: 3,
+                  shadowColor: '#090D16',
+                  shadowOffset: { width: 0, height: 3 },
+                  shadowOpacity: 0.18,
+                  shadowRadius: 8,
+                })}
               >
                 <Feather name="send" size={15} color="#FFFFFF" style={{ transform: [{ rotate: '-12deg' }] }} />
                 <Text 
-                  style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8 }}
-                  className="text-white text-xs uppercase"
+                  style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8, color: '#FFFFFF', fontSize: 12, textTransform: 'uppercase' }}
                 >
                   Transfer Credits
                 </Text>
@@ -1412,8 +1414,8 @@ export default function WalletScreen() {
                 </View>
               </View>
 
-              {/* Quick Filter Horizontal Pills with horizontal scrolling matching Sessions tab */}
-              <View className="py-1 mb-1 -mx-4">
+              {/* Quick Filter Horizontal Pills matching Sessions tab date filter */}
+              <View style={{ paddingVertical: 4, marginBottom: 4, marginHorizontal: -16 }}>
                 <ScrollView 
                   horizontal 
                   showsHorizontalScrollIndicator={false}
@@ -1429,21 +1431,22 @@ export default function WalletScreen() {
                           setLedgerFilter(filter);
                           setVisibleLedgerCount(8);
                         }}
-                        style={({ pressed }) => [
-                          {
-                            paddingVertical: 7,
-                            paddingHorizontal: isActive ? 18 : 15,
-                            borderRadius: 9999,
-                            borderWidth: 1,
-                            borderColor: isActive ? '#0F172A' : '#E2E8F0',
-                            backgroundColor: isActive ? '#0F172A' : '#FFFFFF',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            opacity: pressed ? 0.75 : 1,
-                          },
-                          !isActive && softShadow({ color: '#0F172A', opacity: 0.03, radius: 4, offsetY: 1 }),
-                          isActive && softShadow({ color: '#0F172A', opacity: 0.18, radius: 6, offsetY: 2 }),
-                        ]}
+                        style={({ pressed }) => ({
+                          paddingVertical: 7,
+                          paddingHorizontal: isActive ? 18 : 15,
+                          borderRadius: 9999,
+                          borderWidth: 1,
+                          borderColor: isActive ? '#0F172A' : '#E2E8F0',
+                          backgroundColor: isActive ? '#0F172A' : '#FFFFFF',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          opacity: pressed ? 0.75 : 1,
+                          elevation: isActive ? 2 : 1,
+                          shadowColor: '#0F172A',
+                          shadowOffset: { width: 0, height: isActive ? 2 : 1 },
+                          shadowOpacity: isActive ? 0.15 : 0.04,
+                          shadowRadius: isActive ? 5 : 3,
+                        })}
                       >
                         <Text 
                           style={{
