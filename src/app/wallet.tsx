@@ -752,68 +752,10 @@ export default function WalletScreen() {
               {/* Cardholder Label */}
               <Text 
                 style={{ fontFamily: 'Outfit_600SemiBold', letterSpacing: 1.1 }}
-                className="text-[11px] text-zinc-900 uppercase pt-0.5"
+                className="text-[11px] text-slate-400 uppercase pt-0.5"
               >
-                CARD HOLDER: <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-zinc-950">{userName ? userName.toUpperCase() : 'KIRTI YADAV'}</Text>
+                CARD HOLDER: <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-slate-500">{userName ? userName.toUpperCase() : 'KIRTI YADAV'}</Text>
               </Text>
-            </View>
-
-            {/* Primary Dual Action Buttons (Dark Obsidian #090D16) */}
-            <View className="flex-row gap-3 w-full mt-5 px-1">
-              {role !== 'trainer' && (
-                <Pressable
-                  onPress={() => router.push('/membership' as any)}
-                  style={({ pressed }) => [
-                    {
-                      backgroundColor: '#090D16',
-                      borderRadius: 14,
-                      paddingVertical: 14,
-                      paddingHorizontal: 16,
-                      flex: 1,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      opacity: pressed ? 0.88 : 1,
-                      ...softShadow({ color: '#090D16', opacity: 0.18, radius: 8, offsetY: 3 }),
-                    },
-                  ]}
-                >
-                  <Feather name="plus-circle" size={16} color="#FFFFFF" />
-                  <Text 
-                    style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8 }}
-                    className="text-white text-xs uppercase"
-                  >
-                    Recharge Wallet
-                  </Text>
-                </Pressable>
-              )}
-              <Pressable
-                onPress={() => setActiveTab('transfer')}
-                style={({ pressed }) => [
-                  {
-                    backgroundColor: '#090D16',
-                    borderRadius: 14,
-                    paddingVertical: 14,
-                    paddingHorizontal: 16,
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    opacity: pressed ? 0.88 : 1,
-                    ...softShadow({ color: '#090D16', opacity: 0.18, radius: 8, offsetY: 3 }),
-                  },
-                ]}
-              >
-                <Feather name="send" size={15} color="#FFFFFF" style={{ transform: [{ rotate: '-12deg' }] }} />
-                <Text 
-                  style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8 }}
-                  className="text-white text-xs uppercase"
-                >
-                  Transfer Credits
-                </Text>
-              </Pressable>
             </View>
           </View>
 
