@@ -12,7 +12,7 @@ import { syncAllDomainStores } from '../../store/syncAllStores';
 import { useCoachStore, generateMonthlySlots } from '../../store/coachStore';
 import { normalizeDate, canonicalizeTimeRange, formatToDDMMYYYY, getBookingISTDateRange } from '../../utils/date';
 import { Feather, Ionicons } from '@expo/vector-icons';
-import AnimatedReanimated from 'react-native-reanimated';
+import AnimatedReanimated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { Booking } from '../../types';
 import { RaiseSupportTicketModal } from '../../components/RaiseSupportTicketModal';
@@ -1252,8 +1252,12 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
               />
             </View>
 
-            {/* List rendered by trainerTab */}
-            <View>
+            {/* List rendered by trainerTab with UI thread smooth fade animation */}
+            <AnimatedReanimated.View
+              key={trainerTab}
+              entering={FadeIn.duration(200)}
+              exiting={FadeOut.duration(100)}
+            >
               {(() => {
                 if (trainerTab === 'today') {
                   const list = getFilteredSessions('today');
@@ -1418,7 +1422,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
 
                 return null;
               })()}
-            </View>
+            </AnimatedReanimated.View>
 
           </AnimatedReanimated.ScrollView>
 
@@ -1670,8 +1674,13 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
             }}
             scrollEventThrottle={16}
           >
-            {/* Bookings Render List */}
-            <View className="min-h-[220px]">
+            {/* Bookings Render List with UI thread smooth fade animation on tab switch */}
+            <AnimatedReanimated.View 
+              key={renderedFilter}
+              entering={FadeIn.duration(200)}
+              exiting={FadeOut.duration(100)}
+              className="min-h-[220px]"
+            >
               {cursorPage.items.length > 0 ? (
                 <>
                   {cursorPage.items.map((booking) => (
@@ -1755,7 +1764,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                   onAction={clientDateFilter !== "all" ? () => setClientDateFilter("all") : undefined}
                 />
               )}
-            </View>
+            </AnimatedReanimated.View>
           </AnimatedReanimated.ScrollView>
         </View>
       )}
