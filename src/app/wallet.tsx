@@ -1354,7 +1354,7 @@ export default function WalletScreen() {
                 </View>
               </View>
 
-              {/* Quick Filter Horizontal Pills matching Stitch code.html: Sessions, Purchases, Refunds, All */}
+              {/* Quick Filter Horizontal Pills matching native Expo UI: Sessions, Purchases, Refunds, All */}
               <View className="flex-row items-center gap-2 py-1 mb-1">
                 {(['booking', 'purchase', 'refund', 'all'] as const).map((filter) => {
                   const isActive = ledgerFilter === filter;
@@ -1368,19 +1368,19 @@ export default function WalletScreen() {
                       }}
                       style={({ pressed }) => [
                         {
-                          backgroundColor: isActive ? '#0F172A' : '#FFFFFF',
+                          backgroundColor: isActive ? '#0F172A' : '#F1F5F9',
                           borderColor: isActive ? '#0F172A' : '#E2E8F0',
                           borderWidth: 1,
                           borderRadius: 9999,
-                          paddingHorizontal: isActive && filter === 'all' ? 18 : 14,
-                          paddingVertical: 6,
+                          paddingHorizontal: 16,
+                          paddingVertical: 7,
                           opacity: pressed ? 0.75 : 1,
-                          ...softShadow({ color: '#0F172A', opacity: isActive ? 0.12 : 0.03, radius: 4, offsetY: 1 }),
+                          ...softShadow({ color: '#0F172A', opacity: isActive ? 0.12 : 0.02, radius: 4, offsetY: 1 }),
                         },
                       ]}
                     >
                       <Text 
-                        style={{ fontFamily: isActive ? 'Outfit_700Bold' : 'Outfit_500Medium' }}
+                        style={{ fontFamily: isActive ? 'Outfit_700Bold' : 'Outfit_600SemiBold' }}
                         className={`text-xs ${isActive ? 'text-white' : 'text-slate-600'}`}
                       >
                         {label}

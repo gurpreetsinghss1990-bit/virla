@@ -428,10 +428,10 @@ export default function MembershipScreen() {
           paddingBottom: selectedPlan ? 96 + footerInset : 24 + insets.bottom
         }}
       >
-        {/* Hero Title - matching design screenshot */}
+        {/* Hero Title - matching design system typography */}
         <View className="mb-6 items-center">
-          <Text className="text-zinc-950 text-[30px] font-black tracking-tight text-center">Pricing plans</Text>
-          <Text className="text-zinc-500 text-[14px] font-medium leading-[20px] mt-1 text-center">
+          <Text style={{ fontFamily: 'Outfit_800ExtraBold' }} className="text-zinc-950 text-[30px] tracking-tight text-center">Pricing plans</Text>
+          <Text style={{ fontFamily: 'Inter_500Medium' }} className="text-zinc-500 text-[14px] leading-[20px] mt-1 text-center">
             Choose a plan that fits your needs
           </Text>
         </View>
@@ -448,7 +448,7 @@ export default function MembershipScreen() {
                 backgroundColor: activeCategory === 'individual' ? '#18181B' : 'transparent',
               }}
             >
-              <Text style={{ fontSize: 13, fontWeight: '700', color: activeCategory === 'individual' ? '#FFFFFF' : '#71717A' }}>
+              <Text style={{ fontSize: 13, fontFamily: 'Outfit_700Bold', color: activeCategory === 'individual' ? '#FFFFFF' : '#71717A' }}>
                 Solo Training
               </Text>
             </Pressable>
@@ -461,7 +461,7 @@ export default function MembershipScreen() {
                 backgroundColor: activeCategory === 'couple' ? '#18181B' : 'transparent',
               }}
             >
-              <Text style={{ fontSize: 13, fontWeight: '700', color: activeCategory === 'couple' ? '#FFFFFF' : '#71717A' }}>
+              <Text style={{ fontSize: 13, fontFamily: 'Outfit_700Bold', color: activeCategory === 'couple' ? '#FFFFFF' : '#71717A' }}>
                 Train Together
               </Text>
             </Pressable>
@@ -470,7 +470,7 @@ export default function MembershipScreen() {
 
         {/* Validity Notice right below Solo Training & Train Together */}
         <View className="items-center mb-6 px-2">
-          <Text className="text-zinc-950 text-[13.5px] font-bold tracking-tight text-center">
+          <Text style={{ fontFamily: 'Inter_600SemiBold' }} className="text-zinc-950 text-[13.5px] tracking-tight text-center">
             * All Session Packs are subject to 6 Months Validity.
           </Text>
         </View>
@@ -494,11 +494,11 @@ export default function MembershipScreen() {
         <View className="mt-6 mb-4 px-1 py-1">
           <View className="flex-row items-center gap-2 mb-2">
             <Feather name="info" size={13} color="#18181B" />
-            <Text className="text-zinc-950 text-[12px] font-black uppercase tracking-wider">
+            <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-zinc-950 text-[12px] uppercase tracking-wider">
               {activeCategory === 'individual' ? 'How 1-on-1 Workouts Work' : 'How Couple Workouts Work'}
             </Text>
           </View>
-          <Text className="text-zinc-600 text-[13px] font-normal leading-[20px]">
+          <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-zinc-600 text-[13px] leading-[20px]">
             {activeCategory === 'individual'
               ? 'Individual packages cover 1 participant training 1-on-1 with a private certified coach for a personalized 60-minute session at your home or doorstep. Need a friend along occasionally? Use the ₹499 Workout Buddy add-on.'
               : 'Couple packages cover two partners training together with one private coach, at the same location, for a simultaneous 60-minute workout.'}
@@ -509,7 +509,7 @@ export default function MembershipScreen() {
         <View className="mt-3 mb-4 px-1 py-1">
           <View className="flex-row items-center gap-2 mb-3">
             <Feather name="shield" size={13} color="#18181B" />
-            <Text className="text-zinc-950 text-[12px] font-black uppercase tracking-wider">Membership Perks & Terms</Text>
+            <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-zinc-950 text-[12px] uppercase tracking-wider">Membership Perks & Terms</Text>
           </View>
 
           <View className="gap-2.5">
@@ -521,7 +521,7 @@ export default function MembershipScreen() {
             ].map((text, idx) => (
               <View key={idx} className="flex-row items-start gap-2.5">
                 <View className="w-1.5 h-1.5 rounded-full bg-zinc-400 mt-2" />
-                <Text className="text-zinc-600 text-[13px] font-normal leading-[19px] flex-1">
+                <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-zinc-600 text-[13px] leading-[19px] flex-1">
                   {text}
                 </Text>
               </View>
@@ -537,12 +537,12 @@ export default function MembershipScreen() {
           >
             <View>
               <View className="flex-row items-center gap-2">
-                <Text className="text-zinc-950 text-[12px] font-black uppercase tracking-wider">PREMIUM BENEFITS</Text>
+                <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-zinc-950 text-[12px] uppercase tracking-wider">PREMIUM BENEFITS</Text>
                 <View className="bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
-                  <Text className="text-[#4F46E5] text-[10px] font-bold">7 Perks</Text>
+                  <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#4F46E5] text-[10px]">7 Perks</Text>
                 </View>
               </View>
-              <Text className="text-zinc-500 text-[12px] font-normal mt-0.5">
+              <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-zinc-500 text-[12px] mt-0.5">
                 {isBenefitsExpanded ? 'Tap to collapse perks' : 'Tap to view all VIP perks included'}
               </Text>
             </View>
@@ -566,8 +566,8 @@ export default function MembershipScreen() {
                 <View key={idx} className="flex-row items-start gap-2.5">
                   <View className="w-1.5 h-1.5 rounded-full bg-zinc-400 mt-2" />
                   <View className="flex-1">
-                    <Text className="text-zinc-900 text-[13px] font-semibold leading-[18px]">{item.title}</Text>
-                    <Text className="text-zinc-500 text-[12px] font-normal mt-0.5 leading-[17px]">{item.desc}</Text>
+                    <Text style={{ fontFamily: 'Inter_600SemiBold' }} className="text-zinc-900 text-[13px] leading-[18px]">{item.title}</Text>
+                    <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-zinc-500 text-[12px] mt-0.5 leading-[17px]">{item.desc}</Text>
                   </View>
                 </View>
               ))}
@@ -577,11 +577,11 @@ export default function MembershipScreen() {
 
         {/* Pricing Disclaimers */}
         <View className="mt-6 mb-8 gap-1">
-          <Text className="text-zinc-400 text-[10.5px] font-normal leading-[15px]">
+          <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-zinc-400 text-[10.5px] leading-[15px]">
             * All prices are subject to 5% GST as displayed at checkout.
           </Text>
           
-          <Text className="text-zinc-400 text-[10.5px] font-normal leading-[15px]">
+          <Text style={{ fontFamily: 'Inter_400Regular' }} className="text-zinc-400 text-[10.5px] leading-[15px]">
             * Founding 100 promotional pricing applies exclusively to the 8-session packages.
           </Text>
         </View>

@@ -313,13 +313,13 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
     const isCancelledOrMissed = isCancelled;
     const isCompletedStatus = booking.status === 'completed';
     const statusDotColor = isCompletedStatus
-      ? 'bg-zinc-400'
+      ? 'bg-emerald-500'
       : isCancelledOrMissed
       ? 'bg-rose-500'
       : 'bg-emerald-600';
 
     const statusTextColor = isCompletedStatus
-      ? 'text-zinc-500'
+      ? 'text-emerald-600'
       : isCancelledOrMissed
       ? 'text-rose-500'
       : 'text-emerald-700';
@@ -359,7 +359,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
           <View className="flex-row items-center gap-1.5">
             <View className={`w-2 h-2 rounded-full ${statusDotColor}`} />
             <Text 
-              style={{ fontFamily: 'Outfit_800ExtraBold', color: isCompletedStatus ? '#0F172A' : isCancelledOrMissed ? '#E11D48' : '#0F172A' }} 
+              style={{ fontFamily: 'Outfit_800ExtraBold', color: isCompletedStatus ? '#059669' : isCancelledOrMissed ? '#E11D48' : '#0F172A' }} 
               className={`text-[11px] font-black uppercase tracking-wider`}
             >
               {statusLabel}

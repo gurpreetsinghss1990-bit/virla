@@ -93,7 +93,7 @@ function PlanCardBase({ plan, isExpanded, buddyNotice, hasCredits, onPress, onBl
               ...softShadow({ color: '#000', opacity: 0.15, radius: 4, offsetY: 2 }),
             }}
           >
-            <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.6, textTransform: 'uppercase' }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontFamily: 'Outfit_800ExtraBold', letterSpacing: 0.8, textTransform: 'uppercase' }}>
               {isBuddyDisabled ? 'ADD-ON LOCKED' : (is8SessionPack ? 'FIRST 100 EXCLUSIVE' : (plan.ribbon || plan.badge))}
             </Text>
           </View>
@@ -111,10 +111,10 @@ function PlanCardBase({ plan, isExpanded, buddyNotice, hasCredits, onPress, onBl
           }}
         >
           <View style={{ flex: 1, paddingRight: 10 }}>
-            <Text style={{ fontSize: 16, fontWeight: '900', color: isBuddyDisabled ? '#71717A' : '#18181B', letterSpacing: -0.2 }}>
+            <Text style={{ fontSize: 16, fontFamily: 'Outfit_800ExtraBold', color: isBuddyDisabled ? '#71717A' : '#18181B', letterSpacing: -0.2 }}>
               {displayName}
             </Text>
-            <Text style={{ fontSize: 12, color: '#71717A', marginTop: 2, fontWeight: '500' }}>
+            <Text style={{ fontSize: 12, color: '#71717A', marginTop: 2, fontFamily: 'Inter_500Medium' }}>
               {plan.idealFor}
             </Text>
 
@@ -122,7 +122,7 @@ function PlanCardBase({ plan, isExpanded, buddyNotice, hasCredits, onPress, onBl
             {is8SessionPack && (
               <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                 <Feather name="gift" size={12} color="#D97706" />
-                <Text style={{ fontSize: 11, color: '#B45309', fontWeight: '800' }}>
+                <Text style={{ fontSize: 11, color: '#B45309', fontFamily: 'Inter_600SemiBold' }}>
                   Limited time offer for first 100 users
                 </Text>
               </View>
@@ -132,7 +132,7 @@ function PlanCardBase({ plan, isExpanded, buddyNotice, hasCredits, onPress, onBl
             {isBuddyAddon && isBuddyDisabled && buddyNotice && (
               <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                 <Feather name="info" size={12} color="#E11D48" />
-                <Text style={{ fontSize: 11, color: '#E11D48', fontWeight: '700' }}>
+                <Text style={{ fontSize: 11, color: '#E11D48', fontFamily: 'Inter_600SemiBold' }}>
                   This is an add-on plan, not a standalone pack.
                 </Text>
               </View>
@@ -142,13 +142,13 @@ function PlanCardBase({ plan, isExpanded, buddyNotice, hasCredits, onPress, onBl
           <View style={{ alignItems: 'flex-end', flexDirection: 'row', gap: 6 }}>
             <View style={{ alignItems: 'flex-end' }}>
               {plan.originalPrice && (
-                <Text style={{ fontSize: 11, color: '#A1A1AA', textDecorationLine: 'line-through', fontWeight: '600' }}>
+                <Text style={{ fontSize: 11, color: '#A1A1AA', textDecorationLine: 'line-through', fontFamily: 'Inter_500Medium' }}>
                   {plan.originalPrice}
                 </Text>
               )}
               <Text style={{
                 fontSize: 21,
-                fontWeight: '900',
+                fontFamily: 'Outfit_800ExtraBold',
                 color: is8SessionPack
                   ? '#D97706'
                   : (isBuddyDisabled ? '#71717A' : '#18181B'),
@@ -156,7 +156,7 @@ function PlanCardBase({ plan, isExpanded, buddyNotice, hasCredits, onPress, onBl
               }}>
                 {plan.price}
               </Text>
-              <Text style={{ fontSize: 10, color: '#A1A1AA', fontWeight: '600' }}>
+              <Text style={{ fontSize: 10, color: '#A1A1AA', fontFamily: 'Inter_500Medium' }}>
                 {plan.perSessionText || 'per session'}
               </Text>
             </View>
@@ -189,7 +189,7 @@ function PlanCardBase({ plan, isExpanded, buddyNotice, hasCredits, onPress, onBl
               {plan.bulletPoints?.map((bullet, bIdx) => (
                 <View key={bIdx} style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
                   <Feather name="check" size={14} color={is8SessionPack ? '#D97706' : '#E11D48'} />
-                  <Text style={{ fontSize: 12.5, color: '#3F3F46', fontWeight: '500', flex: 1, lineHeight: 17 }}>
+                  <Text style={{ fontSize: 12.5, color: '#3F3F46', fontFamily: 'Inter_500Medium', flex: 1, lineHeight: 17 }}>
                     {bullet}
                   </Text>
                 </View>
@@ -199,7 +199,7 @@ function PlanCardBase({ plan, isExpanded, buddyNotice, hasCredits, onPress, onBl
             {/* Add-on Specific Disclaimer below bullets */}
             {isBuddyAddon && (
               <View style={{ marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F4F4F5' }}>
-                <Text style={{ fontSize: 11, color: '#71717A', fontStyle: 'italic', lineHeight: 16 }}>
+                <Text style={{ fontSize: 11, color: '#71717A', fontFamily: 'Inter_400Regular_Italic', lineHeight: 16 }}>
                   * This is an add-on plan, not a standalone pack, so the 6-month pack validity does not apply.
                 </Text>
               </View>

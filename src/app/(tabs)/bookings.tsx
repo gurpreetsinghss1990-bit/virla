@@ -1657,6 +1657,16 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
             )}
           </View>
 
+          {/* Samsung One UI style: content top corners round UP → header bottom appears to dip DOWN at edges */}
+          <View
+            style={{
+              flex: 1,
+              borderTopLeftRadius: 48,
+              borderTopRightRadius: 48,
+              overflow: 'hidden',
+              backgroundColor: '#F8F9FC',
+            }}
+          >
           {/* Scrollable Content: Pure UI Thread Scrolling for Cards */}
           <AnimatedReanimated.ScrollView 
             showsVerticalScrollIndicator={false}
@@ -1668,7 +1678,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
             style={{ flex: 1 }}
             className="flex-1"
             contentContainerStyle={{ 
-              paddingTop: 8,
+              paddingTop: 12,
               paddingBottom: Math.max((insets.bottom || 0) + 40, 140),
               paddingHorizontal: 16
             }}
@@ -1766,6 +1776,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
               )}
             </AnimatedReanimated.View>
           </AnimatedReanimated.ScrollView>
+          </View>
         </View>
       )}
 
