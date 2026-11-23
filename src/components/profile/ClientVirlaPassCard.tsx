@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, Pressable, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import Reanimated, {
   useSharedValue,
   useAnimatedStyle,
@@ -112,9 +112,6 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
     passColor = '#F59E0B';
   }
 
-  // Use TouchableOpacity on iOS for reliable touch-responder triggering with nested SVGs; Pressable on Android
-  const CreditsButton = Platform.OS === 'ios' ? TouchableOpacity : Pressable;
-
   return (
     <View
       style={{
@@ -225,11 +222,7 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
       />
 
       <View className="flex-row justify-between items-end z-10 pt-0.5">
-        <CreditsButton
-          onPress={playCreditsLayerBounce}
-          activeOpacity={Platform.OS === 'ios' ? 0.75 : undefined}
-          className="flex-row items-center"
-        >
+        <Pressable onPress={playCreditsLayerBounce} className="flex-row items-center">
           <Reanimated.View
             style={[
               { flexDirection: 'row', alignItems: 'center' },
@@ -301,7 +294,7 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
               </Text>
             </View>
           </Reanimated.View>
-        </CreditsButton>
+        </Pressable>
 
         <View className="items-end">
           <Text
