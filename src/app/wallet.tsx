@@ -752,9 +752,9 @@ export default function WalletScreen() {
               {/* Cardholder Label */}
               <Text 
                 style={{ fontFamily: 'Outfit_600SemiBold', letterSpacing: 1.1 }}
-                className="text-[11px] text-slate-400 uppercase pt-0.5"
+                className="text-[11px] text-zinc-900 uppercase pt-0.5"
               >
-                CARD HOLDER: <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-slate-500">{userName ? userName.toUpperCase() : 'KIRTI YADAV'}</Text>
+                CARD HOLDER: <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-zinc-950">{userName ? userName.toUpperCase() : 'KIRTI YADAV'}</Text>
               </Text>
             </View>
 
