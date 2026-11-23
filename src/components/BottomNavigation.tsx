@@ -20,6 +20,53 @@ if (Platform.OS === 'android') {
   } catch {}
 }
 
+const TabButton = React.memo(({ route, isFocused, onPress, getIcon, getLabel, hasTabUnread, styles }: any) => {
+  const scale = useRef(new Animated.Value(isFocused ? 1.1 : 1)).current;
+
+  useEffect(() => {
+    Animated.spring(scale, {
+      toValue: isFocused ? 1.12 : 1,
+      useNativeDriver: true,
+      friction: 6,
+      tension: 140,
+    }).start();
+  }, [isFocused]);
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.75}
+      onPress={onPress}
+      className="items-center justify-center flex-1 py-1 z-10 relative"
+      style={{ minHeight: 42, zIndex: 10 }}
+    >
+      <View className="items-center justify-center">
+        {/* Animated Icon Wrapper with spring pop on switch */}
+        <Animated.View 
+          style={[
+            { width: 24, height: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 2, position: 'relative' },
+            { transform: [{ scale }] }
+          ]}
+        >
+          {getIcon(route.name, isFocused)}
+          {hasTabUnread(route.name) && (
+            <View style={styles.redDot} />
+          )}
+        </Animated.View>
+        <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
+          className={`text-[9px] uppercase tracking-tight text-center font-black ${
+            isFocused ? 'text-[#E11D48]' : 'text-[#334155]'
+          }`}
+        >
+          {getLabel(route.name)}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+});
+
 export function BottomNavigation({ state, descriptors, navigation }: any) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -180,34 +227,16 @@ export function BottomNavigation({ state, descriptors, navigation }: any) {
           };
 
           const tabElement = (
-            <TouchableOpacity
+            <TabButton
               key={route.key}
-              activeOpacity={0.75}
+              route={route}
+              isFocused={isFocused}
               onPress={onPress}
-              className="items-center justify-center flex-1 py-1 z-10 relative"
-              style={{ minHeight: 42, zIndex: 10 }}
-            >
-              <View className="items-center justify-center">
-                {/* Icon Wrapper */}
-                <View className="w-6 h-6 items-center justify-center mb-0.5 relative">
-                  {getIcon(route.name, isFocused)}
-                  {/* Red Dot indicator for tabs with unread messages */}
-                  {hasTabUnread(route.name) && (
-                    <View style={styles.redDot} />
-                  )}
-                </View>
-                <Text
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.8}
-                  className={`text-[9px] uppercase tracking-tight text-center font-black ${
-                    isFocused ? 'text-[#E11D48]' : 'text-[#334155]'
-                  }`}
-                >
-                  {getLabel(route.name)}
-                </Text>
-              </View>
-            </TouchableOpacity>
+              getIcon={getIcon}
+              getLabel={getLabel}
+              hasTabUnread={hasTabUnread}
+              styles={styles}
+            />
           );
 
           if (index === 2 && !isTrainer) {

@@ -126,7 +126,16 @@ export function NativeSegmentedControl<T extends string>({
           <TouchableOpacity
             key={r}
             activeOpacity={0.75}
-            onPress={() => onChangeKey(r)}
+            onPress={() => {
+              if (tabWidth > 0) {
+                translateX.value = withSpring(idx * tabWidth, SPRING_CONFIG);
+                checkScale.value = 0.3;
+                checkOpacity.value = 0;
+                checkScale.value = withSpring(1, { damping: 12, stiffness: 220 });
+                checkOpacity.value = withTiming(1, { duration: 160, easing: Easing.out(Easing.quad) });
+              }
+              onChangeKey(r);
+            }}
             style={{
               flex: 1,
               paddingVertical: 8,

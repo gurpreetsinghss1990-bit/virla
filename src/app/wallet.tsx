@@ -1,6 +1,7 @@
 import { Loading } from '../components/Loading';
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Linking, Share, Platform } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { View, Text, TouchableOpacity, TextInput, Alert, Linking, Share, Platform } from 'react-native';
+import Animated, { useSharedValue, useAnimatedScrollHandler, runOnJS } from 'react-native-reanimated';
 import { InteractionManager } from '../utils/interactionManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,7 +13,7 @@ import { useUserStore } from '../store/userStore';
 import { Database } from '../database/Database';
 import { syncAllDomainStores } from '../store/syncAllStores';
 import { Ionicons, Feather } from '@expo/vector-icons';
-import Svg, { Circle, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient, Stop, Rect, Path } from 'react-native-svg';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { formatToDDMMYYYY } from '../utils/date';
 import { supabase } from '../database/supabaseClient';
@@ -430,124 +431,216 @@ export default function WalletScreen() {
   const getLedgerIcon = (type: LedgerTransaction['type']) => {
     switch (type) {
       case 'purchase':
-        return { icon: 'credit-card', color: '#10B981', bg: 'bg-emerald-50' };
+        return { icon: 'credit-card', color: '#10B981', bg: '#ECFDF5', border: '#D1FAE5' };
       case 'booking':
-        return { icon: 'check-circle', color: '#E11D48', bg: 'bg-rose-50' };
+        return { icon: 'check-circle', color: '#E11D48', bg: '#FFF1F2', border: '#FFE4E6' };
       case 'refund':
-        return { icon: 'rotate-ccw', color: '#3B82F6', bg: 'bg-blue-50' };
+        return { icon: 'rotate-ccw', color: '#3B82F6', bg: '#EFF6FF', border: '#DBEAFE' };
       case 'penalty':
-        return { icon: 'alert-triangle', color: '#EF4444', bg: 'bg-red-50' };
+        return { icon: 'alert-triangle', color: '#EF4444', bg: '#FEF2F2', border: '#FEE2E2' };
       default:
-        return { icon: 'gift', color: '#8B5CF6', bg: 'bg-purple-50' };
+        return { icon: 'gift', color: '#8B5CF6', bg: '#F5F3FF', border: '#EDE9FE' };
     }
   };
 
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+
+  const filteredLedgerLengthRef = useRef(filteredLedger.length);
+  filteredLedgerLengthRef.current = filteredLedger.length;
+
+  const scrollY = useSharedValue(0);
+  const isCollapsedShared = useSharedValue(false);
+
+  const handleHeaderCollapse = useCallback((collapsed: boolean) => {
+    setIsHeaderCollapsed(collapsed);
+  }, []);
+
+  const handleLoadMoreLedger = useCallback(() => {
+    if (activeTabRef.current === 'ledger') {
+      setVisibleLedgerCount((prev) => Math.min(prev + 8, filteredLedgerLengthRef.current));
+    }
+  }, []);
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      'worklet';
+      scrollY.value = event.contentOffset.y;
+      const collapsed = event.contentOffset.y > 120;
+      if (collapsed !== isCollapsedShared.value) {
+        isCollapsedShared.value = collapsed;
+        runOnJS(handleHeaderCollapse)(collapsed);
+      }
+
+      const isCloseToBottom = event.layoutMeasurement.height + event.contentOffset.y >= event.contentSize.height - 120;
+      if (isCloseToBottom) {
+        runOnJS(handleLoadMoreLedger)();
+      }
+    },
+  });
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#F5F7FB' }}>
-      <ScrollView
+    <View style={{ flex: 1, backgroundColor: '#FAFBFD' }}>
+      {/* Signature Virla Heritage Top-Right Leaves Watermark */}
+      <View pointerEvents="none" style={{ position: 'absolute', top: 0, right: 0, opacity: 0.22, zIndex: 0 }}>
+        <Svg width={240} height={260} viewBox="0 0 240 260" fill="none">
+          <Path d="M239.5 0C220.5 45.5 180 110 115 135C50 160 10 230 0 260C25 210 75 165 140 135C205 105 230 45 239.5 0Z" fill="#3D5A45" />
+          <Path d="M190 20C170 65 130 110 70 130C10 150 0 205 0 205C20 170 65 140 120 120C175 100 185 50 190 20Z" fill="#587862" opacity={0.6} />
+          <Path d="M240 85C215 115 175 145 130 160C85 175 60 215 60 215C75 190 110 170 150 155C190 140 225 115 240 85Z" fill="#7A9A84" opacity={0.4} />
+        </Svg>
+      </View>
+
+      {/* Signature Virla Heritage Mid-Left Leaves Watermark */}
+      <View pointerEvents="none" style={{ position: 'absolute', top: 180, left: -40, opacity: 0.14, zIndex: 0, transform: [{ rotate: '45deg' }] }}>
+        <Svg width={180} height={200} viewBox="0 0 180 200" fill="none">
+          <Path d="M0 0C20 35 60 85 120 105C180 125 175 180 180 200C160 165 120 130 70 105C20 80 5 35 0 0Z" fill="#4B6A53" />
+        </Svg>
+      </View>
+
+      <Animated.ScrollView
         showsVerticalScrollIndicator={false}
         className="flex-1 px-4 pt-0"
         contentContainerStyle={{ 
-          paddingTop: insets.top + 60,
+          paddingTop: insets.top + 58,
           paddingBottom: Math.max((insets.bottom || 0) + 40, 110) 
         }}
         scrollEventThrottle={16}
-        onScroll={({ nativeEvent }) => {
-          const y = nativeEvent.contentOffset.y;
-          const collapsed = y > 120;
-          if (collapsed !== isHeaderCollapsed) setIsHeaderCollapsed(collapsed);
-
-          if (activeTab !== 'ledger') return;
-          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-          const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 120;
-          if (isCloseToBottom && visibleLedgerCount < filteredLedger.length) {
-            setVisibleLedgerCount(prev => Math.min(prev + 8, filteredLedger.length));
-          }
-        }}
+        onScroll={scrollHandler}
       >
-        <View className="gap-4 pt-1">
+        <View className="gap-5 pt-1">
 
           {/* Dynamic Notice Banner */}
           {!dismissPriorityNotice && (
             isExpired() ? (
-              <View className="bg-red-50 p-3.5 rounded-2xl flex-row items-center justify-between border border-red-100 shadow-sm">
+              <View 
+                style={{
+                  backgroundColor: '#FEFBF2',
+                  borderColor: '#FDEBBA',
+                  borderWidth: 1,
+                  borderRadius: 16,
+                  padding: 14,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  ...softShadow({ color: '#D97706', opacity: 0.08, radius: 8, offsetY: 2 }),
+                }}
+              >
                 <View className="flex-row items-center gap-3 flex-1 mr-2">
-                  <View className="w-9 h-9 rounded-full bg-red-100 items-center justify-center">
-                    <Feather name="alert-triangle" size={16} color="#EF4444" />
+                  <View className="w-10 h-10 rounded-xl bg-[#FDF2D0] items-center justify-center">
+                    <Feather name="alert-triangle" size={17} color="#D97706" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-red-800 text-[10px] font-bold uppercase">Wallet Expired ⚠️</Text>
-                    <Text className="text-red-700 text-xs font-medium mt-0.5">Please recharge to reactivate session check-ins.</Text>
+                    <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-slate-900 text-[13px] tracking-tight leading-tight">
+                      WALLET EXPIRED ⚠️
+                    </Text>
+                    <Text style={{ fontFamily: 'Outfit_500Medium' }} className="text-amber-900/80 text-[11.5px] leading-normal mt-0.5">
+                      Please recharge to reactivate session check-ins.
+                    </Text>
                   </View>
                 </View>
                 <TouchableOpacity
-                  activeOpacity={0.8}
+                  activeOpacity={0.85}
                   onPress={() => router.push('/membership' as any)}
-                  className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-sm"
+                  style={{
+                    backgroundColor: '#FFF1F2',
+                    borderColor: '#FECDD3',
+                    borderWidth: 1,
+                    paddingHorizontal: 13,
+                    paddingVertical: 7,
+                    borderRadius: 9999,
+                  }}
                 >
-                  <Text className="text-white text-[10px] font-bold uppercase">RECHARGE</Text>
-                </TouchableOpacity>
-              </View>
-            ) : role !== 'trainer' && creditBalance === 0 ? (
-              <View className="bg-rose-50 p-3.5 rounded-2xl flex-row items-center justify-between border border-rose-100 shadow-sm">
-                <View className="flex-row items-center gap-3 flex-1 mr-2">
-                  <View className="w-9 h-9 rounded-full bg-rose-100 items-center justify-center">
-                    <Feather name="alert-circle" size={16} color="#E11D48" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-[#E11D48] text-[10px] font-bold uppercase">You&apos;re out of credits ⚠️</Text>
-                    <Text className="text-rose-700 text-xs font-medium mt-0.5">Recharge your wallet to book wellness sessions.</Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => router.push('/membership' as any)}
-                  className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-sm"
-                >
-                  <Text className="text-white text-[10px] font-bold uppercase">RECHARGE</Text>
+                  <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#BE123C] text-[11px] tracking-wider uppercase">
+                    RECHARGE
+                  </Text>
                 </TouchableOpacity>
               </View>
             ) : role !== 'trainer' && creditBalance <= 2 ? (
-              <View className="bg-amber-50 p-3.5 rounded-2xl flex-row items-center justify-between border border-amber-100 shadow-sm">
+              <View 
+                style={{
+                  backgroundColor: '#FEFBF2',
+                  borderColor: '#FDEBBA',
+                  borderWidth: 1,
+                  borderRadius: 16,
+                  padding: 14,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  ...softShadow({ color: '#D97706', opacity: 0.08, radius: 8, offsetY: 2 }),
+                }}
+              >
                 <View className="flex-row items-center gap-3 flex-1 mr-2">
-                  <View className="w-9 h-9 rounded-full bg-amber-100 items-center justify-center">
-                    <Feather name="zap" size={16} color="#D97706" />
+                  <View className="w-10 h-10 rounded-xl bg-[#FDF2D0] items-center justify-center">
+                    <Text className="text-lg">⚡</Text>
                   </View>
                   <View className="flex-1">
-                    <Text className="text-amber-800 text-[10px] font-bold uppercase">Running low on credits ⚡</Text>
-                    <Text className="text-amber-700 text-xs font-medium mt-0.5">Recharge your wallet to keep training.</Text>
+                    <View className="flex-row items-center gap-1">
+                      <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-slate-900 text-[13px] tracking-tight leading-tight">
+                        RUNNING LOW ON CREDITS
+                      </Text>
+                      <Text className="text-amber-500 text-xs">⚡</Text>
+                    </View>
+                    <Text style={{ fontFamily: 'Outfit_500Medium' }} className="text-amber-900/80 text-[11.5px] leading-normal mt-0.5">
+                      Recharge your wallet to keep training.
+                    </Text>
                   </View>
                 </View>
                 <TouchableOpacity
-                  activeOpacity={0.8}
+                  activeOpacity={0.85}
                   onPress={() => router.push('/membership' as any)}
-                  className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-sm"
+                  style={{
+                    backgroundColor: '#FFF1F2',
+                    borderColor: '#FECDD3',
+                    borderWidth: 1,
+                    paddingHorizontal: 13,
+                    paddingVertical: 7,
+                    borderRadius: 9999,
+                  }}
                 >
-                  <Text className="text-white text-[10px] font-bold uppercase">RECHARGE</Text>
+                  <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#BE123C] text-[11px] tracking-wider uppercase">
+                    RECHARGE
+                  </Text>
                 </TouchableOpacity>
               </View>
             ) : approachingLots.length > 0 ? (
-              <View className="bg-[#EEF4FF] p-3.5 rounded-2xl flex-row items-center justify-between border border-blue-100/60 shadow-sm">
+              <View 
+                style={{
+                  backgroundColor: '#EEF4FF',
+                  borderColor: 'rgba(191, 219, 254, 0.7)',
+                  borderWidth: 1,
+                  borderRadius: 16,
+                  padding: 14,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  ...softShadow({ color: '#3B82F6', opacity: 0.06, radius: 8, offsetY: 2 }),
+                }}
+              >
                 <View className="flex-row items-center gap-3 flex-1 mr-2">
-                  <View className="w-9 h-9 rounded-full bg-[#FFE4E6] items-center justify-center">
-                    <Ionicons name="hourglass-outline" size={16} color="#E11D48" />
+                  <View className="w-10 h-10 rounded-xl bg-[#FFE4E6] items-center justify-center">
+                    <Ionicons name="hourglass-outline" size={17} color="#E11D48" />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-[#E11D48] text-[10px] font-bold uppercase">
+                    <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#E11D48] text-[11px] uppercase tracking-wider">
                       Expiring Soon ⚠️ • Lot #{activeLots[0]?.id?.slice(-3) || '1'}
                     </Text>
-                    <Text className="text-zinc-800 text-xs font-bold mt-0.5" numberOfLines={1}>
+                    <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-zinc-800 text-xs mt-0.5" numberOfLines={1}>
                       {approachingLots.length} lot(s) expiring in {burningDaysLeft} days ({activeLots[0] ? formatToDDMMYYYY(activeLots[0].official_expiry_date) : ''})
                     </Text>
                   </View>
                 </View>
                 <View className="flex-row items-center gap-2">
                   <TouchableOpacity
-                    activeOpacity={0.8}
+                    activeOpacity={0.85}
                     onPress={() => router.push('/membership' as any)}
-                    className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-sm"
+                    style={{
+                      backgroundColor: '#E11D48',
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 9999,
+                    }}
                   >
-                    <Text className="text-white text-[10px] font-bold uppercase">EXTEND</Text>
+                    <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-white text-[10px] uppercase">EXTEND</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                     activeOpacity={0.7}
@@ -561,137 +654,238 @@ export default function WalletScreen() {
             ) : null
           )}
 
-          {/* Universal Session Pass Section - Clean, lightweight container without bulky card box */}
-          <View className="items-center gap-3 py-2">
-
-            {/* Circular Gauge */}
-            <View className="relative w-[180px] h-[180px] items-center justify-center my-1">
-              <Svg width={180} height={180} viewBox="0 0 180 180">
-                {/* Background Ring */}
+          {/* Available Balance Gauge (Hero Section) matching Stitch code.html & Screenshot */}
+          <View className="items-center justify-center pt-2 pb-1">
+            {/* Circular Radial Progress Gauge */}
+            <View className="relative w-56 h-56 items-center justify-center">
+              <Svg width={220} height={220} viewBox="0 0 220 220" style={{ transform: [{ rotate: '-90deg' }] }}>
+                {/* Background Outer Track (Soft Ice Sky Blue #E1EFFE) */}
                 <Circle
-                  cx="90"
-                  cy="90"
-                  r="72"
-                  stroke="#E2EDFD"
-                  strokeWidth="8"
-                  fill="none"
-                />
-                {/* Active Crimson Arc */}
-                <Circle
-                  cx="90"
-                  cy="90"
-                  r="72"
-                  stroke="#E11D48"
-                  strokeWidth="8"
-                  fill="none"
-                  strokeDasharray={`${(gaugeRatio * 452.4).toFixed(1)} 452.4`}
+                  cx="110"
+                  cy="110"
+                  r="86"
+                  stroke="#E1EFFE"
+                  strokeWidth="12"
                   strokeLinecap="round"
-                  transform="rotate(-65 90 90)"
+                  fill="none"
+                  opacity={0.85}
                 />
-                {/* Left Indicator Dot */}
+                {/* Active Energetic Crimson Arc */}
                 <Circle
-                  cx="18"
-                  cy="90"
-                  r="6.5"
-                  fill="#E11D48"
+                  cx="110"
+                  cy="110"
+                  r="86"
+                  stroke="#E11D48"
+                  strokeWidth="12"
+                  strokeLinecap="round"
+                  fill="none"
+                  strokeDasharray="540.35"
+                  strokeDashoffset={Math.max(60, 540.35 - (gaugeRatio * 430))}
                 />
               </Svg>
 
-              <View className="absolute inset-0 items-center justify-center">
-                <Text className="text-zinc-400 text-[10px] font-bold uppercase">AVAILABLE BALANCE</Text>
-                <Text className="text-zinc-950 text-4xl font-bold my-0.5">
-                  {creditBalance}<Text className="text-[#E11D48]">.</Text>
+              {/* Inner Dial Content */}
+              <View className="absolute inset-0 items-center justify-center px-4">
+                <Text 
+                  style={{ fontFamily: 'Outfit_600SemiBold', letterSpacing: 1.5 }}
+                  className="text-[11px] text-slate-400 uppercase mb-1"
+                >
+                  AVAILABLE BALANCE
                 </Text>
-                <Text className="text-zinc-700 text-[10px] font-bold uppercase">AVAILABLE CREDITS</Text>
+                
+                {/* Bold Metric Display */}
+                <View className="flex-row items-baseline justify-center">
+                  <Text 
+                    style={{ fontFamily: 'Outfit_800ExtraBold', letterSpacing: -2 }}
+                    className="text-6xl text-slate-900 leading-none"
+                  >
+                    {creditBalance}
+                  </Text>
+                  <Text 
+                    style={{ fontFamily: 'Outfit_700Bold' }}
+                    className="text-[#E11D48] text-5xl leading-none font-bold"
+                  >
+                    .
+                  </Text>
+                </View>
+
+                <Text 
+                  style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 1.2 }}
+                  className="text-[10.5px] text-slate-800 uppercase mt-2"
+                >
+                  AVAILABLE CREDITS
+                </Text>
               </View>
             </View>
 
-            {/* Valid Badge & Card Holder */}
-            <View className="items-center gap-1">
-              <View className="bg-[#F0F4FA] border border-blue-100/60 px-3.5 py-1 rounded-full flex-row items-center gap-1.5">
-                <Feather name="shield" size={12} color="#E11D48" />
-                <Text className="text-zinc-800 text-xs font-bold">Valid until {membership.renewalDate || '14 Sep 2027'}</Text>
+            {/* Validity & Cardholder Details */}
+            <View className="mt-3.5 items-center gap-1.5">
+              {/* Shield Validity Badge */}
+              <View 
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  borderColor: '#FFE4E6',
+                  borderWidth: 1,
+                  borderRadius: 9999,
+                  paddingHorizontal: 12,
+                  paddingVertical: 4.5,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  ...softShadow({ color: '#0F172A', opacity: 0.04, radius: 4, offsetY: 1 }),
+                }}
+              >
+                <Feather name="shield" size={13} color="#E11D48" />
+                <Text 
+                  style={{ fontFamily: 'Outfit_500Medium' }}
+                  className="text-slate-800 text-[12px]"
+                >
+                  Valid until {membership.renewalDate || 'May 23, 2027'}
+                </Text>
               </View>
-              <Text className="text-zinc-400 text-[10px] font-bold uppercase mt-0.5">
-                CARD HOLDER: {userName ? userName.toUpperCase() : 'VIRAL'}
+
+              {/* Cardholder Label */}
+              <Text 
+                style={{ fontFamily: 'Outfit_600SemiBold', letterSpacing: 1.1 }}
+                className="text-[11px] text-slate-400 uppercase pt-0.5"
+              >
+                CARD HOLDER: <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-slate-500">{userName ? userName.toUpperCase() : 'KIRTI YADAV'}</Text>
               </Text>
             </View>
 
-            {/* Action Buttons */}
-            <View className="flex-row gap-3 w-full mt-2">
+            {/* Primary Dual Action Buttons (Dark Obsidian #090D16) */}
+            <View className="flex-row gap-3 w-full mt-5 px-1">
               {role !== 'trainer' && (
                 <TouchableOpacity
-                  activeOpacity={0.85}
+                  activeOpacity={0.88}
                   onPress={() => router.push('/membership' as any)}
-                  className="flex-1 bg-black py-3.5 rounded-2xl items-center justify-center flex-row gap-2 shadow-sm"
+                  style={{
+                    backgroundColor: '#090D16',
+                    borderRadius: 14,
+                    paddingVertical: 14,
+                    paddingHorizontal: 16,
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    ...softShadow({ color: '#090D16', opacity: 0.18, radius: 8, offsetY: 3 }),
+                  }}
                 >
-                  <Feather name="plus-circle" size={16} color="white" />
-                  <Text className="text-white text-xs font-bold uppercase">Recharge Wallet</Text>
+                  <Feather name="plus-circle" size={16} color="#FFFFFF" />
+                  <Text 
+                    style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8 }}
+                    className="text-white text-xs uppercase"
+                  >
+                    Recharge Wallet
+                  </Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
-                activeOpacity={0.85}
+                activeOpacity={0.88}
                 onPress={() => setActiveTab('transfer')}
-                className="flex-1 bg-black py-3.5 rounded-2xl items-center justify-center flex-row gap-2 shadow-sm"
+                style={{
+                  backgroundColor: '#090D16',
+                  borderRadius: 14,
+                  paddingVertical: 14,
+                  paddingHorizontal: 16,
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  ...softShadow({ color: '#090D16', opacity: 0.18, radius: 8, offsetY: 3 }),
+                }}
               >
-                <Feather name="send" size={15} color="white" />
-                <Text className="text-white text-xs font-bold uppercase">Transfer Credits</Text>
+                <Feather name="send" size={15} color="#FFFFFF" style={{ transform: [{ rotate: '-12deg' }] }} />
+                <Text 
+                  style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8 }}
+                  className="text-white text-xs uppercase"
+                >
+                  Transfer Credits
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Quick Stats 3-Column Native Grouped Section */}
+          {/* Lifetime Stats 3-Column Card matching Stitch code.html */}
           <View
-            className="rounded-2xl py-3.5 px-3 flex-row justify-between items-center"
             style={{
-              backgroundColor: Platform.OS === 'ios' ? 'rgba(255, 255, 255, 0.92)' : '#FFFFFF',
-              borderWidth: Platform.OS === 'ios' ? 0.5 : 0,
-              borderColor: 'rgba(60, 60, 67, 0.12)',
-              ...softShadow({ color: '#101828', opacity: 0.05, radius: 10, offsetY: 2 }),
+              backgroundColor: '#FFFFFF',
+              borderRadius: 16,
+              borderColor: '#F1F4F9',
+              borderWidth: 1,
+              padding: 16,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              ...softShadow({ color: '#0F172A', opacity: 0.05, radius: 10, offsetY: 2 }),
             }}
           >
-            <View className="flex-1 items-center">
-              <Text className="text-zinc-400 text-[10px] font-bold uppercase">PURCHASED</Text>
-              <Text className="text-zinc-950 text-xl font-bold mt-0.5">{lifetimePurchased}</Text>
-              <Text className="text-zinc-400 text-[11px] font-medium mt-0.5">Lifetime</Text>
+            {/* Col 1: Purchased */}
+            <View className="flex-1 items-center justify-center px-1">
+              <Text style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8 }} className="text-[10px] uppercase text-slate-400">
+                PURCHASED
+              </Text>
+              <Text style={{ fontFamily: 'Outfit_700Bold', letterSpacing: -0.5 }} className="text-2xl text-slate-900 mt-0.5">
+                {lifetimePurchased}
+              </Text>
+              <Text style={{ fontFamily: 'Outfit_400Regular' }} className="text-[11px] text-slate-400 mt-0.5">
+                Lifetime
+              </Text>
             </View>
 
-            <View className="h-8" style={{ width: 0.5, backgroundColor: 'rgba(60, 60, 67, 0.14)' }} />
+            {/* Divider */}
+            <View className="h-9 w-[1px] bg-slate-100" />
 
-            <View className="flex-1 items-center">
-              <Text className="text-zinc-400 text-[10px] font-bold uppercase">CONSUMED</Text>
-              <Text className="text-zinc-950 text-xl font-bold mt-0.5">{creditsUsed}</Text>
-              <Text className="text-[#E11D48] text-[11px] font-semibold mt-0.5">{consumptionRate}% Rate</Text>
+            {/* Col 2: Consumed */}
+            <View className="flex-1 items-center justify-center px-1">
+              <Text style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8 }} className="text-[10px] uppercase text-slate-400">
+                CONSUMED
+              </Text>
+              <Text style={{ fontFamily: 'Outfit_700Bold', letterSpacing: -0.5 }} className="text-2xl text-slate-900 mt-0.5">
+                {creditsUsed}
+              </Text>
+              <Text style={{ fontFamily: 'Outfit_500Medium' }} className="text-[#E11D48] text-[11px] mt-0.5">
+                {consumptionRate}% Rate
+              </Text>
             </View>
 
-            <View className="h-8" style={{ width: 0.5, backgroundColor: 'rgba(60, 60, 67, 0.14)' }} />
+            {/* Divider */}
+            <View className="h-9 w-[1px] bg-slate-100" />
 
+            {/* Col 3: Next */}
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={handleUpcomingBookingsPress}
-              className="flex-1 items-center"
+              className="flex-1 items-center justify-center px-1"
             >
-              <Text className="text-zinc-400 text-[10px] font-bold uppercase">NEXT</Text>
-              <Text className="text-zinc-950 text-sm font-bold mt-1" numberOfLines={1}>
+              <Text style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8 }} className="text-[10px] uppercase text-slate-400">
+                NEXT
+              </Text>
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-sm text-slate-900 mt-1 mb-0.5" numberOfLines={1}>
                 {nextRitual ? formatToDDMMYYYY(nextRitual.date) : 'No Sessions'}
               </Text>
-              <Text className="text-zinc-400 text-[11px] font-medium mt-0.5">{upcomingCount} Upcoming</Text>
+              <Text style={{ fontFamily: 'Outfit_400Regular' }} className="text-[11px] text-slate-400">
+                {upcomingCount} Upcoming
+              </Text>
             </TouchableOpacity>
           </View>
 
-          {/* Line Tab Switch */}
-          <View className="flex-row border-b border-zinc-200 mt-2">
+          {/* Category Tabs Navigation: LEDGER | TRANSFER | LOTS */}
+          <View className="flex-row border-b border-slate-200/80 mt-1">
             <TouchableOpacity
-              activeOpacity={0.7}
+              activeOpacity={0.75}
               onPress={() => setActiveTab('ledger')}
-              className={`flex-1 py-3 items-center justify-center border-b-2 ${
-                activeTab === 'ledger' ? 'border-zinc-950 -mb-[1px]' : 'border-transparent'
+              className={`flex-1 pb-3 items-center justify-center border-b-2 ${
+                activeTab === 'ledger' ? 'border-slate-900 -mb-[1px]' : 'border-transparent'
               }`}
             >
               <Text 
                 numberOfLines={1}
-                className={`text-[11px] font-bold uppercase ${
-                  activeTab === 'ledger' ? 'text-zinc-950' : 'text-zinc-400'
+                style={{ fontFamily: activeTab === 'ledger' ? 'Outfit_700Bold' : 'Outfit_500Medium', letterSpacing: 0.8 }}
+                className={`text-xs uppercase ${
+                  activeTab === 'ledger' ? 'text-slate-900' : 'text-slate-400'
                 }`}
               >
                 LEDGER
@@ -699,16 +893,17 @@ export default function WalletScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              activeOpacity={0.7}
+              activeOpacity={0.75}
               onPress={() => setActiveTab('transfer')}
-              className={`flex-1 py-3 items-center justify-center border-b-2 ${
-                activeTab === 'transfer' ? 'border-zinc-950 -mb-[1px]' : 'border-transparent'
+              className={`flex-1 pb-3 items-center justify-center border-b-2 ${
+                activeTab === 'transfer' ? 'border-slate-900 -mb-[1px]' : 'border-transparent'
               }`}
             >
               <Text 
                 numberOfLines={1}
-                className={`text-[11px] font-bold uppercase ${
-                  activeTab === 'transfer' ? 'text-zinc-950' : 'text-zinc-400'
+                style={{ fontFamily: activeTab === 'transfer' ? 'Outfit_700Bold' : 'Outfit_500Medium', letterSpacing: 0.8 }}
+                className={`text-xs uppercase ${
+                  activeTab === 'transfer' ? 'text-slate-900' : 'text-slate-400'
                 }`}
               >
                 TRANSFER
@@ -716,16 +911,17 @@ export default function WalletScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              activeOpacity={0.7}
+              activeOpacity={0.75}
               onPress={() => setActiveTab('lots')}
-              className={`flex-1 py-3 items-center justify-center border-b-2 ${
-                activeTab === 'lots' ? 'border-zinc-950 -mb-[1px]' : 'border-transparent'
+              className={`flex-1 pb-3 items-center justify-center border-b-2 ${
+                activeTab === 'lots' ? 'border-slate-900 -mb-[1px]' : 'border-transparent'
               }`}
             >
               <Text 
                 numberOfLines={1}
-                className={`text-[11px] font-bold uppercase ${
-                  activeTab === 'lots' ? 'text-zinc-950' : 'text-zinc-400'
+                style={{ fontFamily: activeTab === 'lots' ? 'Outfit_700Bold' : 'Outfit_500Medium', letterSpacing: 0.8 }}
+                className={`text-xs uppercase ${
+                  activeTab === 'lots' ? 'text-slate-900' : 'text-slate-400'
                 }`}
               >
                 LOTS
@@ -736,16 +932,32 @@ export default function WalletScreen() {
           {/* Tab 1: Credit Lots */}
           {activeTab === 'lots' && (
             <View className="gap-3">
-              <View className="px-1">
-                <Text className="text-zinc-950 text-[15px] font-bold">Credit Expiry Breakdown</Text>
-                <Text className="text-zinc-500 text-xs font-medium mt-0.5">Oldest expiring credits are used first</Text>
+              <View className="px-0.5">
+                <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-base text-slate-900 tracking-tight leading-tight">
+                  Credit Expiry Breakdown
+                </Text>
+                <Text style={{ fontFamily: 'Outfit_400Regular' }} className="text-[11px] text-slate-400 mt-0.5">
+                  Oldest expiring credits are used first
+                </Text>
               </View>
 
               {/* Clean Circle Breakdown */}
-              <View className="bg-white rounded-3xl p-5 shadow-sm border border-zinc-100/80 relative">
+              <View 
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: 20,
+                  padding: 20,
+                  borderColor: '#F1F4F9',
+                  borderWidth: 1,
+                  position: 'relative',
+                  ...softShadow({ color: '#0F172A', opacity: 0.04, radius: 10, offsetY: 2 }),
+                }}
+              >
                 {activeLots.length === 0 ? (
                   <View className="py-4 items-center justify-center">
-                    <Text className="text-zinc-500 text-xs font-medium">No active credit packs right now.</Text>
+                    <Text style={{ fontFamily: 'Outfit_500Medium' }} className="text-slate-400 text-xs">
+                      No active credit packs right now.
+                    </Text>
                   </View>
                 ) : (
                   <>
@@ -753,7 +965,7 @@ export default function WalletScreen() {
                       <View
                         className="absolute h-[2px] bg-[#E11D48]/25"
                         style={{
-                          top: 40,
+                          top: 42,
                           left: activeLots.length === 2 ? '25%' : '16.6%',
                           width: activeLots.length === 2 ? '50%' : '66.8%',
                         }}
@@ -774,29 +986,37 @@ export default function WalletScreen() {
                         return (
                           <View key={lot.id || idx} className="items-center flex-1">
                             <View
-                              className={`w-10 h-10 rounded-full items-center justify-center ${
-                                isFirst ? 'bg-[#E11D48] shadow-sm' : 'bg-[#E0EDFD]'
-                              }`}
+                              style={{
+                                width: 44,
+                                height: 44,
+                                borderRadius: 22,
+                                backgroundColor: isFirst ? '#E11D48' : '#E1EFFE',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                ...(isFirst ? softShadow({ color: '#E11D48', opacity: 0.3, radius: 6, offsetY: 2 }) : {}),
+                              }}
                             >
-                              <Text className={`text-sm font-bold ${isFirst ? 'text-white' : 'text-[#1E293B]'}`}>
+                              <Text style={{ fontFamily: 'Outfit_700Bold' }} className={`text-sm ${isFirst ? 'text-white' : 'text-slate-800'}`}>
                                 {lot.remaining_credits || 0}
                               </Text>
                             </View>
                             <Text
-                              className={`text-[10px] font-bold uppercase mt-2 ${
-                                isFirst ? 'text-[#E11D48]' : 'text-zinc-500'
+                              style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8 }}
+                              className={`text-[10px] uppercase mt-2.5 ${
+                                isFirst ? 'text-[#E11D48]' : 'text-slate-400'
                               }`}
                             >
                               {stepLabel}
                             </Text>
                             <Text
-                              className={`text-[10px] font-bold mt-0.5 ${
+                              style={{ fontFamily: 'Outfit_700Bold' }}
+                              className={`text-[10.5px] mt-0.5 ${
                                 isExpiringSoon ? 'text-[#E11D48]' : 'text-emerald-600'
                               }`}
                             >
                               {daysLeft}d left
                             </Text>
-                            <Text className="text-zinc-400 text-[10px] font-medium mt-0.5">
+                            <Text style={{ fontFamily: 'Outfit_400Regular' }} className="text-slate-400 text-[10px] mt-0.5">
                               {lot.official_expiry_date ? formatToDDMMYYYY(lot.official_expiry_date) : '-'}
                             </Text>
                           </View>
@@ -805,23 +1025,23 @@ export default function WalletScreen() {
                     </View>
 
                     {activeLots.length > 3 && (
-                      <View className="mt-4 pt-3 border-t border-zinc-100">
+                      <View style={{ marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderColor: '#F1F4F9' }}>
                         <TouchableOpacity
                           activeOpacity={0.7}
                           onPress={() => setShowAllLots(!showAllLots)}
-                          className="items-center justify-center"
+                          className="items-center justify-center py-1"
                         >
-                          <Text className="text-zinc-600 text-[11px] font-bold uppercase">
+                          <Text style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.6 }} className="text-slate-600 text-[11px] uppercase">
                             {showAllLots ? 'Show Less' : `View All ${activeLots.length} Packs`}
                           </Text>
                         </TouchableOpacity>
 
                         {showAllLots && (
-                          <View className="gap-2 mt-3">
+                          <View className="gap-2.5 mt-3">
                             {activeLots.slice(3).map((lot: any, idx: number) => (
-                              <View key={lot.id || idx} className="flex-row justify-between items-center py-1">
-                                <Text className="text-zinc-900 text-xs font-bold">{lot.remaining_credits} Credits</Text>
-                                <Text className="text-zinc-500 text-[11px] font-medium">
+                              <View key={lot.id || idx} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 }}>
+                                <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-slate-900 text-xs">{lot.remaining_credits} Credits</Text>
+                                <Text style={{ fontFamily: 'Outfit_400Regular' }} className="text-slate-400 text-[11px]">
                                   Expires {lot.official_expiry_date ? formatToDDMMYYYY(lot.official_expiry_date) : '-'}
                                 </Text>
                               </View>
@@ -837,37 +1057,82 @@ export default function WalletScreen() {
               {/* Contextual Benefit / Tip Card (Deferred until transition finishes) */}
               {isReady && (
                 isEliteUser && approachingLots.length > 0 ? (
-                  <View className="bg-[#EDF3FC] p-4 rounded-2xl flex-row items-start gap-3 border border-blue-100/60 mt-1">
-                    <View className="w-9 h-9 rounded-full bg-[#FCE7F3] items-center justify-center">
-                      <Ionicons name="heart-outline" size={17} color="#E11D48" />
+                  <View 
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderColor: '#F1F4F9',
+                      borderWidth: 1,
+                      borderRadius: 18,
+                      padding: 16,
+                      flexDirection: 'row',
+                      alignItems: 'flex-start',
+                      gap: 12,
+                      marginTop: 2,
+                      ...softShadow({ color: '#0F172A', opacity: 0.03, radius: 8, offsetY: 2 }),
+                    }}
+                  >
+                    <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFF1F2', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="heart-outline" size={18} color="#E11D48" />
                     </View>
                     <View className="flex-1">
-                      <Text className="text-zinc-950 text-xs font-bold">A special benefit for you ❤️</Text>
-                      <Text className="text-zinc-600 text-xs font-medium mt-1 leading-relaxed">
+                      <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-slate-900 text-xs">
+                        A special benefit for you ❤️
+                      </Text>
+                      <Text style={{ fontFamily: 'Outfit_400Regular' }} className="text-slate-500 text-xs mt-1 leading-relaxed">
                         Your credits are approaching their expiry date. Because you&apos;re a premium Virla client, we&apos;re giving you an additional 7 days to use your remaining credits.
                       </Text>
                     </View>
                   </View>
                 ) : role === 'trainer' ? (
-                  <View className="bg-[#EDF3FC] p-4 rounded-2xl flex-row items-start gap-3 border border-blue-100/60 mt-1">
-                    <View className="w-9 h-9 rounded-full bg-[#FCE7F3] items-center justify-center">
-                      <Ionicons name="information-circle-outline" size={17} color="#E11D48" />
+                  <View 
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderColor: '#F1F4F9',
+                      borderWidth: 1,
+                      borderRadius: 18,
+                      padding: 16,
+                      flexDirection: 'row',
+                      alignItems: 'flex-start',
+                      gap: 12,
+                      marginTop: 2,
+                      ...softShadow({ color: '#0F172A', opacity: 0.03, radius: 8, offsetY: 2 }),
+                    }}
+                  >
+                    <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="information-circle-outline" size={18} color="#3B82F6" />
                     </View>
                     <View className="flex-1">
-                      <Text className="text-zinc-950 text-xs font-bold">Transfer-Only Credits</Text>
-                      <Text className="text-zinc-600 text-xs font-medium mt-1 leading-relaxed">
+                      <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-slate-900 text-xs">
+                        Transfer-Only Credits
+                      </Text>
+                      <Text style={{ fontFamily: 'Outfit_400Regular' }} className="text-slate-500 text-xs mt-1 leading-relaxed">
                         As a trainer, you can receive and transfer credits, but you cannot use credits to book sessions for yourself.
                       </Text>
                     </View>
                   </View>
                 ) : (
-                  <View className="bg-[#EDF3FC] p-4 rounded-2xl flex-row items-start gap-3 border border-blue-100/60 mt-1">
-                    <View className="w-9 h-9 rounded-full bg-[#FCE7F3] items-center justify-center">
-                      <Ionicons name="bulb-outline" size={17} color="#E11D48" />
+                  <View 
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderColor: '#F1F4F9',
+                      borderWidth: 1,
+                      borderRadius: 18,
+                      padding: 16,
+                      flexDirection: 'row',
+                      alignItems: 'flex-start',
+                      gap: 12,
+                      marginTop: 2,
+                      ...softShadow({ color: '#0F172A', opacity: 0.03, radius: 8, offsetY: 2 }),
+                    }}
+                  >
+                    <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFFBEB', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="bulb-outline" size={18} color="#D97706" />
                     </View>
                     <View className="flex-1">
-                      <Text className="text-zinc-950 text-xs font-bold">Session Scheduling Tip</Text>
-                      <Text className="text-zinc-600 text-xs font-medium mt-1 leading-relaxed">
+                      <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-slate-900 text-xs">
+                        Session Scheduling Tip
+                      </Text>
+                      <Text style={{ fontFamily: 'Outfit_400Regular' }} className="text-slate-500 text-xs mt-1 leading-relaxed">
                         Schedule your workout sessions in advance to ensure your available credits are utilized effectively before expiration.
                       </Text>
                     </View>
@@ -880,24 +1145,47 @@ export default function WalletScreen() {
           {/* Tab 2: P2P Transfer */}
           {activeTab === 'transfer' && (
             <View className="gap-3">
-              <View className="px-1">
-                <Text className="text-zinc-950 text-[15px] font-bold">Peer-to-Peer Transfer</Text>
-                <Text className="text-zinc-500 text-xs font-medium mt-0.5">
+              <View className="px-0.5">
+                <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-base text-slate-900 tracking-tight leading-tight">
+                  Peer-to-Peer Transfer
+                </Text>
+                <Text style={{ fontFamily: 'Outfit_400Regular' }} className="text-[11px] text-slate-400 mt-0.5">
                   Instantly share booking credits with friends or family on Virla.
                 </Text>
               </View>
 
-              <View className="bg-white rounded-3xl p-5 shadow-sm border border-zinc-100/80 gap-4">
+              <View 
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: 20,
+                  padding: 20,
+                  borderColor: '#F1F4F9',
+                  borderWidth: 1,
+                  gap: 16,
+                  ...softShadow({ color: '#0F172A', opacity: 0.04, radius: 10, offsetY: 2 }),
+                }}
+              >
                 <View className="gap-3.5">
                   <View>
-                    <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1.5">Recipient Phone Number</Text>
+                    <Text style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8 }} className="text-[10px] uppercase text-slate-400 mb-1.5">
+                      Recipient Phone Number
+                    </Text>
                     <View className="flex-row gap-2">
-                      <View className="bg-zinc-100 px-3.5 py-3 rounded-xl justify-center">
-                        <Text className="text-zinc-700 text-xs font-bold">+91</Text>
+                      <View 
+                        style={{
+                          backgroundColor: '#F8FAFC',
+                          borderColor: '#E2E8F0',
+                          borderWidth: 1,
+                          paddingHorizontal: 14,
+                          borderRadius: 12,
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-slate-700 text-xs">+91</Text>
                       </View>
                       <TextInput
                         placeholder="Enter 10-digit mobile number"
-                        placeholderTextColor="#9CA3AF"
+                        placeholderTextColor="#94A3B8"
                         value={transferPhone}
                         onChangeText={(txt) => {
                           const cleaned = txt.replace(/\D/g, '');
@@ -910,14 +1198,34 @@ export default function WalletScreen() {
                         }}
                         keyboardType="numeric"
                         maxLength={10}
-                        className="flex-1 bg-zinc-50 border border-zinc-200 px-4 py-3 rounded-xl text-zinc-900 text-xs font-bold"
+                        style={{
+                          flex: 1,
+                          backgroundColor: '#FAFBFD',
+                          borderColor: '#E2E8F0',
+                          borderWidth: 1,
+                          paddingHorizontal: 16,
+                          paddingVertical: 12,
+                          borderRadius: 12,
+                          fontFamily: 'Outfit_600SemiBold',
+                          fontSize: 13,
+                          color: '#0F172A',
+                        }}
                       />
                       <TouchableOpacity
-                        activeOpacity={0.8}
+                        activeOpacity={0.85}
                         onPress={handleVerifyRecipient}
-                        className="bg-zinc-950 px-4 rounded-xl items-center justify-center shadow-sm"
+                        style={{
+                          backgroundColor: '#090D16',
+                          paddingHorizontal: 16,
+                          borderRadius: 12,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          ...softShadow({ color: '#090D16', opacity: 0.15, radius: 6, offsetY: 2 }),
+                        }}
                       >
-                        <Text className="text-white text-[10px] font-bold uppercase">Verify</Text>
+                        <Text style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.6 }} className="text-white text-[11px] uppercase">
+                          Verify
+                        </Text>
                       </TouchableOpacity>
                     </View>
 
@@ -925,14 +1233,26 @@ export default function WalletScreen() {
                     {recipientStatus === 'searching' && (
                       <View className="flex-row items-center gap-2 mt-2.5 ml-1">
                         <Loading size="small" color="#4F46E5" />
-                        <Text className="text-zinc-500 text-[10px] font-bold">Checking registered Virla users...</Text>
+                        <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-slate-400 text-[11px]">
+                          Checking registered Virla users...
+                        </Text>
                       </View>
                     )}
                     {recipientStatus === 'not_found' && (
-                      <View className="mt-3 p-3.5 rounded-2xl bg-zinc-50 gap-3">
+                      <View 
+                        style={{
+                          marginTop: 12,
+                          padding: 14,
+                          borderRadius: 16,
+                          backgroundColor: '#FEFBF2',
+                          borderColor: '#FDEBBA',
+                          borderWidth: 1,
+                          gap: 12,
+                        }}
+                      >
                         <View className="flex-row items-center gap-2">
                           <Feather name="info" size={15} color="#D97706" />
-                          <Text className="text-zinc-800 text-xs font-bold">
+                          <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-slate-800 text-xs">
                             {t('wallet.recipient_not_found', "This person isn't on Virla yet.")}
                           </Text>
                         </View>
@@ -941,12 +1261,20 @@ export default function WalletScreen() {
                           <TouchableOpacity
                             activeOpacity={0.85}
                             onPress={handleInviteWhatsApp}
-                            className={`flex-1 py-2.5 px-3 rounded-xl items-center justify-center flex-row gap-1.5 shadow-sm ${
-                              isInviteSent ? 'bg-[#1EBE5D]' : 'bg-[#25D366]'
-                            }`}
+                            style={{
+                              flex: 1,
+                              paddingVertical: 10,
+                              paddingHorizontal: 12,
+                              borderRadius: 12,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexDirection: 'row',
+                              gap: 6,
+                              backgroundColor: isInviteSent ? '#1EBE5D' : '#25D366',
+                            }}
                           >
                             <Ionicons name="logo-whatsapp" size={15} color="white" />
-                            <Text className="text-white text-[11px] font-bold uppercase">
+                            <Text style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.5 }} className="text-white text-[11px] uppercase">
                               {isInviteSent ? t('wallet.invited_whatsapp', 'Invited on WhatsApp ✓') : t('wallet.invite_whatsapp', 'Invite via WhatsApp')}
                             </Text>
                           </TouchableOpacity>
@@ -954,10 +1282,21 @@ export default function WalletScreen() {
                           <TouchableOpacity
                             activeOpacity={0.8}
                             onPress={handleShareMoreOptions}
-                            className="bg-white border border-zinc-300 py-2.5 px-3 rounded-xl items-center justify-center flex-row gap-1.5 shadow-sm"
+                            style={{
+                              backgroundColor: '#FFFFFF',
+                              borderColor: '#E2E8F0',
+                              borderWidth: 1,
+                              paddingVertical: 10,
+                              paddingHorizontal: 12,
+                              borderRadius: 12,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexDirection: 'row',
+                              gap: 6,
+                            }}
                           >
                             <Feather name="share-2" size={13} color="#374151" />
-                            <Text className="text-zinc-700 text-[11px] font-bold">
+                            <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-slate-700 text-[11px]">
                               {t('wallet.more_options', 'More')}
                             </Text>
                           </TouchableOpacity>
@@ -965,14 +1304,27 @@ export default function WalletScreen() {
                       </View>
                     )}
                     {recipientStatus === 'self' && (
-                      <Text className="text-rose-600 text-[10px] font-bold uppercase mt-2 ml-1">
+                      <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-rose-600 text-[11px] mt-2 ml-1">
                         You cannot transfer credits to yourself.
                       </Text>
                     )}
                     {recipientStatus === 'found' && (
-                      <View className="flex-row items-center gap-1.5 mt-2.5 ml-1">
-                        <Feather name="check-circle" size={13} color="#059669" />
-                        <Text className="text-emerald-700 text-xs font-bold uppercase">
+                      <View 
+                        style={{
+                          marginTop: 10,
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: 10,
+                          backgroundColor: '#ECFDF5',
+                          borderColor: '#D1FAE5',
+                          borderWidth: 1,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        <Feather name="check-circle" size={14} color="#059669" />
+                        <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-emerald-700 text-xs uppercase">
                           Verified: {recipientName}
                         </Text>
                       </View>
@@ -980,26 +1332,51 @@ export default function WalletScreen() {
                   </View>
 
                   <View>
-                    <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1.5">Credits Amount</Text>
+                    <Text style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8 }} className="text-[10px] uppercase text-slate-400 mb-1.5">
+                      Credits Amount
+                    </Text>
                     <TextInput
                       maxLength={12}
                       placeholder="Number of credits to send"
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor="#94A3B8"
                       value={transferAmount}
                       onChangeText={(v) => setTransferAmount(clampInt(v, 6))}
                       keyboardType="numeric"
                       editable={recipientStatus === 'found'}
-                      className={`bg-zinc-50 border border-zinc-200 px-4 py-3 rounded-xl text-zinc-900 text-xs font-bold ${recipientStatus !== 'found' ? 'opacity-50' : ''}`}
+                      style={{
+                        backgroundColor: '#FAFBFD',
+                        borderColor: '#E2E8F0',
+                        borderWidth: 1,
+                        paddingHorizontal: 16,
+                        paddingVertical: 12,
+                        borderRadius: 12,
+                        fontFamily: 'Outfit_600SemiBold',
+                        fontSize: 13,
+                        color: '#0F172A',
+                        opacity: recipientStatus !== 'found' ? 0.5 : 1,
+                      }}
                     />
                   </View>
 
                   <TouchableOpacity
-                    activeOpacity={0.85}
+                    activeOpacity={0.88}
                     onPress={handleTransfer}
                     disabled={recipientStatus !== 'found'}
-                    className={`w-full py-3.5 rounded-xl items-center justify-center mt-1 shadow-sm ${recipientStatus === 'found' ? 'bg-[#E11D48]' : 'bg-zinc-200'}`}
+                    style={{
+                      width: '100%',
+                      paddingVertical: 14,
+                      borderRadius: 14,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginTop: 4,
+                      backgroundColor: recipientStatus === 'found' ? '#090D16' : '#F1F5F9',
+                      ...(recipientStatus === 'found' ? softShadow({ color: '#090D16', opacity: 0.2, radius: 8, offsetY: 3 }) : {}),
+                    }}
                   >
-                    <Text className={`text-xs font-bold uppercase ${recipientStatus === 'found' ? 'text-white' : 'text-zinc-400'}`}>
+                    <Text 
+                      style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8 }}
+                      className={`text-xs uppercase ${recipientStatus === 'found' ? 'text-white' : 'text-slate-400'}`}
+                    >
                       Transfer Credits
                     </Text>
                   </TouchableOpacity>
@@ -1011,46 +1388,65 @@ export default function WalletScreen() {
           {/* Tab 3: Ledger Audit */}
           {activeTab === 'ledger' && (
             <View className="gap-3 mt-1">
-              <View className="flex-row items-center justify-between px-1">
-                <View className="flex-1 pr-2">
-                  <Text className="text-zinc-950 text-[15px] font-bold">Transaction Ledger</Text>
-                  <Text className="text-zinc-500 text-xs font-medium mt-0.5">Session debits & credit top-ups</Text>
+              {/* Ledger Subheader & Total Counter */}
+              <View className="flex-row items-center justify-between px-0.5">
+                <View>
+                  <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-base text-slate-900 tracking-tight leading-tight">
+                    Transaction Ledger
+                  </Text>
+                  <Text style={{ fontFamily: 'Outfit_400Regular' }} className="text-[11px] text-slate-400 mt-0.5">
+                    Session debits & credit top-ups
+                  </Text>
                 </View>
-                <View className="bg-zinc-100 px-3 py-1 rounded-full">
-                  <Text className="text-zinc-500 text-xs font-semibold">{ledger.length} Total</Text>
+                <View className="px-2.5 py-0.5 bg-slate-100 rounded-full">
+                  <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-slate-600 text-[11px]">
+                    {ledger.length} Total
+                  </Text>
                 </View>
               </View>
 
-              {/* Filter Chips */}
-              <View className="flex-row gap-2 my-1">
-                {(['booking', 'purchase', 'refund', 'all'] as const).map((filter) => (
-                  <TouchableOpacity
-                    key={filter}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      setLedgerFilter(filter);
-                      setVisibleLedgerCount(8);
-                    }}
-                    className={`px-4 py-2 rounded-full border ${
-                      ledgerFilter === filter
-                        ? 'bg-zinc-900 border-zinc-900'
-                        : 'bg-zinc-50 border-zinc-200'
-                    }`}
-                  >
-                    <Text className={`text-xs font-bold ${
-                      ledgerFilter === filter ? 'text-white' : 'text-zinc-600'
-                    }`}>
-                      {filter === 'all' ? 'All' : filter === 'booking' ? 'Sessions' : filter === 'purchase' ? 'Purchases' : 'Refunds'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+              {/* Quick Filter Horizontal Pills matching Stitch code.html: Sessions, Purchases, Refunds, All */}
+              <View className="flex-row items-center gap-2 py-1 mb-1">
+                {(['booking', 'purchase', 'refund', 'all'] as const).map((filter) => {
+                  const isActive = ledgerFilter === filter;
+                  const label = filter === 'booking' ? 'Sessions' : filter === 'purchase' ? 'Purchases' : filter === 'refund' ? 'Refunds' : 'All';
+                  return (
+                    <TouchableOpacity
+                      key={filter}
+                      activeOpacity={0.75}
+                      onPress={() => {
+                        setLedgerFilter(filter);
+                        setVisibleLedgerCount(8);
+                      }}
+                      style={{
+                        backgroundColor: isActive ? '#0F172A' : '#FFFFFF',
+                        borderColor: isActive ? '#0F172A' : '#E2E8F0',
+                        borderWidth: 1,
+                        borderRadius: 9999,
+                        paddingHorizontal: isActive && filter === 'all' ? 18 : 14,
+                        paddingVertical: 6,
+                        ...softShadow({ color: '#0F172A', opacity: isActive ? 0.12 : 0.03, radius: 4, offsetY: 1 }),
+                      }}
+                    >
+                      <Text 
+                        style={{ fontFamily: isActive ? 'Outfit_700Bold' : 'Outfit_500Medium' }}
+                        className={`text-xs ${isActive ? 'text-white' : 'text-slate-600'}`}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
               
-              <View className="bg-white rounded-3xl p-5 shadow-sm border border-zinc-100/80">
+              {/* Transaction List Cards Container */}
+              <View className="gap-3">
                 {filteredLedger.length === 0 ? (
-                  <View className="py-8 items-center justify-center gap-2">
-                    <Feather name="inbox" size={26} color="#D1D5DB" />
-                    <Text className="text-zinc-400 text-sm font-semibold">No transactions found</Text>
+                  <View className="bg-white rounded-2xl p-8 border border-slate-100 items-center justify-center gap-2 shadow-sm">
+                    <Feather name="inbox" size={26} color="#CBD5E1" />
+                    <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-slate-400 text-sm">
+                      No transactions found
+                    </Text>
                   </View>
                 ) : (
                   <>
@@ -1058,25 +1454,56 @@ export default function WalletScreen() {
                       const isAdd = tx.change >= 0;
                       const iconInfo = getLedgerIcon(tx.type);
                       return (
-                        <View key={tx.id} className="flex-row justify-between items-center py-3.5 border-b border-zinc-100 last:border-0">
+                        <View 
+                          key={tx.id} 
+                          style={{
+                            backgroundColor: '#FFFFFF',
+                            borderRadius: 16,
+                            padding: 16,
+                            borderColor: '#F1F4F9',
+                            borderWidth: 1,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            ...softShadow({ color: '#0F172A', opacity: 0.04, radius: 10, offsetY: 2 }),
+                          }}
+                        >
                           <View className="flex-row items-center gap-3.5 flex-1 pr-3">
-                            <View className={`w-9 h-9 rounded-xl ${iconInfo.bg} items-center justify-center`}>
-                              <Feather name={iconInfo.icon as any} size={16} color={iconInfo.color} />
+                            <View 
+                              style={{
+                                width: 44,
+                                height: 44,
+                                borderRadius: 12,
+                                backgroundColor: iconInfo.bg,
+                                borderColor: iconInfo.border,
+                                borderWidth: 1,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Feather name={iconInfo.icon as any} size={18} color={iconInfo.color} />
                             </View>
                             <View className="flex-1 gap-0.5">
-                              <Text className="text-zinc-900 text-sm font-semibold leading-tight">{tx.title}</Text>
-                              <Text className="text-zinc-500 text-xs font-medium mt-0.5">{formatToDDMMYYYY(tx.date)}</Text>
+                              <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-slate-900 text-sm tracking-tight leading-snug">
+                                {tx.title}
+                              </Text>
+                              <Text style={{ fontFamily: 'Outfit_400Regular' }} className="text-slate-400 text-xs mt-0.5">
+                                {formatToDDMMYYYY(tx.date)}
+                              </Text>
                             </View>
                           </View>
                           <View className="items-end gap-1.5">
-                            <Text className={`text-sm font-bold ${isAdd ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            <Text 
+                              style={{ fontFamily: 'Outfit_700Bold' }}
+                              className={`text-sm tracking-tight leading-none ${isAdd ? 'text-emerald-600' : 'text-rose-600'}`}
+                            >
                               {isAdd ? '+' : ''}{tx.change} {Math.abs(tx.change) === 1 ? 'Credit' : 'Credits'}
                             </Text>
                             
                             {/* Type Badge */}
-                            <View className="px-2.5 py-0.5 rounded-md bg-zinc-100">
-                              <Text className="text-[10px] font-semibold uppercase text-zinc-600">
-                                {tx.type}
+                            <View className="px-2 py-0.5 rounded bg-slate-100">
+                              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[9.5px] uppercase tracking-wider text-slate-500">
+                                {tx.type === 'purchase' ? 'Purchase' : tx.type === 'booking' ? 'Booking' : tx.type === 'refund' ? 'Refund' : tx.type}
                               </Text>
                             </View>
                           </View>
@@ -1088,9 +1515,9 @@ export default function WalletScreen() {
                       <TouchableOpacity
                         activeOpacity={0.8}
                         onPress={() => setVisibleLedgerCount(prev => Math.min(prev + 8, filteredLedger.length))}
-                        className="py-3 mt-2 rounded-2xl bg-zinc-50 items-center justify-center"
+                        className="py-3 mt-2 rounded-2xl bg-white border border-slate-200/80 items-center justify-center shadow-xs"
                       >
-                        <Text className="text-zinc-900 text-xs font-bold uppercase tracking-wider">
+                        <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-slate-800 text-xs uppercase tracking-wider">
                           Load More ({filteredLedger.length - visibleLedgerCount} remaining)
                         </Text>
                       </TouchableOpacity>
@@ -1102,7 +1529,7 @@ export default function WalletScreen() {
           )}
 
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Confirmation Modal Overlay */}
       {showConfirmModal && (
@@ -1210,7 +1637,7 @@ export default function WalletScreen() {
                 router.replace('/(tabs)/profile');
               }
             }}
-            className="w-10 h-10 rounded-full bg-white/90 shadow-xs items-center justify-center"
+            className="w-10 h-10 rounded-full bg-white border border-slate-200/80 shadow-xs items-center justify-center"
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
@@ -1222,23 +1649,24 @@ export default function WalletScreen() {
         <View pointerEvents="none" className="absolute left-0 right-0 items-center justify-center">
           <View 
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.55)',
-              borderColor: 'rgba(226, 232, 240, 0.7)',
+              backgroundColor: '#FFFFFF',
+              borderColor: 'rgba(226, 232, 240, 0.9)',
               borderWidth: 1,
+              ...softShadow({ color: '#000000', opacity: 0.03, radius: 6, offsetY: 2 }),
             }}
-            className="flex-row items-center px-5 py-2 rounded-full shadow-2xs gap-2"
+            className="flex-row items-center px-5 py-1.5 rounded-full gap-2"
           >
             {isHeaderCollapsed ? (
               <>
-                <Text className="text-[#E11D48] text-[15px] font-black tracking-tight">
+                <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#E11D48] text-sm">
                   {creditBalance ?? 0}
                 </Text>
-                <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">
+                <Text style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.5 }} className="text-slate-900 text-[11px] uppercase">
                   Credits
                 </Text>
               </>
             ) : (
-              <Text className="text-zinc-950 text-[13.5px] font-black tracking-tight">
+              <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-slate-800 text-[13.5px] tracking-tight">
                 Credit Wallet
               </Text>
             )}

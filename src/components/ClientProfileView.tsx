@@ -142,9 +142,22 @@ export const ClientProfileView: React.FC<ClientProfileViewProps> = React.memo(({
     setIsReanimatedLayersActive(true);
   }, [layer1Y, layer2Y, layer3Y, creditsScale]);
 
+  // Entrance bounce on mount so the user experiences the credits layer animation
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      playCreditsLayerBounce();
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [playCreditsLayerBounce]);
+
   const handleCreditsPress = React.useCallback(() => {
     playCreditsLayerBounce();
-  }, [playCreditsLayerBounce]);
+    if (navigateThrottled) {
+      setTimeout(() => {
+        navigateThrottled('/wallet');
+      }, 160);
+    }
+  }, [playCreditsLayerBounce, navigateThrottled]);
 
   return (
     <Reanimated.ScrollView
