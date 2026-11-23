@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Alert, TextInput, Platform, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Alert, TextInput, Platform, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useNotificationStore } from '../store/notificationStore';
@@ -333,8 +333,7 @@ export default function NotificationsScreen() {
         rightElement={
           isSelectionMode ? (
             <View className="flex-row items-center gap-2">
-              <TouchableOpacity 
-                activeOpacity={0.7}
+              <Pressable 
                 onPress={() => handleSelectAll(filteredNotifications)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 className="px-2.5 py-1.5 rounded-full bg-white shadow-xs"
@@ -342,9 +341,8 @@ export default function NotificationsScreen() {
                 <Text className="text-zinc-900 text-xs font-black">
                   {filteredNotifications.length > 0 && selectedIds.size >= filteredNotifications.length ? 'Deselect All' : 'Select All'}
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                activeOpacity={0.7}
+              </Pressable>
+              <Pressable 
                 onPress={() => {
                   setIsSelectionMode(false);
                   setSelectedIds(new Set());
@@ -353,18 +351,17 @@ export default function NotificationsScreen() {
                 className="px-2.5 py-1.5 rounded-full bg-white shadow-xs"
               >
                 <Text className="text-zinc-600 text-xs font-bold">Done</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           ) : (
             notifications.length > 0 ? (
-              <TouchableOpacity 
-                activeOpacity={0.7}
+              <Pressable 
                 onPress={() => setIsSelectionMode(true)} 
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 className="w-9 h-9 items-center justify-center"
               >
                 <Feather name="trash-2" size={20} color="#101828" />
-              </TouchableOpacity>
+              </Pressable>
             ) : undefined
           )
         }
@@ -385,11 +382,11 @@ export default function NotificationsScreen() {
               clearButtonMode="while-editing"
             />
             {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Pressable onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <View className="w-4 h-4 rounded-full bg-zinc-300 items-center justify-center">
                   <Feather name="x" size={10} color="white" />
                 </View>
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
         </View>
@@ -433,9 +430,8 @@ export default function NotificationsScreen() {
                       const isSelected = selectedIds.has(item.id);
 
                       return (
-                        <TouchableOpacity
+                        <Pressable
                           key={item.id}
-                          activeOpacity={0.7}
                           onPress={() => handleNotificationPress(item)}
                           onLongPress={() => {
                             if (!isSelectionMode) {
@@ -508,8 +504,7 @@ export default function NotificationsScreen() {
 
                             {/* Call to Action Button */}
                             {item.actionLabel && (
-                              <TouchableOpacity
-                                activeOpacity={0.8}
+                              <Pressable
                                 onPress={() => handleNotificationPress(item)}
                                 className="bg-zinc-950 px-4 py-2 rounded-xl self-start mt-2.5 flex-row items-center gap-1.5 shadow-xs"
                               >
@@ -517,23 +512,22 @@ export default function NotificationsScreen() {
                                   {item.actionLabel}
                                 </Text>
                                 <Feather name="arrow-right" size={13} color="white" />
-                              </TouchableOpacity>
+                              </Pressable>
                             )}
                           </View>
-                        </TouchableOpacity>
+                        </Pressable>
                       );
             }}
             ListFooterComponent={
               hasMore ? (
-                <TouchableOpacity
-                  activeOpacity={0.7}
+                <Pressable
                   onPress={() => setPageSize(prev => prev + 15)}
                   className="w-full py-4 items-center justify-center mt-2 mb-4"
                 >
                   <Text className="text-zinc-600 text-xs font-extrabold uppercase tracking-wider">
                     Load More Notifications
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               ) : null
             }
           />
@@ -546,12 +540,12 @@ export default function NotificationsScreen() {
             <Text className="text-zinc-500 text-xs text-center px-8 leading-relaxed">
               We couldn&apos;t find any notifications matching &ldquo;{searchQuery}&rdquo;.
             </Text>
-            <TouchableOpacity
+            <Pressable
               onPress={() => setSearchQuery('')}
               className="mt-2 px-4 py-2 rounded-full bg-zinc-900"
             >
               <Text className="text-white text-xs font-bold">Clear Search</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         ) : (
           <View className="flex-1 justify-center items-center py-12">
@@ -570,8 +564,7 @@ export default function NotificationsScreen() {
           style={{ paddingBottom: Math.max(insets.bottom, 16) }} 
           className="px-5 pt-3 bg-white border-t border-zinc-100 flex-row items-center gap-3 shadow-md"
         >
-          <TouchableOpacity
-            activeOpacity={0.8}
+          <Pressable
             disabled={selectedIds.size === 0}
             onPress={handleDeleteSelected}
             className={`flex-1 py-3.5 rounded-2xl flex-row items-center justify-center gap-2 ${
@@ -584,9 +577,8 @@ export default function NotificationsScreen() {
             }`}>
               Delete {selectedIds.size > 0 ? `(${selectedIds.size})` : 'Selected'}
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.7}
+          </Pressable>
+          <Pressable
             onPress={() => {
               setIsSelectionMode(false);
               setSelectedIds(new Set());
@@ -594,7 +586,7 @@ export default function NotificationsScreen() {
             className="px-5 py-3.5 rounded-2xl bg-zinc-100 items-center justify-center"
           >
             <Text className="text-zinc-700 text-xs font-bold uppercase tracking-wider">Cancel</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )}
 

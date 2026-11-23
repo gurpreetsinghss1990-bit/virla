@@ -1,6 +1,6 @@
 import { Loading } from '../../components/Loading';
 import React, { useRef, useState } from 'react';
-import { Animated, TouchableOpacity, Text, View } from 'react-native';
+import { Animated, Pressable, Text, View } from 'react-native';
 
 interface SecondaryButtonProps {
   onPress: () => void;
@@ -41,8 +41,7 @@ export function SecondaryButton({
 
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }} className="w-full">
-      <TouchableOpacity
-        activeOpacity={0.9}
+      <Pressable
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
@@ -67,7 +66,7 @@ export function SecondaryButton({
             </Text>
           </View>
         )}
-      </TouchableOpacity>
+      </Pressable>
     </Animated.View>
   );
 }

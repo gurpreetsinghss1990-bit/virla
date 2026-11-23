@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, Vibration, Image } from 'react-native';
+import { View, Text, Pressable, Vibration, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
@@ -136,8 +136,7 @@ export const CalculatedTargetsCard: React.FC<CalculatedTargetsCardProps> = ({
           </View>
 
           {showNavigation && (
-            <TouchableOpacity
-              activeOpacity={0.7}
+            <Pressable
               onPress={handleCardPress}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={{
@@ -150,7 +149,7 @@ export const CalculatedTargetsCard: React.FC<CalculatedTargetsCardProps> = ({
               }}
             >
               <Feather name="arrow-up-right" size={13} color="#CBD5E1" />
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
       </View>
@@ -272,8 +271,7 @@ export const CalculatedTargetsCard: React.FC<CalculatedTargetsCardProps> = ({
 
       {/* Interactive Footer Navigation Bar */}
       {showNavigation && (
-        <TouchableOpacity
-          activeOpacity={0.8}
+        <Pressable
           onPress={handleCardPress}
           style={{
             marginTop: 14,
@@ -297,7 +295,7 @@ export const CalculatedTargetsCard: React.FC<CalculatedTargetsCardProps> = ({
             </Text>
             <Feather name="chevron-right" size={13} color="#E11D48" />
           </View>
-        </TouchableOpacity>
+        </Pressable>
       )}
     </View>
   );

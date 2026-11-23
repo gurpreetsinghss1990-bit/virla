@@ -1,6 +1,6 @@
 import { Loading } from './Loading';
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { StyleSheet, View, Text, Platform, TouchableOpacity, Animated } from 'react-native';
+import { StyleSheet, View, Text, Platform, Pressable, Animated } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -354,22 +354,20 @@ export default function TrackingMap({
 
       {/* Map Floating Action Buttons (Recenter Route & Fullscreen) */}
       <View style={[styles.mapControls, isFullScreen && { top: 16 }]}>
-        <TouchableOpacity
-          activeOpacity={0.85}
+        <Pressable
           onPress={() => fitMapToRoute(true)}
           style={styles.mapControlBtn}
         >
           <Ionicons name="locate" size={18} color="#0F172A" />
-        </TouchableOpacity>
+        </Pressable>
 
         {onExpandPress && !isFullScreen && (
-          <TouchableOpacity
-            activeOpacity={0.85}
+          <Pressable
             onPress={onExpandPress}
             style={styles.mapControlBtn}
           >
             <Ionicons name="expand" size={17} color="#0F172A" />
-          </TouchableOpacity>
+          </Pressable>
         )}
       </View>
 

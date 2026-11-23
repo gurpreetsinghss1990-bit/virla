@@ -1,6 +1,6 @@
 import { Loading } from '../components/Loading';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, TextInput } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -135,12 +135,12 @@ export default function AdminWorkoutApprovalsScreen() {
         <Text className="text-zinc-500 text-xs font-semibold text-center mt-2 leading-relaxed max-w-[260px]">
           Administrative authorization is required to access this control page.
         </Text>
-        <TouchableOpacity
+        <Pressable
           onPress={() => router.replace('/(tabs)/profile' as any)}
           className="mt-6 bg-zinc-950 py-3.5 px-6 rounded-xl shadow-md"
         >
           <Text className="text-white text-xs font-black uppercase tracking-wider">Return Profile</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     );
   }
@@ -152,25 +152,25 @@ export default function AdminWorkoutApprovalsScreen() {
         style={{ paddingTop: insets.top + 16 }}
         className="px-6 pb-4 bg-white border-b border-zinc-150 flex-row items-center justify-between"
       >
-        <TouchableOpacity 
+        <Pressable 
           onPress={() => router.back()}
           className="w-10 h-10 items-center justify-center bg-zinc-50 rounded-full"
         >
           <Ionicons name="arrow-back" size={20} color="#18181B" />
-        </TouchableOpacity>
+        </Pressable>
         <Text className="text-zinc-900 text-xs font-black uppercase tracking-wider">Workout Approvals</Text>
-        <TouchableOpacity 
+        <Pressable 
           onPress={() => syncFromDB()}
           className="w-10 h-10 items-center justify-center bg-zinc-50 rounded-full"
         >
           <Feather name="refresh-cw" size={16} color="#18181B" />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       {/* Tabs */}
       <View className="flex-row bg-white border-b border-zinc-100 p-2 gap-1">
         {(['PENDING', 'APPROVED', 'REJECTED', 'CHANGE_REQUESTS'] as const).map(tab => (
-          <TouchableOpacity
+          <Pressable
             key={tab}
             onPress={() => setActiveTab(tab)}
             className={`flex-1 py-3 rounded-lg items-center justify-center ${activeTab === tab ? 'bg-zinc-950' : 'bg-transparent'}`}
@@ -180,7 +180,7 @@ export default function AdminWorkoutApprovalsScreen() {
             >
               {tab === 'CHANGE_REQUESTS' ? 'Change Req' : tab}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         ))}
       </View>
 
@@ -236,18 +236,18 @@ export default function AdminWorkoutApprovalsScreen() {
                   {/* Actions for pending and change requests */}
                   {(a.status === 'PENDING' || a.status === 'REMOVAL_REQUESTED') && (
                     <View className="flex-row gap-3 mt-3">
-                      <TouchableOpacity
+                      <Pressable
                         onPress={() => handleRejectPrompt(a.id)}
                         className="flex-1 py-3 bg-zinc-50 rounded-xl items-center"
                       >
                         <Text className="text-zinc-700 text-xs font-black uppercase">Reject</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
+                      </Pressable>
+                      <Pressable
                         onPress={() => handleApprove(a.id, a.workoutCategory, trainerName)}
                         className="flex-1 py-3 bg-zinc-950 rounded-xl items-center"
                       >
                         <Text className="text-white text-xs font-black uppercase">Approve</Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                   )}
                 </View>
@@ -276,18 +276,18 @@ export default function AdminWorkoutApprovalsScreen() {
             />
 
             <View className="flex-row gap-3 mt-6">
-              <TouchableOpacity
+              <Pressable
                 onPress={() => setRejectModalVisible(false)}
                 className="flex-1 py-3.5 bg-zinc-50 border border-zinc-250 rounded-xl items-center"
               >
                 <Text className="text-zinc-600 text-xs font-black uppercase">Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Pressable>
+              <Pressable
                 onPress={submitRejection}
                 className="flex-1 py-3.5 bg-rose-600 rounded-xl items-center"
               >
                 <Text className="text-white text-xs font-black uppercase">Confirm Decline</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
         </View>
       </NativeSheet>

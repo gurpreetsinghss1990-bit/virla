@@ -1,6 +1,6 @@
 import { Loading } from '../components/Loading';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Linking, Share, Platform } from 'react-native';
+import { View, Text, Pressable, ScrollView, TextInput, Alert, Linking, Share, Platform } from 'react-native';
 import { InteractionManager } from '../utils/interactionManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -480,13 +480,12 @@ export default function WalletScreen() {
                     <Text className="text-red-700 text-xs font-medium mt-0.5">Please recharge to reactivate session check-ins.</Text>
                   </View>
                 </View>
-                <TouchableOpacity
-                  activeOpacity={0.8}
+                <Pressable
                   onPress={() => router.push('/membership' as any)}
                   className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-sm"
                 >
                   <Text className="text-white text-[10px] font-bold uppercase">RECHARGE</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             ) : role !== 'trainer' && creditBalance === 0 ? (
               <View className="bg-rose-50 p-3.5 rounded-2xl flex-row items-center justify-between border border-rose-100 shadow-sm">
@@ -499,13 +498,12 @@ export default function WalletScreen() {
                     <Text className="text-rose-700 text-xs font-medium mt-0.5">Recharge your wallet to book wellness sessions.</Text>
                   </View>
                 </View>
-                <TouchableOpacity
-                  activeOpacity={0.8}
+                <Pressable
                   onPress={() => router.push('/membership' as any)}
                   className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-sm"
                 >
                   <Text className="text-white text-[10px] font-bold uppercase">RECHARGE</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             ) : role !== 'trainer' && creditBalance <= 2 ? (
               <View className="bg-amber-50 p-3.5 rounded-2xl flex-row items-center justify-between border border-amber-100 shadow-sm">
@@ -518,13 +516,12 @@ export default function WalletScreen() {
                     <Text className="text-amber-700 text-xs font-medium mt-0.5">Recharge your wallet to keep training.</Text>
                   </View>
                 </View>
-                <TouchableOpacity
-                  activeOpacity={0.8}
+                <Pressable
                   onPress={() => router.push('/membership' as any)}
                   className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-sm"
                 >
                   <Text className="text-white text-[10px] font-bold uppercase">RECHARGE</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             ) : approachingLots.length > 0 ? (
               <View className="bg-[#EEF4FF] p-3.5 rounded-2xl flex-row items-center justify-between border border-blue-100/60 shadow-sm">
@@ -542,20 +539,18 @@ export default function WalletScreen() {
                   </View>
                 </View>
                 <View className="flex-row items-center gap-2">
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <Pressable
                     onPress={() => router.push('/membership' as any)}
                     className="bg-[#E11D48] px-3.5 py-1.5 rounded-full shadow-sm"
                   >
                     <Text className="text-white text-[10px] font-bold uppercase">EXTEND</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    activeOpacity={0.7}
+                  </Pressable>
+                  <Pressable 
                     onPress={() => setDismissPriorityNotice(true)}
                     className="p-1"
                   >
                     <Feather name="x" size={16} color="#64748B" />
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </View>
             ) : null
@@ -620,23 +615,21 @@ export default function WalletScreen() {
             {/* Action Buttons */}
             <View className="flex-row gap-3 w-full mt-2">
               {role !== 'trainer' && (
-                <TouchableOpacity
-                  activeOpacity={0.85}
+                <Pressable
                   onPress={() => router.push('/membership' as any)}
                   className="flex-1 bg-black py-3.5 rounded-2xl items-center justify-center flex-row gap-2 shadow-sm"
                 >
                   <Feather name="plus-circle" size={16} color="white" />
                   <Text className="text-white text-xs font-bold uppercase">Recharge Wallet</Text>
-                </TouchableOpacity>
+                </Pressable>
               )}
-              <TouchableOpacity
-                activeOpacity={0.85}
+              <Pressable
                 onPress={() => setActiveTab('transfer')}
                 className="flex-1 bg-black py-3.5 rounded-2xl items-center justify-center flex-row gap-2 shadow-sm"
               >
                 <Feather name="send" size={15} color="white" />
                 <Text className="text-white text-xs font-bold uppercase">Transfer Credits</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
 
@@ -666,8 +659,7 @@ export default function WalletScreen() {
 
             <View className="h-8" style={{ width: 0.5, backgroundColor: 'rgba(60, 60, 67, 0.14)' }} />
 
-            <TouchableOpacity
-              activeOpacity={0.7}
+            <Pressable
               onPress={handleUpcomingBookingsPress}
               className="flex-1 items-center"
             >
@@ -676,13 +668,12 @@ export default function WalletScreen() {
                 {nextRitual ? formatToDDMMYYYY(nextRitual.date) : 'No Sessions'}
               </Text>
               <Text className="text-zinc-400 text-[11px] font-medium mt-0.5">{upcomingCount} Upcoming</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Line Tab Switch */}
           <View className="flex-row border-b border-zinc-200 mt-2">
-            <TouchableOpacity
-              activeOpacity={0.7}
+            <Pressable
               onPress={() => setActiveTab('ledger')}
               className={`flex-1 py-3 items-center justify-center border-b-2 ${
                 activeTab === 'ledger' ? 'border-zinc-950 -mb-[1px]' : 'border-transparent'
@@ -696,10 +687,9 @@ export default function WalletScreen() {
               >
                 LEDGER
               </Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
-              activeOpacity={0.7}
+            <Pressable
               onPress={() => setActiveTab('transfer')}
               className={`flex-1 py-3 items-center justify-center border-b-2 ${
                 activeTab === 'transfer' ? 'border-zinc-950 -mb-[1px]' : 'border-transparent'
@@ -713,10 +703,9 @@ export default function WalletScreen() {
               >
                 TRANSFER
               </Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
-              activeOpacity={0.7}
+            <Pressable
               onPress={() => setActiveTab('lots')}
               className={`flex-1 py-3 items-center justify-center border-b-2 ${
                 activeTab === 'lots' ? 'border-zinc-950 -mb-[1px]' : 'border-transparent'
@@ -730,7 +719,7 @@ export default function WalletScreen() {
               >
                 LOTS
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Tab 1: Credit Lots */}
@@ -806,15 +795,14 @@ export default function WalletScreen() {
 
                     {activeLots.length > 3 && (
                       <View className="mt-4 pt-3 border-t border-zinc-100">
-                        <TouchableOpacity
-                          activeOpacity={0.7}
+                        <Pressable
                           onPress={() => setShowAllLots(!showAllLots)}
                           className="items-center justify-center"
                         >
                           <Text className="text-zinc-600 text-[11px] font-bold uppercase">
                             {showAllLots ? 'Show Less' : `View All ${activeLots.length} Packs`}
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
 
                         {showAllLots && (
                           <View className="gap-2 mt-3">
@@ -912,13 +900,12 @@ export default function WalletScreen() {
                         maxLength={10}
                         className="flex-1 bg-zinc-50 border border-zinc-200 px-4 py-3 rounded-xl text-zinc-900 text-xs font-bold"
                       />
-                      <TouchableOpacity
-                        activeOpacity={0.8}
+                      <Pressable
                         onPress={handleVerifyRecipient}
                         className="bg-zinc-950 px-4 rounded-xl items-center justify-center shadow-sm"
                       >
                         <Text className="text-white text-[10px] font-bold uppercase">Verify</Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
 
                     {/* Recipient status confirmations */}
@@ -938,8 +925,7 @@ export default function WalletScreen() {
                         </View>
                         
                         <View className="flex-row gap-2">
-                          <TouchableOpacity
-                            activeOpacity={0.85}
+                          <Pressable
                             onPress={handleInviteWhatsApp}
                             className={`flex-1 py-2.5 px-3 rounded-xl items-center justify-center flex-row gap-1.5 shadow-sm ${
                               isInviteSent ? 'bg-[#1EBE5D]' : 'bg-[#25D366]'
@@ -949,10 +935,9 @@ export default function WalletScreen() {
                             <Text className="text-white text-[11px] font-bold uppercase">
                               {isInviteSent ? t('wallet.invited_whatsapp', 'Invited on WhatsApp ✓') : t('wallet.invite_whatsapp', 'Invite via WhatsApp')}
                             </Text>
-                          </TouchableOpacity>
+                          </Pressable>
 
-                          <TouchableOpacity
-                            activeOpacity={0.8}
+                          <Pressable
                             onPress={handleShareMoreOptions}
                             className="bg-white border border-zinc-300 py-2.5 px-3 rounded-xl items-center justify-center flex-row gap-1.5 shadow-sm"
                           >
@@ -960,7 +945,7 @@ export default function WalletScreen() {
                             <Text className="text-zinc-700 text-[11px] font-bold">
                               {t('wallet.more_options', 'More')}
                             </Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         </View>
                       </View>
                     )}
@@ -993,8 +978,7 @@ export default function WalletScreen() {
                     />
                   </View>
 
-                  <TouchableOpacity
-                    activeOpacity={0.85}
+                  <Pressable
                     onPress={handleTransfer}
                     disabled={recipientStatus !== 'found'}
                     className={`w-full py-3.5 rounded-xl items-center justify-center mt-1 shadow-sm ${recipientStatus === 'found' ? 'bg-[#E11D48]' : 'bg-zinc-200'}`}
@@ -1002,7 +986,7 @@ export default function WalletScreen() {
                     <Text className={`text-xs font-bold uppercase ${recipientStatus === 'found' ? 'text-white' : 'text-zinc-400'}`}>
                       Transfer Credits
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </View>
             </View>
@@ -1024,9 +1008,8 @@ export default function WalletScreen() {
               {/* Filter Chips */}
               <View className="flex-row gap-2 my-1">
                 {(['booking', 'purchase', 'refund', 'all'] as const).map((filter) => (
-                  <TouchableOpacity
+                  <Pressable
                     key={filter}
-                    activeOpacity={0.7}
                     onPress={() => {
                       setLedgerFilter(filter);
                       setVisibleLedgerCount(8);
@@ -1042,7 +1025,7 @@ export default function WalletScreen() {
                     }`}>
                       {filter === 'all' ? 'All' : filter === 'booking' ? 'Sessions' : filter === 'purchase' ? 'Purchases' : 'Refunds'}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 ))}
               </View>
               
@@ -1085,15 +1068,14 @@ export default function WalletScreen() {
                     })}
 
                     {filteredLedger.length > visibleLedgerCount && (
-                      <TouchableOpacity
-                        activeOpacity={0.8}
+                      <Pressable
                         onPress={() => setVisibleLedgerCount(prev => Math.min(prev + 8, filteredLedger.length))}
                         className="py-3 mt-2 rounded-2xl bg-zinc-50 items-center justify-center"
                       >
                         <Text className="text-zinc-900 text-xs font-bold uppercase tracking-wider">
                           Load More ({filteredLedger.length - visibleLedgerCount} remaining)
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     )}
                   </>
                 )}
@@ -1142,20 +1124,18 @@ export default function WalletScreen() {
             </View>
 
             <View className="flex-row gap-3.5 mt-2">
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Pressable
                 onPress={() => setShowConfirmModal(false)}
                 className="flex-1 bg-zinc-100 py-3.5 rounded-xl items-center justify-center"
               >
                 <Text className="text-zinc-700 text-xs font-bold uppercase">Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.85}
+              </Pressable>
+              <Pressable
                 onPress={handleTransferConfirm}
                 className="flex-1 bg-[#E11D48] py-3.5 rounded-xl items-center justify-center shadow-sm"
               >
                 <Text className="text-white text-xs font-bold uppercase">Confirm</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -1200,8 +1180,7 @@ export default function WalletScreen() {
             </Svg>
           </View>
 
-          <TouchableOpacity
-            activeOpacity={0.6}
+          <Pressable
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             onPress={() => {
               if (router.canGoBack()) {
@@ -1215,7 +1194,7 @@ export default function WalletScreen() {
             accessibilityLabel="Back"
           >
             <Ionicons name="chevron-back" size={22} color="#101828" style={{ marginLeft: -1 }} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Center Pill Section: Lightweight, seamless pill with ultra-subtle transparent frosted backdrop */}

@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   Animated,
   Vibration,
   Platform,
@@ -224,8 +224,7 @@ export function FoodPreferenceCard({ item, isSelected, onSelect, index = 0 }: Fo
         ],
       }}
     >
-      <TouchableOpacity
-        activeOpacity={0.9}
+      <Pressable
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={handlePress}
@@ -332,7 +331,7 @@ export function FoodPreferenceCard({ item, isSelected, onSelect, index = 0 }: Fo
             </Text>
           </View>
         </Animated.View>
-      </TouchableOpacity>
+      </Pressable>
     </Animated.View>
   );
 }
@@ -431,8 +430,7 @@ export function FoodPreferenceSelectionView({
         <View className="gap-2 mt-2">
           {/* Continue Button */}
           <Animated.View style={{ width: '100%', transform: [{ scale: continueScaleAnim }] }}>
-            <TouchableOpacity
-              activeOpacity={0.9}
+            <Pressable
               onPressIn={() => {
                 Animated.spring(continueScaleAnim, { toValue: 0.97, useNativeDriver: true, speed: 45, bounciness: 4 }).start();
               }}
@@ -469,7 +467,7 @@ export function FoodPreferenceSelectionView({
                 CONTINUE
               </Text>
               <Feather name="arrow-right" size={17} color="#FFFFFF" />
-            </TouchableOpacity>
+            </Pressable>
           </Animated.View>
         </View>
       </FoodFadeIn>
@@ -488,14 +486,13 @@ export function FoodPreferenceSelectionView({
       {/* Top Header */}
       <View style={{ paddingTop: insets.top, backgroundColor: '#FFFFFF' }} className="z-10">
         <View className="h-14 flex-row items-center px-4 justify-between">
-          <TouchableOpacity
+          <Pressable
             onPress={onBack || (() => router.back())}
-            activeOpacity={0.6}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             className="w-10 h-10 items-center justify-center rounded-full"
           >
             <Ionicons name="arrow-back" size={22} color="#0F172A" />
-          </TouchableOpacity>
+          </Pressable>
 
           <View className="flex-1 items-center px-2">
             <Text className="text-[#0F172A] text-base font-bold text-center">

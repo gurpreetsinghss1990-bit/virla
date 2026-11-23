@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -88,9 +88,8 @@ export default function LegalCenterScreen() {
             {legalDocs.map((doc) => {
               const isOpen = expandedSection === doc.id;
               return (
-                <TouchableOpacity
+                <Pressable
                   key={doc.id}
-                  activeOpacity={0.85}
                   onPress={() => setExpandedSection(isOpen ? null : doc.id)}
                   className="bg-white p-4 rounded-[22px] shadow-sm gap-2"
                   style={{
@@ -120,7 +119,7 @@ export default function LegalCenterScreen() {
                       </Text>
                     </View>
                   )}
-                </TouchableOpacity>
+                </Pressable>
               );
             })}
           </View>

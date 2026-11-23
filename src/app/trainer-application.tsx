@@ -1,6 +1,6 @@
 import { NativeSwitch } from '../components/NativeSwitch';
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, StyleSheet, Platform, KeyboardAvoidingView, NativeModules } from 'react-native';
+import { View, Text, ScrollView, TextInput, Pressable, Alert, StyleSheet, Platform, KeyboardAvoidingView, NativeModules } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -968,8 +968,7 @@ export default function TrainerApplicationScreen() {
       <SafeAreaViewWrapper bg="#FFFFFF">
         {/* Header - Full Bleed */}
         <View className="h-14 flex-row items-center px-4 justify-between bg-white">
-          <TouchableOpacity 
-            activeOpacity={0.8} 
+          <Pressable 
             onPress={() => {
               if (policyPage === 3) {
                 switchPolicyPage(2);
@@ -986,7 +985,7 @@ export default function TrainerApplicationScreen() {
             className="w-10 h-10 items-center justify-center"
           >
             <Feather name="arrow-left" size={18} color="#101828" />
-          </TouchableOpacity>
+          </Pressable>
           <View className="items-center">
             <Text className="text-zinc-950 text-sm font-black uppercase tracking-wider">
               Trainer Agreement
@@ -996,13 +995,12 @@ export default function TrainerApplicationScreen() {
             </Text>
           </View>
           {appStatus !== 'draft' && !viewingPoliciesOnly ? (
-            <TouchableOpacity
-              activeOpacity={0.8}
+            <Pressable
               onPress={() => setHasAcceptedPolicies(true)}
               className="px-2.5 py-1.5 bg-zinc-100 rounded-lg"
             >
               <Text className="text-[10px] text-zinc-700 font-bold uppercase">Status</Text>
-            </TouchableOpacity>
+            </Pressable>
           ) : (
             <View className="w-10" />
           )}
@@ -1158,8 +1156,7 @@ export default function TrainerApplicationScreen() {
 
               {/* Section 25 Acceptance Checkbox */}
               <View className="my-5 gap-3">
-                <TouchableOpacity 
-                  activeOpacity={0.8}
+                <Pressable 
                   onPress={() => {
                     const nextVal = !checkEarningsAcceptance;
                     setCheckEarningsAcceptance(nextVal);
@@ -1178,11 +1175,10 @@ export default function TrainerApplicationScreen() {
                   <Text className="text-[10.5px] text-zinc-800 font-medium leading-[15px] flex-1">
                     "I have read and understood the VIRLA Earnings &amp; Payout Policy and agree to comply with the applicable earnings, payout, professional conduct, client protection and platform requirements."
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
 
-                <TouchableOpacity
+                <Pressable
                   disabled={!checkEarningsAcceptance}
-                  activeOpacity={0.85}
                   onPress={() => {
                     setAcceptedAgreementTimestamp(new Date().toISOString());
                     setAcceptedAgreementAppVersion('1.0.0');
@@ -1198,7 +1194,7 @@ export default function TrainerApplicationScreen() {
                     Accept &amp; Continue to Application Form
                   </Text>
                   {checkEarningsAcceptance && <Feather name="check-circle" size={14} color="white" />}
-                </TouchableOpacity>
+                </Pressable>
               </View>
             </>
           )}
@@ -1219,8 +1215,7 @@ export default function TrainerApplicationScreen() {
         >
           {/* Back button on Page 2 and Page 3 (Left Bottom) */}
           {policyPage > 1 ? (
-            <TouchableOpacity
-              activeOpacity={0.7}
+            <Pressable
               onPress={() => {
                 if (policyPage === 3) switchPolicyPage(2);
                 else if (policyPage === 2) switchPolicyPage(1);
@@ -1231,15 +1226,14 @@ export default function TrainerApplicationScreen() {
                 Back
               </Text>
               <View className="h-1 w-full bg-[#E11D48] rounded-full mt-0.5" />
-            </TouchableOpacity>
+            </Pressable>
           ) : (
             <View />
           )}
 
           {/* Next button on Page 1 and Page 2 (Right Bottom) */}
           {policyPage < 3 ? (
-            <TouchableOpacity
-              activeOpacity={0.7}
+            <Pressable
               onPress={() => {
                 if (policyPage === 1) switchPolicyPage(2);
                 else if (policyPage === 2) switchPolicyPage(3);
@@ -1250,7 +1244,7 @@ export default function TrainerApplicationScreen() {
                 Next
               </Text>
               <View className="h-1 w-full bg-[#E11D48] rounded-full mt-0.5" />
-            </TouchableOpacity>
+            </Pressable>
           ) : (
             <View />
           )}
@@ -1258,8 +1252,7 @@ export default function TrainerApplicationScreen() {
 
         {/* Step 3 only: floating Scroll to Bottom, hidden near bottom so it never covers Accept */}
         {policyPage === 3 && !isScrolledNearBottom && (
-          <TouchableOpacity
-            activeOpacity={0.9}
+          <Pressable
             onPress={scrollToBottom}
             style={{
               position: 'absolute',
@@ -1273,7 +1266,7 @@ export default function TrainerApplicationScreen() {
             <Text className="text-white text-[10.5px] font-black uppercase tracking-wider">
               Scroll to Bottom
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
       </SafeAreaViewWrapper>
     );
@@ -1282,8 +1275,7 @@ export default function TrainerApplicationScreen() {
   return (
     <SafeAreaViewWrapper>
       <View className="h-16 flex-row items-center px-6 justify-between bg-white border-b border-zinc-150">
-        <TouchableOpacity 
-          activeOpacity={0.8} 
+        <Pressable 
           onPress={() => {
             if (currentStep > 1 && appStatus === 'draft') {
               handleBack();
@@ -1299,7 +1291,7 @@ export default function TrainerApplicationScreen() {
         >
           <Feather name="arrow-left" size={16} color="#101828" />
           <Text className="text-zinc-900 text-xs font-bold uppercase tracking-wider">Back</Text>
-        </TouchableOpacity>
+        </Pressable>
         <Text className="text-[#E11D48] text-sm font-black tracking-widest uppercase">Trainer Join</Text>
         <View className="w-10" />
       </View>
@@ -1316,14 +1308,13 @@ export default function TrainerApplicationScreen() {
         <View className="mb-6">
           <View className="flex-row items-center justify-between">
             <Text className="text-zinc-400 text-xs font-extrabold uppercase tracking-widest text-start">Step 4 of 5: Application</Text>
-            <TouchableOpacity 
-              activeOpacity={0.8}
+            <Pressable 
               onPress={() => setViewingPoliciesOnly(true)}
               className="px-2.5 py-1 bg-zinc-100 rounded-lg flex-row items-center gap-1"
             >
               <Feather name="file-text" size={11} color="#E11D48" />
               <Text className="text-[#E11D48] text-[10px] font-black uppercase tracking-wider">View Policies (Steps 1–3)</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
           <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1 text-start">Onboarding Application</Text>
           {appStatus === 'draft' && (
@@ -1363,20 +1354,20 @@ export default function TrainerApplicationScreen() {
               Please carry your original identity documents and physical copies of your fitness certifications for in-person verification.
             </Text>
 
-            <TouchableOpacity
+            <Pressable
               onPress={() => setViewingPoliciesOnly(true)}
               className="w-full py-3.5 bg-zinc-100 rounded-xl items-center justify-center mt-2 flex-row gap-2"
             >
               <Feather name="file-text" size={13} color="#E11D48" />
               <Text className="text-zinc-900 text-xs font-bold">View Partner Policies (61 Rules)</Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
+            <Pressable
               onPress={() => router.replace('/(tabs)')}
               className="w-full py-4 bg-[#101828] rounded-xl items-center justify-center mt-2"
             >
               <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Return to Home</Text>
-            </TouchableOpacity>
+            </Pressable>
           </LuxuryCard>
         )}
 
@@ -1413,20 +1404,20 @@ export default function TrainerApplicationScreen() {
               We&apos;ll notify you through the VIRLA app once your application has been reviewed.
             </Text>
 
-            <TouchableOpacity
+            <Pressable
               onPress={() => setViewingPoliciesOnly(true)}
               className="w-full py-3.5 bg-zinc-100 rounded-xl items-center justify-center mt-2 flex-row gap-2"
             >
               <Feather name="file-text" size={13} color="#E11D48" />
               <Text className="text-zinc-900 text-xs font-bold">View Partner Policies (61 Rules)</Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
+            <Pressable
               onPress={() => router.replace('/(tabs)')}
               className="w-full py-4 bg-[#101828] rounded-xl items-center justify-center mt-2"
             >
               <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Return to Home</Text>
-            </TouchableOpacity>
+            </Pressable>
           </LuxuryCard>
         )}
 
@@ -1448,12 +1439,12 @@ export default function TrainerApplicationScreen() {
               Your onboarding review and physical interview verification have been completed successfully. Please sign out and log back in to access the Trainer Partner Dashboard.
             </Text>
             
-            <TouchableOpacity
+            <Pressable
               onPress={() => router.replace('/(tabs)/profile' as any)}
               className="w-full py-4 bg-[#101828] rounded-xl items-center justify-center mt-2"
             >
               <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Go to Profile</Text>
-            </TouchableOpacity>
+            </Pressable>
           </LuxuryCard>
         )}
 
@@ -1464,12 +1455,12 @@ export default function TrainerApplicationScreen() {
             <Text className="text-zinc-500 text-xs text-center leading-relaxed">
               Your certificates do not comply with the standards. Resubmit correct qualifications.
             </Text>
-            <TouchableOpacity
+            <Pressable
               onPress={() => setAppStatus('draft')}
               className="w-full py-4 bg-zinc-900 rounded-xl items-center justify-center mt-2"
             >
               <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Modify Application</Text>
-            </TouchableOpacity>
+            </Pressable>
           </LuxuryCard>
         )}
 
@@ -1487,12 +1478,12 @@ export default function TrainerApplicationScreen() {
               You can modify the requested details below and resubmit without losing your other progress.
             </Text>
 
-            <TouchableOpacity
+            <Pressable
               onPress={() => setAppStatus('draft')}
               className="w-full py-4 bg-zinc-900 rounded-xl items-center justify-center mt-2"
             >
               <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Update Details</Text>
-            </TouchableOpacity>
+            </Pressable>
           </LuxuryCard>
         )}
 
@@ -1601,8 +1592,7 @@ export default function TrainerApplicationScreen() {
                       <Text className="text-zinc-500 text-[10px] font-bold uppercase mb-1 text-start">
                         Date of Birth <Text className="text-rose-500">*</Text>
                       </Text>
-                      <TouchableOpacity
-                        activeOpacity={0.9}
+                      <Pressable
                         onPress={() => setShowDobPicker(!showDobPicker)}
                         className={`flex-row items-center bg-zinc-50 border p-3 rounded-xl ${
                           step1Errors.dob ? 'border-rose-400 bg-rose-50/20' : 'border-zinc-150'
@@ -1615,7 +1605,7 @@ export default function TrainerApplicationScreen() {
                           {dob || 'DD/MM/YYYY'}
                         </Text>
                         <Feather name={showDobPicker ? "chevron-up" : "chevron-down"} size={14} color="#6B7280" />
-                      </TouchableOpacity>
+                      </Pressable>
                       {!!step1Errors.dob && (
                         <Text className="text-rose-500 text-[10px] font-semibold mt-1 text-start">
                           {step1Errors.dob}
@@ -1675,7 +1665,7 @@ export default function TrainerApplicationScreen() {
                                         ? (currentMonth ? `M: ${months[currentMonth - 1]?.name || currentMonth}` : 'Month') 
                                         : (currentYear ? `Y: ${currentYear}` : 'Year');
                                     return (
-                                      <TouchableOpacity
+                                      <Pressable
                                         key={tab}
                                         onPress={() => setDobPickerTab(tab)}
                                         className={`flex-1 py-1 items-center rounded-md ${isActive ? 'bg-[#101828]' : 'bg-transparent'}`}
@@ -1683,7 +1673,7 @@ export default function TrainerApplicationScreen() {
                                         <Text className={`text-[9.5px] font-black uppercase ${isActive ? 'text-white' : 'text-zinc-600'}`}>
                                           {label}
                                         </Text>
-                                      </TouchableOpacity>
+                                      </Pressable>
                                     );
                                   })}
                                 </View>
@@ -1696,7 +1686,7 @@ export default function TrainerApplicationScreen() {
                                         {days.map(d => {
                                           const isSelected = currentDay === d;
                                           return (
-                                            <TouchableOpacity
+                                            <Pressable
                                               key={d}
                                               onPress={() => {
                                                 updateDob(d, currentMonth, currentYear);
@@ -1709,7 +1699,7 @@ export default function TrainerApplicationScreen() {
                                               <Text className={`text-[10px] font-bold ${isSelected ? 'text-white' : 'text-zinc-800'}`}>
                                                 {d}
                                               </Text>
-                                            </TouchableOpacity>
+                                            </Pressable>
                                           );
                                         })}
                                       </View>
@@ -1722,7 +1712,7 @@ export default function TrainerApplicationScreen() {
                                     {months.map(m => {
                                       const isSelected = currentMonth === m.num;
                                       return (
-                                        <TouchableOpacity
+                                        <Pressable
                                           key={m.num}
                                           onPress={() => {
                                             updateDob(currentDay, m.num, currentYear);
@@ -1735,7 +1725,7 @@ export default function TrainerApplicationScreen() {
                                           <Text className={`text-[10px] font-bold ${isSelected ? 'text-white' : 'text-zinc-800'}`}>
                                             {m.name}
                                           </Text>
-                                        </TouchableOpacity>
+                                        </Pressable>
                                       );
                                     })}
                                   </View>
@@ -1748,7 +1738,7 @@ export default function TrainerApplicationScreen() {
                                         {years.map(y => {
                                           const isSelected = currentYear === y;
                                           return (
-                                            <TouchableOpacity
+                                            <Pressable
                                               key={y}
                                               onPress={() => {
                                                 updateDob(currentDay, currentMonth, y);
@@ -1761,7 +1751,7 @@ export default function TrainerApplicationScreen() {
                                               <Text className={`text-[10px] font-bold ${isSelected ? 'text-white' : 'text-zinc-800'}`}>
                                                 {y}
                                               </Text>
-                                            </TouchableOpacity>
+                                            </Pressable>
                                           );
                                         })}
                                       </View>
@@ -1770,12 +1760,12 @@ export default function TrainerApplicationScreen() {
                                 )}
 
                                 {/* Close / Done button */}
-                                <TouchableOpacity
+                                <Pressable
                                   onPress={() => setShowDobPicker(false)}
                                   className="py-1 bg-zinc-900 rounded-lg items-center justify-center mt-1"
                                 >
                                   <Text className="text-white text-[9.5px] font-black uppercase">Done</Text>
-                                </TouchableOpacity>
+                                </Pressable>
                               </View>
                             );
                           })()}
@@ -1788,16 +1778,15 @@ export default function TrainerApplicationScreen() {
                         {['Male', 'Female'].map((g) => {
                           const isSelected = gender === g;
                           return (
-                            <TouchableOpacity
+                            <Pressable
                               key={g}
-                              activeOpacity={0.8}
                               onPress={() => setGender(g)}
                               className={`flex-1 items-center justify-center ${isSelected ? 'bg-zinc-950' : 'bg-transparent'}`}
                             >
                               <Text className={`text-xs font-black uppercase ${isSelected ? 'text-white' : 'text-zinc-650'}`}>
                                 {g}
                               </Text>
-                            </TouchableOpacity>
+                            </Pressable>
                           );
                         })}
                       </View>
@@ -1928,13 +1917,12 @@ export default function TrainerApplicationScreen() {
                           step2Errors.primaryWorkout ? 'border-rose-400 bg-rose-50/20' : 'border-zinc-150'
                         }`}
                       />
-                      <TouchableOpacity
-                        activeOpacity={0.7}
+                      <Pressable
                         onPress={() => setShowPrimaryDropdown(!showPrimaryDropdown)}
                         className="absolute right-3 top-3.5 w-6 h-6 items-center justify-center"
                       >
                         <Feather name={showPrimaryDropdown ? "chevron-up" : "chevron-down"} size={16} color="#6B7280" />
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                     {!!step2Errors.primaryWorkout && (
                       <Text className="text-rose-500 text-[10px] font-semibold mt-1 text-start">
@@ -1964,9 +1952,8 @@ export default function TrainerApplicationScreen() {
                             {suggestions.map(opt => {
                               const matchIndex = opt.toLowerCase().indexOf(currentSegment);
                               return (
-                                <TouchableOpacity
+                                <Pressable
                                   key={opt}
-                                  activeOpacity={0.8}
                                   onPress={() => {
                                     const segments = primaryWorkout.split(',').map(s => s.trim()).filter(Boolean);
                                     if (segments.length > 0 && segments[segments.length - 1].toLowerCase() === currentSegment) {
@@ -1985,7 +1972,7 @@ export default function TrainerApplicationScreen() {
                                     <Text className="text-[#E11D48] font-black underline">{opt.slice(matchIndex, matchIndex + currentSegment.length)}</Text>
                                     <Text className="text-zinc-500 font-medium">{opt.slice(matchIndex + currentSegment.length)}</Text>
                                   </Text>
-                                </TouchableOpacity>
+                                </Pressable>
                               );
                             })}
                           </View>
@@ -2014,9 +2001,8 @@ export default function TrainerApplicationScreen() {
                               const isUnmatched = !isSelected && !!currentTypedSegment && !hasPartialMatch;
 
                               return (
-                                <TouchableOpacity
+                                <Pressable
                                   key={opt}
-                                  activeOpacity={0.75}
                                   onPress={() => {
                                     if (opt === 'Other') {
                                       setPrimaryWorkout(prev => prev.trim() ? `${prev.trim()}, Other: ` : 'Other: ');
@@ -2070,7 +2056,7 @@ export default function TrainerApplicationScreen() {
                                       {isSelected ? `✓ ${opt}` : opt}
                                     </Text>
                                   )}
-                                </TouchableOpacity>
+                                </Pressable>
                               );
                             });
                           })()}
@@ -2094,13 +2080,12 @@ export default function TrainerApplicationScreen() {
                         scrollEnabled={false}
                         className="bg-zinc-50 border border-zinc-150 p-3 pr-10 rounded-xl text-zinc-900 text-xs font-semibold min-h-[46px] leading-5" 
                       />
-                      <TouchableOpacity
-                        activeOpacity={0.7}
+                      <Pressable
                         onPress={() => setShowSecondaryDropdown(!showSecondaryDropdown)}
                         className="absolute right-3 top-3.5 w-6 h-6 items-center justify-center"
                       >
                         <Feather name={showSecondaryDropdown ? "chevron-up" : "chevron-down"} size={16} color="#6B7280" />
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
 
                     {/* Dynamic Auto-Suggestion Pills when secondary dropdown is closed */}
@@ -2125,9 +2110,8 @@ export default function TrainerApplicationScreen() {
                             {suggestions.map(opt => {
                               const matchIndex = opt.toLowerCase().indexOf(currentSegment);
                               return (
-                                <TouchableOpacity
+                                <Pressable
                                   key={opt}
-                                  activeOpacity={0.8}
                                   onPress={() => {
                                     const segments = secondarySkills.split(',').map(s => s.trim()).filter(Boolean);
                                     if (segments.length > 0 && segments[segments.length - 1].toLowerCase() === currentSegment) {
@@ -2145,7 +2129,7 @@ export default function TrainerApplicationScreen() {
                                     <Text className="text-[#E11D48] font-black underline">{opt.slice(matchIndex, matchIndex + currentSegment.length)}</Text>
                                     <Text className="text-zinc-500 font-medium">{opt.slice(matchIndex + currentSegment.length)}</Text>
                                   </Text>
-                                </TouchableOpacity>
+                                </Pressable>
                               );
                             })}
                           </View>
@@ -2174,9 +2158,8 @@ export default function TrainerApplicationScreen() {
                               const isUnmatched = !isSelected && !!currentTypedSegment && !hasPartialMatch;
 
                               return (
-                                <TouchableOpacity
+                                <Pressable
                                   key={opt}
-                                  activeOpacity={0.75}
                                   onPress={() => {
                                     if (opt === 'Other') {
                                       setSecondarySkills(prev => prev.trim() ? `${prev.trim()}, Other: ` : 'Other: ');
@@ -2229,7 +2212,7 @@ export default function TrainerApplicationScreen() {
                                       {isSelected ? `✓ ${opt}` : opt}
                                     </Text>
                                   )}
-                                </TouchableOpacity>
+                                </Pressable>
                               );
                             });
                           })()}
@@ -2261,13 +2244,12 @@ export default function TrainerApplicationScreen() {
                           step2Errors.fitnessQualifications ? 'border-rose-400 bg-rose-50/20' : 'border-zinc-150'
                         }`}
                       />
-                      <TouchableOpacity
-                        activeOpacity={0.7}
+                      <Pressable
                         onPress={() => setShowQualificationsDropdown(!showQualificationsDropdown)}
                         className="absolute right-3 top-3.5 w-6 h-6 items-center justify-center"
                       >
                         <Feather name={showQualificationsDropdown ? "chevron-up" : "chevron-down"} size={16} color="#6B7280" />
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                     {!!step2Errors.fitnessQualifications && (
                       <Text className="text-rose-500 text-[10px] font-semibold mt-1 text-start">
@@ -2298,9 +2280,8 @@ export default function TrainerApplicationScreen() {
                             {suggestions.map(opt => {
                               const matchIndex = opt.toLowerCase().indexOf(currentSegment);
                               return (
-                                <TouchableOpacity
+                                <Pressable
                                   key={opt}
-                                  activeOpacity={0.8}
                                   onPress={() => {
                                     const segments = fitnessQualifications.split(',').map(s => s.trim()).filter(Boolean);
                                     if (segments.length > 0 && segments[segments.length - 1].toLowerCase() === currentSegment) {
@@ -2323,7 +2304,7 @@ export default function TrainerApplicationScreen() {
                                   ) : (
                                     <Text className="text-[10.5px] font-bold text-[#E11D48] underline">{opt}</Text>
                                   )}
-                                </TouchableOpacity>
+                                </Pressable>
                               );
                             })}
                           </View>
@@ -2353,9 +2334,8 @@ export default function TrainerApplicationScreen() {
                               const isUnmatched = !isSelected && !!currentTypedSegment && !hasPartialMatch;
 
                               return (
-                                <TouchableOpacity
+                                <Pressable
                                   key={opt}
-                                  activeOpacity={0.75}
                                   onPress={() => {
                                     if (opt === 'Other') {
                                       setFitnessQualifications(prev => prev.trim() ? `${prev.trim()}, Other: ` : 'Other: ');
@@ -2409,7 +2389,7 @@ export default function TrainerApplicationScreen() {
                                       {isSelected ? `✓ ${opt}` : opt}
                                     </Text>
                                   )}
-                                </TouchableOpacity>
+                                </Pressable>
                               );
                             });
                           })()}
@@ -2473,12 +2453,12 @@ export default function TrainerApplicationScreen() {
                       {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
                         const selected = workingDays.includes(day);
                         return (
-                          <TouchableOpacity 
+                          <Pressable 
                             key={day} onPress={() => toggleDay(day)}
                             className={`px-3.5 py-2 rounded-xl border ${selected ? 'bg-[#101828] border-[#101828]' : 'bg-white border-zinc-200'}`}
                           >
                             <Text className={`text-[9px] font-bold uppercase ${selected ? 'text-white' : 'text-zinc-500'}`}>{day}</Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         );
                       })}
                     </View>
@@ -2549,7 +2529,7 @@ export default function TrainerApplicationScreen() {
                         <Text className="text-rose-600 text-[9px] font-black uppercase mt-1 text-start">⚠️ Required</Text>
                       )}
                     </View>
-                    <TouchableOpacity
+                    <Pressable
                       onPress={() => uploadFile('selfie')}
                       disabled={uploadingDoc === 'selfie'}
                       className={`px-4 py-2.5 rounded-xl border ${selfieUploadStatus === 'UPLOADED' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-zinc-200'}`}
@@ -2557,7 +2537,7 @@ export default function TrainerApplicationScreen() {
                       <Text className={`text-[8.5px] font-black uppercase ${selfieUploadStatus === 'UPLOADED' ? 'text-emerald-600' : 'text-zinc-800'}`}>
                         {uploadingDoc === 'selfie' ? 'Uploading...' : selfieUploadStatus === 'FAILED' ? 'Retry Upload' : documentSelfie ? 'Replace' : 'Upload'}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
 
                   {/* Required Fitness Certificates based on selected qualifications */}
@@ -2621,7 +2601,7 @@ export default function TrainerApplicationScreen() {
                                   )}
                                 </View>
 
-                                <TouchableOpacity
+                                <Pressable
                                   onPress={() => uploadFile('certs', qual)}
                                   disabled={isCurrentUploading}
                                   className={`px-3.5 py-2 rounded-xl border ${
@@ -2643,7 +2623,7 @@ export default function TrainerApplicationScreen() {
                                           ? 'Replace'
                                           : 'Upload'}
                                   </Text>
-                                </TouchableOpacity>
+                                </Pressable>
                               </View>
                             );
                           })}
@@ -2657,26 +2637,23 @@ export default function TrainerApplicationScreen() {
 
             <View className="flex-row gap-3 mt-6">
               {currentStep > 1 && (
-                <TouchableOpacity
-                  activeOpacity={0.8}
+                <Pressable
                   onPress={handleBack}
                   className="flex-1 py-4 bg-zinc-200 rounded-xl items-center justify-center"
                 >
                   <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider text-center">Back</Text>
-                </TouchableOpacity>
+                </Pressable>
               )}
               
               {currentStep < 4 ? (
-                <TouchableOpacity
-                  activeOpacity={0.8}
+                <Pressable
                   onPress={handleNext}
                   className="flex-1 py-4 bg-[#101828] rounded-xl items-center justify-center"
                 >
                   <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Next</Text>
-                </TouchableOpacity>
+                </Pressable>
               ) : (
-                <TouchableOpacity
-                  activeOpacity={0.8}
+                <Pressable
                   onPress={handleSubmit}
                   disabled={isSubmittingApplication || !documentSelfie || (() => {
                     const selected = getSelectedQualificationsList();
@@ -2695,7 +2672,7 @@ export default function TrainerApplicationScreen() {
                   }`}
                 >
                   <Text className="text-white text-xs font-black uppercase tracking-wider text-center">{isSubmittingApplication ? 'Submitting...' : 'Submit Application'}</Text>
-                </TouchableOpacity>
+                </Pressable>
               )}
             </View>
           </>
@@ -2706,41 +2683,41 @@ export default function TrainerApplicationScreen() {
       {/* Custom Picker Selection Overlay */}
       {showPickerModal && (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, justifyContent: 'flex-end' }]}>
-          <TouchableOpacity activeOpacity={1} onPress={() => setShowPickerModal(false)} style={{ flex: 1 }} />
+          <Pressable onPress={() => setShowPickerModal(false)} style={{ flex: 1 }} />
           <View className="bg-white p-6 rounded-t-3xl gap-4">
             <Text className="text-[#101828] text-sm font-black uppercase tracking-wider text-center">Select Document Source</Text>
             
             <View className="gap-2">
-              <TouchableOpacity
+              <Pressable
                 onPress={() => pickDocument('camera')}
                 className="py-3.5 bg-zinc-50 rounded-xl border border-zinc-150 flex-row justify-center items-center gap-2"
               >
                 <Feather name="camera" size={16} color="#101828" />
                 <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Take Photo (Camera)</Text>
-              </TouchableOpacity>
+              </Pressable>
 
-              <TouchableOpacity
+              <Pressable
                 onPress={() => pickDocument('library')}
                 className="py-3.5 bg-zinc-50 rounded-xl border border-zinc-150 flex-row justify-center items-center gap-2"
               >
                 <Feather name="image" size={16} color="#101828" />
                 <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Choose from Gallery (Library)</Text>
-              </TouchableOpacity>
+              </Pressable>
 
-              <TouchableOpacity
+              <Pressable
                 onPress={() => pickDocument('file')}
                 className="py-3.5 bg-zinc-50 rounded-xl border border-zinc-150 flex-row justify-center items-center gap-2"
               >
                 <Feather name="file" size={16} color="#101828" />
                 <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider">Choose File (PDF/Docs)</Text>
-              </TouchableOpacity>
+              </Pressable>
 
-              <TouchableOpacity
+              <Pressable
                 onPress={() => setShowPickerModal(false)}
                 className="py-3.5 bg-zinc-100 rounded-xl items-center mt-2"
               >
                 <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">Cancel</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -2765,7 +2742,7 @@ export default function TrainerApplicationScreen() {
             </View>
 
             <View className="flex-row gap-3">
-              <TouchableOpacity
+              <Pressable
                 onPress={() => {
                   setShowPreview(false);
                   uploadFile(activeUploadType!);
@@ -2773,14 +2750,14 @@ export default function TrainerApplicationScreen() {
                 className="flex-1 py-3 bg-zinc-100 rounded-xl items-center justify-center"
               >
                 <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">Retake / Change</Text>
-              </TouchableOpacity>
+              </Pressable>
 
-              <TouchableOpacity
+              <Pressable
                 onPress={confirmAndUpload}
                 className="flex-1 py-3 bg-[#E11D48] rounded-xl items-center justify-center"
               >
                 <Text className="text-white text-xs font-black uppercase tracking-wider">Confirm & Upload</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
         </View>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeSheet } from './NativeSheet';
@@ -106,13 +106,12 @@ export const FitnessGoalsModal: React.FC<FitnessGoalsModalProps> = ({
               Select multiple targets for custom workout drills.
             </Text>
           </View>
-          <TouchableOpacity
+          <Pressable
             onPress={onClose}
-            activeOpacity={0.7}
             className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center mt-0.5"
           >
             <Feather name="x" size={15} color="#101828" />
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Goals Chips List */}

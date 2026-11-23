@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCoachStore } from '../store/coachStore';
@@ -19,9 +19,9 @@ export default function CoachProfileScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: 'white', paddingTop: insets.top }}>
         <View className="h-14 flex-row items-center px-6 border-b border-zinc-100">
-          <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
+          <Pressable onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
             <Ionicons name="arrow-back" size={20} color="#111111" />
-          </TouchableOpacity>
+          </Pressable>
           <Text className="flex-1 text-center text-primary text-base font-black tracking-tight mr-8">
             Coach Profile
           </Text>
@@ -54,9 +54,9 @@ export default function CoachProfileScreen() {
     <View style={{ flex: 1, backgroundColor: 'white', paddingTop: insets.top }}>
       {/* Header back button */}
       <View className="h-14 flex-row items-center px-6 border-b border-zinc-100">
-        <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
+        <Pressable onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
           <Ionicons name="arrow-back" size={20} color="#111111" />
-        </TouchableOpacity>
+        </Pressable>
         <Text className="flex-1 text-center text-primary text-base font-black tracking-tight mr-8">
           Coach Profile
         </Text>
@@ -204,15 +204,14 @@ export default function CoachProfileScreen() {
 
       {/* Book This Coach Button */}
       <View style={{ paddingBottom: Math.max(insets.bottom, 24), paddingTop: 16, paddingHorizontal: 24 }} className="bg-white border-t border-zinc-100">
-        <TouchableOpacity
-          activeOpacity={0.8}
+        <Pressable
           onPress={handleBookCoach}
           className="w-full py-4 bg-zinc-900 rounded-[20px] items-center justify-center shadow-sm"
         >
           <Text className="text-white text-base font-extrabold tracking-wide">
             Book This Coach (₹{coach.price || 1200}/session)
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );

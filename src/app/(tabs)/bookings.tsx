@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useTransition } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, Text, TouchableOpacity, Platform, Alert } from 'react-native';
+import { View, Text, Pressable, Platform, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBookingStore } from '../../store/bookingStore';
 import { BookingCard } from '../../components/BookingCard';
@@ -720,7 +720,7 @@ export default function BookingsScreen() {
                   paddingVertical: 6,
                   borderRadius: 9999,
                 }}>
-                  <TouchableOpacity 
+                  <Pressable 
                     onPress={handlePrevMonth} 
                     disabled={!prevMonthAvailable}
                     style={{
@@ -734,7 +734,7 @@ export default function BookingsScreen() {
                     }}
                   >
                     <Feather name="chevron-left" size={12} color="#FFFFFF" />
-                  </TouchableOpacity>
+                  </Pressable>
                   <Text style={{
                     color: "#FFFFFF",
                     fontSize: 10,
@@ -744,7 +744,7 @@ export default function BookingsScreen() {
                   }}>
                     {monthsNames[selectedMonth]} {selectedYear}
                   </Text>
-                  <TouchableOpacity 
+                  <Pressable 
                     onPress={handleNextMonth} 
                     disabled={!nextMonthAvailable}
                     style={{
@@ -758,7 +758,7 @@ export default function BookingsScreen() {
                     }}
                   >
                     <Feather name="chevron-right" size={12} color="#FFFFFF" />
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </View>
 
@@ -807,9 +807,8 @@ export default function BookingsScreen() {
                         const states = dayStates[dayNum] || { hasBookings: false, hasAvailability: false, isFullyBooked: false };
 
                         return (
-                          <TouchableOpacity
+                          <Pressable
                             key={colIdx}
-                            activeOpacity={isDisabled ? 1 : 0.8}
                             disabled={isDisabled}
                             onPress={() => {
                               setSelectedDay(dayNum);
@@ -850,7 +849,7 @@ export default function BookingsScreen() {
                                 }`} />
                               ) : null}
                             </View>
-                          </TouchableOpacity>
+                          </Pressable>
                         );
                       })}
                       {row.length < 7 && Array.from({ length: 7 - row.length }).map((_, padIdx) => (
@@ -941,8 +940,7 @@ export default function BookingsScreen() {
                   const isAvailable = activeCount > 0 || bookedCount > 0;
 
                   return (
-                    <TouchableOpacity
-                      activeOpacity={0.8}
+                    <Pressable
                       onPress={() => {
                         if (Platform.OS === 'web') {
                           const confirmMsg = isAvailable 
@@ -1031,7 +1029,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                       }}>
                         {isAvailable ? "Disable Day" : "Enable Day"}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 })()}
               </View>
@@ -1039,8 +1037,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
               {/* Manage slots collapsible toggle */}
               {!isSelectedDateOutOfRange && coach && (
                 <View style={{ gap: 12 }}>
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <Pressable
                     onPress={() => {
                       console.log('[AVAILABILITY-CLICK-TRACE] MANAGE SLOTS PRESSED');
                       setIsSlotsExpanded(!isSlotsExpanded);
@@ -1063,7 +1060,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                     }}>
                       {isSlotsExpanded ? "Manage Slots ▴" : "Manage Slots ▾"}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
 
                    {isSlotsExpanded && (
                      <View style={{ gap: 10, marginTop: 4 }}>
@@ -1091,8 +1088,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                                borderColor: slot.isAvailable ? "#E4E4E7" : "#F4F4F5",
                              }}
                            >
-                             <TouchableOpacity
-                               activeOpacity={slot.isBooked || isSelectedDateOutOfRange ? 1 : 0.8}
+                             <Pressable
                                disabled={slot.isBooked || isSelectedDateOutOfRange}
                                onPress={() => {
                                  if (Platform.OS === "web") {
@@ -1206,12 +1202,11 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                                 )}
                               </View>
                             </View>
-                          </TouchableOpacity>
+                          </Pressable>
 
                           {/* Configure category trigger with exact native styles */}
                           {!slot.isBooked && slot.isAvailable && !isSelectedDateOutOfRange && (
-                            <TouchableOpacity
-                              activeOpacity={0.8}
+                            <Pressable
                               onPress={() => handleEditTimeSlot(slot.time, slot.category)}
                               style={{
                                 width: 32,
@@ -1225,7 +1220,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                               }}
                             >
                               <Feather name="edit-2" size={11} color="#6B7280" />
-                            </TouchableOpacity>
+                            </Pressable>
                           )}
                         </View>
                       ))}
@@ -1379,9 +1374,8 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                                 {daySessions.map(b => {
                                   const isMissedSession = b.status === 'client_no_show' || b.status === 'trainer_no_show' || b.status === 'missed_session_not_started';
                                   return (
-                                    <TouchableOpacity
+                                    <Pressable
                                       key={b.id}
-                                      activeOpacity={0.8}
                                       onPress={() => router.push({ pathname: '/session-detail', params: { id: b.id } })}
                                       className="flex-row justify-between items-center py-1"
                                     >
@@ -1406,7 +1400,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                                           {b.status === 'completed' ? 'Completed' : isMissedSession ? 'Missed' : 'Cancelled'}
                                         </Text>
                                       </View>
-                                    </TouchableOpacity>
+                                    </Pressable>
                                   );
                                 })}
                               </View>
@@ -1443,8 +1437,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
           >
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-2.5 flex-1 pr-2">
-                <TouchableOpacity
-                  activeOpacity={0.6}
+                <Pressable
                   hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                   onPress={() => {
                     if (router.canGoBack()) {
@@ -1458,7 +1451,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                   accessibilityLabel="Back"
                 >
                   <Ionicons name="chevron-back" size={22} color="#101828" />
-                </TouchableOpacity>
+                </Pressable>
 
                 <View className="flex-1">
                   <Text className="text-[#101828] text-xl font-black tracking-tight" numberOfLines={1}>
@@ -1565,8 +1558,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
               </View>
 
               {/* Right Action: Support Tickets Notepad */}
-              <TouchableOpacity
-                activeOpacity={0.6}
+              <Pressable
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 onPress={() => setShowUserTicketsModal(true)}
                 style={{ marginTop: 2 }}
@@ -1575,7 +1567,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                 accessibilityLabel="My Support Tickets"
               >
                 <Feather name="file-text" size={17} color="#0F172A" />
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             {/* Upcoming / Completed / Cancelled Segmented Control Tabs */}
@@ -1620,9 +1612,8 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                       this_month: "This Month",
                     };
                     return (
-                      <TouchableOpacity
+                      <Pressable
                         key={filterKey}
-                        activeOpacity={0.8}
                         onPress={() => {
                           setClientDateFilter(filterKey);
                           setCurrentCursor(null);
@@ -1654,7 +1645,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                         >
                           {labels[filterKey]}
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     );
                   })}
                 </AnimatedReanimated.ScrollView>
@@ -1693,8 +1684,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                   {(renderedFilter === "completed" || renderedFilter === "cancelled") &&
                     (cursorPage.hasPrevPage || cursorPage.hasNextPage) && (
                       <View className="flex-row items-center justify-between mt-4 mb-2 pt-3 border-t border-zinc-200/80">
-                        <TouchableOpacity
-                          activeOpacity={0.75}
+                        <Pressable
                           disabled={!cursorPage.hasPrevPage}
                           onPress={() => {
                             if (!cursorPage.hasPrevPage) return;
@@ -1710,10 +1700,9 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                         >
                           <Feather name="chevron-left" size={14} color="#101828" />
                           <Text className="text-[#101828] text-xs font-bold">Prev</Text>
-                        </TouchableOpacity>
+                        </Pressable>
 
-                        <TouchableOpacity
-                          activeOpacity={0.75}
+                        <Pressable
                           disabled={!cursorPage.hasNextPage || !cursorPage.nextCursor}
                           onPress={() => {
                             if (!cursorPage.hasNextPage || !cursorPage.nextCursor) return;
@@ -1738,7 +1727,7 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
                             size={14}
                             color={cursorPage.hasNextPage ? "#FFFFFF" : "#6B7280"}
                           />
-                        </TouchableOpacity>
+                        </Pressable>
                       </View>
                     )}
                 </>

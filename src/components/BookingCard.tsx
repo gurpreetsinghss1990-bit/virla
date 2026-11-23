@@ -1,6 +1,6 @@
 import { Loading } from './Loading';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ScrollView, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, Alert, ScrollView, Platform, useWindowDimensions } from 'react-native';
 import { Booking } from '../types';
 import { BookingStatusBadge } from './BookingStatusBadge';
 import { useBookingStore } from '../store/bookingStore';
@@ -366,8 +366,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
             </Text>
           </View>
           {isCompletedStatus && onOpenSupport && (
-            <TouchableOpacity
-              activeOpacity={0.7}
+            <Pressable
               onPress={() => onOpenSupport(booking)}
               style={{
                 backgroundColor: '#FFF1F2',
@@ -388,13 +387,12 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
               >
                 SUPPORT
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
 
         {/* Main Workout Block */}
-        <TouchableOpacity
-          activeOpacity={0.7}
+        <Pressable
           onPress={handleViewDetails}
           className="flex-row items-start gap-3"
         >
@@ -484,15 +482,14 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
               </Text>
             </View>
           </View>
-        </TouchableOpacity>
+        </Pressable>
 
         {/* Separator Line */}
         <View style={{ height: 1, backgroundColor: '#F1F5F9', marginVertical: 12 }} />
 
         {/* Coach Row (for upcoming, completed, and cancelled sessions if trainer was assigned) */}
         {(isUpcoming || isCompletedStatus || (isCancelledOrMissed && !!booking.trainerName)) && (
-          <TouchableOpacity
-            activeOpacity={0.7}
+          <Pressable
             onPress={handleViewDetails}
             className="flex-row items-center justify-between"
           >
@@ -513,7 +510,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
               </Text>
             </View>
             <Feather name="chevron-right" size={16} color="#94A3B8" />
-          </TouchableOpacity>
+          </Pressable>
         )}
 
         {/* Dedicated Verified Trainer Pill - Exact Stitch Style */}
@@ -581,8 +578,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
             </View>
 
             <View className="gap-3 w-full">
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Pressable
                 disabled={isCancelling}
                 onPress={handleConfirmCancelWithinTwoHours}
                 className="w-full bg-[#E11D48] py-4 rounded-2xl items-center justify-center flex-row gap-2"
@@ -594,16 +590,15 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
                     {booking.sessionType === 'COUPLE' ? 'Cancel & Forfeit 2 Credits' : 'Cancel & Forfeit 1 Credit'}
                   </Text>
                 )}
-              </TouchableOpacity>
+              </Pressable>
 
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Pressable
                 disabled={isCancelling}
                 onPress={() => setShowCancelWarningModal(false)}
                 className="w-full bg-zinc-50 border border-zinc-150 py-4 rounded-2xl items-center justify-center"
               >
                 <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Keep Session</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
         </NativeSheet>
@@ -626,9 +621,9 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
                   <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Reschedule Session</Text>
                   <Text className="text-[#101828] text-xl font-black tracking-tight mt-0.5">Choose a new session time</Text>
                 </View>
-                <TouchableOpacity onPress={() => setShowRescheduleModal(false)} className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center">
+                <Pressable onPress={() => setShowRescheduleModal(false)} className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center">
                   <Feather name="x" size={16} color="#101828" />
-                </TouchableOpacity>
+                </Pressable>
               </View>
 
               <View>
@@ -637,9 +632,8 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
                   {rescheduleDates.map((capsule) => {
                     const isSelected = selectedRescheduleDate === capsule.ymd;
                     return (
-                      <TouchableOpacity
+                      <Pressable
                         key={capsule.ymd}
-                        activeOpacity={0.8}
                         onPress={() => {
                           setSelectedRescheduleDate(capsule.ymd);
                           setSelectedRescheduleTime('');
@@ -655,7 +649,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
                         <Text className={`text-[8px] font-bold ${isSelected ? 'text-zinc-400' : 'text-[#6B7280]'}`}>
                           {capsule.sub}
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     );
                   })}
                 </ScrollView>
@@ -676,9 +670,8 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
                       {availableSlots.map((slot) => {
                         const isSelected = selectedRescheduleTime === slot.time;
                         return (
-                          <TouchableOpacity
+                          <Pressable
                             key={slot.time}
-                            activeOpacity={0.8}
                             onPress={() => setSelectedRescheduleTime(slot.time)}
                             className={`px-4 py-3.5 rounded-2xl border items-center justify-center ${
                               isSelected ? 'bg-zinc-950 border-zinc-950' : 'bg-zinc-50 border-zinc-100'
@@ -688,7 +681,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
                             <Text className={`text-xs font-black tracking-tight ${isSelected ? 'text-white' : 'text-[#101828]'}`}>
                               {slot.time}
                             </Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         );
                       })}
                     </View>
@@ -698,8 +691,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
             </View>
 
             <View className="gap-3 w-full border-t border-zinc-100 pt-4">
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Pressable
                 disabled={isRescheduling || !selectedRescheduleDate || !selectedRescheduleTime}
                 onPress={handleConfirmReschedule}
                 className={`w-full py-4 rounded-2xl items-center justify-center flex-row gap-2 ${
@@ -713,16 +705,15 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
                     (!selectedRescheduleDate || !selectedRescheduleTime) ? 'text-zinc-400' : 'text-white'
                   }`}>Confirm Reschedule</Text>
                 )}
-              </TouchableOpacity>
+              </Pressable>
 
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Pressable
                 disabled={isRescheduling}
                 onPress={() => setShowRescheduleModal(false)}
                 className="w-full bg-zinc-50 border border-zinc-150 py-4 rounded-2xl items-center justify-center"
               >
                 <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Keep Current</Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
         </NativeSheet>
@@ -778,15 +769,14 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
             </View>
           </View>
 
-          <TouchableOpacity
-            activeOpacity={0.7}
+          <Pressable
             onPress={handleViewDetails}
             className="px-4 py-1.5 rounded-full items-center justify-center bg-[#101828]"
           >
             <Text className="text-white text-[11px] font-black uppercase tracking-wider">
               View Details
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     );
@@ -891,14 +881,13 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
       })()}
 
       {isUpcoming && !isTrainer && booking.sessionType === 'SINGLE' && booking.timelineStatus !== 'otp_verified' && booking.timelineStatus !== 'workout_started' && booking.timelineStatus !== 'workout_completed' && booking.timelineStatus !== 'session_closed' && (
-        <TouchableOpacity
-          activeOpacity={0.7}
+        <Pressable
           onPress={() => setShowPartnerModal(true)}
           className="w-full bg-[#E11D48] py-3 rounded-xl items-center justify-center flex-row gap-1.5 mb-3"
         >
           <Feather name="plus-circle" size={14} color="white" />
           <Text className="text-white text-xs font-black uppercase tracking-wider">Train with a Friend</Text>
-        </TouchableOpacity>
+        </Pressable>
       )}
 
       {booking.sessionType === 'COUPLE' && !!booking.partnerName && (
@@ -927,15 +916,14 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
         {isTrainer ? (
           isUpcoming ? (
             <>
-              <TouchableOpacity
-                activeOpacity={0.7}
+              <Pressable
                 onPress={() => Alert.alert('Navigate', 'Opening Google Maps routing direction to Worli, Mumbai.')}
                 className="flex-1 bg-zinc-50 border py-3 rounded-xl items-center justify-center flex-row gap-1.5"
                 style={{ borderColor: 'rgba(228, 228, 231, 0.6)' }}
               >
                 <Feather name="navigation" size={12} color="#101828" />
                 <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Navigate</Text>
-              </TouchableOpacity>
+              </Pressable>
               {(() => {
                 const isBeforeWindow = SessionEngine.isBeforeStartWindow(booking);
                 const sessionDate = SessionEngine.getSessionStartDate(booking);
@@ -952,53 +940,48 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
 
                 if (isBeforeWindow) {
                   return (
-                    <TouchableOpacity
-                      activeOpacity={1}
+                    <Pressable
                       onPress={() => Alert.alert('Session Locked', `This session can only be started from ${formatTimeOnly()}.`)}
                       className="flex-1 py-3 rounded-xl items-center justify-center bg-zinc-200"
                     >
                       <Text className="text-zinc-400 text-xs font-black uppercase tracking-wider">Start Session</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 } else {
                   return (
-                    <TouchableOpacity
-                      activeOpacity={0.7}
+                    <Pressable
                       onPress={handleViewDetails}
                       className="flex-1 py-3 rounded-xl items-center justify-center bg-[#E11D48]"
                     >
                       <Text className="text-white text-xs font-black uppercase tracking-wider">Start Session</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 }
               })()}
             </>
           ) : (
-            <TouchableOpacity
-              activeOpacity={0.7}
+            <Pressable
               onPress={handleViewDetails}
               className="flex-1 py-3 rounded-xl items-center justify-center bg-[#101828] border border-[#101828]"
             >
               <Text className="text-white text-xs font-black uppercase tracking-wider">View Summary</Text>
-            </TouchableOpacity>
+            </Pressable>
           )
         ) : (
           <>
             {isUpcoming && (
               <>
                 {isMoreThanTwoHours && (
-                  <TouchableOpacity
-                    activeOpacity={0.7}
+                  <Pressable
                     onPress={handleReschedule}
                     className="flex-1 bg-zinc-50 border py-3 rounded-xl items-center justify-center"
                     style={{ borderColor: 'rgba(228, 228, 231, 0.6)' }}
                   >
                     <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Reschedule</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
                 {!isPast && (
-                  <TouchableOpacity
-                    activeOpacity={0.7}
+                  <Pressable
                     onPress={handleCancel}
                     className="flex-1 border py-3 rounded-xl items-center justify-center"
                     style={{
@@ -1007,14 +990,13 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
                     }}
                   >
                     <Text className="text-[#FF4D4F] text-xs font-black uppercase tracking-wider">Cancel</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 )}
               </>
             )}
             {/* Support button for cancelled or completed sessions */}
             {!isUpcoming && (booking.status === 'cancelled' || booking.status === 'client_no_show' || booking.status === 'trainer_no_show' || booking.status === 'completed' || booking.status === 'missed_session_not_started') && (
-              <TouchableOpacity
-                activeOpacity={0.7}
+              <Pressable
                 onPress={() => {
                   if (onOpenSupport) {
                     onOpenSupport(booking);
@@ -1028,10 +1010,9 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
                 <Text className="text-rose-600 text-xs font-black uppercase tracking-wider">
                   Support
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
-            <TouchableOpacity
-              activeOpacity={0.7}
+            <Pressable
               onPress={handleViewDetails}
               className={`py-3 rounded-xl items-center justify-center bg-[#101828] border border-[#101828] ${
                 (isUpcoming && !isPast) ? 'px-5' : (!isUpcoming ? 'flex-1' : 'flex-1')
@@ -1040,7 +1021,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
               <Text className="text-white text-xs font-black uppercase tracking-wider">
                 {(isUpcoming && !isPast) ? 'Details' : 'View Details'}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </>
         )}
       </View>
@@ -1073,8 +1054,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
 
           {/* Action buttons */}
           <View className="gap-3 w-full">
-            <TouchableOpacity
-              activeOpacity={0.8}
+            <Pressable
               disabled={isCancelling}
               onPress={handleConfirmCancelWithinTwoHours}
               className="w-full bg-[#E11D48] py-4 rounded-2xl items-center justify-center flex-row gap-2"
@@ -1086,16 +1066,15 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
                   {booking.sessionType === 'COUPLE' ? 'Cancel & Forfeit 2 Credits' : 'Cancel & Forfeit 1 Credit'}
                 </Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
-              activeOpacity={0.8}
+            <Pressable
               disabled={isCancelling}
               onPress={() => setShowCancelWarningModal(false)}
               className="w-full bg-zinc-50 border border-zinc-150 py-4 rounded-2xl items-center justify-center"
             >
               <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Keep Session</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </NativeSheet>
@@ -1117,9 +1096,9 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
                 <Text className="text-[#6B7280] text-[10px] font-black uppercase tracking-widest">Reschedule Session</Text>
                 <Text className="text-[#101828] text-xl font-black tracking-tight mt-0.5">Choose a new session time</Text>
               </View>
-              <TouchableOpacity onPress={() => setShowRescheduleModal(false)} className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center">
+              <Pressable onPress={() => setShowRescheduleModal(false)} className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center">
                 <Feather name="x" size={16} color="#101828" />
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             {/* Date Picker ScrollView */}
@@ -1129,9 +1108,8 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
                 {rescheduleDates.map((capsule) => {
                   const isSelected = selectedRescheduleDate === capsule.ymd;
                   return (
-                    <TouchableOpacity
+                    <Pressable
                       key={capsule.ymd}
-                      activeOpacity={0.8}
                       onPress={() => {
                         setSelectedRescheduleDate(capsule.ymd);
                         setSelectedRescheduleTime('');
@@ -1147,7 +1125,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
                       <Text className={`text-[8px] font-bold ${isSelected ? 'text-zinc-400' : 'text-[#6B7280]'}`}>
                         {capsule.sub}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 })}
               </ScrollView>
@@ -1169,9 +1147,8 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
                     {availableSlots.map((slot) => {
                       const isSelected = selectedRescheduleTime === slot.time;
                       return (
-                        <TouchableOpacity
+                        <Pressable
                           key={slot.time}
-                          activeOpacity={0.8}
                           onPress={() => setSelectedRescheduleTime(slot.time)}
                           className={`px-4 py-3.5 rounded-2xl border items-center justify-center ${
                             isSelected ? 'bg-zinc-950 border-zinc-950' : 'bg-zinc-50 border-zinc-100'
@@ -1181,7 +1158,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
                           <Text className={`text-xs font-black tracking-tight ${isSelected ? 'text-white' : 'text-[#101828]'}`}>
                             {slot.time}
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       );
                     })}
                   </View>
@@ -1192,8 +1169,7 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
 
           {/* Action buttons */}
           <View className="gap-3 w-full border-t border-zinc-100 pt-4">
-            <TouchableOpacity
-              activeOpacity={0.8}
+            <Pressable
               disabled={isRescheduling || !selectedRescheduleDate || !selectedRescheduleTime}
               onPress={handleConfirmReschedule}
               className={`w-full py-4 rounded-2xl items-center justify-center flex-row gap-2 ${
@@ -1207,16 +1183,15 @@ export const BookingCard = React.memo(function BookingCard({ booking, onOpenSupp
                   (!selectedRescheduleDate || !selectedRescheduleTime) ? 'text-zinc-400' : 'text-white'
                 }`}>Confirm Reschedule</Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
-              activeOpacity={0.8}
+            <Pressable
               disabled={isRescheduling}
               onPress={() => setShowRescheduleModal(false)}
               className="w-full bg-zinc-50 border border-zinc-150 py-4 rounded-2xl items-center justify-center"
             >
               <Text className="text-[#101828] text-xs font-black uppercase tracking-wider">Keep Current</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </NativeSheet>

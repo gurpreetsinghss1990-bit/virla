@@ -3,7 +3,7 @@ import { AppLogo, Heading, PrimaryButton, Subtitle } from '@/presentation/compon
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, AppState, Dimensions, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { Alert, AppState, Dimensions, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, Pressable, TouchableWithoutFeedback, View } from 'react-native';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -971,14 +971,13 @@ export default function GetStartedScreen() {
                       {['Male', 'Female', 'Other'].map((g) => {
                         const isSel = selectedGender === g;
                         return (
-                          <TouchableOpacity
+                          <Pressable
                             key={g}
-                            activeOpacity={0.8}
                             onPress={() => setSelectedGender(g)}
                             className={`flex-1 py-3.5 rounded-xl border items-center justify-center ${isSel ? 'bg-[#101828] border-[#101828]' : 'bg-white border-zinc-200'}`}
                           >
                             <Text className={`text-[10px] font-black uppercase tracking-wider ${isSel ? 'text-white' : 'text-zinc-650'}`}>{g}</Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         );
                       })}
                     </View>
@@ -993,9 +992,8 @@ export default function GetStartedScreen() {
                       {['Weight Loss', 'Fat Loss', 'Muscle Gain', 'Strength', 'Flexibility', 'General Fitness'].map((goal) => {
                         const isSel = selectedGoals.includes(goal);
                         return (
-                          <TouchableOpacity
+                          <Pressable
                             key={goal}
-                            activeOpacity={0.8}
                             onPress={() => {
                               if (isSel) {
                                 setSelectedGoals(selectedGoals.filter(x => x !== goal));
@@ -1006,7 +1004,7 @@ export default function GetStartedScreen() {
                             className={`px-3.5 py-2 rounded-xl border ${isSel ? 'bg-[#E11D48] border-[#E11D48]' : 'bg-white border-zinc-200'}`}
                           >
                             <Text className={`text-[9px] font-black uppercase tracking-wider ${isSel ? 'text-white' : 'text-zinc-700'}`}>{goal}</Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         );
                       })}
                     </View>
@@ -1158,8 +1156,7 @@ export default function GetStartedScreen() {
 
                   {/* Primary Action Button: Virla Signature Crimson Red Pill */}
                   {!otpSent && (
-                    <TouchableOpacity
-                      activeOpacity={0.88}
+                    <Pressable
                       disabled={isLoading || phone.replace(/\D/g, '').length < 10}
                       onPress={handleSendOtp}
                       style={{
@@ -1201,7 +1198,7 @@ export default function GetStartedScreen() {
                           />
                         </>
                       )}
-                    </TouchableOpacity>
+                    </Pressable>
                   )}
 
                   {otpStatusMessage ? (
@@ -1230,8 +1227,7 @@ export default function GetStartedScreen() {
                       <Text className="text-xs font-bold uppercase tracking-widest text-zinc-500">
                         Verify 6-Digit Code
                       </Text>
-                      <TouchableOpacity
-                        activeOpacity={0.7}
+                      <Pressable
                         disabled={resendCountdown > 0 || isLoading}
                         onPress={handleResendOtp}
                       >
@@ -1244,7 +1240,7 @@ export default function GetStartedScreen() {
                         >
                           {resendCountdown > 0 ? `Resend in ${resendCountdown}s` : 'Resend Code'}
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
 
                     {/* Container for 6 Animated Rotated Digit Cards */}
@@ -1351,8 +1347,7 @@ export default function GetStartedScreen() {
 
                 {otpSent && (
                   <View className="mt-2 w-full max-w-[340px]">
-                    <TouchableOpacity
-                      activeOpacity={0.88}
+                    <Pressable
                       disabled={isLoading || otpCode.length < 6}
                       onPress={handleMobileSubmit}
                       style={{
@@ -1392,7 +1387,7 @@ export default function GetStartedScreen() {
                           />
                         </>
                       )}
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 )}
               </Animated.View>
@@ -1438,8 +1433,7 @@ export default function GetStartedScreen() {
                 By continuing, you agree to VIRLA&apos;s
               </Text>
               <View className="flex-row items-center justify-center mt-1 gap-1.5 flex-wrap">
-                <TouchableOpacity
-                  activeOpacity={0.7}
+                <Pressable
                   onPress={handleOpenTerms}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
@@ -1454,10 +1448,9 @@ export default function GetStartedScreen() {
                   >
                     Terms of Service
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
                 <Text style={{ color: '#94A3B8', fontSize: 11.5, marginHorizontal: 3 }}>·</Text>
-                <TouchableOpacity
-                  activeOpacity={0.7}
+                <Pressable
                   onPress={handleOpenPrivacy}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
@@ -1472,7 +1465,7 @@ export default function GetStartedScreen() {
                   >
                     Privacy Policy
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             </View>
           </ScrollView>

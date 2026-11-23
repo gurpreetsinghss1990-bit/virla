@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Platform, BackHandler } from 'react-native';
+import { View, Text, Pressable, Platform, BackHandler } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, Pressable, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useUserStore } from '../store/userStore';
 import { NativeSheet } from './NativeSheet';
@@ -78,21 +78,19 @@ export const LogMetricsModal: React.FC<LogMetricsModalProps> = ({
                 </Text>
               </View>
 
-              <TouchableOpacity
-                activeOpacity={0.7}
+              <Pressable
                 onPress={onClose}
                 className="w-8 h-8 rounded-full bg-zinc-100/90 items-center justify-center active:bg-zinc-200"
                 accessibilityRole="button"
                 accessibilityLabel="Close dialog"
               >
                 <Feather name="x" size={16} color="#6B7280" />
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             {/* Custom Numerical Stepper (Clean background-free layout) */}
             <View className="flex-row items-center justify-between py-3 mb-5 px-1">
-              <TouchableOpacity
-                activeOpacity={0.7}
+              <Pressable
                 onPress={handleDecrement}
                 disabled={amount <= minAmount}
                 className={`w-12 h-12 rounded-full items-center justify-center border shadow-sm ${
@@ -104,7 +102,7 @@ export const LogMetricsModal: React.FC<LogMetricsModalProps> = ({
                 accessibilityLabel="Decrease value"
               >
                 <Feather name="minus" size={20} color="#374151" />
-              </TouchableOpacity>
+              </Pressable>
 
               <View className="items-center justify-center flex-1 px-3">
                 <View className="flex-row items-baseline justify-center">
@@ -120,8 +118,7 @@ export const LogMetricsModal: React.FC<LogMetricsModalProps> = ({
                 </Text>
               </View>
 
-              <TouchableOpacity
-                activeOpacity={0.7}
+              <Pressable
                 onPress={handleIncrement}
                 disabled={amount >= maxAmount}
                 className={`w-12 h-12 rounded-full items-center justify-center border shadow-sm ${
@@ -133,7 +130,7 @@ export const LogMetricsModal: React.FC<LogMetricsModalProps> = ({
                 accessibilityLabel="Increase value"
               >
                 <Feather name="plus" size={20} color="#374151" />
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             {/* Preset Activity Chips / Structured Cards (Only for Active Burn / Calories) */}
@@ -146,9 +143,8 @@ export const LogMetricsModal: React.FC<LogMetricsModalProps> = ({
                   {CALORIE_PRESETS.map((preset) => {
                     const isSelected = amount === preset.amount;
                     return (
-                      <TouchableOpacity
+                      <Pressable
                         key={preset.amount}
-                        activeOpacity={0.75}
                         onPress={() => setAmount(preset.amount)}
                         className={`flex-row items-center justify-between p-3 rounded-2xl border ${
                           isSelected
@@ -205,7 +201,7 @@ export const LogMetricsModal: React.FC<LogMetricsModalProps> = ({
                             +{preset.amount} kcal
                           </Text>
                         </View>
-                      </TouchableOpacity>
+                      </Pressable>
                     );
                   })}
                 </View>
@@ -214,8 +210,7 @@ export const LogMetricsModal: React.FC<LogMetricsModalProps> = ({
 
             {/* Brand-Cohesive Actions */}
             <View className="gap-1 mt-2">
-              <TouchableOpacity
-                activeOpacity={0.85}
+              <Pressable
                 onPress={handleSave}
                 className="w-full h-[40px] rounded-xl items-center justify-center active:opacity-90"
                 style={{
@@ -225,17 +220,16 @@ export const LogMetricsModal: React.FC<LogMetricsModalProps> = ({
                 <Text className="text-white text-xs font-bold tracking-wide">
                   {isHydration ? 'Save Hydration' : 'Save Active Burn'}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
 
-              <TouchableOpacity
-                activeOpacity={0.6}
+              <Pressable
                 onPress={onClose}
                 className="py-1.5 w-full items-center justify-center active:opacity-60"
               >
                 <Text className="text-zinc-400 text-[11px] font-bold uppercase tracking-wider">
                   Cancel
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
     </NativeSheet>

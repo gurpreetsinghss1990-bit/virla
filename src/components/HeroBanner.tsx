@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 
 export function HeroBanner() {
@@ -25,15 +25,14 @@ export function HeroBanner() {
           </Text>
         </View>
 
-        <TouchableOpacity
-          activeOpacity={0.8}
+        <Pressable
           onPress={handleBook}
           className="bg-primary py-3.5 px-6 rounded-2xl items-center justify-center self-start mt-2 shadow-sm"
         >
           <Text className="text-white text-sm font-bold tracking-wide">
             Book Session
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );

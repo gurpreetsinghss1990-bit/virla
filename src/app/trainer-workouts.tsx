@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -109,19 +109,19 @@ export default function TrainerWorkoutsScreen() {
         style={{ paddingTop: insets.top + 16 }}
         className="px-6 pb-4 bg-white border-b border-zinc-100 flex-row items-center justify-between"
       >
-        <TouchableOpacity 
+        <Pressable 
           onPress={() => router.back()}
           className="w-10 h-10 items-center justify-center bg-zinc-50 rounded-full"
         >
           <Ionicons name="arrow-back" size={20} color="#18181B" />
-        </TouchableOpacity>
+        </Pressable>
         <Text className="text-zinc-900 text-sm font-black tracking-tight">My Workouts</Text>
-        <TouchableOpacity 
+        <Pressable 
           onPress={() => syncFromDB()}
           className="w-10 h-10 items-center justify-center bg-zinc-50 rounded-full"
         >
           <Ionicons name="refresh" size={18} color="#18181B" />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       <ScrollView className="flex-1 px-6 pt-6" contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
@@ -165,12 +165,12 @@ export default function TrainerWorkoutsScreen() {
                     <Text className="text-zinc-400 text-[9px] font-black uppercase mt-0.5">🔒 VIRLA Controlled</Text>
                   </View>
                 </View>
-                <TouchableOpacity
+                <Pressable
                   onPress={() => handleRequestRemoval(a.workoutCategory, CATEGORIES.find(c => c.key === a.workoutCategory)?.name || a.workoutCategory)}
                   className="px-3 py-1.5 bg-rose-50 rounded-lg"
                 >
                   <Text className="text-rose-600 text-[9px] font-extrabold uppercase">Request Removal</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             ))}
           </View>
@@ -254,12 +254,12 @@ export default function TrainerWorkoutsScreen() {
         )}
 
         {/* Request Trigger */}
-        <TouchableOpacity
+        <Pressable
           onPress={() => setModalVisible(true)}
           className="mt-6 py-4 bg-zinc-950 rounded-2xl items-center justify-center"
         >
           <Text className="text-white text-xs font-black uppercase tracking-wider">Request Workout Assignment</Text>
-        </TouchableOpacity>
+        </Pressable>
       </ScrollView>
 
       {/* Picker Modal */}
@@ -270,12 +270,12 @@ export default function TrainerWorkoutsScreen() {
                 <Text className="text-zinc-900 text-lg font-black">Request Qualifications</Text>
                 <Text className="text-zinc-400 text-[10px] font-bold uppercase mt-0.5">Select workout category to teach</Text>
               </View>
-              <TouchableOpacity 
+              <Pressable 
                 onPress={() => setModalVisible(false)}
                 className="w-10 h-10 items-center justify-center bg-zinc-50 rounded-full"
               >
                 <Ionicons name="close" size={20} color="#18181B" />
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             <ScrollView className="space-y-2 mb-6">
@@ -285,7 +285,7 @@ export default function TrainerWorkoutsScreen() {
                 </View>
               ) : (
                 availableToRequest.map(cat => (
-                  <TouchableOpacity
+                  <Pressable
                     key={cat.key}
                     onPress={() => handleRequest(cat.key, cat.name)}
                     className="flex-row items-center p-4 rounded-2xl active:bg-zinc-50"
@@ -298,7 +298,7 @@ export default function TrainerWorkoutsScreen() {
                       )}
                     </View>
                     <Ionicons name="chevron-forward" size={16} color="#A1A1AA" />
-                  </TouchableOpacity>
+                  </Pressable>
                 ))
               )}
             </ScrollView>

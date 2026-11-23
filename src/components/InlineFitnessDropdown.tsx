@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Reanimated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { Feather, Ionicons } from '@expo/vector-icons';
 
@@ -31,9 +31,8 @@ export const InlineFitnessDropdown: React.FC<InlineFitnessDropdownProps> = React
       {FITNESS_LEVELS.map((item, index) => {
         const isSelected = value.toLowerCase() === item.level.toLowerCase();
         return (
-          <TouchableOpacity
+          <Pressable
             key={item.level}
-            activeOpacity={0.7}
             onPress={() => {
               onSelect(item.level);
               onClose();
@@ -61,7 +60,7 @@ export const InlineFitnessDropdown: React.FC<InlineFitnessDropdownProps> = React
             <View style={[styles.radioCircle, isSelected && styles.radioCircleSelected]}>
               {isSelected && <View style={styles.radioInnerDot} />}
             </View>
-          </TouchableOpacity>
+          </Pressable>
         );
       })}
     </Reanimated.View>

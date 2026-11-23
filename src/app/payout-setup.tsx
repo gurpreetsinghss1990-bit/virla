@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, StyleSheet, Platform } from 'react-native';
+import { View, Text, ScrollView, TextInput, Pressable, Alert, StyleSheet, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Database } from '../database/Database';
@@ -80,14 +80,13 @@ export default function PayoutSetupScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#FCF5F5', paddingTop: insets.top }}>
       <View className="h-16 flex-row items-center px-6 justify-between bg-white border-b border-zinc-150">
-        <TouchableOpacity
-          activeOpacity={0.8}
+        <Pressable
           onPress={() => router.replace('/(tabs)/profile' as any)}
           className="flex-row items-center gap-1"
         >
           <Feather name="arrow-left" size={16} color="#101828" />
           <Text className="text-zinc-900 text-xs font-bold uppercase tracking-wider">Cancel</Text>
-        </TouchableOpacity>
+        </Pressable>
         <Text className="text-[#E11D48] text-sm font-black tracking-widest uppercase">Payout Setup</Text>
         <View className="w-10" />
       </View>
@@ -175,8 +174,7 @@ export default function PayoutSetupScreen() {
             </View>
           </LuxuryCard>
 
-          <TouchableOpacity
-            activeOpacity={0.8}
+          <Pressable
             onPress={handleSave}
             disabled={submitting}
             className="w-full py-4 bg-[#E11D48] rounded-xl items-center justify-center mt-6 shadow-lg shadow-rose-950/20"
@@ -184,7 +182,7 @@ export default function PayoutSetupScreen() {
             <Text className="text-white text-xs font-black uppercase tracking-wider">
               {submitting ? 'Saving Configuration...' : 'Confirm Details'}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

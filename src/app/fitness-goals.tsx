@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, Platform } from 'react-native';
 import { InteractionManager } from '../utils/interactionManager';
 import { NativeGoalChip } from '../components/NativeGoalChip';
 import { NativePrimaryButton } from '../components/NativePrimaryButton';
@@ -210,8 +210,7 @@ export default function FitnessGoalsScreen() {
           </View>
 
           {/* Back Pill Button */}
-          <TouchableOpacity
-            activeOpacity={0.6}
+          <Pressable
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             onPress={() => {
               if (router.canGoBack()) {
@@ -225,7 +224,7 @@ export default function FitnessGoalsScreen() {
             accessibilityLabel="Back"
           >
             <Ionicons name="chevron-back" size={22} color="#101828" style={{ marginLeft: -1 }} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     </View>

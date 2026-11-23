@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   ScrollView,
   Animated,
   Vibration,
@@ -289,8 +288,7 @@ export function MetricsSelectionView({
             {/* Sex Options: Male, Female, Other */}
             <View className="flex-row gap-3">
               {/* Male Card */}
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Pressable
                 onPress={() => {
                   triggerHaptic();
                   setGender('Male');
@@ -348,11 +346,10 @@ export function MetricsSelectionView({
                 >
                   Male
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
 
               {/* Female Card */}
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Pressable
                 onPress={() => {
                   triggerHaptic();
                   setGender('Female');
@@ -409,11 +406,10 @@ export function MetricsSelectionView({
                 >
                   Female
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
 
               {/* Other Card */}
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Pressable
                 onPress={() => {
                   triggerHaptic();
                   setGender('Other');
@@ -470,7 +466,7 @@ export function MetricsSelectionView({
                 >
                   Other
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
         </MetricsFadeIn>
@@ -496,9 +492,8 @@ export function MetricsSelectionView({
                 {quickAges.map((qa) => {
                   const isSelected = parsedAge === qa;
                   return (
-                    <TouchableOpacity
+                    <Pressable
                       key={qa}
-                      activeOpacity={0.75}
                       onPress={() => {
                         triggerHaptic();
                         setAge(qa.toString());
@@ -519,7 +514,7 @@ export function MetricsSelectionView({
                       >
                         {qa}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 })}
               </View>
@@ -647,7 +642,7 @@ export function MetricsSelectionView({
                     padding: 2,
                   }}
                 >
-                  <TouchableOpacity
+                  <Pressable
                     onPress={() => {
                       triggerHaptic();
                       setHeightUnit('cm');
@@ -669,8 +664,8 @@ export function MetricsSelectionView({
                     >
                       cm
                     </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+                  </Pressable>
+                  <Pressable
                     onPress={() => {
                       triggerHaptic();
                       setHeightUnit('ft');
@@ -692,7 +687,7 @@ export function MetricsSelectionView({
                     >
                       ft
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </View>
 
@@ -812,7 +807,7 @@ export function MetricsSelectionView({
                     padding: 2,
                   }}
                 >
-                  <TouchableOpacity
+                  <Pressable
                     onPress={() => {
                       triggerHaptic();
                       setWeightUnit('kg');
@@ -834,8 +829,8 @@ export function MetricsSelectionView({
                     >
                       kg
                     </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+                  </Pressable>
+                  <Pressable
                     onPress={() => {
                       triggerHaptic();
                       setWeightUnit('lbs');
@@ -857,7 +852,7 @@ export function MetricsSelectionView({
                     >
                       lbs
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </View>
 
@@ -947,8 +942,7 @@ export function MetricsSelectionView({
               transform: [{ scale: continueScaleAnim }],
             }}
           >
-            <TouchableOpacity
-              activeOpacity={0.9}
+            <Pressable
               onPressIn={() => {
                 Animated.spring(continueScaleAnim, {
                   toValue: 0.97,
@@ -1002,7 +996,7 @@ export function MetricsSelectionView({
                 CONTINUE
               </Text>
               <Feather name="arrow-right" size={17} color="#FFFFFF" />
-            </TouchableOpacity>
+            </Pressable>
           </Animated.View>
         </View>
       </MetricsFadeIn>
@@ -1025,14 +1019,13 @@ export function MetricsSelectionView({
       >
         <View className="h-14 flex-row items-center px-4 justify-between">
           {/* Back Button */}
-          <TouchableOpacity
+          <Pressable
             onPress={onBack || (() => router.back())}
-            activeOpacity={0.6}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             className="w-10 h-10 items-center justify-center rounded-full"
           >
             <Ionicons name="arrow-back" size={24} color="#0F172A" />
-          </TouchableOpacity>
+          </Pressable>
 
           {/* Center Title */}
           <View className="flex-1 items-center px-2">

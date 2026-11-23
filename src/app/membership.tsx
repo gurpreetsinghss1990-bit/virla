@@ -2,7 +2,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, BackHandler, LayoutAnimation, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, BackHandler, LayoutAnimation, Platform, ScrollView, Text, Pressable, View } from 'react-native';
 import { InteractionManager } from '../utils/interactionManager';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
@@ -439,8 +439,7 @@ export default function MembershipScreen() {
         {/* Minimal Pill Segmented Switcher Category Selector */}
         <View className="flex-row items-center justify-center mb-3">
           <View style={{ backgroundColor: '#F4F4F6', padding: 4, borderRadius: 24, flexDirection: 'row' }}>
-            <TouchableOpacity
-              activeOpacity={0.85}
+            <Pressable
               onPress={() => handleSelectCategory('individual')}
               style={{
                 paddingVertical: 8,
@@ -452,9 +451,8 @@ export default function MembershipScreen() {
               <Text style={{ fontSize: 13, fontWeight: '700', color: activeCategory === 'individual' ? '#FFFFFF' : '#71717A' }}>
                 Solo Training
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.85}
+            </Pressable>
+            <Pressable
               onPress={() => handleSelectCategory('couple')}
               style={{
                 paddingVertical: 8,
@@ -466,7 +464,7 @@ export default function MembershipScreen() {
               <Text style={{ fontSize: 13, fontWeight: '700', color: activeCategory === 'couple' ? '#FFFFFF' : '#71717A' }}>
                 Train Together
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
 
@@ -533,8 +531,7 @@ export default function MembershipScreen() {
 
         {/* PREMIUM BENEFITS — Seamless Collapsible Dropdown */}
         <View className="mt-4 mb-4 px-0.5">
-          <TouchableOpacity
-            activeOpacity={0.7}
+          <Pressable
             onPress={toggleBenefits}
             className="flex-row items-center justify-between mb-3"
           >
@@ -553,7 +550,7 @@ export default function MembershipScreen() {
             <View className="w-7 h-7 rounded-full bg-zinc-100 items-center justify-center">
               <Feather name={isBenefitsExpanded ? "chevron-up" : "chevron-down"} size={14} color="#18181B" />
             </View>
-          </TouchableOpacity>
+          </Pressable>
 
           {isBenefitsExpanded && (
             <View className="gap-3 pt-1">
@@ -627,8 +624,7 @@ export default function MembershipScreen() {
             </View>
           </View>
 
-          <TouchableOpacity
-            activeOpacity={0.88}
+          <Pressable
             onPress={() => openPlanDetails(selectedPlan)}
             style={{
               backgroundColor: '#E11D48', // Virla signature primary red
@@ -645,7 +641,7 @@ export default function MembershipScreen() {
               Pay {selectedPlan.finalPrice || selectedPlan.price}
             </Text>
             <Feather name="arrow-right" size={13} color="#FFFFFF" />
-          </TouchableOpacity>
+          </Pressable>
         </Animated.View>
       )}
 
@@ -659,7 +655,7 @@ export default function MembershipScreen() {
           className="absolute top-0 left-0 right-0 bottom-0 bg-black/60 z-50 justify-end px-3.5"
         >
           {/* Transparent dismiss header */}
-          <TouchableOpacity onPress={closeDetails} className="flex-1" />
+          <Pressable onPress={closeDetails} className="flex-1" />
 
           <Animated.View
             style={{
@@ -687,13 +683,12 @@ export default function MembershipScreen() {
                           </Text>
                         </View>
                       </View>
-                      <TouchableOpacity
+                      <Pressable
                         onPress={closeDetails}
-                        activeOpacity={0.7}
                         className="w-10 h-10 rounded-full bg-zinc-100 items-center justify-center"
                       >
                         <Feather name="x" size={19} color="#18181B" />
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
 
                     <View className="gap-0.5">
@@ -721,8 +716,7 @@ export default function MembershipScreen() {
                       ))}
                     </View>
 
-                    <TouchableOpacity
-                      activeOpacity={0.85}
+                    <Pressable
                       onPress={startCheckout}
                       style={{
                         backgroundColor: '#E11D48', // Virla signature primary red
@@ -733,7 +727,7 @@ export default function MembershipScreen() {
                       className="items-center justify-center mt-2"
                     >
                       <Text className="text-white text-xs font-black uppercase tracking-wider">Continue →</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 ) : (
                   // Slide To Purchase Checkout (Feature 5)
@@ -741,20 +735,18 @@ export default function MembershipScreen() {
                     <View className="flex-row justify-between items-center border-b border-zinc-100 pb-2.5">
                       <Text className="text-zinc-950 text-base font-black uppercase tracking-tight">Checkout</Text>
                       <View className="flex-row items-center gap-2">
-                        <TouchableOpacity
+                        <Pressable
                           onPress={() => setCheckoutActive(false)}
-                          activeOpacity={0.7}
                           className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center"
                         >
                           <Feather name="arrow-left" size={16} color="#18181B" />
-                        </TouchableOpacity>
-                        <TouchableOpacity
+                        </Pressable>
+                        <Pressable
                           onPress={closeDetails}
-                          activeOpacity={0.7}
                           className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center"
                         >
                           <Feather name="x" size={16} color="#18181B" />
-                        </TouchableOpacity>
+                        </Pressable>
                       </View>
                     </View>
 
@@ -804,8 +796,7 @@ export default function MembershipScreen() {
 
                     {/* Compact Natural-Width Payment Gateway Button - App Primary Red Style */}
                     <View className="items-center gap-2 mt-2">
-                      <TouchableOpacity
-                        activeOpacity={0.75}
+                      <Pressable
                         disabled={isProcessing}
                         onPress={handlePayPhiPayment}
                         style={{
@@ -821,7 +812,7 @@ export default function MembershipScreen() {
                           Pay {selectedPlan.finalPrice || selectedPlan.price}
                         </Text>
                         <Feather name="arrow-right" size={13} color="#FFFFFF" />
-                      </TouchableOpacity>
+                      </Pressable>
 
                       {/* Clean Safety Guidance Note in Red */}
                       <View className="flex-row items-center justify-center gap-1.5 pt-0.5 px-2">
@@ -895,8 +886,7 @@ export default function MembershipScreen() {
                 </View>
 
                 <View className="w-full gap-3 mt-4">
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <Pressable
                     onPress={() => {
                       closeDetails();
                       router.replace('/wallet');
@@ -905,10 +895,9 @@ export default function MembershipScreen() {
                     style={{ height: 54 }}
                   >
                     <Text className="text-white text-sm font-extrabold uppercase">View Wallet</Text>
-                  </TouchableOpacity>
+                  </Pressable>
 
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <Pressable
                     onPress={() => {
                       closeDetails();
                     }}
@@ -916,7 +905,7 @@ export default function MembershipScreen() {
                     style={{ height: 54 }}
                   >
                     <Text className="text-zinc-700 text-sm font-extrabold uppercase">Done</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </View>
             )}
@@ -964,8 +953,7 @@ export default function MembershipScreen() {
           </View>
 
           {/* Back Pill Button */}
-          <TouchableOpacity
-            activeOpacity={0.6}
+          <Pressable
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             onPress={() => {
               if (router.canGoBack()) {
@@ -979,7 +967,7 @@ export default function MembershipScreen() {
             accessibilityLabel="Back"
           >
             <Ionicons name="chevron-back" size={22} color="#18181B" style={{ marginLeft: -1 }} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Localized Pill-shaped Scrim Fade for Help Button */}
@@ -1007,8 +995,7 @@ export default function MembershipScreen() {
             </Svg>
           </View>
 
-          <TouchableOpacity
-            activeOpacity={0.6}
+          <Pressable
             onPress={() => router.push('/help-support' as any)}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             className="w-10 h-10 rounded-full bg-white/90 shadow-xs items-center justify-center"
@@ -1016,7 +1003,7 @@ export default function MembershipScreen() {
             accessibilityLabel="Help"
           >
             <Feather name="help-circle" size={18} color="#18181B" />
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     </View>

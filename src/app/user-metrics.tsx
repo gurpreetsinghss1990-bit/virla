@@ -1,6 +1,6 @@
 import { Loading } from '../components/Loading';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Animated, Vibration, Platform, KeyboardAvoidingView, Dimensions, Alert, Image } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, Animated, Vibration, Platform, KeyboardAvoidingView, Dimensions, Alert, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -310,13 +310,12 @@ export default function UserMetricsLandingScreen() {
       >
         <View className="flex-row items-center justify-between">
           {/* Back Icon */}
-          <TouchableOpacity
+          <Pressable
             onPress={handleBack}
-            activeOpacity={0.7}
             className="w-10 h-10 items-center justify-center -ml-2"
           >
             <Feather name="chevron-left" size={26} color="#111827" />
-          </TouchableOpacity>
+          </Pressable>
 
           {/* Centered Title & Segmented Progress Bar */}
           <View className="items-center flex-1 mx-2">
@@ -382,8 +381,7 @@ export default function UserMetricsLandingScreen() {
 
                 <View className="flex-row justify-between gap-4 mt-8">
                   {/* Male Card */}
-                  <TouchableOpacity
-                    activeOpacity={0.88}
+                  <Pressable
                     onPress={() => {
                       triggerHaptic();
                       setGender('Male');
@@ -421,11 +419,10 @@ export default function UserMetricsLandingScreen() {
                         Male
                       </Text>
                     </View>
-                  </TouchableOpacity>
+                  </Pressable>
 
                   {/* Female Card */}
-                  <TouchableOpacity
-                    activeOpacity={0.88}
+                  <Pressable
                     onPress={() => {
                       triggerHaptic();
                       setGender('Female');
@@ -463,7 +460,7 @@ export default function UserMetricsLandingScreen() {
                         Female
                       </Text>
                     </View>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
 
                 <Text className="text-[#6B7280] text-sm text-center mt-7 leading-relaxed px-4">
@@ -534,7 +531,7 @@ export default function UserMetricsLandingScreen() {
                     </Text>
                     <View className="flex-row bg-[#F3F4F6] p-1 rounded-xl">
                       {(['kg', 'lbs'] as WeightUnit[]).map((u) => (
-                        <TouchableOpacity
+                        <Pressable
                           key={u}
                           onPress={() => {
                             triggerHaptic();
@@ -551,13 +548,13 @@ export default function UserMetricsLandingScreen() {
                           >
                             {u}
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       ))}
                     </View>
                   </View>
 
                   <View className="flex-row items-center justify-between w-full px-2 my-2">
-                    <TouchableOpacity
+                    <Pressable
                       onPress={() => {
                         triggerHaptic();
                         setWeight((prev) => Math.max(30, prev - 1));
@@ -565,7 +562,7 @@ export default function UserMetricsLandingScreen() {
                       className="w-13 h-13 rounded-2xl bg-[#FFF1F2] items-center justify-center"
                     >
                       <Feather name="minus" size={22} color="#E11D48" />
-                    </TouchableOpacity>
+                    </Pressable>
 
                     <View className="items-center">
                       <Text className="text-[#111827] text-5xl font-black tracking-tight">
@@ -576,7 +573,7 @@ export default function UserMetricsLandingScreen() {
                       </Text>
                     </View>
 
-                    <TouchableOpacity
+                    <Pressable
                       onPress={() => {
                         triggerHaptic();
                         setWeight((prev) => Math.min(250, prev + 1));
@@ -584,7 +581,7 @@ export default function UserMetricsLandingScreen() {
                       className="w-13 h-13 rounded-2xl bg-[#FFF1F2] items-center justify-center"
                     >
                       <Feather name="plus" size={22} color="#E11D48" />
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 </View>
 
@@ -596,7 +593,7 @@ export default function UserMetricsLandingScreen() {
                       HEIGHT ({heightUnit})
                     </Text>
                     <View className="flex-row items-center justify-between mt-3">
-                      <TouchableOpacity
+                      <Pressable
                         onPress={() => {
                           triggerHaptic();
                           setHeight((prev) => Math.max(90, prev - 1));
@@ -604,9 +601,9 @@ export default function UserMetricsLandingScreen() {
                         className="w-9 h-9 rounded-xl bg-[#FFF1F2] items-center justify-center"
                       >
                         <Feather name="minus" size={16} color="#E11D48" />
-                      </TouchableOpacity>
+                      </Pressable>
                       <Text className="text-[#111827] text-2xl font-black">{height}</Text>
-                      <TouchableOpacity
+                      <Pressable
                         onPress={() => {
                           triggerHaptic();
                           setHeight((prev) => Math.min(240, prev + 1));
@@ -614,7 +611,7 @@ export default function UserMetricsLandingScreen() {
                         className="w-9 h-9 rounded-xl bg-[#FFF1F2] items-center justify-center"
                       >
                         <Feather name="plus" size={16} color="#E11D48" />
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                   </View>
 
@@ -624,7 +621,7 @@ export default function UserMetricsLandingScreen() {
                       AGE (YEARS)
                     </Text>
                     <View className="flex-row items-center justify-between mt-3">
-                      <TouchableOpacity
+                      <Pressable
                         onPress={() => {
                           triggerHaptic();
                           setAge((prev) => Math.max(12, prev - 1));
@@ -632,9 +629,9 @@ export default function UserMetricsLandingScreen() {
                         className="w-9 h-9 rounded-xl bg-[#FFF1F2] items-center justify-center"
                       >
                         <Feather name="minus" size={16} color="#E11D48" />
-                      </TouchableOpacity>
+                      </Pressable>
                       <Text className="text-[#111827] text-2xl font-black">{age}</Text>
-                      <TouchableOpacity
+                      <Pressable
                         onPress={() => {
                           triggerHaptic();
                           setAge((prev) => Math.min(99, prev + 1));
@@ -642,7 +639,7 @@ export default function UserMetricsLandingScreen() {
                         className="w-9 h-9 rounded-xl bg-[#FFF1F2] items-center justify-center"
                       >
                         <Feather name="plus" size={16} color="#E11D48" />
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                   </View>
                 </View>
@@ -691,9 +688,8 @@ export default function UserMetricsLandingScreen() {
                   {INTEREST_TOPICS.map((item) => {
                     const isSelected = selectedInterests.includes(item.id);
                     return (
-                      <TouchableOpacity
+                      <Pressable
                         key={item.id}
-                        activeOpacity={0.85}
                         onPress={() => toggleInterest(item.id)}
                         style={{
                           width: (SCREEN_WIDTH - 40 - 24) / 3, // 3 columns with padding
@@ -729,7 +725,7 @@ export default function UserMetricsLandingScreen() {
                         >
                           {item.name}
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     );
                   })}
                 </View>
@@ -740,8 +736,7 @@ export default function UserMetricsLandingScreen() {
           {/* Bottom Action Footer */}
           <View className="mt-8 pt-2">
             {/* Primary Action Button (Red & White palette matching mockup) */}
-            <TouchableOpacity
-              activeOpacity={0.88}
+            <Pressable
               onPress={isSubmitting ? undefined : handleNext}
               disabled={isSubmitting}
               style={{
@@ -760,11 +755,10 @@ export default function UserMetricsLandingScreen() {
                   <Feather name="arrow-right" size={18} color="#FFFFFF" />
                 </>
               )}
-            </TouchableOpacity>
+            </Pressable>
 
             {/* Prefer not to choose / Skip footer link */}
-            <TouchableOpacity
-              activeOpacity={0.6}
+            <Pressable
               onPress={handleSkipOrPreferNotToSay}
               className="items-center justify-center mt-3 py-1"
             >
@@ -777,7 +771,7 @@ export default function UserMetricsLandingScreen() {
               </Text>
               {/* Subtle underline bar matching Android home/indicator bar */}
               <View className="w-32 h-1 bg-[#E5E7EB] rounded-full mt-2" />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

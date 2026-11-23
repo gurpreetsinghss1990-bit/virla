@@ -5,7 +5,7 @@ import {
   Platform,
   ScrollView,
   Text,
-  TouchableOpacity,
+  Pressable,
   View,
   useWindowDimensions,
 } from 'react-native';
@@ -52,14 +52,13 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
         {/* Top App Header */}
         <View className="bg-white border-b border-zinc-200 px-5 py-3.5 flex-row items-center justify-between shadow-xs">
           <View className="flex-row items-center gap-3 flex-1">
-            <TouchableOpacity
+            <Pressable
               onPress={onClose}
-              activeOpacity={0.7}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center"
             >
               <Feather name="x" size={18} color="#18181B" />
-            </TouchableOpacity>
+            </Pressable>
             <View className="flex-1">
               <Text className="text-zinc-900 text-base font-black tracking-tight" numberOfLines={1}>
                 {activeTab === 'terms' ? 'Terms of Service' : 'Privacy Policy'}
@@ -74,21 +73,19 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
           </View>
 
           {/* Quick External Link */}
-          <TouchableOpacity
+          <Pressable
             onPress={handleOpenBrowser}
-            activeOpacity={0.7}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             className="flex-row items-center gap-1 bg-zinc-50 px-2.5 py-1.5 rounded-lg"
           >
             <Feather name="external-link" size={13} color="#71717A" />
             <Text className="text-zinc-600 text-[11px] font-bold">Browser</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Tab Switcher (Terms vs Privacy) */}
         <View className="bg-white px-5 py-2.5 border-b border-zinc-100 flex-row gap-2">
-          <TouchableOpacity
-            activeOpacity={0.8}
+          <Pressable
             onPress={() => setActiveTab('terms')}
             className={`flex-1 py-2 rounded-xl items-center justify-center flex-row gap-1.5 border ${activeTab === 'terms'
               ? 'bg-rose-50 border-rose-200'
@@ -106,10 +103,9 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
             >
               Terms of Service
             </Text>
-          </TouchableOpacity>
+          </Pressable>
 
-          <TouchableOpacity
-            activeOpacity={0.8}
+          <Pressable
             onPress={() => setActiveTab('privacy')}
             className={`flex-1 py-2 rounded-xl items-center justify-center flex-row gap-1.5 border ${activeTab === 'privacy'
               ? 'bg-rose-50 border-rose-200'
@@ -127,7 +123,7 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
             >
               Privacy Policy
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Scrollable Document Content */}
@@ -394,15 +390,14 @@ export const LegalWebViewModal: React.FC<LegalWebViewModalProps> = ({
 
           {/* Bottom Dismiss Button */}
           <View className="mt-6 pt-4 border-t border-zinc-200">
-            <TouchableOpacity
+            <Pressable
               onPress={onClose}
-              activeOpacity={0.8}
               className="w-full bg-[#18181B] py-3.5 rounded-2xl items-center justify-center shadow-sm"
             >
               <Text className="text-white text-xs font-black uppercase tracking-wider">
                 I Understand & Close
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </ScrollView>
       </View>

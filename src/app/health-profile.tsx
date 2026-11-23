@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Pressable, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore } from '../store/userProfileStore';
@@ -40,17 +40,17 @@ export default function HealthProfileScreen() {
     <View style={{ flex: 1, backgroundColor: '#FCF5F5', paddingTop: insets.top }}>
       {/* Header */}
       <View className="h-14 flex-row items-center px-6 border-b border-[#E5E7EB] bg-white justify-between">
-        <TouchableOpacity onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
+        <Pressable onPress={() => router.back()} className="w-8 h-8 items-center justify-center">
           <Ionicons name="arrow-back" size={20} color="#101828" />
-        </TouchableOpacity>
+        </Pressable>
         <Text className="text-[#101828] text-sm font-black uppercase tracking-wider">
           Health & Medical profile
         </Text>
-        <TouchableOpacity onPress={() => { if (isEditing) { handleSave(); } else { setIsEditing(true); } }}>
+        <Pressable onPress={() => { if (isEditing) { handleSave(); } else { setIsEditing(true); } }}>
           <Text className="text-indigo-600 text-xs font-black uppercase">
             {isEditing ? 'Save' : 'Edit'}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
@@ -91,12 +91,12 @@ export default function HealthProfileScreen() {
             </View>
 
             {isEditing && (
-              <TouchableOpacity
+              <Pressable
                 onPress={handleSave}
                 className="w-full bg-[#101828] py-4 rounded-2xl items-center justify-center mt-3 shadow-xs"
               >
                 <Text className="text-white text-xs font-black uppercase">Save Medical Information</Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
 
           </View>

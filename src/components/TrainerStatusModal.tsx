@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeSheet } from './NativeSheet';
@@ -40,13 +40,12 @@ export const TrainerStatusModal: React.FC<TrainerStatusModalProps> = ({
               {isGoingOffline ? 'Go Offline?' : 'Go Online?'}
             </Text>
           </View>
-          <TouchableOpacity
+          <Pressable
             onPress={handleDismiss}
-            activeOpacity={0.7}
             style={styles.closeButton}
           >
             <Feather name="x" size={15} color="#101828" />
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Information & Impact Card */}
@@ -108,8 +107,7 @@ export const TrainerStatusModal: React.FC<TrainerStatusModalProps> = ({
         {/* Action Buttons */}
         <View style={styles.actionsContainer}>
           {/* Primary Action Button */}
-          <TouchableOpacity
-            activeOpacity={0.8}
+          <Pressable
             onPress={onConfirm}
             style={[
               styles.primaryButton,
@@ -119,18 +117,17 @@ export const TrainerStatusModal: React.FC<TrainerStatusModalProps> = ({
             <Text style={styles.primaryButtonText}>
               {isGoingOffline ? 'Confirm & Go Offline' : 'Confirm & Go Online'}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
 
           {/* Secondary Dismiss Button */}
-          <TouchableOpacity
-            activeOpacity={0.8}
+          <Pressable
             onPress={handleDismiss}
             style={styles.secondaryButton}
           >
             <Text style={styles.secondaryButtonText}>
               {isGoingOffline ? 'Keep Online' : 'Stay Offline'}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     </NativeSheet>

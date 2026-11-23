@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useWalletStore } from '../store/walletStore';
@@ -21,9 +21,9 @@ export default function InvoiceScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: 'white', paddingTop: insets.top }} className="justify-center items-center">
         <Text className="text-zinc-400 font-semibold">No invoice records found.</Text>
-        <TouchableOpacity onPress={() => router.back()} className="mt-4 bg-zinc-900 px-6 py-2 rounded-full">
+        <Pressable onPress={() => router.back()} className="mt-4 bg-zinc-900 px-6 py-2 rounded-full">
           <Text className="text-white font-bold text-xs">Go Back</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     );
   }
@@ -114,13 +114,12 @@ export default function InvoiceScreen() {
           </View>
 
           {/* Download invoice button (Feature 6) */}
-          <TouchableOpacity
-            activeOpacity={0.8}
+          <Pressable
             onPress={handleDownloadInvoice}
             className="w-full bg-[#101828] py-4 rounded-2xl items-center justify-center shadow-xs"
           >
             <Text className="text-white text-xs font-black uppercase">Download Invoice PDF</Text>
-          </TouchableOpacity>
+          </Pressable>
 
         </View>
       </ScrollView>

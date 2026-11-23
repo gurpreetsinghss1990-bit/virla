@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text as RNText, TouchableOpacity, LayoutChangeEvent } from 'react-native';
+import { View, Text as RNText, Pressable, LayoutChangeEvent } from 'react-native';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -123,9 +123,8 @@ export function NativeSegmentedControl<T extends string>({
       {items.map(({ key: r, label }, idx) => {
         const isActive = activeKey === r;
         return (
-          <TouchableOpacity
+          <Pressable
             key={r}
-            activeOpacity={0.75}
             onPress={() => onChangeKey(r)}
             style={{
               flex: 1,
@@ -154,7 +153,7 @@ export function NativeSegmentedControl<T extends string>({
             >
               {label}
             </RNText>
-          </TouchableOpacity>
+          </Pressable>
         );
       })}
     </View>

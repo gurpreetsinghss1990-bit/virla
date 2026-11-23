@@ -1,6 +1,6 @@
 import { Loading } from './Loading';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
+import { View, Text, Pressable, TextInput, ScrollView, Alert } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Database, SupportTicket } from '../database/Database';
@@ -92,13 +92,13 @@ export function RaiseSupportTicketModal({
               Report an issue
             </Text>
           </View>
-          <TouchableOpacity
+          <Pressable
             onPress={onClose}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             className="w-8 h-8 rounded-full bg-zinc-100 items-center justify-center"
           >
             <Ionicons name="close" size={18} color="#18181B" />
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         <ScrollView
@@ -128,9 +128,8 @@ export function RaiseSupportTicketModal({
             {reasonsList.map((r) => {
               const isSelected = selectedReason === r;
               return (
-                <TouchableOpacity
+                <Pressable
                   key={r}
-                  activeOpacity={0.7}
                   onPress={() => setSelectedReason(r)}
                   className={`px-3 py-2.5 rounded-lg border flex-row items-center justify-between ${
                     isSelected ? 'bg-zinc-100 border-zinc-900' : 'bg-white border-zinc-200'
@@ -144,7 +143,7 @@ export function RaiseSupportTicketModal({
                   }`}>
                     {isSelected && <View className="w-2 h-2 rounded-full bg-zinc-900" />}
                   </View>
-                </TouchableOpacity>
+                </Pressable>
               );
             })}
           </View>
@@ -166,9 +165,8 @@ export function RaiseSupportTicketModal({
             className="bg-white rounded-xl p-3 text-[13px] text-zinc-900 min-h-[84px] mb-5"
           />
 
-          <TouchableOpacity
+          <Pressable
             disabled={isSubmitting || !selectedReason}
-            activeOpacity={0.8}
             onPress={handleSubmit}
             className={`w-full py-3 rounded-xl items-center justify-center flex-row gap-2 ${
               isSubmitting || !selectedReason ? 'bg-zinc-300' : 'bg-[#101828]'
@@ -184,7 +182,7 @@ export function RaiseSupportTicketModal({
                 </Text>
               </>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </ScrollView>
       </View>
     </NativeSheet>

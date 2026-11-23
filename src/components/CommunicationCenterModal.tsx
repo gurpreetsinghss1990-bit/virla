@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, Pressable, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeSheet } from './NativeSheet';
@@ -37,8 +37,7 @@ export const CommunicationCenterModal: React.FC<CommunicationCenterModalProps> =
             {/* Options Destination List - Clean, borderless & seamless */}
             <View className="gap-1">
               {/* Notifications Center Option */}
-              <TouchableOpacity
-                activeOpacity={0.6}
+              <Pressable
                 onPress={onSelectNotifications}
                 className="flex-row items-center py-3 px-2 rounded-xl active:bg-zinc-50"
               >
@@ -61,11 +60,10 @@ export const CommunicationCenterModal: React.FC<CommunicationCenterModalProps> =
                 )}
 
                 <Feather name="chevron-right" size={16} color="#94A3B8" />
-              </TouchableOpacity>
+              </Pressable>
 
               {/* Messages (Chats) Option */}
-              <TouchableOpacity
-                activeOpacity={0.6}
+              <Pressable
                 onPress={onSelectMessages}
                 className="flex-row items-center py-3 px-2 rounded-xl active:bg-zinc-50"
               >
@@ -80,7 +78,7 @@ export const CommunicationCenterModal: React.FC<CommunicationCenterModalProps> =
                 </View>
 
                 <Feather name="chevron-right" size={16} color="#94A3B8" />
-              </TouchableOpacity>
+              </Pressable>
             </View>
       </View>
     </NativeSheet>

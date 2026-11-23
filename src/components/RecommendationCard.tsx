@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, Pressable, Alert } from 'react-native';
 import { useWorkoutStore } from '../store/workoutStore';
 import { useBookingStore } from '../store/bookingStore';
 import { useMembershipStore } from '../store/membershipStore';
@@ -78,8 +78,7 @@ export function RecommendationCard() {
         {recommendationMessage}
       </Text>
       
-      <TouchableOpacity
-        activeOpacity={0.8}
+      <Pressable
         onPress={handleBookNow}
         disabled={booked}
         className={`py-3 px-6 rounded-2xl items-center justify-center self-start shadow-xs ${
@@ -89,7 +88,7 @@ export function RecommendationCard() {
         <Text className={`text-sm font-bold ${booked ? 'text-zinc-500' : 'text-white'}`}>
           {booked ? 'Booked' : 'Book Now'}
         </Text>
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 }

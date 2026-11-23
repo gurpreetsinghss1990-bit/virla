@@ -3,7 +3,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { useRouter, type Href } from 'expo-router';
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { Alert, Image, Platform, Text, TouchableOpacity, View, StyleSheet, AppState, AppStateStatus, Vibration, Linking } from 'react-native';
+import { Alert, Image, Platform, Text, Pressable, View, StyleSheet, AppState, AppStateStatus, Vibration, Linking } from 'react-native';
 import Svg, { Rect, Defs, LinearGradient, Stop, Circle, Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ReanimatedAnimated, { 
@@ -288,8 +288,7 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
   const customerGender = getClientGender(booking);
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.8}
+    <Pressable
       onPress={() => onPress(booking.id)}
       className="bg-white p-5 rounded-[28px] shadow-sm gap-4 mb-4"
     >
@@ -327,7 +326,7 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
       <View className="h-[1px] bg-zinc-100 my-1" />
 
       <View className="flex-row">
-        <TouchableOpacity
+        <Pressable
           disabled={countdownNum === null}
           onPress={(e) => {
             e.stopPropagation();
@@ -340,9 +339,9 @@ export function RequestCard({ booking, onAccept, onDecline, onTimeout, onPress }
           <Text className={`text-xs font-black uppercase ${countdownNum === null ? 'text-zinc-500' : 'text-white'}`}>
             {countdownNum === null ? 'Expired' : 'Accept Request'}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -357,8 +356,7 @@ export function AcknowledgementCard({ booking, onAcknowledge, onPress }: Acknowl
   const customerGender = getClientGender(booking);
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.8}
+    <Pressable
       onPress={() => onPress(booking.id)}
       className="bg-white border-2 border-amber-500/30 p-5 rounded-[28px] shadow-sm gap-4 mb-4"
     >
@@ -400,7 +398,7 @@ export function AcknowledgementCard({ booking, onAcknowledge, onPress }: Acknowl
       <View className="h-[1px] bg-zinc-100 my-1" />
 
       <View className="flex-row">
-        <TouchableOpacity
+        <Pressable
           onPress={(e) => {
             e.stopPropagation();
             onAcknowledge(booking.id);
@@ -410,9 +408,9 @@ export function AcknowledgementCard({ booking, onAcknowledge, onPress }: Acknowl
           <Text className="text-xs font-black uppercase text-white">
             Acknowledge Request
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -1205,8 +1203,7 @@ export default function HomeScreen() {
       {/* Dynamic Header */}
       <View className="h-16 flex-row items-center justify-between px-5 bg-[#FCF5F5]">
         <View className="relative flex-row items-center">
-          <TouchableOpacity
-            activeOpacity={1}
+          <Pressable
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
             className="pr-3 py-1"
@@ -1244,7 +1241,7 @@ export default function HomeScreen() {
             >
               Wellness At Your Doorstep
             </Text>
-          </TouchableOpacity>
+          </Pressable>
 
           {isHolding && (
             <View className="absolute right-0 top-3 w-8 h-8 items-center justify-center">
@@ -1274,8 +1271,7 @@ export default function HomeScreen() {
           )}
         </View>
         <View className="flex-row items-center gap-3">
-          <TouchableOpacity
-            activeOpacity={0.7}
+          <Pressable
             onPressIn={handleCommunicationCenter}
             className="w-10 h-10 rounded-full bg-white border border-[#F1E5E7] items-center justify-center relative"
             style={softShadow({ color: '#0F172A', opacity: 0.05, radius: 4, offsetY: 1 })}
@@ -1301,10 +1297,9 @@ export default function HomeScreen() {
                 </Text>
               </View>
             )}
-          </TouchableOpacity>
+          </Pressable>
 
-          <TouchableOpacity
-            activeOpacity={0.8}
+          <Pressable
             onPress={() => navigateSafely('/(tabs)/profile')}
             className="w-10 h-10 rounded-full overflow-hidden relative items-center justify-center p-[1.5px]"
             style={{
@@ -1333,7 +1328,7 @@ export default function HomeScreen() {
                 borderColor: '#FFFFFF',
               }}
             />
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
       {loading ? (
@@ -1341,8 +1336,7 @@ export default function HomeScreen() {
       ) : (
         <View className="flex-1 bg-[#FCF5F5]">
           {activeBooking && (role === 'customer' || role === 'admin') && (
-            <TouchableOpacity
-              activeOpacity={0.88}
+            <Pressable
               onPress={() => navigateSafely({ pathname: '/session-detail', params: { id: activeBooking.id } })}
               className="mx-6 mt-3 mb-2 bg-zinc-950 border border-zinc-800 rounded-[22px] flex-row items-center justify-between p-4 shadow-lg"
               style={{
@@ -1399,7 +1393,7 @@ export default function HomeScreen() {
               >
                 <Feather name="chevron-right" size={16} color="#FFFFFF" />
               </View>
-            </TouchableOpacity>
+            </Pressable>
           )}
 
           <ReanimatedAnimated.ScrollView
@@ -1537,8 +1531,7 @@ export default function HomeScreen() {
                   </View>
 
                   {/* Schedule Session Button */}
-                  <TouchableOpacity
-                    activeOpacity={0.92}
+                  <Pressable
                     onPress={() => navigateSafely('/booking')}
                     className="w-full h-12 bg-[#E11D48] rounded-2xl justify-between items-center px-4 flex-row mt-1"
                     style={{
@@ -1557,7 +1550,7 @@ export default function HomeScreen() {
                     <View className="w-6 h-6 rounded-full bg-white/20 items-center justify-center">
                       <Feather name="chevron-right" size={13} color="white" />
                     </View>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
                 </View>
               </View>
@@ -1568,11 +1561,11 @@ export default function HomeScreen() {
                   <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 18, color: '#0F172A', letterSpacing: -0.3 }}>
                     Choose Your Workout
                   </Text>
-                  <TouchableOpacity onPress={() => navigateSafely('/booking')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Pressable onPress={() => navigateSafely('/booking')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                     <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#E11D48' }}>
                       View All ›
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
 
                 <ReanimatedAnimated.ScrollView
@@ -1596,9 +1589,8 @@ export default function HomeScreen() {
                     { id: 'rhythm', title: 'Rhythm', sub: 'Cardio & Beats', icon: 'zap', colors: ['#F472B6', '#BE185D'], video: WORKOUT_BG_RHYTHM },
                     { id: 'boxing', title: 'Boxing', sub: 'Power & Endurance', icon: 'shield', colors: ['#FBBF24', '#EA580C'], video: WORKOUT_BG_BOXING }
                   ].map((item) => (
-                    <TouchableOpacity
+                    <Pressable
                       key={item.id}
-                      activeOpacity={0.88}
                       onPress={() => navigateSafely({
                         pathname: '/booking',
                         params: {
@@ -1658,7 +1650,7 @@ export default function HomeScreen() {
                         </View>
                       </View>
                       </View>
-                    </TouchableOpacity>
+                    </Pressable>
                   ))}
                 </ReanimatedAnimated.ScrollView>
               </View>
@@ -1758,8 +1750,7 @@ export default function HomeScreen() {
 
                       <NativeDivider color="#F1E5E7" />
 
-                      <TouchableOpacity
-                        activeOpacity={0.8}
+                      <Pressable
                         onPress={() => {
                           navigateSafely({ pathname: '/session-detail', params: { id: activeBooking.id } });
                         }}
@@ -1769,7 +1760,7 @@ export default function HomeScreen() {
                         <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 12, color: '#E11D48', letterSpacing: 0.5, textTransform: 'uppercase' }}>
                           Track Coach Live
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                   );
                 })() : (
@@ -1850,8 +1841,7 @@ export default function HomeScreen() {
 
                 <View className="flex-row flex-wrap justify-between gap-y-3">
                   {/* Calories Widget */}
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <Pressable
                     onPress={handleLogCalories}
                     className="w-[48%] rounded-2xl p-4 justify-between bg-white border border-[#F1E5E7]"
                     style={softShadow({ color: '#0F172A', opacity: 0.05, radius: 10, offsetY: 2 })}
@@ -1882,11 +1872,10 @@ export default function HomeScreen() {
                       trackColor="#F1F5F9"
                       height={6}
                     />
-                  </TouchableOpacity>
+                  </Pressable>
 
                   {/* Hydration Widget */}
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <Pressable
                     onPress={handleLogWater}
                     className="w-[48%] rounded-2xl p-4 justify-between bg-white border border-[#F1E5E7]"
                     style={softShadow({ color: '#0F172A', opacity: 0.05, radius: 10, offsetY: 2 })}
@@ -1917,11 +1906,10 @@ export default function HomeScreen() {
                       trackColor="#F1F5F9"
                       height={6}
                     />
-                  </TouchableOpacity>
+                  </Pressable>
 
                   {/* Wallet Credits Widget */}
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <Pressable
                     onPress={() => navigateSafely('/membership')}
                     className="w-[48%] rounded-2xl p-4 justify-between bg-white border border-[#F1E5E7]"
                     style={softShadow({ color: '#0F172A', opacity: 0.05, radius: 10, offsetY: 2 })}
@@ -1947,11 +1935,10 @@ export default function HomeScreen() {
                       trackColor="#F1F5F9"
                       height={6}
                     />
-                  </TouchableOpacity>
+                  </Pressable>
 
                   {/* Workout Streak Widget */}
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <Pressable
                     onPress={() => navigateSafely('/(tabs)/progress')}
                     className="w-[48%] rounded-2xl p-4 justify-between bg-white border border-[#F1E5E7]"
                     style={softShadow({ color: '#0F172A', opacity: 0.05, radius: 10, offsetY: 2 })}
@@ -1980,7 +1967,7 @@ export default function HomeScreen() {
                       trackColor="#F1F5F9"
                       height={6}
                     />
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </View>
 
@@ -2061,8 +2048,7 @@ export default function HomeScreen() {
                       </View>
                     )}
 
-                    <TouchableOpacity
-                      activeOpacity={0.88}
+                    <Pressable
                       onPress={() => navigateSafely('/virla-ai')}
                       className="bg-[#E11D48] rounded-full py-2.5 px-4 flex-row items-center self-start gap-2 mt-1.5"
                       style={softShadow({ color: '#E11D48', opacity: 0.3, radius: 8, offsetY: 3 })}
@@ -2071,7 +2057,7 @@ export default function HomeScreen() {
                         {savedPlan ? 'View Plan' : 'Get Started'}
                       </Text>
                       <Feather name="chevron-right" size={11} color="white" />
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 </View>
                 </View>
@@ -2173,22 +2159,20 @@ export default function HomeScreen() {
                             </Text>
                           </View>
 
-                          <TouchableOpacity
-                            activeOpacity={0.8}
+                          <Pressable
                             onPress={() => navigateSafely({ pathname: '/session-detail', params: { id: bookingData.id } })}
                             className="w-10 h-10 rounded-full bg-[#16C784] items-center justify-center"
                             style={softShadow({ color: '#16C784', opacity: 0.25, radius: 10, offsetY: 4 })}
                           >
                             <Feather name="navigation" size={15} color="white" />
-                          </TouchableOpacity>
+                          </Pressable>
                         </View>
                       </View>
 
                       {bookingData.sessionType === 'SINGLE' && bookingData.timelineStatus !== 'otp_verified' && bookingData.timelineStatus !== 'workout_started' && bookingData.timelineStatus !== 'workout_completed' && bookingData.timelineStatus !== 'session_closed' && bookingData.status === 'upcoming' && (
                         <>
                           <NativeDivider color="#F1E5E7" className="mt-2 mb-1" />
-                          <TouchableOpacity
-                            activeOpacity={0.8}
+                          <Pressable
                             onPress={() => {
                               setActivePartnerBookingId(bookingData.id);
                               setPartnerModalVisible(true);
@@ -2199,7 +2183,7 @@ export default function HomeScreen() {
                             <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 11, color: '#E11D48', letterSpacing: 0.5, textTransform: 'uppercase' }}>
                               Add Partner
                             </Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         </>
                       )}
 
@@ -2241,15 +2225,14 @@ export default function HomeScreen() {
                         Schedule your next personal training session today.
                       </Text>
                     </View>
-                    <TouchableOpacity
-                      activeOpacity={0.88}
+                    <Pressable
                       onPress={() => navigateSafely('/booking')}
                       className="border border-rose-200 bg-rose-50/50 px-5 py-2.5 rounded-xl shadow-sm"
                     >
                       <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#E11D48' }}>
                         Book Doorstep Trainer Now
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 )}
               </View>
@@ -2270,8 +2253,7 @@ export default function HomeScreen() {
                     </Text>
                   </View>
                   
-                  <TouchableOpacity
-                    activeOpacity={0.8}
+                  <Pressable
                     onPress={toggleOnlineStatus}
                     className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full bg-white shadow-sm"
                   >
@@ -2279,7 +2261,7 @@ export default function HomeScreen() {
                     <Text className={`text-[11px] font-semibold tracking-wide ${trainerOnlineStatus === 'online' ? 'text-[#16C784]' : 'text-red-500'}`}>
                       {trainerOnlineStatus === 'online' ? 'ONLINE' : 'OFFLINE'}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
                 <Text className="text-zinc-500 text-xs font-medium mt-1.5">
                   {getFormattedToday()}
@@ -2326,7 +2308,7 @@ export default function HomeScreen() {
                       <Text className="text-zinc-400 text-xs font-bold uppercase tracking-wider pl-1">
                         New Session Requests • {requests.length}
                       </Text>
-                      <TouchableOpacity 
+                      <Pressable 
                         onPress={handleManualRefresh}
                         disabled={isRefreshing}
                         className="bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-150 flex-row items-center gap-1.5"
@@ -2335,7 +2317,7 @@ export default function HomeScreen() {
                         <Text className="text-[#4F46E5] text-xs font-semibold uppercase">
                           {isRefreshing ? 'Syncing...' : 'Sync'}
                         </Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                     {requests.map(req => (
                       <RequestCard
@@ -2406,7 +2388,7 @@ export default function HomeScreen() {
                       </Text>
                     </View>
 
-                    <TouchableOpacity
+                    <Pressable
                       onPress={() => navigateSafely({ pathname: '/session-detail', params: { id: activeSession.id } })}
                       className="w-full bg-rose-500 py-3.5 rounded-2xl items-center justify-center flex-row gap-2"
                       style={{
@@ -2415,7 +2397,7 @@ export default function HomeScreen() {
                       }}
                     >
                       <Text className="text-white text-xs font-bold uppercase tracking-wider">Open Session →</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 </View>
               ) : null}
@@ -2474,7 +2456,7 @@ export default function HomeScreen() {
 
                       {nextSession.timelineStatus !== 'workout_started' && (
                         <View className="flex-row gap-2 flex-wrap">
-                          <TouchableOpacity
+                          <Pressable
                             onPress={() => {
                               if (SessionEngine.isTravelWindowOpen(nextSession)) {
                                 navigateSafely({ pathname: '/session-detail', params: { id: nextSession.id, openMap: 'true' } });
@@ -2492,9 +2474,9 @@ export default function HomeScreen() {
                           >
                             <Feather name="navigation" size={12} color="white" />
                             <Text numberOfLines={1} className="text-white text-[11px] font-semibold uppercase">Navigate</Text>
-                          </TouchableOpacity>
+                          </Pressable>
 
-                          <TouchableOpacity
+                          <Pressable
                             onPress={() => {
                               if (getMinutesToSession(nextSession) <= 60) {
                                 setNativeAlertState({
@@ -2518,15 +2500,15 @@ export default function HomeScreen() {
                           >
                             <Feather name="phone" size={12} color="white" />
                             <Text numberOfLines={1} className="text-white text-[11px] font-semibold uppercase">Call Client</Text>
-                          </TouchableOpacity>
+                          </Pressable>
 
-                          <TouchableOpacity
+                          <Pressable
                             onPress={() => navigateSafely({ pathname: '/communication', params: { id: nextSession.id } })}
                             className="flex-1 min-w-[80px] bg-zinc-900 border border-zinc-800 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5 px-2"
                           >
                             <Feather name="message-square" size={12} color="white" />
                             <Text numberOfLines={1} className="text-white text-[11px] font-semibold uppercase">Message</Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         </View>
                       )}
 
@@ -2541,7 +2523,7 @@ export default function HomeScreen() {
                             </Text>
                           </View>
                           {SessionEngine.isTravelWindowOpen(nextSession) ? (
-                            <TouchableOpacity
+                            <Pressable
                               onPress={async () => {
                                 try {
                                   const started = await locationTrackerService.startTracking(nextSession.id, true);
@@ -2569,10 +2551,9 @@ export default function HomeScreen() {
                               className="w-full bg-indigo-600 py-3.5 rounded-xl items-center justify-center"
                             >
                               <Text className="text-white text-xs font-bold uppercase tracking-wider">Start Travel</Text>
-                            </TouchableOpacity>
+                            </Pressable>
                           ) : (
-                            <TouchableOpacity
-                              activeOpacity={0.8}
+                            <Pressable
                               onPress={() => {
                                 setNativeAlertState({
                                   visible: true,
@@ -2585,11 +2566,11 @@ export default function HomeScreen() {
                               className="w-full bg-zinc-800/70 border border-zinc-700/50 py-3.5 rounded-xl items-center justify-center"
                             >
                               <Text className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Start Travel (Unlocks 30m prior)</Text>
-                            </TouchableOpacity>
+                            </Pressable>
                           )}
                         </View>
                       ) : nextSession.timelineStatus === 'trainer_travelling' ? (
-                        <TouchableOpacity
+                        <Pressable
                           onPress={async () => {
                             try {
                               await updateTimelineStatus(nextSession.id, 'trainer_arrived');
@@ -2612,16 +2593,16 @@ export default function HomeScreen() {
                           className="w-full bg-emerald-600 py-3.5 rounded-xl items-center justify-center"
                         >
                           <Text className="text-white text-xs font-bold uppercase tracking-wider">Reached Location</Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       ) : (
-                        <TouchableOpacity
+                        <Pressable
                           onPress={() => navigateSafely({ pathname: '/session-detail', params: { id: nextSession.id } })}
                           className="w-full bg-zinc-800 py-3.5 rounded-xl items-center justify-center"
                         >
                           <Text className="text-white text-xs font-bold uppercase tracking-wider">
                             {nextSession.timelineStatus === 'trainer_arrived' ? 'Waiting client OTP check-in' : 'Open active console'}
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       )}
                     </View>
                   );
@@ -2660,9 +2641,8 @@ export default function HomeScreen() {
                     {todayDisplayBookings.map((booking) => {
                       const isCancelledByUser = booking.status === 'cancelled';
                       return (
-                      <TouchableOpacity 
+                      <Pressable 
                         key={booking.id} 
-                        activeOpacity={isCancelledByUser ? 1 : 0.8}
                         disabled={isCancelledByUser}
                         onPress={isCancelledByUser ? undefined : () => navigateSafely({ pathname: '/session-detail', params: { id: booking.id } })}
                         className={`bg-white border border-[#E5E7EB] p-4 rounded-2xl flex-row justify-between items-center ${isCancelledByUser ? 'opacity-70' : ''}`}
@@ -2708,7 +2688,7 @@ export default function HomeScreen() {
                               : 'Confirmed'}
                           </Text>
                         </View>
-                      </TouchableOpacity>
+                      </Pressable>
                       );
                     })}
                   </View>
@@ -2743,13 +2723,13 @@ export default function HomeScreen() {
                       </View>
                     </View>
                     
-                    <TouchableOpacity
+                    <Pressable
                       onPress={() => navigateSafely('/bookings')}
                       className="bg-indigo-600 p-3 rounded-2xl items-center justify-center flex-row gap-1.5"
                     >
                       <Feather name="calendar" size={14} color="white" />
                       <Text className="text-white text-xs font-semibold uppercase tracking-wider">Manage availability →</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 ) : (
                   <View 
@@ -2765,9 +2745,9 @@ export default function HomeScreen() {
                           <Text className="text-zinc-900 text-xs font-bold uppercase">
                             {tomorrowBookings.length} {tomorrowBookings.length === 1 ? 'Session' : 'Sessions'} Scheduled
                           </Text>
-                          <TouchableOpacity onPress={() => navigateSafely('/bookings')}>
+                          <Pressable onPress={() => navigateSafely('/bookings')}>
                             <Text className="text-indigo-600 text-xs font-bold uppercase tracking-wider">View All →</Text>
-                          </TouchableOpacity>
+                          </Pressable>
                         </View>
                         
                         <View className="gap-2 mt-1">
@@ -2796,15 +2776,14 @@ export default function HomeScreen() {
                           </View>
                         </View>
                         
-                        <TouchableOpacity
-                          activeOpacity={0.8}
+                        <Pressable
                           onPress={() => navigateSafely('/bookings')}
                           className="bg-zinc-950 py-2.5 px-4 rounded-xl"
                         >
                           <Text className="text-white text-xs font-semibold tracking-wide">
                             Manage →
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       </View>
                     )}
                   </View>

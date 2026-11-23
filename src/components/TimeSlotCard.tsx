@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, Pressable, View } from 'react-native';
 
 interface TimeSlotCardProps {
   slot: string; // E.g., "08:00 AM - 09:00 AM"
@@ -20,8 +20,7 @@ export function TimeSlotCard({ slot, isSelected, isAvailable, onPress }: TimeSlo
   }
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.7}
+    <Pressable
       onPress={onPress}
       className={`w-[47%] p-4 rounded-2xl border-2 items-center justify-center ${
         isSelected 
@@ -36,6 +35,6 @@ export function TimeSlotCard({ slot, isSelected, isAvailable, onPress }: TimeSlo
       >
         {slot}
       </Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 }

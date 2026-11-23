@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, Image, Vibration } from 'react-native';
+import { View, Text, Pressable, ScrollView, TextInput, Alert, Animated, Platform, KeyboardAvoidingView, Image, Vibration } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -595,23 +595,21 @@ export default function VirlaAIScreen() {
       <View style={{ paddingTop: insets.top, backgroundColor: '#FFFFFF' }} className="z-10">
         <View className="h-14 flex-row items-center px-4 justify-between">
           {step > 1 && !generatedPlan ? (
-            <TouchableOpacity 
+            <Pressable 
               onPress={handleBack} 
-              activeOpacity={0.6}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               className="w-10 h-10 items-center justify-center rounded-full"
             >
               <Ionicons name="arrow-back" size={24} color="#0F172A" />
-            </TouchableOpacity>
+            </Pressable>
           ) : (
-            <TouchableOpacity 
+            <Pressable 
               onPress={() => router.back()} 
-              activeOpacity={0.6}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               className="w-10 h-10 items-center justify-center rounded-full bg-slate-100/80"
             >
               <Ionicons name="close" size={20} color="#0F172A" />
-            </TouchableOpacity>
+            </Pressable>
           )}
 
           <View className="flex-1 items-center justify-center px-2">
@@ -646,14 +644,13 @@ export default function VirlaAIScreen() {
           </View>
 
           {generatedPlan ? (
-            <TouchableOpacity
+            <Pressable
               onPress={handleRegenerate}
-              activeOpacity={0.6}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               className="w-10 h-10 items-center justify-center rounded-full bg-slate-100/80"
             >
               <Feather name="refresh-cw" size={17} color="#0F172A" />
-            </TouchableOpacity>
+            </Pressable>
           ) : step > 1 ? (
             <View
               style={{
@@ -872,8 +869,7 @@ export default function VirlaAIScreen() {
 
                   <StepIn delay={480}>
                   <View className="gap-2 mt-2">
-                    <TouchableOpacity
-                      activeOpacity={0.9}
+                    <Pressable
                       onPress={() => {
                         try {
                           Vibration.vibrate(12);
@@ -904,7 +900,7 @@ export default function VirlaAIScreen() {
                         Start Assessment
                       </Text>
                       <Feather name="arrow-right" size={17} color="#FFFFFF" />
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                   </StepIn>
                 </View>
@@ -990,8 +986,7 @@ export default function VirlaAIScreen() {
                           const isSel = workoutFrequency === num;
                           return (
                             <StepIn key={num} delay={100 + n * 40} style={{ flex: 1 }}>
-                              <TouchableOpacity
-                                activeOpacity={0.9}
+                              <Pressable
                                 onPress={() => {
                                   try { Vibration.vibrate(10); } catch {}
                                   setWorkoutFrequency(num);
@@ -1019,7 +1014,7 @@ export default function VirlaAIScreen() {
                                 >
                                   {num}d
                                 </Text>
-                              </TouchableOpacity>
+                              </Pressable>
                             </StepIn>
                           );
                         })}
@@ -1050,9 +1045,8 @@ export default function VirlaAIScreen() {
                         ].map((act) => {
                           const isSel = activityLevel === act.id;
                           return (
-                            <TouchableOpacity
+                            <Pressable
                               key={act.id}
-                              activeOpacity={0.9}
                               onPress={() => {
                                 try { Vibration.vibrate(10); } catch {}
                                 setActivityLevel(act.id);
@@ -1076,7 +1070,7 @@ export default function VirlaAIScreen() {
                               >
                                 {act.label}
                               </Text>
-                            </TouchableOpacity>
+                            </Pressable>
                           );
                         })}
                       </View>
@@ -1085,8 +1079,7 @@ export default function VirlaAIScreen() {
 
                   <StepIn delay={300}>
                     <View className="gap-2 mt-8 mb-2">
-                      <TouchableOpacity
-                        activeOpacity={0.9}
+                      <Pressable
                         onPress={() => {
                           try { Vibration.vibrate(12); } catch {}
                           handleNext();
@@ -1116,7 +1109,7 @@ export default function VirlaAIScreen() {
                           CONTINUE
                         </Text>
                         <Feather name="arrow-right" size={17} color="#FFFFFF" />
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                   </StepIn>
                 </View>
@@ -1296,8 +1289,7 @@ export default function VirlaAIScreen() {
 
                   <StepIn delay={250}>
                     <View className="gap-2 mt-8 mb-2">
-                      <TouchableOpacity
-                        activeOpacity={0.9}
+                      <Pressable
                         onPress={() => {
                           try { Vibration.vibrate(12); } catch {}
                           handleNext();
@@ -1327,7 +1319,7 @@ export default function VirlaAIScreen() {
                           CONTINUE
                         </Text>
                         <Feather name="arrow-right" size={17} color="#FFFFFF" />
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                   </StepIn>
                 </View>
@@ -1459,8 +1451,7 @@ export default function VirlaAIScreen() {
 
                   <StepIn delay={250}>
                     <View className="gap-2 mt-8 mb-2">
-                      <TouchableOpacity
-                        activeOpacity={0.9}
+                      <Pressable
                         onPress={() => {
                           try { Vibration.vibrate(12); } catch {}
                           handleNext();
@@ -1490,7 +1481,7 @@ export default function VirlaAIScreen() {
                           CONTINUE
                         </Text>
                         <Feather name="arrow-right" size={17} color="#FFFFFF" />
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                   </StepIn>
                 </View>
@@ -1654,8 +1645,7 @@ export default function VirlaAIScreen() {
                 ...softShadow({ color: '#0F172A', opacity: 0.06, radius: 10, offsetY: -4 }),
               }}
             >
-              <TouchableOpacity
-                activeOpacity={0.9}
+              <Pressable
                 onPress={() => {
                   try {
                     Vibration.vibrate(12);
@@ -1687,7 +1677,7 @@ export default function VirlaAIScreen() {
                   FINISH ASSESSMENT
                 </Text>
                 <Feather name="arrow-right" size={17} color="#FFFFFF" />
-              </TouchableOpacity>
+              </Pressable>
             </View>
           )}
         </View>

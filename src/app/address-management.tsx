@@ -1,6 +1,6 @@
 import { NativeSwitch } from '../components/NativeSwitch';
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useUserProfileStore, SavedAddress } from '../store/userProfileStore';
@@ -239,14 +239,14 @@ export default function AddressManagementScreen() {
         title="Saved Addresses" 
         category="VIRLA PLACES"
         rightElement={
-          <TouchableOpacity 
+          <Pressable 
             onPress={() => { if (showForm) { resetForm(); } else { setShowForm(true); } }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Text className="text-indigo-600 text-xs font-black uppercase tracking-wider">
               {showForm ? 'Cancel' : 'Add New'}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         }
       />
 
@@ -273,7 +273,7 @@ export default function AddressManagementScreen() {
                   <Text className="text-zinc-500 text-[8px] font-black uppercase">Address Label</Text>
                   <View className="flex-row gap-2">
                     {(['Home', 'Office', 'Gym', 'Custom'] as const).map((l) => (
-                      <TouchableOpacity
+                      <Pressable
                         key={l}
                         onPress={() => setLabel(l)}
                         className={`px-3.5 py-2 rounded-xl border ${
@@ -283,7 +283,7 @@ export default function AddressManagementScreen() {
                         <Text className={`text-[8px] font-black uppercase ${
                           label === l ? 'text-white' : 'text-zinc-650'
                         }`}>{l}</Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     ))}
                   </View>
                 </View>
@@ -314,14 +314,14 @@ export default function AddressManagementScreen() {
                 <View className="gap-1.5 bg-indigo-50/30 border border-indigo-150/40 p-3 rounded-2xl">
                   <Text className="text-zinc-500 text-[8px] font-black uppercase">Resolve Workout Address</Text>
                   
-                  <TouchableOpacity
+                  <Pressable
                     onPress={handleUseCurrentLocation}
                     disabled={isSearching}
                     className="bg-indigo-50 border border-indigo-200/50 py-2.5 rounded-xl flex-row justify-center items-center gap-2"
                   >
                     <Feather name="navigation" size={12} color="#4F46E5" />
                     <Text className="text-indigo-600 text-[9px] font-black uppercase tracking-wider">Use Current Location</Text>
-                  </TouchableOpacity>
+                  </Pressable>
 
                   <TextInput
                     maxLength={250}
@@ -334,7 +334,7 @@ export default function AddressManagementScreen() {
                   {suggestions.length > 0 && (
                     <View className="bg-white rounded-xl overflow-hidden mt-1 py-1 max-h-40">
                       {suggestions.map((item, idx) => (
-                        <TouchableOpacity
+                        <Pressable
                           key={idx}
                           onPress={() => handleSelectSuggestion(item)}
                           className="p-3 border-b border-zinc-100 flex-row items-center gap-2"
@@ -343,7 +343,7 @@ export default function AddressManagementScreen() {
                           <Text className="text-zinc-700 text-[10px] font-bold flex-1" numberOfLines={2}>
                             {item.description}
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       ))}
                     </View>
                   )}
@@ -424,7 +424,7 @@ export default function AddressManagementScreen() {
                   <NativeSwitch value={isDefault} onValueChange={setIsDefault} />
                 </View>
 
-                <TouchableOpacity
+                <Pressable
                   onPress={handleSave}
                   disabled={coaches.length > 0 && isOutsideCoverage}
                   className={`w-full py-4 rounded-2xl items-center justify-center mt-2 shadow-xs ${
@@ -438,7 +438,7 @@ export default function AddressManagementScreen() {
                       ? 'Outside Service Area'
                       : (editingId ? 'Update Address' : 'Save Address')}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             ) : (
               /* Address List View */
@@ -473,30 +473,30 @@ export default function AddressManagementScreen() {
                     <NativeDivider color="#F4F4F5" />
 
                     <View className="flex-row gap-3">
-                      <TouchableOpacity
+                      <Pressable
                         onPress={() => handleEdit(addr)}
                         className="flex-1 bg-zinc-50 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
                       >
                         <Feather name="edit" size={11} color="#101828" />
                         <Text className="text-zinc-950 text-[8px] font-black uppercase">Edit</Text>
-                      </TouchableOpacity>
+                      </Pressable>
 
                       {!addr.isDefault && (
-                        <TouchableOpacity
+                        <Pressable
                           onPress={() => setDefaultAddress(addr.id)}
                           className="flex-1 bg-zinc-50 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
                         >
                           <Feather name="check" size={11} color="#4F46E5" />
                           <Text className="text-[#4F46E5] text-[8px] font-black uppercase">Make Default</Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       )}
 
-                      <TouchableOpacity
+                      <Pressable
                         onPress={() => handleDelete(addr.id)}
                         className="w-10 bg-rose-50 border border-rose-100 py-2.5 rounded-xl items-center justify-center"
                       >
                         <Feather name="trash-2" size={12} color="#EF4444" />
-                      </TouchableOpacity>
+                      </Pressable>
                     </View>
                   </View>
                 ))}

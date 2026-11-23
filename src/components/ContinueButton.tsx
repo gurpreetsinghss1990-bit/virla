@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import {
-  TouchableOpacity,
+  Pressable,
   Text,
   Animated,
   Vibration,
@@ -59,8 +59,7 @@ export function ContinueButton({
   return (
     <View style={{ width: '100%', marginTop: 24, marginBottom: 8 }}>
       <Animated.View style={{ width: '100%', transform: [{ scale: scaleAnim }] }}>
-        <TouchableOpacity
-          activeOpacity={0.9}
+        <Pressable
           disabled={disabled}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
@@ -89,7 +88,7 @@ export function ContinueButton({
             {title}
           </Text>
           {iconName ? <Feather name={iconName} size={17} color="#FFFFFF" /> : null}
-        </TouchableOpacity>
+        </Pressable>
       </Animated.View>
     </View>
   );

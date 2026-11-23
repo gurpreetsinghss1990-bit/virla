@@ -1,6 +1,6 @@
 import { Loading } from './Loading';
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Database } from '../database/Database';
 import { useUserStore } from '../store/userStore';
@@ -64,9 +64,9 @@ export const AddPartnerModal: React.FC<AddPartnerModalProps> = ({
               <Text className="text-zinc-400 text-[8px] font-black uppercase">Train with a Friend</Text>
               <Text className="text-zinc-950 text-xl font-black mt-0.5">Add Partner to Session</Text>
             </View>
-            <TouchableOpacity onPress={onClose} className="w-8 h-8 rounded-full bg-zinc-50 items-center justify-center border border-zinc-150">
+            <Pressable onPress={onClose} className="w-8 h-8 rounded-full bg-zinc-50 items-center justify-center border border-zinc-150">
               <Feather name="x" size={14} color="#101828" />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Pricing/Credits summary */}
@@ -129,8 +129,7 @@ export const AddPartnerModal: React.FC<AddPartnerModalProps> = ({
           {/* Actions */}
           <View className="gap-3.5 mt-3">
             {hasCredits ? (
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Pressable
                 onPress={handleUpgrade}
                 disabled={isSubmitting}
                 className="w-full bg-[#E11D48] py-4 rounded-xl items-center justify-center flex-row gap-2 shadow-sm min-h-[48px]"
@@ -143,10 +142,9 @@ export const AddPartnerModal: React.FC<AddPartnerModalProps> = ({
                     <Feather name="arrow-right" size={12} color="white" />
                   </>
                 )}
-              </TouchableOpacity>
+              </Pressable>
             ) : (
-              <TouchableOpacity
-                activeOpacity={0.8}
+              <Pressable
                 onPress={() => {
                   onClose();
                   router.push('/membership');
@@ -155,17 +153,16 @@ export const AddPartnerModal: React.FC<AddPartnerModalProps> = ({
               >
                 <Feather name="shopping-bag" size={12} color="white" />
                 <Text className="text-white text-xs font-black uppercase tracking-wider">Recharge Wallet</Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
             
-            <TouchableOpacity
-              activeOpacity={0.8}
+            <Pressable
               onPress={onClose}
               disabled={isSubmitting}
               className="w-full bg-zinc-50 border border-zinc-150 py-4 rounded-xl items-center justify-center"
             >
               <Text className="text-zinc-600 text-xs font-black uppercase tracking-wider">Cancel</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </KeyboardAvoidingView>

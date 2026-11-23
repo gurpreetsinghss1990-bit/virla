@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, Animated, TouchableOpacity, Linking, Platform } from 'react-native';
+import { View, Text, Animated, Pressable, Linking, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Database } from '../database/Database';
@@ -693,13 +693,12 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
               </Text>
             </View>
           </View>
-          <TouchableOpacity
-            activeOpacity={0.8}
+          <Pressable
             onPress={() => setShowPartnerModal(true)}
             className="self-end bg-[#E11D48] px-4 py-2.5 rounded-xl items-center justify-center shadow-xs"
           >
             <Text className="text-white text-xs font-black uppercase tracking-wider">+ Add Partner</Text>
-          </TouchableOpacity>
+          </Pressable>
         </Animated.View>
       )}
 
@@ -847,13 +846,12 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
             <Text className="text-slate-500 text-xs font-medium flex-1 pr-2">
               Need to reschedule? Free changes up to 4 hrs before.
             </Text>
-            <TouchableOpacity
-              activeOpacity={0.7}
+            <Pressable
               onPress={() => router.push('/help-support' as any)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text className="text-[#E11D48] text-xs font-black">Contact Concierge</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </Animated.View>
@@ -886,16 +884,14 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
         }}
         className="flex-row gap-3 mt-2"
       >
-        <TouchableOpacity
-          activeOpacity={0.8}
+        <Pressable
           onPress={onBackToHome}
           className="flex-1 bg-white py-4 rounded-2xl items-center justify-center shadow-xs"
         >
           <Text className="text-slate-900 text-xs font-black uppercase tracking-wider">Home</Text>
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity
-          activeOpacity={0.8}
+        <Pressable
           onPress={() => onViewSession(successBookingId)}
           className="flex-[1.8] bg-[#E11D48] py-4 rounded-2xl items-center justify-center shadow-md"
           style={{
@@ -905,7 +901,7 @@ export const BookingSuccessAnimation: React.FC<BookingSuccessAnimationProps> = (
           <Text className="text-white text-xs font-black uppercase tracking-wider">
             View Session Details →
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </Animated.View>
     </View>
   );

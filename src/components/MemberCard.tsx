@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 
 interface MemberCardProps {
   name: string;
@@ -10,8 +10,7 @@ interface MemberCardProps {
 
 export function MemberCard({ name, relation, isSelected, onPress }: MemberCardProps) {
   return (
-    <TouchableOpacity
-      activeOpacity={0.7}
+    <Pressable
       onPress={onPress}
       className={`w-full flex-row items-center justify-between p-4 rounded-2xl border-2 mb-3 ${
         isSelected 
@@ -41,6 +40,6 @@ export function MemberCard({ name, relation, isSelected, onPress }: MemberCardPr
           <View className="w-2 h-2 rounded-full bg-white" />
         )}
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }

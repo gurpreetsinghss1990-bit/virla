@@ -1,6 +1,6 @@
 import { Loading } from './Loading';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, ScrollView, useWindowDimensions } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Database, SupportTicket } from '../database/Database';
@@ -55,20 +55,18 @@ export function UserTicketsModal({
             My Support Tickets
           </Text>
           <View className="flex-row items-center gap-2">
-            <TouchableOpacity
+            <Pressable
               onPress={loadTickets}
-              activeOpacity={0.7}
               className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center mr-0.5"
             >
               <Feather name="refresh-cw" size={14} color="#18181B" />
-            </TouchableOpacity>
-            <TouchableOpacity
+            </Pressable>
+            <Pressable
               onPress={onClose}
-              activeOpacity={0.7}
               className="w-9 h-9 rounded-full bg-zinc-100 items-center justify-center"
             >
               <Ionicons name="close" size={18} color="#18181B" />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
 
@@ -99,9 +97,8 @@ export function UserTicketsModal({
               {tickets.map((t) => {
                 const isOpen = t.status === 'OPEN';
                 return (
-                  <TouchableOpacity
+                  <Pressable
                     key={t.id}
-                    activeOpacity={0.85}
                     onPress={() => {
                       onClose();
                       onSelectTicket(t);
@@ -151,7 +148,7 @@ export function UserTicketsModal({
                         </Text>
                       </View>
                     </View>
-                  </TouchableOpacity>
+                  </Pressable>
                 );
               })}
             </View>
