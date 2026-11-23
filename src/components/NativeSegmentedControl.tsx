@@ -3,10 +3,15 @@ import { View, Text as RNText, TouchableOpacity, LayoutChangeEvent } from 'react
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
+  useAnimatedProps,
   withSpring,
+  withTiming,
+  Easing,
 } from 'react-native-reanimated';
-import { Feather } from '@expo/vector-icons';
+import Svg, { Path } from 'react-native-svg';
 import { softShadow } from '../utils/shadows';
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 export interface SegmentItem<T extends string> {
   key: T;
@@ -26,6 +31,65 @@ const SPRING_CONFIG = {
   stiffness: 240,
   mass: 0.6,
 };
+
+// SVG path total length for 'M3 8.5L6.5 12L13 4' is approximately 17 units
+const CHECK_PATH_LENGTH = 18;
+
+function AnimatedCheckmark({ isActive }: { isActive: boolean }) {
+  const drawProgress = useSharedValue(isActive ? 1 : 0);
+  const checkScale = useSharedValue(isActive ? 1 : 0.4);
+
+  useEffect(() => {
+    if (isActive) {
+      drawProgress.value = 0;
+      checkScale.value = 0.5;
+      // Draw path forward smoothly
+      drawProgress.value = withTiming(1, { 
+        duration: 260, 
+        easing: Easing.bezier(0.16, 1, 0.3, 1) 
+      });
+      // Micro spring bounce on appearance
+      checkScale.value = withSpring(1, { 
+        damping: 14, 
+        stiffness: 220, 
+        mass: 0.6 
+      });
+    } else {
+      drawProgress.value = 0;
+      checkScale.value = 0.4;
+    }
+  }, [isActive]);
+
+  const animatedPathProps = useAnimatedProps(() => {
+    return {
+      strokeDashoffset: CHECK_PATH_LENGTH * (1 - drawProgress.value),
+    };
+  });
+
+  const animatedContainerStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: checkScale.value }],
+      opacity: drawProgress.value > 0.05 ? 1 : 0,
+      marginRight: 5,
+    };
+  });
+
+  return (
+    <Animated.View style={animatedContainerStyle}>
+      <Svg width={14} height={14} viewBox="0 0 16 16" fill="none">
+        <AnimatedPath
+          d="M3 8.5L6.5 12L13 4"
+          stroke="#FFFFFF"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray={CHECK_PATH_LENGTH}
+          animatedProps={animatedPathProps}
+        />
+      </Svg>
+    </Animated.View>
+  );
+}
 
 export function NativeSegmentedControl<T extends string>({
   items,
@@ -126,14 +190,7 @@ export function NativeSegmentedControl<T extends string>({
               zIndex: 2,
             }}
           >
-            {isActive && (
-              <Feather 
-                name="check" 
-                size={13} 
-                color="#FFFFFF" 
-                style={{ marginRight: 5, strokeWidth: 2.8 }} 
-              />
-            )}
+            {isActive && <AnimatedCheckmark isActive={isActive} />}
             <RNText
               numberOfLines={1}
               style={{

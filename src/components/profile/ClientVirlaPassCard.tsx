@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import Reanimated, {
   useSharedValue,
@@ -96,6 +96,14 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
 
     setIsReanimatedLayersActive(true);
   }, [layer1Y, layer2Y, layer3Y, creditsScale]);
+
+  // Entrance bounce on mount so the user experiences the credits layer animation on iOS & Android
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      playCreditsLayerBounce();
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [playCreditsLayerBounce]);
 
   let passTier = 'STANDARD';
   let passColor = '#F59E0B';
