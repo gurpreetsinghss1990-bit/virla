@@ -114,3 +114,4 @@ export const ClientFitnessGoalsCard = React.memo(function ClientFitnessGoalsCard
     </View>
   );
 });
+

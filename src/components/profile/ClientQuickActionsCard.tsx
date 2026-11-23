@@ -96,3 +96,4 @@ export const ClientQuickActionsCard = React.memo(function ClientQuickActionsCard
     </>
   );
 });
+

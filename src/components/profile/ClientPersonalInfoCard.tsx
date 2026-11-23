@@ -240,3 +240,4 @@ export const ClientPersonalInfoCard = React.memo(function ClientPersonalInfoCard
     </View>
   );
 });
+

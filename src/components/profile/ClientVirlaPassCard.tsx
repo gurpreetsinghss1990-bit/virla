@@ -325,3 +325,4 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
     </View>
   );
 });
+

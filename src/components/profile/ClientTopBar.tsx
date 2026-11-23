@@ -16,3 +16,4 @@ export const ClientTopBar = React.memo(function ClientTopBar() {
     </View>
   );
 });
+

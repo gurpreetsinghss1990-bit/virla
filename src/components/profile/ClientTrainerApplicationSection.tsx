@@ -126,3 +126,4 @@ export const ClientTrainerApplicationSection = React.memo(function ClientTrainer
     </View>
   );
 });
+
