@@ -1,6 +1,6 @@
 import { Loading } from '../components/Loading';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, Pressable, TextInput, Alert, Linking, Share, Platform } from 'react-native';
+import { View, Text, Pressable, TextInput, Alert, Linking, Share, Platform, ScrollView } from 'react-native';
 import Animated, { useSharedValue, useAnimatedScrollHandler, runOnJS } from 'react-native-reanimated';
 import { InteractionManager } from '../utils/interactionManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -757,6 +757,64 @@ export default function WalletScreen() {
                 CARD HOLDER: <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-slate-500">{userName ? userName.toUpperCase() : 'KIRTI YADAV'}</Text>
               </Text>
             </View>
+
+            {/* Primary Dual Action Buttons (Dark Obsidian #090D16) */}
+            <View className="flex-row gap-3 w-full mt-5 px-1">
+              {role !== 'trainer' && (
+                <Pressable
+                  onPress={() => router.push('/membership' as any)}
+                  style={({ pressed }) => [
+                    {
+                      backgroundColor: '#090D16',
+                      borderRadius: 14,
+                      paddingVertical: 14,
+                      paddingHorizontal: 16,
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      opacity: pressed ? 0.88 : 1,
+                      ...softShadow({ color: '#090D16', opacity: 0.18, radius: 8, offsetY: 3 }),
+                    },
+                  ]}
+                >
+                  <Feather name="plus-circle" size={16} color="#FFFFFF" />
+                  <Text 
+                    style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8 }}
+                    className="text-white text-xs uppercase"
+                  >
+                    Recharge Wallet
+                  </Text>
+                </Pressable>
+              )}
+              <Pressable
+                onPress={() => setActiveTab('transfer')}
+                style={({ pressed }) => [
+                  {
+                    backgroundColor: '#090D16',
+                    borderRadius: 14,
+                    paddingVertical: 14,
+                    paddingHorizontal: 16,
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    opacity: pressed ? 0.88 : 1,
+                    ...softShadow({ color: '#090D16', opacity: 0.18, radius: 8, offsetY: 3 }),
+                  },
+                ]}
+              >
+                <Feather name="send" size={15} color="#FFFFFF" style={{ transform: [{ rotate: '-12deg' }] }} />
+                <Text 
+                  style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8 }}
+                  className="text-white text-xs uppercase"
+                >
+                  Transfer Credits
+                </Text>
+              </Pressable>
+            </View>
           </View>
 
           {/* Lifetime Stats 3-Column Card matching Stitch code.html */}
@@ -1354,40 +1412,52 @@ export default function WalletScreen() {
                 </View>
               </View>
 
-              {/* Quick Filter Horizontal Pills matching native Expo UI: Sessions, Purchases, Refunds, All */}
-              <View className="flex-row items-center gap-2 py-1 mb-1">
-                {(['booking', 'purchase', 'refund', 'all'] as const).map((filter) => {
-                  const isActive = ledgerFilter === filter;
-                  const label = filter === 'booking' ? 'Sessions' : filter === 'purchase' ? 'Purchases' : filter === 'refund' ? 'Refunds' : 'All';
-                  return (
-                    <Pressable
-                      key={filter}
-                      onPress={() => {
-                        setLedgerFilter(filter);
-                        setVisibleLedgerCount(8);
-                      }}
-                      style={({ pressed }) => [
-                        {
-                          backgroundColor: isActive ? '#0F172A' : '#F1F5F9',
-                          borderColor: isActive ? '#0F172A' : '#E2E8F0',
-                          borderWidth: 1,
-                          borderRadius: 9999,
-                          paddingHorizontal: 16,
-                          paddingVertical: 7,
-                          opacity: pressed ? 0.75 : 1,
-                          ...softShadow({ color: '#0F172A', opacity: isActive ? 0.12 : 0.02, radius: 4, offsetY: 1 }),
-                        },
-                      ]}
-                    >
-                      <Text 
-                        style={{ fontFamily: isActive ? 'Outfit_700Bold' : 'Outfit_600SemiBold' }}
-                        className={`text-xs ${isActive ? 'text-white' : 'text-slate-600'}`}
+              {/* Quick Filter Horizontal Pills with horizontal scrolling matching Sessions tab */}
+              <View className="py-1 mb-1 -mx-4">
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 16, gap: 8, flexDirection: 'row', alignItems: 'center' }}
+                >
+                  {(['booking', 'purchase', 'refund', 'all'] as const).map((filter) => {
+                    const isActive = ledgerFilter === filter;
+                    const label = filter === 'booking' ? 'Sessions' : filter === 'purchase' ? 'Purchases' : filter === 'refund' ? 'Refunds' : 'All';
+                    return (
+                      <Pressable
+                        key={filter}
+                        onPress={() => {
+                          setLedgerFilter(filter);
+                          setVisibleLedgerCount(8);
+                        }}
+                        style={({ pressed }) => [
+                          {
+                            paddingVertical: 7,
+                            paddingHorizontal: isActive ? 18 : 15,
+                            borderRadius: 9999,
+                            borderWidth: 1,
+                            borderColor: isActive ? '#0F172A' : '#E2E8F0',
+                            backgroundColor: isActive ? '#0F172A' : '#FFFFFF',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            opacity: pressed ? 0.75 : 1,
+                          },
+                          !isActive && softShadow({ color: '#0F172A', opacity: 0.03, radius: 4, offsetY: 1 }),
+                          isActive && softShadow({ color: '#0F172A', opacity: 0.18, radius: 6, offsetY: 2 }),
+                        ]}
                       >
-                        {label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+                        <Text 
+                          style={{
+                            fontFamily: isActive ? 'Outfit_700Bold' : 'Outfit_600SemiBold',
+                            fontSize: 12,
+                            color: isActive ? '#FFFFFF' : '#475569',
+                          }}
+                        >
+                          {label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
               </View>
               
               {/* Transaction List Cards Container */}
