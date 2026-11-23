@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text as RNText, TouchableOpacity, LayoutChangeEvent } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -30,33 +30,27 @@ const SPRING_CONFIG = {
 };
 
 /**
- * Pure Reanimated animated checkmark — NO SVG animatedProps.
- * Uses only useAnimatedStyle (View + Feather icon) which works
- * identically on iOS (Fabric) and Android.
- * Keyed on `instanceKey` so it always remounts fresh when the tab changes,
- * which guarantees useSharedValue starts at 0 and the entrance animation fires.
+ * Pure Reanimated UI-thread Checkmark.
+ * Uses Animated.View + Feather icon driven strictly by UI-thread transforms (scale + opacity).
+ * No SVG useAnimatedProps or strokeDashoffset that fail on iOS Fabric.
  */
 function AnimatedCheckmark() {
-  const scale = useSharedValue(0.3);
-  const opacity = useSharedValue(0);
+  const checkScale = useSharedValue(0.2);
+  const checkOpacity = useSharedValue(0);
 
   useEffect(() => {
-    // Both run on the UI thread via Reanimated — works on iOS & Android
-    scale.value = withSpring(1, { damping: 14, stiffness: 220, mass: 0.6 });
-    opacity.value = withTiming(1, {
-      duration: 180,
-      easing: Easing.out(Easing.quad),
-    });
-  }, []);
+    checkScale.value = withSpring(1, { damping: 14, stiffness: 240, mass: 0.6 });
+    checkOpacity.value = withTiming(1, { duration: 150, easing: Easing.out(Easing.quad) });
+  }, [checkScale, checkOpacity]);
 
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: opacity.value,
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: checkScale.value }],
+    opacity: checkOpacity.value,
     marginRight: 5,
   }));
 
   return (
-    <Animated.View style={animStyle}>
+    <Animated.View style={animatedStyle}>
       <Feather name="check" size={13} color="#FFFFFF" />
     </Animated.View>
   );
@@ -68,23 +62,21 @@ export function NativeSegmentedControl<T extends string>({
   onChangeKey,
   marginVertical = 4,
 }: NativeSegmentedControlProps<T>) {
-  // useRef for width so changes don't re-mount child components
-  const containerWidthRef = useRef(0);
   const [containerWidth, setContainerWidth] = useState(0);
-
   const activeIndex = items.findIndex((i) => i.key === activeKey);
   const validIndex = activeIndex >= 0 ? activeIndex : 0;
 
+  // Available width for segments (containerWidth minus 8px: 4px padding left + 4px padding right)
   const tabWidth = containerWidth > 0 ? (containerWidth - 8) / items.length : 0;
 
-  // Shared value lives on the UI thread — spring runs at 120fps on both platforms
+  // Shared value running 100% on native Reanimated UI thread
   const translateX = useSharedValue(0);
 
   useEffect(() => {
     if (tabWidth > 0) {
       translateX.value = withSpring(validIndex * tabWidth, SPRING_CONFIG);
     }
-  }, [validIndex, tabWidth]);
+  }, [validIndex, tabWidth, translateX]);
 
   const animatedIndicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
@@ -93,12 +85,10 @@ export function NativeSegmentedControl<T extends string>({
 
   const onLayout = (e: LayoutChangeEvent) => {
     const width = Math.round(e.nativeEvent.layout.width);
-    if (width > 0 && width !== containerWidthRef.current) {
-      containerWidthRef.current = width;
-      const computedTabWidth = (width - 8) / items.length;
-      // Snap pill immediately on first layout (no spring) then update state to re-render
-      translateX.value = validIndex * computedTabWidth;
+    if (width > 0 && width !== containerWidth) {
       setContainerWidth(width);
+      const computedTabWidth = (width - 8) / items.length;
+      translateX.value = validIndex * computedTabWidth;
     }
   };
 
@@ -120,7 +110,7 @@ export function NativeSegmentedControl<T extends string>({
         ...softShadow({ color: '#0F172A', opacity: 0.05, radius: 8, offsetY: 2 }),
       }}
     >
-      {/* 🚀 Physical Gliding Active Obsidian Pill — 100% UI Thread on iOS & Android */}
+      {/* 🚀 Physical Gliding Active Obsidian Pill (100% UI Thread Reanimated on iOS & Android) */}
       {tabWidth > 0 && (
         <Animated.View
           pointerEvents="none"
@@ -163,11 +153,6 @@ export function NativeSegmentedControl<T extends string>({
               zIndex: 2,
             }}
           >
-            {/*
-             * Key forces remount on every activeKey change so the
-             * AnimatedCheckmark's useSharedValue always starts at 0
-             * and the entrance spring fires on iOS and Android alike.
-             */}
             {isActive && <AnimatedCheckmark key={`check-${r}-${activeKey}`} />}
             <RNText
               numberOfLines={1}

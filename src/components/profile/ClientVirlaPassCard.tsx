@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import Reanimated, {
   useSharedValue,
@@ -7,8 +7,6 @@ import Reanimated, {
   withTiming,
   withSequence,
   Easing,
-  runOnJS,
-  runOnUI,
 } from 'react-native-reanimated';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Polygon, Polyline, Defs, LinearGradient, Stop, Rect, Circle } from 'react-native-svg';
@@ -27,11 +25,11 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
   validTillText,
   onOpenWallet,
 }: ClientVirlaPassCardProps) {
+  // Shared values live 100% on native UI thread
   const layer1Y = useSharedValue(0);
   const layer2Y = useSharedValue(0);
   const layer3Y = useSharedValue(0);
   const creditsScale = useSharedValue(1);
-  const [isReanimatedLayersActive, setIsReanimatedLayersActive] = useState(false);
 
   const sparkleProgress = useSharedValue(0);
   const sparkleAnimatedStyle = useAnimatedStyle(() => ({
@@ -42,6 +40,7 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
   }));
 
   const handleSparklePress = useCallback(() => {
+    'worklet';
     sparkleProgress.value = withSequence(
       withTiming(1, { duration: 250, easing: Easing.out(Easing.quad) }),
       withTiming(0, { duration: 200, easing: Easing.in(Easing.quad) }),
@@ -66,7 +65,9 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
     transform: [{ scale: creditsScale.value }],
   }));
 
+  // Pure UI-thread bounce on tap: no React setState, no JS thread delays
   const playCreditsLayerBounce = useCallback(() => {
+    'worklet';
     layer1Y.value = withSequence(
       withTiming(4, { duration: 110, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }),
       withTiming(5.5, { duration: 80 }),
@@ -82,11 +83,7 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
     layer3Y.value = withSequence(
       withTiming(0, { duration: 120 }),
       withTiming(1.5, { duration: 80 }),
-      withSpring(0, { damping: 11, stiffness: 160, mass: 0.7 }, (finished) => {
-        if (finished) {
-          runOnJS(setIsReanimatedLayersActive)(false);
-        }
-      })
+      withSpring(0, { damping: 11, stiffness: 160, mass: 0.7 })
     );
 
     creditsScale.value = withSequence(
@@ -94,47 +91,7 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
       withSpring(1.04, { damping: 10, stiffness: 220 }),
       withSpring(1, { damping: 12, stiffness: 180 })
     );
-
-    setIsReanimatedLayersActive(true);
   }, [layer1Y, layer2Y, layer3Y, creditsScale]);
-
-  // Entrance bounce on mount — runOnUI ensures animations run on the
-  // Reanimated UI thread from the very first frame on both iOS (Fabric/JSI)
-  // and Android, avoiding the silent-failure that plagued JS-thread useEffect.
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      runOnUI(() => {
-        'worklet';
-        layer1Y.value = withSequence(
-          withTiming(4, { duration: 110, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }),
-          withTiming(5.5, { duration: 80 }),
-          withSpring(0, { damping: 9, stiffness: 180, mass: 0.7 })
-        );
-        layer2Y.value = withSequence(
-          withTiming(0, { duration: 70 }),
-          withTiming(3, { duration: 110, easing: Easing.bezier(0.25, 0.1, 0.25, 1) }),
-          withSpring(0, { damping: 10, stiffness: 170, mass: 0.7 })
-        );
-        layer3Y.value = withSequence(
-          withTiming(0, { duration: 120 }),
-          withTiming(1.5, { duration: 80 }),
-          withSpring(0, { damping: 11, stiffness: 160, mass: 0.7 }, (finished) => {
-            'worklet';
-            if (finished) {
-              runOnJS(setIsReanimatedLayersActive)(false);
-            }
-          })
-        );
-        creditsScale.value = withSequence(
-          withTiming(0.95, { duration: 90 }),
-          withSpring(1.04, { damping: 10, stiffness: 220 }),
-          withSpring(1, { damping: 12, stiffness: 180 })
-        );
-        runOnJS(setIsReanimatedLayersActive)(true);
-      })();
-    }, 450);
-    return () => clearTimeout(timer);
-  }, []);
 
   let passTier = 'STANDARD';
   let passColor = '#F59E0B';
@@ -290,7 +247,7 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
                 <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
                   <Polygon
                     points="12 2 2 7 12 12 22 7 12 2"
-                    stroke={isReanimatedLayersActive ? '#E11D48' : '#0F172A'}
+                    stroke="#0F172A"
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -302,7 +259,7 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
                 <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
                   <Polyline
                     points="2 12 12 17 22 12"
-                    stroke={isReanimatedLayersActive ? '#E11D48' : '#0F172A'}
+                    stroke="#0F172A"
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -314,7 +271,7 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
                 <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
                   <Polyline
                     points="2 17 12 22 22 17"
-                    stroke={isReanimatedLayersActive ? '#E11D48' : '#0F172A'}
+                    stroke="#0F172A"
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -364,4 +321,3 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
     </View>
   );
 });
-
