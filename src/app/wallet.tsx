@@ -761,60 +761,46 @@ export default function WalletScreen() {
             {/* Primary Dual Action Buttons (Dark Obsidian #090D16) */}
             <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 20, paddingHorizontal: 4 }}>
               {role !== 'trainer' && (
-                <Pressable
-                  onPress={() => router.push('/membership' as any)}
-                  style={({ pressed }) => ({
+                <Pressable onPress={() => router.push('/membership' as any)} style={{ flex: 1 }}>
+                  <View
+                    style={{
+                      backgroundColor: '#090D16',
+                      borderRadius: 14,
+                      paddingVertical: 14,
+                      paddingHorizontal: 16,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      elevation: 3,
+                    }}
+                  >
+                    <Feather name="plus-circle" size={16} color="#FFFFFF" />
+                    <Text style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8, color: '#FFFFFF', fontSize: 12 }}>
+                      RECHARGE WALLET
+                    </Text>
+                  </View>
+                </Pressable>
+              )}
+              <Pressable onPress={() => setActiveTab('transfer')} style={{ flex: 1 }}>
+                <View
+                  style={{
                     backgroundColor: '#090D16',
                     borderRadius: 14,
                     paddingVertical: 14,
                     paddingHorizontal: 16,
-                    flex: 1,
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 8,
-                    opacity: pressed ? 0.88 : 1,
                     elevation: 3,
-                    shadowColor: '#090D16',
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowOpacity: 0.18,
-                    shadowRadius: 8,
-                  })}
+                  }}
                 >
-                  <Feather name="plus-circle" size={16} color="#FFFFFF" />
-                  <Text 
-                    style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8, color: '#FFFFFF', fontSize: 12, textTransform: 'uppercase' }}
-                  >
-                    Recharge Wallet
+                  <Feather name="send" size={15} color="#FFFFFF" />
+                  <Text style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8, color: '#FFFFFF', fontSize: 12 }}>
+                    TRANSFER CREDITS
                   </Text>
-                </Pressable>
-              )}
-              <Pressable
-                onPress={() => setActiveTab('transfer')}
-                style={({ pressed }) => ({
-                  backgroundColor: '#090D16',
-                  borderRadius: 14,
-                  paddingVertical: 14,
-                  paddingHorizontal: 16,
-                  flex: 1,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  opacity: pressed ? 0.88 : 1,
-                  elevation: 3,
-                  shadowColor: '#090D16',
-                  shadowOffset: { width: 0, height: 3 },
-                  shadowOpacity: 0.18,
-                  shadowRadius: 8,
-                })}
-              >
-                <Feather name="send" size={15} color="#FFFFFF" style={{ transform: [{ rotate: '-12deg' }] }} />
-                <Text 
-                  style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.8, color: '#FFFFFF', fontSize: 12, textTransform: 'uppercase' }}
-                >
-                  Transfer Credits
-                </Text>
+                </View>
               </Pressable>
             </View>
           </View>
@@ -1425,39 +1411,36 @@ export default function WalletScreen() {
                     const isActive = ledgerFilter === filter;
                     const label = filter === 'booking' ? 'Sessions' : filter === 'purchase' ? 'Purchases' : filter === 'refund' ? 'Refunds' : 'All';
                     return (
-                      <Pressable
+                      <View
                         key={filter}
-                        onPress={() => {
-                          setLedgerFilter(filter);
-                          setVisibleLedgerCount(8);
-                        }}
-                        style={({ pressed }) => ({
-                          paddingVertical: 7,
-                          paddingHorizontal: isActive ? 18 : 15,
-                          borderRadius: 9999,
+                        style={{
+                          borderRadius: 999,
                           borderWidth: 1,
                           borderColor: isActive ? '#0F172A' : '#E2E8F0',
                           backgroundColor: isActive ? '#0F172A' : '#FFFFFF',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          opacity: pressed ? 0.75 : 1,
+                          paddingVertical: 7,
+                          paddingHorizontal: isActive ? 18 : 15,
                           elevation: isActive ? 2 : 1,
-                          shadowColor: '#0F172A',
-                          shadowOffset: { width: 0, height: isActive ? 2 : 1 },
-                          shadowOpacity: isActive ? 0.15 : 0.04,
-                          shadowRadius: isActive ? 5 : 3,
-                        })}
+                        }}
                       >
-                        <Text 
-                          style={{
-                            fontFamily: isActive ? 'Outfit_700Bold' : 'Outfit_600SemiBold',
-                            fontSize: 12,
-                            color: isActive ? '#FFFFFF' : '#475569',
+                        <Pressable
+                          onPress={() => {
+                            setLedgerFilter(filter);
+                            setVisibleLedgerCount(8);
                           }}
+                          hitSlop={6}
                         >
-                          {label}
-                        </Text>
-                      </Pressable>
+                          <Text
+                            style={{
+                              fontFamily: isActive ? 'Outfit_700Bold' : 'Outfit_600SemiBold',
+                              fontSize: 12,
+                              color: isActive ? '#FFFFFF' : '#475569',
+                            }}
+                          >
+                            {label}
+                          </Text>
+                        </Pressable>
+                      </View>
                     );
                   })}
                 </ScrollView>
@@ -1538,10 +1521,19 @@ export default function WalletScreen() {
                     {filteredLedger.length > visibleLedgerCount && (
                       <Pressable
                         onPress={() => setVisibleLedgerCount(prev => Math.min(prev + 8, filteredLedger.length))}
-                        className="py-3 mt-2 rounded-2xl bg-white border border-slate-200/80 items-center justify-center shadow-xs"
+                        style={{
+                          marginTop: 8,
+                          paddingVertical: 12,
+                          borderRadius: 16,
+                          backgroundColor: '#FFFFFF',
+                          borderWidth: 1,
+                          borderColor: '#E2E8F0',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
                       >
-                        <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-slate-800 text-xs uppercase tracking-wider">
-                          Load More ({filteredLedger.length - visibleLedgerCount} remaining)
+                        <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 12, color: '#1E293B' }}>
+                          {`LOAD MORE (${filteredLedger.length - visibleLedgerCount} REMAINING)`}
                         </Text>
                       </Pressable>
                     )}
@@ -1594,15 +1586,15 @@ export default function WalletScreen() {
             <View className="flex-row gap-3.5 mt-2">
               <Pressable
                 onPress={() => setShowConfirmModal(false)}
-                className="flex-1 bg-zinc-100 py-3.5 rounded-xl items-center justify-center"
+                style={{ flex: 1, backgroundColor: '#F4F4F5', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
               >
-                <Text className="text-zinc-700 text-xs font-bold uppercase">Cancel</Text>
+                <Text style={{ fontFamily: 'Outfit_700Bold', color: '#3F3F46', fontSize: 12 }}>CANCEL</Text>
               </Pressable>
               <Pressable
                 onPress={handleTransferConfirm}
-                className="flex-1 bg-[#E11D48] py-3.5 rounded-xl items-center justify-center shadow-sm"
+                style={{ flex: 1, backgroundColor: '#E11D48', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
               >
-                <Text className="text-white text-xs font-bold uppercase">Confirm</Text>
+                <Text style={{ fontFamily: 'Outfit_700Bold', color: '#FFFFFF', fontSize: 12 }}>CONFIRM</Text>
               </Pressable>
             </View>
           </View>
