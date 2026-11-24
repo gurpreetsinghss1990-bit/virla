@@ -89,7 +89,7 @@ const TRAINER_THUMB_PANKAJ = BUNNY_CDN_ASSETS.TRAINER_IMAGE_PANKAJ;
 const TOP_PERFORMING_TRAINERS = [
   {
     id: 'top-kalpesh',
-    name: 'Kalpesh Khirade',
+    name: 'Kalpesh Kherade',
     designation: 'Fitness Trainer',
     specialty: 'Strength Training',
     video: TRAINER_VIDEO_KALPESH,

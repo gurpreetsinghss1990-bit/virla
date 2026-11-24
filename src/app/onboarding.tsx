@@ -1,191 +1,152 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { View, Text, Pressable, Animated, PanResponder, Easing, Platform, Dimensions, Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Pressable, Dimensions } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import Svg, { Circle, Path, Rect, Defs, LinearGradient, RadialGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  withRepeat,
+  withSequence,
+  Easing,
+  runOnJS,
+} from 'react-native-reanimated';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useUserStore } from '../store/userStore';
 import { PageIndicator } from '../presentation/components/PageIndicator';
-
 import { softShadow } from '../utils/shadows';
+
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const slides = [
+  {
+    title: 'Personal Fitness.\nAt Your Doorstep.',
+    description: 'Book ACE/ISSA certified fitness coaches for Yoga, Strength, Boxing, Dance, and Rehabilitation. We bring all required gear straight to your home.',
+  },
+  {
+    title: 'Flexible Spacing.\nSeamless Booking.',
+    description: 'Train wherever you are comfortable: home, society gym, outdoor parks, or office. Select convenient morning or evening time slots that fit your day.',
+  },
+  {
+    title: 'Verified & Secure.\nPeace of Mind.',
+    description: 'Enjoy professional service with live travel arrival maps, secure customer OTP check-ins, and direct one-tap emergency SOS support.',
+  },
+];
 
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const { setCompletedOnboarding } = useUserStore();
 
   const [currentSlide, setCurrentSlide] = useState(0);
-  const slideRef = useRef(0);
-  slideRef.current = currentSlide;
 
-  // Animation values (lightweight native-driven)
-  const fadeContentAnim = useMemo(() => new Animated.Value(1), []);
-  const fadeTextAnim = useMemo(() => new Animated.Value(1), []);
-  const dragAnim = useMemo(() => new Animated.Value(0), []);
-  const buttonScaleAnim = useMemo(() => new Animated.Value(1), []);
-  const buttonFadeAnim = useMemo(() => new Animated.Value(1), []);
-  const swipeHintPulse = useMemo(() => new Animated.Value(0), []);
+  // 100% UI-Thread Reanimated Shared Values
+  const fadeContent = useSharedValue(1);
+  const fadeText = useSharedValue(1);
+  const dragX = useSharedValue(0);
+  const buttonScale = useSharedValue(1);
+  const buttonFade = useSharedValue(1);
 
-  // Cutout exit animation: Slides out cleanly to left & fades when going to slide 1 or 2
-  const cutoutTranslateX = useMemo(() => new Animated.Value(0), []);
-  const cutoutOpacity = useMemo(() => new Animated.Value(1), []);
+  // Cutout exit/enter (slide 0)
+  const cutoutTranslateX = useSharedValue(0);
+  const cutoutOpacity = useSharedValue(1);
 
-  // Slide 2 (index 1) phone cutout slow reveal animation
-  const phoneCutoutAnim = useMemo(() => new Animated.Value(60), []);
-  const phoneCutoutOpacity = useMemo(() => new Animated.Value(0), []);
+  // Slide 2 phone cutout
+  const phoneCutoutY = useSharedValue(0);
+  const phoneCutoutOpacity = useSharedValue(1);
 
-  useEffect(() => {
-    // 0. Modern Android Edge-to-Edge System Bar
-    // Subtle swipe hint pulse animation
-    const swipeHintLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(swipeHintPulse, {
-          toValue: 6,
-          duration: 900,
-          useNativeDriver: true,
-        }),
-        Animated.timing(swipeHintPulse, {
-          toValue: 0,
-          duration: 900,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    swipeHintLoop.start();
-    return () => swipeHintLoop.stop();
-  }, [swipeHintPulse]);
+  // Animated Styles on UI Thread
+  const contentAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: fadeContent.value,
+    transform: [{ translateX: dragX.value }],
+  }));
 
-  // Animate button entry when landing on 3rd slide
+  const textAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: fadeText.value,
+  }));
+
+  const buttonAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: buttonFade.value,
+    transform: [{ scale: buttonScale.value }],
+  }));
+
+  const cutoutAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: cutoutOpacity.value,
+    transform: [{ translateX: cutoutTranslateX.value }],
+  }));
+
+  const phoneCutoutAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: phoneCutoutOpacity.value,
+    transform: [
+      { translateY: phoneCutoutY.value },
+      { scale: 1.05 },
+    ],
+  }));
+
+  // Button entry animation on 3rd slide
   useEffect(() => {
     if (currentSlide === 2) {
-      buttonScaleAnim.setValue(0.92);
-      buttonFadeAnim.setValue(0);
-      Animated.parallel([
-        Animated.spring(buttonScaleAnim, {
-          toValue: 1,
-          friction: 6,
-          tension: 50,
-          useNativeDriver: true,
-        }),
-        Animated.timing(buttonFadeAnim, {
-          toValue: 1,
-          duration: 350,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      buttonScale.value = 0.92;
+      buttonFade.value = 0;
+      buttonScale.value = withSpring(1, { damping: 12, stiffness: 100 });
+      buttonFade.value = withTiming(1, { duration: 300 });
     } else {
-      buttonScaleAnim.setValue(1);
-      buttonFadeAnim.setValue(1);
+      buttonScale.value = 1;
+      buttonFade.value = 1;
     }
-  }, [currentSlide, buttonScaleAnim, buttonFadeAnim]);
+  }, [currentSlide]);
+
+  const updateSlideState = (idx: number) => {
+    setCurrentSlide(idx);
+  };
 
   const goToSlide = (nextIndex: number) => {
-    if (nextIndex === slideRef.current || nextIndex < 0 || nextIndex > 2) {
-      Animated.spring(dragAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        bounciness: 4,
-      }).start();
+    'worklet';
+    if (nextIndex < 0 || nextIndex > 2) {
+      dragX.value = withSpring(0, { damping: 15, stiffness: 150 });
       return;
     }
 
-    const direction = nextIndex > slideRef.current ? -120 : 120;
+    const cur = currentSlide;
+    const direction = nextIndex > cur ? -100 : 100;
 
-    // If moving away from slide 0, animate cutout sliding out to the left & fading
-    if (slideRef.current === 0 && nextIndex > 0) {
-      Animated.parallel([
-        Animated.timing(cutoutTranslateX, {
-          toValue: -SCREEN_WIDTH * 0.45,
-          duration: 300,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(cutoutOpacity, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start();
+    // Slide 0 athlete cutout animation
+    if (cur === 0 && nextIndex > 0) {
+      cutoutTranslateX.value = withTiming(-SCREEN_WIDTH * 0.45, {
+        duration: 280,
+        easing: Easing.out(Easing.cubic),
+      });
+      cutoutOpacity.value = withTiming(0, { duration: 240 });
     } else if (nextIndex === 0) {
-      // Returning to slide 0, smoothly bring cutout back
-      Animated.parallel([
-        Animated.spring(cutoutTranslateX, {
-          toValue: 0,
-          friction: 7,
-          tension: 50,
-          useNativeDriver: true,
-        }),
-        Animated.timing(cutoutOpacity, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      cutoutTranslateX.value = withSpring(0, { damping: 14, stiffness: 90 });
+      cutoutOpacity.value = withTiming(1, { duration: 250 });
     }
 
-    const isSlide1Entry = slideRef.current === 0 && nextIndex === 1;
+    // Outgoing content
+    fadeContent.value = withTiming(0, { duration: 150 });
+    fadeText.value = withTiming(0, { duration: 150 });
+    dragX.value = withTiming(direction, { duration: 150 }, (finished) => {
+      if (finished) {
+        runOnJS(updateSlideState)(nextIndex);
+        dragX.value = direction * -0.5;
 
-    Animated.parallel([
-      Animated.timing(fadeContentAnim, {
-        toValue: 0,
-        duration: isSlide1Entry ? 220 : 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeTextAnim, {
-        toValue: 0,
-        duration: isSlide1Entry ? 220 : 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(dragAnim, {
-        toValue: direction,
-        duration: isSlide1Entry ? 220 : 150,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setCurrentSlide(nextIndex);
-      dragAnim.setValue(direction * -0.5);
-
-      if (nextIndex === 1) {
-        // Reset phone cutout position & opacity
-        phoneCutoutAnim.setValue(50);
-        phoneCutoutOpacity.setValue(0);
-      }
-
-      Animated.parallel([
-        Animated.timing(fadeContentAnim, {
-          toValue: 1,
-          duration: isSlide1Entry ? 380 : 250,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeTextAnim, {
-          toValue: 1,
-          duration: isSlide1Entry ? 380 : 250,
-          useNativeDriver: true,
-        }),
-        Animated.spring(dragAnim, {
-          toValue: 0,
-          friction: isSlide1Entry ? 8 : 7,
-          tension: isSlide1Entry ? 45 : 60,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        // Once page 2 lands smoothly, animate the phone cutout smoothly with a delicate slide & fade
         if (nextIndex === 1) {
-          Animated.parallel([
-            Animated.timing(phoneCutoutAnim, {
-              toValue: 0,
-              duration: 500,
-              easing: Easing.out(Easing.cubic),
-              useNativeDriver: true,
-            }),
-            Animated.timing(phoneCutoutOpacity, {
-              toValue: 1,
-              duration: 400,
-              useNativeDriver: true,
-            }),
-          ]).start();
+          phoneCutoutY.value = 25;
+          phoneCutoutOpacity.value = 0;
+          phoneCutoutY.value = withTiming(0, {
+            duration: 280,
+            easing: Easing.out(Easing.cubic),
+          });
+          phoneCutoutOpacity.value = withTiming(1, { duration: 240 });
         }
-      });
+
+        fadeContent.value = withTiming(1, { duration: 220 });
+        fadeText.value = withTiming(1, { duration: 220 });
+        dragX.value = withSpring(0, { damping: 15, stiffness: 120 });
+      }
     });
   };
 
@@ -194,73 +155,44 @@ export default function OnboardingScreen() {
     router.replace('/get-started' as any);
   };
 
-  // PanResponder only active on slides 1 & 2. On slide 0, swipe is disabled (user uses Next / Get Started)
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => false,
-        onMoveShouldSetPanResponder: (_, gestureState) => {
-          // Disable swipe on slide 0
-          if (slideRef.current === 0) return false;
-          return Math.abs(gestureState.dx) > 14 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.2;
-        },
-        onPanResponderMove: (_, gestureState) => {
-          let dx = gestureState.dx;
-          if (slideRef.current === 2 && dx < 0) {
-            dx = dx * 0.25;
-          }
-          dragAnim.setValue(dx);
-          const dragRatio = Math.min(Math.abs(gestureState.dx) / 120, 1);
-          fadeTextAnim.setValue(1 - dragRatio * 0.6);
-          fadeContentAnim.setValue(1 - dragRatio * 0.25);
-        },
-        onPanResponderRelease: (_, gestureState) => {
-          if (gestureState.dx < -50) {
-            if (slideRef.current < 2) {
-              goToSlide(slideRef.current + 1);
-            } else {
-              Animated.parallel([
-                Animated.spring(dragAnim, { toValue: 0, useNativeDriver: true }),
-                Animated.timing(fadeContentAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
-                Animated.timing(fadeTextAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
-              ]).start();
-            }
-          } else if (gestureState.dx > 50) {
-            if (slideRef.current > 0) {
-              goToSlide(slideRef.current - 1);
-            } else {
-              Animated.parallel([
-                Animated.spring(dragAnim, { toValue: 0, useNativeDriver: true }),
-                Animated.timing(fadeContentAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
-                Animated.timing(fadeTextAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
-              ]).start();
-            }
-          } else {
-            Animated.parallel([
-              Animated.spring(dragAnim, { toValue: 0, friction: 6, tension: 50, useNativeDriver: true }),
-              Animated.timing(fadeContentAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
-              Animated.timing(fadeTextAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
-            ]).start();
-          }
-        },
-      }),
-    [dragAnim, fadeContentAnim, fadeTextAnim, buttonScaleAnim, buttonFadeAnim]
-  );
-
-  const slides = [
-    {
-      title: 'Personal Fitness.\nAt Your Doorstep.',
-      description: 'Book ACE/ISSA certified fitness coaches for Yoga, Strength, Boxing, Dance, and Rehabilitation. We bring all required gear straight to your home.',
-    },
-    {
-      title: 'Flexible Spacing.\nSeamless Booking.',
-      description: 'Train wherever you are comfortable: home, society gym, outdoor parks, or office. Select convenient morning or evening time slots that fit your day.',
-    },
-    {
-      title: 'Verified & Secure.\nPeace of Mind.',
-      description: 'Enjoy professional service with live travel arrival maps, secure customer OTP check-ins, and direct one-tap emergency SOS support.',
-    },
-  ];
+  // Pure UI-Thread Pan Gesture using react-native-gesture-handler
+  const panGesture = Gesture.Pan()
+    .enabled(currentSlide > 0)
+    .activeOffsetX([-15, 15])
+    .failOffsetY([-20, 20])
+    .onUpdate((event) => {
+      let dx = event.translationX;
+      if (currentSlide === 2 && dx < 0) {
+        dx = dx * 0.25;
+      }
+      dragX.value = dx;
+      const dragRatio = Math.min(Math.abs(event.translationX) / 120, 1);
+      fadeText.value = 1 - dragRatio * 0.6;
+      fadeContent.value = 1 - dragRatio * 0.25;
+    })
+    .onEnd((event) => {
+      if (event.translationX < -50) {
+        if (currentSlide < 2) {
+          goToSlide(currentSlide + 1);
+        } else {
+          dragX.value = withSpring(0, { damping: 15, stiffness: 150 });
+          fadeContent.value = withTiming(1, { duration: 150 });
+          fadeText.value = withTiming(1, { duration: 150 });
+        }
+      } else if (event.translationX > 50) {
+        if (currentSlide > 0) {
+          goToSlide(currentSlide - 1);
+        } else {
+          dragX.value = withSpring(0, { damping: 15, stiffness: 150 });
+          fadeContent.value = withTiming(1, { duration: 150 });
+          fadeText.value = withTiming(1, { duration: 150 });
+        }
+      } else {
+        dragX.value = withSpring(0, { damping: 15, stiffness: 150 });
+        fadeContent.value = withTiming(1, { duration: 150 });
+        fadeText.value = withTiming(1, { duration: 150 });
+      }
+    });
 
   // Render Cutout Images for slides 1 & 2
   const renderIllustration = (index: number) => {
@@ -268,22 +200,22 @@ export default function OnboardingScreen() {
       case 1:
         return (
           <Animated.View
-            style={{
-              width: '100%',
-              height: '100%',
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: phoneCutoutOpacity,
-              transform: [
-                { translateY: phoneCutoutAnim },
-                { scale: 1.05 },
-              ],
-            }}
+            style={[
+              {
+                width: '100%',
+                height: '100%',
+                alignItems: 'center',
+                justifyContent: 'center',
+              },
+              phoneCutoutAnimatedStyle,
+            ]}
           >
-            <Image
+            <ExpoImage
               source={require('../../assets/images/booked_sessions_3d_transparent.webp')}
               style={{ width: '100%', height: '100%' }}
-              resizeMode="contain"
+              contentFit="contain"
+              priority="high"
+              cachePolicy="memory-disk"
             />
           </Animated.View>
         );
@@ -298,15 +230,16 @@ export default function OnboardingScreen() {
               overflow: 'visible',
             }}
           >
-            {/* Phone anchored to left edge in opposite direction, with 3D UI cards emerging outward from screen */}
-            <Image
+            <ExpoImage
               source={require('../../assets/images/left_edge_emerging_phone_transparent.webp')}
               style={{
                 width: Math.min(SCREEN_WIDTH * 1.05, 440),
                 height: '100%',
                 marginLeft: -SCREEN_WIDTH * 0.05,
               }}
-              resizeMode="contain"
+              contentFit="contain"
+              priority="high"
+              cachePolicy="memory-disk"
             />
           </View>
         );
@@ -316,20 +249,18 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#090B0E' }}>
-      {/* Modern Edge-to-Edge System Bar */}
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#090B0E' }}>
       <StatusBar style="light" />
 
-      {/* ===================================================================== */}
-      {/* 1. PERSISTENT STUDIO BACKGROUND IMAGE ACROSS ALL 3 ONBOARDING PAGES   */}
-      {/* ===================================================================== */}
+      {/* PERSISTENT STUDIO BACKGROUND IMAGE */}
       <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-        <Image
+        <ExpoImage
           source={require('../../assets/images/athlete_background_clean.jpg')}
           style={{ width: SCREEN_WIDTH, height: '100%' }}
-          resizeMode="cover"
+          contentFit="cover"
+          priority="high"
+          cachePolicy="memory-disk"
         />
-        {/* Subtle backdrop overlay for slides 1 & 2 only */}
         {currentSlide > 0 && (
           <View
             style={{
@@ -344,37 +275,36 @@ export default function OnboardingScreen() {
         )}
       </View>
 
-      {/* ===================================================================== */}
-      {/* 2. ATHLETE PERSON CUTOUT (ONLY ON 1ST SLIDE, SLIDES OUT TO LEFT)      */}
-      {/* ===================================================================== */}
+      {/* ATHLETE PERSON CUTOUT (ONLY ON 1ST SLIDE, SLIDES OUT TO LEFT) */}
       <Animated.View
         pointerEvents="none"
-        style={{
-          position: 'absolute',
-          top: insets.top + 20,
-          bottom: 0,
-          left: 0,
-          right: 0,
-          alignItems: 'center',
-          justifyContent: 'flex-end',
-          opacity: cutoutOpacity,
-          transform: [{ translateX: cutoutTranslateX }],
-          zIndex: 10,
-        }}
+        style={[
+          {
+            position: 'absolute',
+            top: insets.top + 20,
+            bottom: 0,
+            left: 0,
+            right: 0,
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            zIndex: 10,
+          },
+          cutoutAnimatedStyle,
+        ]}
       >
-        <Image
+        <ExpoImage
           source={require('../../assets/images/athlete_person_transparent.webp')}
           style={{
             width: SCREEN_WIDTH * 0.95,
             height: SCREEN_HEIGHT * 0.72,
           }}
-          resizeMode="contain"
+          contentFit="contain"
+          priority="high"
+          cachePolicy="memory-disk"
         />
       </Animated.View>
 
-      {/* ===================================================================== */}
-      {/* 3. SOFT BOTTOM VIGNETTE (PRESERVES RIGHT-SIDE ORANGE SHADE)           */}
-      {/* ===================================================================== */}
+      {/* SOFT BOTTOM VIGNETTE */}
       <View
         pointerEvents="none"
         style={{
@@ -398,11 +328,7 @@ export default function OnboardingScreen() {
         </Svg>
       </View>
 
-
-
-      {/* ===================================================================== */}
-      {/* 4. TOP CENTER BRAND LOGO ON SLIDE 1: SPLASH ICON V + 'IRLA'           */}
-      {/* ===================================================================== */}
+      {/* TOP CENTER BRAND LOGO ON SLIDE 1 */}
       {currentSlide === 0 && (
         <View
           pointerEvents="none"
@@ -424,22 +350,21 @@ export default function OnboardingScreen() {
               gap: 2,
             }}
           >
-            {/* Real App V Logo from splash-icon.png */}
-            <Image
+            <ExpoImage
               source={require('../../assets/images/splash-icon.png')}
               style={{
                 width: 32,
                 height: 32,
-                resizeMode: 'contain',
               }}
+              contentFit="contain"
+              priority="high"
+              cachePolicy="memory-disk"
             />
-
-            {/* Large Bold IRLA Brand Text */}
             <Text
               style={{
+                fontFamily: 'Outfit_900Black',
                 color: '#FFFFFF',
                 fontSize: 26,
-                fontWeight: '900',
                 letterSpacing: 4,
                 marginLeft: 1,
               }}
@@ -450,9 +375,7 @@ export default function OnboardingScreen() {
         </View>
       )}
 
-      {/* ===================================================================== */}
-      {/* 5. SLIDE 0 CONTENT OVERLAY (SWIPE DISABLED, CLEAN BUTTON & NEXT)     */}
-      {/* ===================================================================== */}
+      {/* SLIDE CONTENT */}
       {currentSlide === 0 ? (
         <View
           style={{
@@ -463,13 +386,12 @@ export default function OnboardingScreen() {
             zIndex: 30,
           }}
         >
-          {/* Headline & Description */}
           <View style={{ marginBottom: 22 }}>
             <Text
               style={{
+                fontFamily: 'Outfit_900Black',
                 color: '#FFFFFF',
                 fontSize: 28,
-                fontWeight: '900',
                 lineHeight: 34,
                 letterSpacing: -0.5,
               }}
@@ -478,10 +400,10 @@ export default function OnboardingScreen() {
             </Text>
             <Text
               style={{
+                fontFamily: 'Inter_500Medium',
                 color: 'rgba(255,255,255,0.85)',
                 fontSize: 13.5,
-                fontWeight: '500',
-                lineHeight: 19,
+                lineHeight: 20,
                 marginTop: 8,
               }}
             >
@@ -489,7 +411,6 @@ export default function OnboardingScreen() {
             </Text>
           </View>
 
-          {/* Controls Row: Page Indicator & Next Button */}
           <View
             style={{
               flexDirection: 'row',
@@ -497,10 +418,8 @@ export default function OnboardingScreen() {
               alignItems: 'center',
             }}
           >
-            {/* Page Indicator on Left */}
             <PageIndicator activeIndex={0} total={3} />
 
-            {/* NEXT BUTTON: Styled with White background, Black text, Thick border & bold uppercase */}
             <Pressable
               onPress={() => goToSlide(1)}
               style={{
@@ -508,7 +427,7 @@ export default function OnboardingScreen() {
                 alignItems: 'center',
                 gap: 6,
                 backgroundColor: '#FFFFFF',
-                paddingHorizontal: 22,
+                paddingHorizontal: 24,
                 paddingVertical: 11,
                 borderRadius: 999,
                 borderWidth: 3,
@@ -518,11 +437,12 @@ export default function OnboardingScreen() {
             >
               <Text
                 style={{
+                  fontFamily: 'Outfit_800ExtraBold',
                   color: '#000000',
                   fontSize: 12,
-                  fontWeight: '900',
                   textTransform: 'uppercase',
-                  letterSpacing: 1.2,
+                  letterSpacing: 0.5,
+                  paddingRight: 3,
                 }}
               >
                 Next
@@ -534,102 +454,127 @@ export default function OnboardingScreen() {
           </View>
         </View>
       ) : (
-        /* =================================================================== */
-        /* 6. SLIDES 1 & 2 CONTENT (MATCHING SLIDE 1 LAYOUT: CLEAN & IMMERSIVE) */
-        /* =================================================================== */
-        <View
-          style={{
-            flex: 1,
-            justifyContent: 'flex-end',
-            paddingBottom: Math.max(insets.bottom, 16) + 18,
-            paddingHorizontal: 24,
-            zIndex: 30,
-          }}
-          {...panResponder.panHandlers}
-        >
-          {/* Main slide illustration & animated content */}
-          <Animated.View
-            style={{
-              opacity: fadeContentAnim,
-              transform: [{ translateX: dragAnim }],
-              flex: 1,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            {/* Clean Illustration wrapper (No vertical float loop) */}
-            <View
-              style={{
-                width: SCREEN_WIDTH,
-                height: SCREEN_HEIGHT * 0.45,
-                marginHorizontal: -24,
-                alignItems: currentSlide === 2 ? 'flex-start' : 'center',
-                justifyContent: 'center',
-                overflow: 'visible',
-              }}
-            >
-              {renderIllustration(currentSlide)}
-            </View>
-          </Animated.View>
-
-          {/* Headline & Description matching 1st slide position and typography */}
-          <Animated.View
-            style={{
-              opacity: fadeTextAnim,
-              marginBottom: 22,
-            }}
-          >
-            <Text
-              style={{
-                color: '#FFFFFF',
-                fontSize: 28,
-                fontWeight: '900',
-                lineHeight: 34,
-                letterSpacing: -0.5,
-              }}
-            >
-              {slides[currentSlide].title}
-            </Text>
-            <Text
-              style={{
-                color: 'rgba(255,255,255,0.85)',
-                fontSize: 13.5,
-                fontWeight: '500',
-                lineHeight: 19,
-                marginTop: 8,
-              }}
-            >
-              {slides[currentSlide].description}
-            </Text>
-          </Animated.View>
-
-          {/* Footer controls: Page indicator on Left & Action button on Right */}
+        <GestureDetector gesture={panGesture}>
           <View
             style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
+              flex: 1,
+              justifyContent: 'flex-end',
+              paddingBottom: Math.max(insets.bottom, 16) + 18,
+              paddingHorizontal: 24,
+              zIndex: 30,
             }}
           >
-            {/* Custom Page indicator on Left */}
-            <PageIndicator activeIndex={currentSlide} total={3} />
-
-            {/* Action button on Right with same styling as slide 0 */}
-            {currentSlide === 2 ? (
-              <Animated.View
+            {/* Main slide illustration & animated content */}
+            <Animated.View
+              style={[
+                {
+                  flex: 1,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                },
+                contentAnimatedStyle,
+              ]}
+            >
+              <View
                 style={{
-                  opacity: buttonFadeAnim,
-                  transform: [{ scale: buttonScaleAnim }],
+                  width: SCREEN_WIDTH,
+                  height: SCREEN_HEIGHT * 0.45,
+                  marginHorizontal: -24,
+                  alignItems: currentSlide === 2 ? 'flex-start' : 'center',
+                  justifyContent: 'center',
+                  overflow: 'visible',
                 }}
               >
+                {renderIllustration(currentSlide)}
+              </View>
+            </Animated.View>
+
+            {/* Headline & Description */}
+            <Animated.View
+              style={[
+                {
+                  marginBottom: 22,
+                },
+                textAnimatedStyle,
+              ]}
+            >
+              <Text
+                style={{
+                  fontFamily: 'Outfit_900Black',
+                  color: '#FFFFFF',
+                  fontSize: 28,
+                  lineHeight: 34,
+                  letterSpacing: -0.5,
+                }}
+              >
+                {slides[currentSlide].title}
+              </Text>
+              <Text
+                style={{
+                  fontFamily: 'Inter_500Medium',
+                  color: 'rgba(255,255,255,0.85)',
+                  fontSize: 13.5,
+                  lineHeight: 20,
+                  marginTop: 8,
+                }}
+              >
+                {slides[currentSlide].description}
+              </Text>
+            </Animated.View>
+
+            {/* Footer controls */}
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <PageIndicator activeIndex={currentSlide} total={3} />
+
+              {currentSlide === 2 ? (
+                <Animated.View style={buttonAnimatedStyle}>
+                  <Pressable
+                    onPress={handleFinishOnboarding}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      backgroundColor: '#FFFFFF',
+                      paddingHorizontal: 24,
+                      paddingVertical: 11,
+                      borderRadius: 999,
+                      borderWidth: 3,
+                      borderColor: '#000000',
+                      ...softShadow({ color: '#000', opacity: 0.4, radius: 5, offsetY: 3 }),
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: 'Outfit_800ExtraBold',
+                        color: '#000000',
+                        fontSize: 12,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
+                        paddingRight: 3,
+                      }}
+                    >
+                      Get Started
+                    </Text>
+                    <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <Path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="#000000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                    </Svg>
+                  </Pressable>
+                </Animated.View>
+              ) : (
                 <Pressable
-                  onPress={handleFinishOnboarding}
+                  onPress={() => goToSlide(2)}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: 6,
                     backgroundColor: '#FFFFFF',
-                    paddingHorizontal: 22,
+                    paddingHorizontal: 24,
                     paddingVertical: 11,
                     borderRadius: 999,
                     borderWidth: 3,
@@ -639,55 +584,25 @@ export default function OnboardingScreen() {
                 >
                   <Text
                     style={{
+                      fontFamily: 'Outfit_800ExtraBold',
                       color: '#000000',
                       fontSize: 12,
-                      fontWeight: '900',
                       textTransform: 'uppercase',
-                      letterSpacing: 1.2,
+                      letterSpacing: 0.5,
+                      paddingRight: 3,
                     }}
                   >
-                    Get Started
+                    Next
                   </Text>
                   <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                     <Path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="#000000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                   </Svg>
                 </Pressable>
-              </Animated.View>
-            ) : (
-              <Pressable
-                onPress={() => goToSlide(2)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  backgroundColor: '#FFFFFF',
-                  paddingHorizontal: 22,
-                  paddingVertical: 11,
-                  borderRadius: 999,
-                  borderWidth: 3,
-                  borderColor: '#000000',
-                  ...softShadow({ color: '#000', opacity: 0.4, radius: 5, offsetY: 3 }),
-                }}
-              >
-                <Text
-                  style={{
-                    color: '#000000',
-                    fontSize: 12,
-                    fontWeight: '900',
-                    textTransform: 'uppercase',
-                    letterSpacing: 1.2,
-                  }}
-                >
-                  Next
-                </Text>
-                <Svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <Path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="#000000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                </Svg>
-              </Pressable>
-            )}
+              )}
+            </View>
           </View>
-        </View>
+        </GestureDetector>
       )}
-    </View>
+    </GestureHandlerRootView>
   );
 }

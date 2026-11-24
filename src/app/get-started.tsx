@@ -108,8 +108,9 @@ export default function GetStartedScreen() {
   const spinAnim = useSharedValue(0);
 
   // Animate OTP container shift natively on UI thread
+  // In OTP state, keep hero text fully visible and prevent excessive overlap
   useEffect(() => {
-    otpShiftAnim.value = withSpring(otpSent ? -75 : 0, {
+    otpShiftAnim.value = withSpring(otpSent ? -20 : 0, {
       damping: 20,
       stiffness: 180,
       mass: 0.8,
@@ -123,9 +124,11 @@ export default function GetStartedScreen() {
 
     const showSub = Keyboard.addListener(showEvent, () => {
       setIsKeyboardVisible(true);
-      // Natively translate ONLY the input section on the UI thread
-      inputShiftAnim.value = withSpring(-80, {
-        damping: 20,
+      // On iOS, KeyboardAvoidingView (behavior='padding') already natively handles viewport elevation.
+      // We apply subtle -25 on Android only to prevent double-pushing offscreen on iPhone SE / small screens.
+      const shiftValue = Platform.OS === 'ios' ? 0 : -25;
+      inputShiftAnim.value = withSpring(shiftValue, {
+        damping: 22,
         stiffness: 180,
         mass: 0.8,
       });
@@ -905,7 +908,7 @@ export default function GetStartedScreen() {
             </View>
 
             {/* Pure Whitespace Hero Headline & Subtitle */}
-            <View className="items-center my-6">
+            <View className={`items-center ${otpSent ? 'mt-1 mb-3' : 'my-5'}`}>
               <Text
                 style={{
                   fontFamily: 'Outfit_700Bold',
@@ -1177,7 +1180,7 @@ export default function GetStartedScreen() {
                       }}
                     >
                       {isLoading ? (
-                        <Loading size="small" color="#000000" />
+                        <Loading size="small" color="#FFFFFF" />
                       ) : (
                         <>
                           <Text
@@ -1367,7 +1370,7 @@ export default function GetStartedScreen() {
                       }}
                     >
                       {isLoading ? (
-                        <Loading size="small" color="#000000" />
+                        <Loading size="small" color="#FFFFFF" />
                       ) : (
                         <>
                           <Text

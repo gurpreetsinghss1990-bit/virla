@@ -1,7 +1,7 @@
 import { Loading } from '../components/Loading';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, Pressable, TextInput, Alert, Linking, Share, Platform, ScrollView } from 'react-native';
-import Animated, { useSharedValue, useAnimatedScrollHandler, runOnJS } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedScrollHandler, useAnimatedStyle, interpolate, Extrapolation, runOnJS } from 'react-native-reanimated';
 import { InteractionManager } from '../utils/interactionManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -479,6 +479,34 @@ export default function WalletScreen() {
     },
   });
 
+  // 100% UI-Thread Animated Style for the Main Hero Gauge:
+  // As user scrolls, the hero ring visibly shifts rightwards and shrinks towards the top-right header dock
+  const heroRingAnimatedStyle = useAnimatedStyle(() => {
+    'worklet';
+    // Ring moves right (+translateX) and shrinks down towards 0.25 scale
+    const translateX = interpolate(scrollY.value, [0, 160], [0, 130], Extrapolation.CLAMP);
+    const translateY = interpolate(scrollY.value, [0, 160], [0, -10], Extrapolation.CLAMP);
+    const scale = interpolate(scrollY.value, [0, 160], [1, 0.28], Extrapolation.CLAMP);
+    const opacity = interpolate(scrollY.value, [0, 130, 160], [1, 0.9, 0], Extrapolation.CLAMP);
+    return {
+      opacity,
+      transform: [{ translateX }, { translateY }, { scale }],
+    };
+  });
+
+  // 100% UI-Thread Animated Style for the Sticky Header Docked Mini Ring:
+  // Seamlessly catches the incoming hero ring from the right trajectory and snaps into exact position
+  const headerDockedRingStyle = useAnimatedStyle(() => {
+    'worklet';
+    const scale = interpolate(scrollY.value, [130, 165], [0.75, 1], Extrapolation.CLAMP);
+    const opacity = interpolate(scrollY.value, [130, 155], [0, 1], Extrapolation.CLAMP);
+    const translateX = interpolate(scrollY.value, [130, 165], [18, 0], Extrapolation.CLAMP);
+    return {
+      opacity,
+      transform: [{ scale }, { translateX }],
+    };
+  });
+
   return (
     <View style={{ flex: 1, backgroundColor: '#FAFBFD' }}>
       {/* Signature Virla Heritage Top-Right Leaves Watermark */}
@@ -662,7 +690,7 @@ export default function WalletScreen() {
           {/* Available Balance Gauge (Hero Section) matching Stitch code.html & Screenshot */}
           <View className="items-center justify-center pt-2 pb-1">
             {/* Circular Radial Progress Gauge */}
-            <View className="relative w-56 h-56 items-center justify-center">
+            <Animated.View style={heroRingAnimatedStyle} className="relative w-56 h-56 items-center justify-center">
               <Svg width={220} height={220} viewBox="0 0 220 220" style={{ transform: [{ rotate: '-90deg' }] }}>
                 {/* Background Outer Track (Soft Ice Sky Blue #E1EFFE) */}
                 <Circle
@@ -721,7 +749,7 @@ export default function WalletScreen() {
                   AVAILABLE CREDITS
                 </Text>
               </View>
-            </View>
+            </Animated.View>
 
             {/* Validity & Cardholder Details */}
             <View className="mt-3.5 items-center gap-1.5">
@@ -1668,25 +1696,65 @@ export default function WalletScreen() {
             }}
             className="flex-row items-center px-5 py-1.5 rounded-full gap-2"
           >
-            {isHeaderCollapsed ? (
-              <>
-                <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#E11D48] text-sm">
-                  {creditBalance ?? 0}
-                </Text>
-                <Text style={{ fontFamily: 'Outfit_700Bold', letterSpacing: 0.5 }} className="text-slate-900 text-[11px] uppercase">
-                  Credits
-                </Text>
-              </>
-            ) : (
-              <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-slate-800 text-[13.5px] tracking-tight">
-                Credit Wallet
-              </Text>
-            )}
+            <Text style={{ fontFamily: 'Outfit_600SemiBold' }} className="text-slate-800 text-[13.5px] tracking-tight">
+              Credit Wallet
+            </Text>
           </View>
         </View>
 
-        {/* Right dummy balancer to keep center pill centered */}
-        <View style={{ width: 40 }} pointerEvents="none" />
+        {/* Right Docked Mini Ring: Shrinks & docks into right corner on scroll (100% UI-Thread) */}
+        <View style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }} pointerEvents="box-none">
+          <Animated.View
+            style={[
+              {
+                width: 38,
+                height: 38,
+                alignItems: 'center',
+                justifyContent: 'center',
+              },
+              headerDockedRingStyle,
+            ]}
+          >
+            {/* Native SVG Mini Gauge Ring */}
+            <Svg width={38} height={38} viewBox="0 0 38 38" style={{ transform: [{ rotate: '-90deg' }] }}>
+              {/* Background Track */}
+              <Circle
+                cx="19"
+                cy="19"
+                r="15"
+                stroke="#E1EFFE"
+                strokeWidth="3"
+                fill="#FFFFFF"
+              />
+              {/* Active Crimson Ring Arc */}
+              <Circle
+                cx="19"
+                cy="19"
+                r="15"
+                stroke="#E11D48"
+                strokeWidth="3.2"
+                strokeLinecap="round"
+                fill="none"
+                strokeDasharray="94.2"
+                strokeDashoffset={Math.max(10, 94.2 - (gaugeRatio * 75))}
+              />
+            </Svg>
+
+            {/* Centered Credit Balance inside Docked Mini Ring */}
+            <View style={{ position: 'absolute', alignItems: 'center', justifyContent: 'center' }}>
+              <Text
+                style={{
+                  fontFamily: 'Outfit_800ExtraBold',
+                  fontSize: creditBalance > 99 ? 10 : 11.5,
+                  color: '#0F172A',
+                  letterSpacing: -0.5,
+                }}
+              >
+                {creditBalance}
+              </Text>
+            </View>
+          </Animated.View>
+        </View>
       </View>
 
     </View>

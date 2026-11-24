@@ -1985,18 +1985,20 @@ export default function SessionDetailScreen() {
               </View>
             )}
 
-            {/* Client cancel booking (only after trainer acceptance) */}
-            {role === 'customer' && isAccepted && !isMissed && !isCancelled && booking?.status === 'upcoming' &&
-              ['trainer_accepted', 'trainer_preparing', 'trainer_travelling'].includes(currentStatus) && (
+            {/* Client cancel booking: Always available while booking is upcoming and not started/completed */}
+            {role === 'customer' && !isMissed && !isCancelled && booking?.status === 'upcoming' &&
+              !['workout_started', 'workout_completed', 'trainer_report_submitted', 'customer_review_pending', 'session_closed'].includes(currentStatus) && (
               <View className="mt-2 mb-4">
                 <Pressable
                   onPress={() => {
                     const mins = getMinutesToSession();
-                    const policy = mins >= 60
-                      ? 'Free cancellation. Your credits will be fully refunded.'
-                      : mins >= 30
-                        ? 'Late cancellation: half of the session rate will be charged.'
-                        : 'Very late cancellation: the full session rate will be charged and no refund will be given.';
+                    const policy = !isAccepted
+                      ? 'Free cancellation. Your credit will be immediately refunded to your wallet.'
+                      : mins >= 60
+                        ? 'Free cancellation. Your credits will be fully refunded.'
+                        : mins >= 30
+                          ? 'Late cancellation: half of the session rate will be charged.'
+                          : 'Very late cancellation: the full session rate will be charged and no refund will be given.';
                     Alert.alert('Cancel Booking?', policy, [
                       { text: 'Keep Booking', style: 'cancel' },
                       {

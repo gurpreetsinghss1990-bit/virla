@@ -2,7 +2,18 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, BackHandler, LayoutAnimation, Platform, ScrollView, Text, Pressable, View } from 'react-native';
+import { Alert, BackHandler, Platform, ScrollView, Text, Pressable, View } from 'react-native';
+import AnimatedReanimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  withRepeat,
+  FadeIn,
+  FadeOut,
+  ReduceMotion,
+  Easing,
+} from 'react-native-reanimated';
 import { InteractionManager } from '../utils/interactionManager';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
@@ -236,8 +247,37 @@ export default function MembershipScreen() {
     setIsBenefitsExpanded((prev) => !prev);
   };
 
+  // Physical spring for sliding pill
+  const tabWidthShared = useSharedValue(0);
+  const translateX = useSharedValue(0);
+
+  useEffect(() => {
+    if (tabWidthShared.value > 0) {
+      const targetIdx = activeCategory === 'couple' ? 1 : 0;
+      translateX.value = withSpring(targetIdx * tabWidthShared.value, {
+        damping: 22,
+        stiffness: 240,
+        mass: 0.6,
+        reduceMotion: ReduceMotion.Never,
+      });
+    }
+  }, [activeCategory, tabWidthShared, translateX]);
+
+  const animatedIndicatorStyle = useAnimatedStyle(() => ({
+    width: tabWidthShared.value,
+    transform: [{ translateX: translateX.value }],
+  }));
+
   const handleSelectCategory = (cat: 'individual' | 'couple') => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    if (tabWidthShared.value > 0) {
+      const targetIdx = cat === 'couple' ? 1 : 0;
+      translateX.value = withSpring(targetIdx * tabWidthShared.value, {
+        damping: 22,
+        stiffness: 240,
+        mass: 0.6,
+        reduceMotion: ReduceMotion.Never,
+      });
+    }
     setActiveCategory(cat);
     setSelectedPlan(null); // Keep unselected on tab change
     setBuddyNotice(false);
@@ -249,54 +289,73 @@ export default function MembershipScreen() {
   const [buddyNotice, setBuddyNotice] = useState(false);
 
   const handlePlanCardPress = (plan: Plan) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setBuddyNotice(false);
     setSelectedPlan((prev) => (prev?.id === plan.id ? null : plan));
   };
 
   const handleBuddyBlocked = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setBuddyNotice(true);
   };
 
-  // Animations using useMemo to avoid render-phase ref reads
-  const slideUpAnim = useMemo(() => new Animated.Value(600), []);
-  const overlayOpacity = useMemo(() => new Animated.Value(0), []);
-  const progressAnim = useMemo(() => new Animated.Value(0), []);
-  const spinAnim = useMemo(() => new Animated.Value(0), []);
-  const footerBarAnim = useMemo(() => new Animated.Value(0), []);
+  // Reanimated UI-thread values
+  const slideUpAnim = useSharedValue(600);
+  const overlayOpacity = useSharedValue(0);
+  const spinAnim = useSharedValue(0);
+  const footerBarAnim = useSharedValue(0);
 
   useEffect(() => {
-    Animated.spring(footerBarAnim, {
-      toValue: selectedPlan ? 1 : 0,
-      friction: 8,
-      tension: 50,
-      useNativeDriver: true,
-    }).start();
-  }, [selectedPlan]);
+    footerBarAnim.value = withSpring(selectedPlan ? 1 : 0, {
+      damping: 18,
+      stiffness: 160,
+      mass: 0.8,
+      reduceMotion: ReduceMotion.Never,
+    });
+  }, [selectedPlan, footerBarAnim]);
+
+  const animatedFooterBarStyle = useAnimatedStyle(() => {
+    return {
+      opacity: footerBarAnim.value,
+      transform: [
+        {
+          translateY: (1 - footerBarAnim.value) * 50,
+        },
+      ],
+    };
+  });
+
+  const animatedOverlayStyle = useAnimatedStyle(() => {
+    return {
+      opacity: overlayOpacity.value,
+    };
+  });
+
+  const animatedSheetStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: slideUpAnim.value }],
+    };
+  });
+
+  const animatedSpinStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ rotate: `${spinAnim.value * 360}deg` }],
+    };
+  });
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Revolving spinning animation for the loader ring
+  // Revolving spinning animation for the loader ring on UI thread
   useEffect(() => {
-    let animation: Animated.CompositeAnimation | null = null;
     if (isProcessing) {
-      spinAnim.setValue(0);
-      animation = Animated.loop(
-        Animated.timing(spinAnim, {
-          toValue: 1,
-          duration: 900,
-          useNativeDriver: true,
-        })
+      spinAnim.value = 0;
+      spinAnim.value = withRepeat(
+        withTiming(1, { duration: 900, easing: Easing.linear, reduceMotion: ReduceMotion.Never }),
+        -1,
+        false
       );
-      animation.start();
     } else {
-      spinAnim.setValue(0);
+      spinAnim.value = 0;
     }
-    return () => {
-      if (animation) animation.stop();
-    };
   }, [isProcessing, spinAnim]);
 
   // Hardware back button: close payment modal instead of navigating away
@@ -319,20 +378,22 @@ export default function MembershipScreen() {
     setIsProcessing(false);
     setIsSuccess(false);
 
-    Animated.parallel([
-      Animated.timing(overlayOpacity, { toValue: 1, duration: 250, useNativeDriver: true }),
-      Animated.spring(slideUpAnim, { toValue: 0, friction: 8, tension: 40, useNativeDriver: true })
-    ]).start();
+    overlayOpacity.value = withTiming(1, { duration: 250 });
+    slideUpAnim.value = withSpring(0, {
+      damping: 24,
+      stiffness: 220,
+      mass: 0.8,
+      reduceMotion: ReduceMotion.Never,
+    });
   };
 
   const closeDetails = () => {
-    Animated.parallel([
-      Animated.timing(overlayOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
-      Animated.timing(slideUpAnim, { toValue: 600, duration: 200, useNativeDriver: true })
-    ]).start(() => {
+    overlayOpacity.value = withTiming(0, { duration: 200 });
+    slideUpAnim.value = withTiming(600, { duration: 200 });
+    setTimeout(() => {
       setIsModalOpen(false);
       if (isSuccess) setSelectedPlan(null);
-    });
+    }, 200);
   };
 
   const startCheckout = () => {
@@ -436,19 +497,62 @@ export default function MembershipScreen() {
           </Text>
         </View>
 
-        {/* Minimal Pill Segmented Switcher Category Selector */}
+        {/* Minimal Pill Segmented Switcher Category Selector with Physical Sliding Indicator */}
         <View className="flex-row items-center justify-center mb-3">
-          <View style={{ backgroundColor: '#F4F4F6', padding: 4, borderRadius: 24, flexDirection: 'row' }}>
+          <View
+            collapsable={false}
+            onLayout={(e) => {
+              const width = Math.round(e.nativeEvent.layout.width);
+              if (width > 0) {
+                const computedTabWidth = (width - 8) / 2;
+                tabWidthShared.value = computedTabWidth;
+                translateX.value = (activeCategory === 'couple' ? 1 : 0) * computedTabWidth;
+              }
+            }}
+            style={{
+              backgroundColor: '#F4F4F6',
+              padding: 4,
+              borderRadius: 24,
+              flexDirection: 'row',
+              position: 'relative',
+              alignItems: 'center',
+            }}
+          >
+            {/* 🚀 Physical Gliding Active Obsidian Pill */}
+            <AnimatedReanimated.View
+              pointerEvents="none"
+              style={[
+                {
+                  position: 'absolute',
+                  top: 4,
+                  left: 4,
+                  bottom: 4,
+                  backgroundColor: '#18181B',
+                  borderRadius: 20,
+                  elevation: 2,
+                },
+                animatedIndicatorStyle,
+              ]}
+            />
+
             <Pressable
               onPress={() => handleSelectCategory('individual')}
               style={{
                 paddingVertical: 8,
-                paddingHorizontal: 18,
+                paddingHorizontal: 20,
                 borderRadius: 20,
-                backgroundColor: activeCategory === 'individual' ? '#18181B' : 'transparent',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2,
               }}
             >
-              <Text style={{ fontSize: 13, fontFamily: 'Outfit_700Bold', color: activeCategory === 'individual' ? '#FFFFFF' : '#71717A' }}>
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontFamily: 'Outfit_700Bold',
+                  color: activeCategory === 'individual' ? '#FFFFFF' : '#71717A',
+                }}
+              >
                 Solo Training
               </Text>
             </Pressable>
@@ -456,12 +560,20 @@ export default function MembershipScreen() {
               onPress={() => handleSelectCategory('couple')}
               style={{
                 paddingVertical: 8,
-                paddingHorizontal: 18,
+                paddingHorizontal: 20,
                 borderRadius: 20,
-                backgroundColor: activeCategory === 'couple' ? '#18181B' : 'transparent',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2,
               }}
             >
-              <Text style={{ fontSize: 13, fontFamily: 'Outfit_700Bold', color: activeCategory === 'couple' ? '#FFFFFF' : '#71717A' }}>
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontFamily: 'Outfit_700Bold',
+                  color: activeCategory === 'couple' ? '#FFFFFF' : '#71717A',
+                }}
+              >
                 Train Together
               </Text>
             </Pressable>
@@ -475,8 +587,13 @@ export default function MembershipScreen() {
           </Text>
         </View>
 
-        {/* Plan Cards - Accordion replicating exact screenshot feel */}
-        <View style={{ marginBottom: 28 }}>
+        {/* Plan Cards - Animated switch transition on category toggle */}
+        <AnimatedReanimated.View
+          key={activeCategory}
+          entering={FadeIn.duration(220)}
+          exiting={FadeOut.duration(120)}
+          style={{ marginBottom: 28 }}
+        >
           {activePlans.map((plan) => (
             <PlanCard
               key={plan.id}
@@ -488,7 +605,7 @@ export default function MembershipScreen() {
               onBlocked={handleBuddyBlocked}
             />
           ))}
-        </View>
+        </AnimatedReanimated.View>
 
         {/* HOW WORKOUTS WORK — Lightweight Clean Editorial Section */}
         <View className="mt-6 mb-4 px-1 py-1">
@@ -589,23 +706,17 @@ export default function MembershipScreen() {
 
       {/* Sticky Bottom Bar with compact height and curved top corners */}
       {selectedPlan && (
-        <Animated.View
-          style={{
-            paddingBottom: footerInset,
-            opacity: footerBarAnim,
-            transform: [
-              {
-                translateY: footerBarAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [50, 0],
-                }),
-              },
-            ],
-            borderTopLeftRadius: 22,
-            borderTopRightRadius: 22,
-            backgroundColor: '#FFFFFF',
-            ...softShadow({ color: '#000000', opacity: 0.1, radius: 12, offsetY: -6 }),
-          }}
+        <AnimatedReanimated.View
+          style={[
+            {
+              paddingBottom: footerInset,
+              borderTopLeftRadius: 22,
+              borderTopRightRadius: 22,
+              backgroundColor: '#FFFFFF',
+              ...softShadow({ color: '#000000', opacity: 0.1, radius: 12, offsetY: -6 }),
+            },
+            animatedFooterBarStyle,
+          ]}
           className="border-t border-zinc-100 px-5 pt-3 pb-2.5 flex-row items-center justify-between"
         >
           <View className="flex-1 pr-3">
@@ -638,30 +749,34 @@ export default function MembershipScreen() {
             }}
           >
             <Text className="text-white text-[12px] font-black tracking-wider uppercase">
-              Pay {selectedPlan.finalPrice || selectedPlan.price}
+              Pay {selectedPlan.price}
             </Text>
             <Feather name="arrow-right" size={13} color="#FFFFFF" />
           </Pressable>
-        </Animated.View>
+        </AnimatedReanimated.View>
       )}
 
       {/* Details & Checkout Overlay Modal (Feature 2) */}
       {isModalOpen && selectedPlan && (
-        <Animated.View
-          style={{
-            opacity: overlayOpacity,
-            paddingBottom: Math.max((insets.bottom || 0) + (Platform.OS === 'android' ? 24 : 12), Platform.OS === 'android' ? 36 : 16)
-          }}
+        <AnimatedReanimated.View
+          style={[
+            {
+              paddingBottom: Math.max((insets.bottom || 0) + (Platform.OS === 'android' ? 24 : 12), Platform.OS === 'android' ? 36 : 16),
+            },
+            animatedOverlayStyle,
+          ]}
           className="absolute top-0 left-0 right-0 bottom-0 bg-black/60 z-50 justify-end px-3.5"
         >
           {/* Transparent dismiss header */}
           <Pressable onPress={closeDetails} className="flex-1" />
 
-          <Animated.View
-            style={{
-              transform: [{ translateY: slideUpAnim }],
-              ...softShadow({ color: '#000', opacity: 0.18, radius: 20, offsetY: 10 }),
-            }}
+          <AnimatedReanimated.View
+            style={[
+              {
+                ...softShadow({ color: '#000', opacity: 0.18, radius: 20, offsetY: 10 }),
+              },
+              animatedSheetStyle,
+            ]}
             className="bg-white rounded-[28px] p-5 pt-3.5 pb-5"
           >
             {/* Modal Drag handle indicator */}
@@ -677,9 +792,11 @@ export default function MembershipScreen() {
                         <Text className="text-zinc-400 text-[10px] font-black uppercase tracking-wider">Plan Selected</Text>
                         <Text className="text-zinc-950 text-xl font-black tracking-tight mt-0.5">{selectedPlan.name}</Text>
                         <View className="flex-row items-center gap-1.5 mt-1">
-                          <Feather name="tag" size={11} color="#E11D48" />
-                          <Text style={{ color: '#E11D48' }} className="text-[10px] font-bold">
-                            GST Tax Note: {selectedPlan.gstText}
+                          <Text style={{ color: '#E11D48' }} className="text-sm font-black tracking-tight">
+                            {selectedPlan.price}
+                          </Text>
+                          <Text className="text-zinc-400 text-[11px] font-medium">
+                            • {selectedPlan.credits} {selectedPlan.credits === 1 ? 'Session' : 'Sessions'}
                           </Text>
                         </View>
                       </View>
@@ -831,26 +948,21 @@ export default function MembershipScreen() {
             {isProcessing && (
               <View className="items-center justify-center py-16 gap-6 min-h-[400px]">
                 <View className="relative w-16 h-16 items-center justify-center">
-                  <Animated.View
-                    style={{
-                      position: 'absolute',
-                      width: 64,
-                      height: 64,
-                      transform: [
-                        {
-                          rotate: spinAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: ['0deg', '360deg'],
-                          }),
-                        },
-                      ],
-                    }}
+                  <AnimatedReanimated.View
+                    style={[
+                      {
+                        position: 'absolute',
+                        width: 64,
+                        height: 64,
+                      },
+                      animatedSpinStyle,
+                    ]}
                   >
                     <Svg width={64} height={64} viewBox="0 0 64 64">
                       <Circle cx={32} cy={32} r={28} stroke="#E5E7EB" strokeWidth={4} fill="none" />
                       <Circle cx={32} cy={32} r={28} stroke="#4F46E5" strokeWidth={4} fill="none" strokeDasharray="176" strokeDashoffset="44" strokeLinecap="round" />
                     </Svg>
-                  </Animated.View>
+                  </AnimatedReanimated.View>
                   <Feather name="lock" size={20} color="#4F46E5" />
                 </View>
                 <View className="items-center gap-1.5 px-6">
@@ -909,8 +1021,8 @@ export default function MembershipScreen() {
                 </View>
               </View>
             )}
-          </Animated.View>
-        </Animated.View>
+          </AnimatedReanimated.View>
+        </AnimatedReanimated.View>
       )}
 
       {/* Floating Pill Back Button & Help Button with Pill Scrim */}

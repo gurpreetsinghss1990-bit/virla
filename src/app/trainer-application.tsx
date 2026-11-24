@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Database, TrainerApplication } from '../database/Database';
 import { LuxuryCard } from '../components/LuxuryCard';
+import { NativeAlertDialog } from '../components/NativeAlertDialog';
 import { useUserProfileStore } from '../store/userProfileStore';
 import { supabase } from '../database/supabaseClient';
 import { PARTNER_POLICY_SECTIONS, PARTNER_POLICIES_DOCUMENT_INFO } from '../constants/partnerPolicies';
@@ -59,6 +60,42 @@ const getNativePickerModules = () => {
 };
 
 export default function TrainerApplicationScreen() {
+  const [nativeAlert, setNativeAlert] = useState<{
+    visible: boolean;
+    title: string;
+    message?: string;
+    confirmText?: string;
+    cancelText?: string;
+    onConfirm?: () => void;
+  }>({ visible: false, title: '', message: '' });
+
+  const showNativeAlert = (
+    title: string,
+    message?: string,
+    buttons?: { text: string; style?: string; onPress?: () => void }[]
+  ) => {
+    if (!buttons || buttons.length <= 1) {
+      const btn = buttons?.[0];
+      setNativeAlert({
+        visible: true,
+        title,
+        message,
+        confirmText: btn?.text || 'OK',
+        onConfirm: btn?.onPress,
+      });
+    } else {
+      const cancelBtn = buttons.find(b => b.style === 'cancel');
+      const actionBtn = buttons.find(b => b.style !== 'cancel') || buttons[0];
+      setNativeAlert({
+        visible: true,
+        title,
+        message,
+        confirmText: actionBtn?.text || 'OK',
+        cancelText: cancelBtn?.text || 'Cancel',
+        onConfirm: actionBtn?.onPress,
+      });
+    }
+  };
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const mobile = useUserProfileStore(state => state.mobile);
@@ -529,7 +566,7 @@ export default function TrainerApplicationScreen() {
       if (source === 'camera') {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('Permission Denied', 'Camera permission is required to take photos.');
+          showNativeAlert('Permission Denied', 'Camera permission is required to take photos.');
           return;
         }
 
@@ -543,7 +580,7 @@ export default function TrainerApplicationScreen() {
       } else if (source === 'library') {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('Permission Denied', 'Photo library permission is required to select photos.');
+          showNativeAlert('Permission Denied', 'Photo library permission is required to select photos.');
           return;
         }
 
@@ -572,7 +609,7 @@ export default function TrainerApplicationScreen() {
       setShowPreview(true);
     } catch (err: any) {
       console.error('[TrainerApp] Document picking failed:', err);
-      Alert.alert('Error', 'Unable to pick document. Please try again.');
+      showNativeAlert('Error', 'Unable to pick document. Please try again.');
     }
   };
 
@@ -683,7 +720,7 @@ export default function TrainerApplicationScreen() {
           await Database.updateTrainerVerificationDoc(docId, 'MANUAL_REVIEW', false);
           setVerifyingStatus('MANUAL_REVIEW');
           setTrainerAttested(false);
-          Alert.alert('AI Processing Delay', 'AI verification is taking longer than expected. Your document has been submitted for manual admin review.');
+          showNativeAlert('AI Processing Delay', 'AI verification is taking longer than expected. Your document has been submitted for manual admin review.');
         }
       } else if (docType === 'pan') {
         setDocumentPan(fileUrl);
@@ -708,7 +745,7 @@ export default function TrainerApplicationScreen() {
       }
 
       if (docType !== 'aadhaar') {
-        Alert.alert('Upload Successful', `✓ ${docType.toUpperCase()} document uploaded successfully.`);
+        showNativeAlert('Upload Successful', `✓ ${docType.toUpperCase()} document uploaded successfully.`);
       }
     } catch (err: any) {
       console.error(`[TrainerApp] Upload failed for ${docType}:`, err);
@@ -724,7 +761,7 @@ export default function TrainerApplicationScreen() {
         }
       }
 
-      Alert.alert(
+      showNativeAlert(
         'Upload failed',
         `Unable to securely upload this document: ${err.message || err}`,
         [
@@ -747,9 +784,9 @@ export default function TrainerApplicationScreen() {
       await Database.updateTrainerVerificationDoc(activeDocId, 'MANUAL_REVIEW', true);
       setVerifyingStatus('MANUAL_REVIEW');
       setTrainerAttested(true);
-      Alert.alert('Attestation Received', 'Your attestation has been recorded. The admin will verify both names manually.');
+      showNativeAlert('Attestation Received', 'Your attestation has been recorded. The admin will verify both names manually.');
     } catch (err: any) {
-      Alert.alert('Error', 'Failed to submit attestation.');
+      showNativeAlert('Error', 'Failed to submit attestation.');
       setVerifyingStatus('NAME_MISMATCH');
     }
   };
@@ -839,7 +876,7 @@ export default function TrainerApplicationScreen() {
       }
     } else if (currentStep === 3) {
       if (!yearsOfExperience || !languages || workingDays.length === 0) {
-        Alert.alert('Missing Info', 'Please enter experience, languages, and select working days.');
+        showNativeAlert('Missing Info', 'Please enter experience, languages, and select working days.');
         return;
       }
     }
@@ -853,14 +890,14 @@ export default function TrainerApplicationScreen() {
   const handleSubmit = async () => {
     if (isSubmittingApplication) return;
     if (!documentSelfie) {
-      Alert.alert('Required Photo', 'Please upload your profile selfie photo.');
+      showNativeAlert('Required Photo', 'Please upload your profile selfie photo.');
       return;
     }
 
     const selectedQuals = getSelectedQualificationsList();
     const missingQuals = selectedQuals.filter((q: string) => !qualCertMap[q] || !qualCertMap[q].trim());
     if (missingQuals.length > 0) {
-      Alert.alert(
+      showNativeAlert(
         'Missing Qualification Certificates 📄',
         `Please upload certificates for all selected qualifications before submitting:
 
@@ -947,16 +984,16 @@ export default function TrainerApplicationScreen() {
         const application = await Database.updateTrainerApplication(appId, applicationData);
         setAppStatus('pending');
         await AsyncStorage.removeItem(DRAFT_STORAGE_KEY).catch(() => {});
-        Alert.alert('Application Updated', 'Your updated trainer application has been submitted for review.');
+        showNativeAlert('Application Updated', 'Your updated trainer application has been submitted for review.');
       } else {
         const application = await Database.submitTrainerApplication(applicationData);
         setAppId(application.id);
         setAppStatus('pending');
         await AsyncStorage.removeItem(DRAFT_STORAGE_KEY).catch(() => {});
-        Alert.alert('Application Submitted', 'Your onboarding credentials are under review by the operations team.');
+        showNativeAlert('Application Submitted', 'Your onboarding credentials are under review by the operations team.');
       }
     } catch (err: any) {
-      Alert.alert('Submission Error', err.message || 'Error occurred while saving application.');
+      showNativeAlert('Submission Error', err.message || 'Error occurred while saving application.');
     } finally {
       setIsSubmittingApplication(false);
     }
@@ -967,7 +1004,7 @@ export default function TrainerApplicationScreen() {
     return (
       <SafeAreaViewWrapper bg="#FFFFFF">
         {/* Header - Full Bleed */}
-        <View className="h-14 flex-row items-center px-4 justify-between bg-white">
+        <View className="h-14 flex-row items-center px-4 justify-between bg-white border-b border-zinc-100">
           <Pressable 
             onPress={() => {
               if (policyPage === 3) {
@@ -982,24 +1019,24 @@ export default function TrainerApplicationScreen() {
                 router.replace('/(tabs)/profile' as any);
               }
             }} 
-            className="w-10 h-10 items-center justify-center"
+            className="w-10 h-10 items-center justify-center rounded-full bg-zinc-50 border border-zinc-100"
           >
             <Feather name="arrow-left" size={18} color="#101828" />
           </Pressable>
           <View className="items-center">
-            <Text className="text-zinc-950 text-sm font-black uppercase tracking-wider">
+            <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-zinc-950 text-base uppercase tracking-wider">
               Trainer Agreement
             </Text>
-            <Text className="text-zinc-500 text-[10px] font-bold">
+            <Text style={{ fontFamily: 'Inter_500Medium' }} className="text-zinc-400 text-[11px] mt-0.5">
               Step {policyPage} of 3 • {policyPage === 1 ? 'Policies & Rules' : policyPage === 2 ? 'Terms & Standards' : 'Earnings & Payout'}
             </Text>
           </View>
           {appStatus !== 'draft' && !viewingPoliciesOnly ? (
             <Pressable
               onPress={() => setHasAcceptedPolicies(true)}
-              className="px-2.5 py-1.5 bg-zinc-100 rounded-lg"
+              className="px-3 py-1.5 bg-zinc-100 rounded-full border border-zinc-200"
             >
-              <Text className="text-[10px] text-zinc-700 font-bold uppercase">Status</Text>
+              <Text style={{ fontFamily: 'Inter_700Bold' }} className="text-[10px] text-zinc-800 uppercase tracking-wider">Status</Text>
             </Pressable>
           ) : (
             <View className="w-10" />
@@ -1184,13 +1221,13 @@ export default function TrainerApplicationScreen() {
                     setAcceptedAgreementAppVersion('1.0.0');
                     setHasAcceptedPolicies(true);
                     setViewingPoliciesOnly(false);
-                    Alert.alert('All Agreements Confirmed', 'You may now proceed to complete your personal details.');
+                    showNativeAlert('All Agreements Confirmed', 'You may now proceed to complete your personal details.');
                   }}
                   className={`py-3.5 rounded-full items-center justify-center shadow-md flex-row gap-2 ${
                     checkEarningsAcceptance ? 'bg-[#E11D48]' : 'bg-zinc-300'
                   }`}
                 >
-                  <Text className="text-white text-xs font-black uppercase tracking-wider text-center">
+                  <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-white text-xs uppercase tracking-wider text-center">
                     Accept &amp; Continue to Application Form
                   </Text>
                   {checkEarningsAcceptance && <Feather name="check-circle" size={14} color="white" />}
@@ -1200,7 +1237,7 @@ export default function TrainerApplicationScreen() {
           )}
         </ScrollView>
 
-        {/* Floating Bottom Navigation — Transparent text with thick red underline */}
+        {/* Floating Bottom Navigation — Curated Design.md Pills */}
         <View
           pointerEvents="box-none"
           style={{
@@ -1220,12 +1257,11 @@ export default function TrainerApplicationScreen() {
                 if (policyPage === 3) switchPolicyPage(2);
                 else if (policyPage === 2) switchPolicyPage(1);
               }}
-              className="py-1 px-1 bg-transparent items-start"
+              className="px-5 py-3 bg-white border border-zinc-200 rounded-full shadow-xs items-center justify-center"
             >
-              <Text className="text-zinc-950 text-sm font-black uppercase tracking-wider">
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-zinc-950 text-xs uppercase tracking-wider">
                 Back
               </Text>
-              <View className="h-1 w-full bg-[#E11D48] rounded-full mt-0.5" />
             </Pressable>
           ) : (
             <View />
@@ -1238,17 +1274,30 @@ export default function TrainerApplicationScreen() {
                 if (policyPage === 1) switchPolicyPage(2);
                 else if (policyPage === 2) switchPolicyPage(3);
               }}
-              className="py-1 px-1 bg-transparent items-end ml-auto"
+              className="px-6 py-3 bg-[#18181B] rounded-full shadow-xs items-center justify-center ml-auto"
             >
-              <Text className="text-zinc-950 text-sm font-black uppercase tracking-wider">
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-white text-xs uppercase tracking-wider">
                 Next
               </Text>
-              <View className="h-1 w-full bg-[#E11D48] rounded-full mt-0.5" />
             </Pressable>
           ) : (
             <View />
           )}
         </View>
+
+        {/* Native Alert Dialog */}
+        <NativeAlertDialog
+          visible={nativeAlert.visible}
+          title={nativeAlert.title}
+          message={nativeAlert.message}
+          confirmText={nativeAlert.confirmText}
+          cancelText={nativeAlert.cancelText}
+          onConfirm={() => {
+            setNativeAlert(prev => ({ ...prev, visible: false }));
+            nativeAlert.onConfirm?.();
+          }}
+          onClose={() => setNativeAlert(prev => ({ ...prev, visible: false }))}
+        />
 
         {/* Step 3 only: floating Scroll to Bottom, hidden near bottom so it never covers Accept */}
         {policyPage === 3 && !isScrolledNearBottom && (
@@ -1263,7 +1312,7 @@ export default function TrainerApplicationScreen() {
             className="flex-row items-center gap-1.5 px-3 py-2 bg-[#101828] border border-zinc-700 rounded-full"
           >
             <Feather name="arrow-down" size={13} color="#FFFFFF" />
-            <Text className="text-white text-[10.5px] font-black uppercase tracking-wider">
+            <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-white text-[11px] uppercase tracking-wider">
               Scroll to Bottom
             </Text>
           </Pressable>
@@ -1274,7 +1323,7 @@ export default function TrainerApplicationScreen() {
 
   return (
     <SafeAreaViewWrapper>
-      <View className="h-16 flex-row items-center px-6 justify-between bg-white border-b border-zinc-150">
+      <View className="h-16 flex-row items-center px-5 justify-between bg-white border-b border-zinc-100">
         <Pressable 
           onPress={() => {
             if (currentStep > 1 && appStatus === 'draft') {
@@ -1287,12 +1336,11 @@ export default function TrainerApplicationScreen() {
               }
             }
           }} 
-          className="flex-row items-center gap-1"
+          className="w-10 h-10 items-center justify-center rounded-full bg-zinc-50 border border-zinc-100"
         >
-          <Feather name="arrow-left" size={16} color="#101828" />
-          <Text className="text-zinc-900 text-xs font-bold uppercase tracking-wider">Back</Text>
+          <Feather name="arrow-left" size={18} color="#101828" />
         </Pressable>
-        <Text className="text-[#E11D48] text-sm font-black tracking-widest uppercase">Trainer Join</Text>
+        <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#E11D48] text-sm tracking-widest uppercase">Trainer Join</Text>
         <View className="w-10" />
       </View>
 
@@ -1305,24 +1353,24 @@ export default function TrainerApplicationScreen() {
         contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 140 }}
         className="flex-1 bg-[#FCF5F5]"
       >
-        <View className="mb-6">
+        <View className="mb-5">
           <View className="flex-row items-center justify-between">
-            <Text className="text-zinc-400 text-xs font-extrabold uppercase tracking-widest text-start">Step 4 of 5: Application</Text>
+            <Text style={{ fontFamily: 'Inter_700Bold' }} className="text-zinc-400 text-xs uppercase tracking-widest text-start">Step 4 of 5: Application</Text>
             <Pressable 
               onPress={() => setViewingPoliciesOnly(true)}
-              className="px-2.5 py-1 bg-zinc-100 rounded-lg flex-row items-center gap-1"
+              className="px-3 py-1.5 bg-zinc-100 rounded-full border border-zinc-200 flex-row items-center gap-1.5"
             >
               <Feather name="file-text" size={11} color="#E11D48" />
-              <Text className="text-[#E11D48] text-[10px] font-black uppercase tracking-wider">View Policies (Steps 1–3)</Text>
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#E11D48] text-[10px] uppercase tracking-wider">Policies (Steps 1–3)</Text>
             </Pressable>
           </View>
-          <Text className="text-[#101828] text-2xl font-black tracking-tight mt-1 text-start">Onboarding Application</Text>
+          <Text style={{ fontFamily: 'Outfit_800ExtraBold' }} className="text-[#101828] text-2xl tracking-tight mt-1 text-start">Onboarding Application</Text>
           {appStatus === 'draft' && (
-            <View className="flex-row items-center gap-1.5 mt-3">
+            <View className="flex-row items-center gap-2 mt-3">
               {[1, 2, 3, 4].map(step => (
                 <View 
                   key={step} 
-                  className={`h-2 rounded-full flex-1 ${step <= currentStep ? 'bg-[#E11D48]' : 'bg-zinc-200'}`}
+                  className={`h-1.5 rounded-full flex-1 ${step <= currentStep ? 'bg-[#E11D48]' : 'bg-zinc-200'}`}
                 />
               ))}
             </View>
@@ -1339,10 +1387,10 @@ export default function TrainerApplicationScreen() {
             </View>
 
             <Text className="text-4xl text-center">🤝</Text>
-            <Text className="text-[#101828] text-lg font-extrabold text-center uppercase tracking-wider">Interview Scheduled</Text>
+            <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#101828] text-lg text-center uppercase tracking-wider">Interview Scheduled</Text>
             
             <View className="w-full bg-amber-50 border border-amber-200 p-4 rounded-xl items-center my-1">
-              <Text className="text-amber-900 text-xs font-black uppercase tracking-wider text-center">
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-amber-900 text-xs uppercase tracking-wider text-center">
                 📅 Physical Interview Phase
               </Text>
               <Text className="text-amber-800 text-[11px] font-semibold text-center mt-1 leading-relaxed">
@@ -1359,14 +1407,14 @@ export default function TrainerApplicationScreen() {
               className="w-full py-3.5 bg-zinc-100 rounded-xl items-center justify-center mt-2 flex-row gap-2"
             >
               <Feather name="file-text" size={13} color="#E11D48" />
-              <Text className="text-zinc-900 text-xs font-bold">View Partner Policies (61 Rules)</Text>
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-zinc-900 text-xs uppercase tracking-wider">View Partner Policies (61 Rules)</Text>
             </Pressable>
 
             <Pressable
               onPress={() => router.replace('/(tabs)')}
               className="w-full py-4 bg-[#101828] rounded-xl items-center justify-center mt-2"
             >
-              <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Return to Home</Text>
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-white text-xs uppercase tracking-wider text-center">Return to Home</Text>
             </Pressable>
           </LuxuryCard>
         )}
@@ -1374,11 +1422,11 @@ export default function TrainerApplicationScreen() {
         {appStatus === 'pending' && (
           <LuxuryCard className="p-6 gap-5 items-center justify-center bg-white" interactive={false}>
             <Text className="text-4xl text-center">✅</Text>
-            <Text className="text-[#101828] text-lg font-extrabold text-center uppercase tracking-wider">Application Submitted</Text>
-            <Text className="text-[#E11D48] text-[10px] font-black uppercase tracking-widest text-center mt-1">Step 5 of 5: Review</Text>
+            <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#101828] text-lg text-center uppercase tracking-wider">Application Submitted</Text>
+            <Text style={{ fontFamily: 'Inter_700Bold' }} className="text-[#E11D48] text-[10px] uppercase tracking-widest text-center mt-1">Step 5 of 5: Review</Text>
             
             <View className="w-full bg-[#ECFDF5] border border-[#A7F3D0] p-4 rounded-xl items-center my-1">
-              <Text className="text-emerald-800 text-xs font-black uppercase tracking-wider text-center">🟢 Under Review</Text>
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-emerald-800 text-xs uppercase tracking-wider text-center">🟢 Under Review</Text>
             </View>
 
             <Text className="text-zinc-600 text-xs leading-relaxed text-center px-2">
@@ -1424,7 +1472,7 @@ export default function TrainerApplicationScreen() {
         {appStatus === 'approved' && (
           <LuxuryCard className="p-6 gap-5 items-center justify-center bg-emerald-50/30 border-emerald-200" interactive={false}>
             <Text className="text-4xl text-center">🎉</Text>
-            <Text className="text-[#101828] text-lg font-extrabold text-center uppercase tracking-wider">Application Approved</Text>
+            <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#101828] text-lg text-center uppercase tracking-wider">Application Approved</Text>
             
             <View className="w-full bg-emerald-500 p-4 rounded-2xl items-center">
               <Text className="text-white text-xs font-black uppercase tracking-wider text-center">
@@ -1443,7 +1491,7 @@ export default function TrainerApplicationScreen() {
               onPress={() => router.replace('/(tabs)/profile' as any)}
               className="w-full py-4 bg-[#101828] rounded-xl items-center justify-center mt-2"
             >
-              <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Go to Profile</Text>
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-white text-xs uppercase tracking-wider text-center">Go to Profile</Text>
             </Pressable>
           </LuxuryCard>
         )}
@@ -1451,7 +1499,7 @@ export default function TrainerApplicationScreen() {
         {appStatus === 'rejected' && (
           <LuxuryCard className="p-6 gap-5 items-center justify-center bg-rose-50/20 border-rose-100/50" interactive={false}>
             <Text className="text-4xl text-center">❌</Text>
-            <Text className="text-[#101828] text-lg font-extrabold text-center uppercase tracking-wider">Application Rejected</Text>
+            <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#101828] text-lg text-center uppercase tracking-wider">Application Rejected</Text>
             <Text className="text-zinc-500 text-xs text-center leading-relaxed">
               Your certificates do not comply with the standards. Resubmit correct qualifications.
             </Text>
@@ -1459,7 +1507,7 @@ export default function TrainerApplicationScreen() {
               onPress={() => setAppStatus('draft')}
               className="w-full py-4 bg-zinc-900 rounded-xl items-center justify-center mt-2"
             >
-              <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Modify Application</Text>
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-white text-xs uppercase tracking-wider text-center">Modify Application</Text>
             </Pressable>
           </LuxuryCard>
         )}
@@ -1467,10 +1515,10 @@ export default function TrainerApplicationScreen() {
         {appStatus === 'info_requested' && (
           <LuxuryCard className="p-6 gap-5 items-center justify-center bg-amber-50/30 border border-amber-200/50" interactive={false}>
             <Text className="text-4xl text-center">⚠️</Text>
-            <Text className="text-[#101828] text-lg font-extrabold text-center uppercase tracking-wider">Additional Info Required</Text>
+            <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#101828] text-lg text-center uppercase tracking-wider">Additional Info Required</Text>
             
             <View className="bg-amber-50 border border-amber-200 p-4 rounded-xl w-full">
-              <Text className="text-amber-800 text-[10px] font-black uppercase tracking-widest mb-1 text-start">Feedback from Admin:</Text>
+              <Text style={{ fontFamily: 'Inter_700Bold' }} className="text-amber-800 text-[10px] uppercase tracking-widest mb-1 text-start">Feedback from Admin:</Text>
               <Text className="text-amber-950 text-xs font-semibold leading-relaxed text-start">{adminNotes || 'Please review your uploaded certifications or residential details.'}</Text>
             </View>
 
@@ -1482,7 +1530,7 @@ export default function TrainerApplicationScreen() {
               onPress={() => setAppStatus('draft')}
               className="w-full py-4 bg-zinc-900 rounded-xl items-center justify-center mt-2"
             >
-              <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Update Details</Text>
+              <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-white text-xs uppercase tracking-wider text-center">Update Details</Text>
             </Pressable>
           </LuxuryCard>
         )}
@@ -1491,7 +1539,7 @@ export default function TrainerApplicationScreen() {
           <>
             {currentStep === 1 && (
               <LuxuryCard className="p-5 gap-4" interactive={false}>
-                <Text className="text-[#101828] text-xs font-black uppercase tracking-widest border-b border-zinc-100 pb-2 text-start">Step 1: Personal Details</Text>
+                <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#101828] text-xs uppercase tracking-widest border-b border-zinc-100 pb-2 text-start">Step 1: Personal Details</Text>
                 
                 <View className="gap-3.5">
                   {/* Full Name */}
@@ -1891,7 +1939,7 @@ export default function TrainerApplicationScreen() {
 
             {currentStep === 2 && (
               <LuxuryCard className="p-5 gap-4" interactive={false}>
-                <Text className="text-[#101828] text-xs font-black uppercase tracking-widest border-b border-zinc-100 pb-2 text-start">Step 2: Fitness & Professional Details</Text>
+                <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#101828] text-xs uppercase tracking-widest border-b border-zinc-100 pb-2 text-start">Step 2: Fitness & Professional Details</Text>
                 
                 <View className="gap-3.5">
                   {/* Primary Workout Specialization */}
@@ -2418,7 +2466,7 @@ export default function TrainerApplicationScreen() {
 
             {currentStep === 3 && (
               <LuxuryCard className="p-5 gap-4" interactive={false}>
-                <Text className="text-[#101828] text-xs font-black uppercase tracking-widest border-b border-zinc-100 pb-2 text-start">Step 3: Experience & Working Preferences</Text>
+                <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#101828] text-xs uppercase tracking-widest border-b border-zinc-100 pb-2 text-start">Step 3: Experience & Working Preferences</Text>
                 
                 <View className="gap-4">
                   <View className="flex-row gap-2">
@@ -2514,7 +2562,7 @@ export default function TrainerApplicationScreen() {
 
             {currentStep === 4 && (
               <LuxuryCard className="p-5 gap-4" interactive={false}>
-                <Text className="text-[#101828] text-xs font-black uppercase tracking-widest border-b border-zinc-100 pb-2 text-start">Step 4: Profile Verification</Text>
+                <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-[#101828] text-xs uppercase tracking-widest border-b border-zinc-100 pb-2 text-start">Step 4: Profile Verification</Text>
                 
                 <View className="gap-4">
                   {/* Selfie Upload */}
@@ -2639,18 +2687,18 @@ export default function TrainerApplicationScreen() {
               {currentStep > 1 && (
                 <Pressable
                   onPress={handleBack}
-                  className="flex-1 py-4 bg-zinc-200 rounded-xl items-center justify-center"
+                  className="flex-1 py-4 bg-white border border-zinc-200 rounded-full shadow-xs items-center justify-center"
                 >
-                  <Text className="text-zinc-800 text-xs font-black uppercase tracking-wider text-center">Back</Text>
+                  <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-zinc-950 text-xs uppercase tracking-wider text-center">Back</Text>
                 </Pressable>
               )}
               
               {currentStep < 4 ? (
                 <Pressable
                   onPress={handleNext}
-                  className="flex-1 py-4 bg-[#101828] rounded-xl items-center justify-center"
+                  className="flex-1 py-4 bg-[#18181B] rounded-full shadow-xs items-center justify-center"
                 >
-                  <Text className="text-white text-xs font-black uppercase tracking-wider text-center">Next</Text>
+                  <Text style={{ fontFamily: 'Outfit_700Bold' }} className="text-white text-xs uppercase tracking-wider text-center">Next</Text>
                 </Pressable>
               ) : (
                 <Pressable
@@ -2661,9 +2709,9 @@ export default function TrainerApplicationScreen() {
                     return selected.some((q: string) => !qualCertMap[q] || !qualCertMap[q].trim());
                   })()}
                   style={{
-                    ...softShadow({ color: '#E11D48', opacity: 0.15, radius: 8, offsetY: 4 }),
+                    ...softShadow({ color: '#E11D48', opacity: 0.2, radius: 10, offsetY: 4 }),
                   }}
-                  className={`flex-1 py-4 rounded-xl items-center justify-center ${
+                  className={`flex-1 py-4 rounded-full items-center justify-center ${
                     (!documentSelfie || (() => {
                       const selected = getSelectedQualificationsList();
                       if (selected.length === 0) return true;
@@ -2671,7 +2719,13 @@ export default function TrainerApplicationScreen() {
                     })()) ? 'bg-zinc-300' : 'bg-[#E11D48]'
                   }`}
                 >
-                  <Text className="text-white text-xs font-black uppercase tracking-wider text-center">{isSubmittingApplication ? 'Submitting...' : 'Submit Application'}</Text>
+                  <Text style={{ fontFamily: 'Outfit_700Bold' }} className={`text-xs uppercase tracking-wider text-center ${
+                    (!documentSelfie || (() => {
+                      const selected = getSelectedQualificationsList();
+                      if (selected.length === 0) return true;
+                      return selected.some((q: string) => !qualCertMap[q] || !qualCertMap[q].trim());
+                    })()) ? 'text-zinc-500' : 'text-white'
+                  }`}>{isSubmittingApplication ? 'Submitting...' : 'Submit Application'}</Text>
                 </Pressable>
               )}
             </View>
@@ -2679,6 +2733,20 @@ export default function TrainerApplicationScreen() {
         )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Native Alert Dialog */}
+      <NativeAlertDialog
+        visible={nativeAlert.visible}
+        title={nativeAlert.title}
+        message={nativeAlert.message}
+        confirmText={nativeAlert.confirmText}
+        cancelText={nativeAlert.cancelText}
+        onConfirm={() => {
+          setNativeAlert(prev => ({ ...prev, visible: false }));
+          nativeAlert.onConfirm?.();
+        }}
+        onClose={() => setNativeAlert(prev => ({ ...prev, visible: false }))}
+      />
 
       {/* Custom Picker Selection Overlay */}
       {showPickerModal && (
