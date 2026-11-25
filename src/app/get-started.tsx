@@ -31,7 +31,7 @@ import { LegalWebViewModal } from '../components/LegalWebViewModal';
 import { NativePrimaryButton } from '../components/NativePrimaryButton';
 import { NativeAlertDialog } from '../components/NativeAlertDialog';
 import { cleanOtp, clampInt } from '../utils/inputSafety';
-import { claimDeviceSession } from '../services/DeviceSession';
+import { claimDeviceSession, type ClaimResult } from '../services/DeviceSession';
 
 import { softShadow } from '../utils/shadows';
 export default function GetStartedScreen() {
@@ -496,15 +496,31 @@ export default function GetStartedScreen() {
     }
   };
 
-  const finalizeUserSession = async (userObj: any): Promise<boolean> => {
-    const claim = await claimDeviceSession(userObj.id);
-    if (!claim.ok && claim.reason === 'active_elsewhere') {
-      setIsLoading(false);
+  const showClaimFailure = (claim: ClaimResult): void => {
+    if (claim.reason === 'active_elsewhere') {
       Alert.alert(
         'Already logged in',
         `This account is currently logged in on ${claim.deviceName || 'another device'}. Please log out from that device first, then try again.`,
         [{ text: 'OK' }]
       );
+      return;
+    }
+    if (claim.reason === 'network') {
+      Alert.alert('Connection problem', 'Could not verify this device. Check your internet connection and try again.', [{ text: 'OK' }]);
+      return;
+    }
+    if (claim.reason === 'unknown_user') {
+      Alert.alert('Account not found', 'This account could not be found. Please sign up again.', [{ text: 'OK' }]);
+      return;
+    }
+    Alert.alert('Could not start session', 'This device could not be verified. Please try again.', [{ text: 'OK' }]);
+  };
+
+  const finalizeUserSession = async (userObj: any): Promise<boolean> => {
+    const claim = await claimDeviceSession(userObj.id);
+    if (!claim.ok) {
+      setIsLoading(false);
+      showClaimFailure(claim);
       return false;
     }
 
@@ -608,13 +624,9 @@ export default function GetStartedScreen() {
       console.log(`[DEBUG] Provider response received successfully. Authenticated user ID: ${userObj.id}, Role: ${userObj.role}`);
 
       const claim = await claimDeviceSession(userObj.id);
-      if (!claim.ok && claim.reason === 'active_elsewhere') {
+      if (!claim.ok) {
         setIsLoading(false);
-        Alert.alert(
-          'Already logged in',
-          `This account is currently logged in on ${claim.deviceName || 'another device'}. Please log out from that device first, then try again.`,
-          [{ text: 'OK' }]
-        );
+        showClaimFailure(claim);
         return;
       }
 
