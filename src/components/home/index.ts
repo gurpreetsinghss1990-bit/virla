@@ -5,3 +5,4 @@ export * from './ClientTopTrainersSection';
 export * from './ClientTodayOverviewSection';
 export * from './ClientAIWellnessSection';
 export * from './ClientUpcomingSessionSection';
+

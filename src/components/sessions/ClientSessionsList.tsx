@@ -1,11 +1,11 @@
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View } from 'react-native';
 import AnimatedReanimated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { Feather } from '@expo/vector-icons';
 import { BookingCard } from '../BookingCard';
 import { EmptyState } from '../EmptyState';
 import { Booking } from '../../types';
 import { ClientFilterType, ClientDateFilterType } from './ClientSessionsHeader';
+import { ClientSessionsPagination } from './ClientSessionsPagination';
 
 export interface CursorPageData {
   items: Booking[];
@@ -80,45 +80,16 @@ export const ClientSessionsList = React.memo(function ClientSessionsList({
                   onOpenSupport={onOpenSupport}
                 />
               ))}
+
               {(renderedFilter === 'completed' || renderedFilter === 'cancelled') &&
                 (cursorPage.hasPrevPage || cursorPage.hasNextPage) && (
-                  <View className="flex-row items-center justify-between mt-4 mb-2 pt-3 border-t border-zinc-200/80">
-                    <Pressable
-                      disabled={!cursorPage.hasPrevPage}
-                      onPress={onPrevPage}
-                      className={`px-4 py-2.5 rounded-full flex-row items-center gap-1.5 border ${
-                        cursorPage.hasPrevPage
-                          ? 'bg-white border-zinc-300'
-                          : 'bg-zinc-100 border-zinc-200 opacity-40'
-                      }`}
-                    >
-                      <Feather name="chevron-left" size={14} color="#101828" />
-                      <Text className="text-[#101828] text-xs font-bold">Prev</Text>
-                    </Pressable>
-
-                    <Pressable
-                      disabled={!cursorPage.hasNextPage || !cursorPage.nextCursor}
-                      onPress={onNextPage}
-                      className={`px-4 py-2.5 rounded-full flex-row items-center gap-1.5 ${
-                        cursorPage.hasNextPage
-                          ? 'bg-[#101828]'
-                          : 'bg-zinc-200 opacity-40'
-                      }`}
-                    >
-                      <Text
-                        className={`text-xs font-bold ${
-                          cursorPage.hasNextPage ? 'text-white' : 'text-zinc-500'
-                        }`}
-                      >
-                        Next
-                      </Text>
-                      <Feather
-                        name="chevron-right"
-                        size={14}
-                        color={cursorPage.hasNextPage ? '#FFFFFF' : '#6B7280'}
-                      />
-                    </Pressable>
-                  </View>
+                  <ClientSessionsPagination
+                    hasPrevPage={cursorPage.hasPrevPage}
+                    hasNextPage={cursorPage.hasNextPage}
+                    hasNextCursor={Boolean(cursorPage.nextCursor)}
+                    onPrevPage={onPrevPage}
+                    onNextPage={onNextPage}
+                  />
                 )}
             </>
           ) : (
