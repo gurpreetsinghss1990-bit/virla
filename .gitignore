@@ -64,3 +64,6 @@ build_logs*.txt
 decompressed_output*.txt
 diff.txt
 backups/
+
+# Supabase CLI local state
+supabase/.temp/
