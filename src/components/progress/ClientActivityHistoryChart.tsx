@@ -132,3 +132,4 @@ export const ClientActivityHistoryChart = React.memo(function ClientActivityHist
     </View>
   );
 });
+

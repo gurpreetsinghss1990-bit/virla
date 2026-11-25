@@ -123,3 +123,4 @@ export const ClientWellnessIndicators = React.memo(function ClientWellnessIndica
     </View>
   );
 });
+

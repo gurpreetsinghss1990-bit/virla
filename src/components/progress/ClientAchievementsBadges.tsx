@@ -166,3 +166,4 @@ export const ClientAchievementsBadges = React.memo(function ClientAchievementsBa
     </View>
   );
 });
+

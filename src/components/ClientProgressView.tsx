@@ -52,3 +52,4 @@ export const ClientProgressView = React.memo(function ClientProgressView({
     </>
   );
 });
+
