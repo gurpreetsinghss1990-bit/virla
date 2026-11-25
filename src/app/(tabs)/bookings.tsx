@@ -22,6 +22,7 @@ import { NativeSegmentedControl } from '../../components/NativeSegmentedControl'
 import { NativeDivider } from '../../components/NativeDivider';
 import { NativeAlertDialog } from '../../components/NativeAlertDialog';
 import { NativeSingleChoiceDialog } from '../../components/NativeSingleChoiceDialog';
+import { ClientSessionsView } from '../../components/ClientSessionsView';
 
 import { softShadow } from '../../utils/shadows';
 type FilterType = 'upcoming' | 'completed' | 'cancelled' | 'today' | 'past';
@@ -1532,253 +1533,47 @@ Disabling availability will only affect future/unbooked slots. Your confirmed se
   // Client view
   return (
     <View style={{ flex: 1, backgroundColor: "#F8F9FC" }}>
-      {loading ? (
-        <SkeletonLoader layout="bookings" />
-      ) : (
-        <View style={{ flex: 1 }}>
-          {/* Top Fixed Area: Navigation Bar, MY SCHEDULE Title, UPCOMING/COMPLETED/CANCELLED Switcher & Date Filters */}
-          <View 
-            style={{ 
-              backgroundColor: "#F8F9FC",
-              paddingTop: insets.top + 6,
-              zIndex: 40,
-            }}
-          >
-            {/* Top Navigation & Page Title matching Progress tab structure */}
-            <View className="flex-row items-start justify-between pt-1 pb-2 px-5">
-              <View className="flex-1 pr-3">
-                <Text 
-                  style={{ fontFamily: "Outfit_800ExtraBold", color: "#E11D48", letterSpacing: -0.5, fontSize: 24 }} 
-                  className="font-extrabold uppercase tracking-tight"
-                >
-                  MY SCHEDULE
-                </Text>
-                <Text 
-                  style={{ fontFamily: "Inter_500Medium", color: "#64748B", fontSize: 11 }} 
-                  className="font-medium leading-relaxed mt-0.5"
-                >
-                  Track and manage all your scheduled home wellness visits.
-                </Text>
-              </View>
-
-              {/* Right Action: Support Tickets Notepad */}
-              <Pressable
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                onPress={() => setShowUserTicketsModal(true)}
-                style={{ marginTop: 2 }}
-                className="w-10 h-10 rounded-full bg-white shadow-xs items-center justify-center relative border border-slate-200/80"
-                accessibilityRole="button"
-                accessibilityLabel="My Support Tickets"
-              >
-                <Feather name="file-text" size={17} color="#0F172A" />
-              </Pressable>
-            </View>
-
-            {/* Upcoming / Completed / Cancelled Segmented Control Tabs */}
-            <View className="px-5 pt-1.5">
-              <NativeSegmentedControl
-                items={filterOptions.map((opt) => ({
-                  key: opt,
-                  label: getFilterLabel(opt),
-                }))}
-                activeKey={activeFilter}
-                onChangeKey={(opt) => {
-                  if (activeFilter === opt) return;
-                  setActiveFilter(opt);
-                  setClientDateFilter("all");
-                  setCurrentCursor(null);
-                  setCursorHistory([]);
-                  setRenderedFilter(opt);
-                }}
-                marginVertical={0}
-              />
-            </View>
-
-            {/* Date Filter Pills on pure UI thread */}
-            {activeTabCount > 0 && (
-              <View className="py-2.5">
-                <AnimatedReanimated.ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  decelerationRate="fast"
-                  overScrollMode="always"
-                  bounces={true}
-                  alwaysBounceHorizontal={true}
-                  scrollEventThrottle={16}
-                  contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}
-                >
-                  {(["all", "today", "this_week", "this_month"] as const).map((filterKey) => {
-                    const isActive = clientDateFilter === filterKey;
-                    const labels = {
-                      all: "All",
-                      today: "Today",
-                      this_week: "This Week",
-                      this_month: "This Month",
-                    };
-                    return (
-                      <Pressable
-                        key={filterKey}
-                        onPress={() => {
-                          setClientDateFilter(filterKey);
-                          setCurrentCursor(null);
-                          setCursorHistory([]);
-                        }}
-                        style={[
-                          {
-                            paddingVertical: 6,
-                            paddingHorizontal: isActive ? 18 : 15,
-                            borderRadius: 9999,
-                            borderWidth: 1,
-                            borderColor: isActive ? "#0F172A" : "rgba(226, 232, 240, 0.9)",
-                            backgroundColor: isActive ? "#0F172A" : "#FFFFFF",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
-                          },
-                          !isActive && softShadow({ color: "#0F172A", opacity: 0.03, radius: 4, offsetY: 1 }),
-                          isActive && softShadow({ color: "#0F172A", opacity: 0.18, radius: 6, offsetY: 2 }),
-                        ]}
-                      >
-                        <Text
-                          numberOfLines={1}
-                          style={{
-                            fontFamily: isActive ? "Outfit_700Bold" : "Outfit_600SemiBold",
-                            fontSize: 12,
-                            color: isActive ? "#FFFFFF" : "#475569",
-                          }}
-                        >
-                          {labels[filterKey]}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </AnimatedReanimated.ScrollView>
-              </View>
-            )}
-          </View>
-
-          {/* Samsung One UI style: content top corners round UP → header bottom appears to dip DOWN at edges */}
-          <View
-            style={{
-              flex: 1,
-              borderTopLeftRadius: 48,
-              borderTopRightRadius: 48,
-              overflow: 'hidden',
-              backgroundColor: '#F8F9FC',
-            }}
-          >
-          {/* Scrollable Content: Pure UI Thread Scrolling for Cards */}
-          <AnimatedReanimated.ScrollView 
-            showsVerticalScrollIndicator={false}
-            decelerationRate={0.96}
-            bounces={true}
-            alwaysBounceVertical={true}
-            overScrollMode="always"
-            nestedScrollEnabled={true}
-            style={{ flex: 1 }}
-            className="flex-1"
-            contentContainerStyle={{ 
-              paddingTop: 12,
-              paddingBottom: Math.max((insets.bottom || 0) + 40, 140),
-              paddingHorizontal: 16
-            }}
-            scrollEventThrottle={16}
-          >
-            {/* Bookings Render List with UI thread smooth fade animation on tab switch */}
-            <AnimatedReanimated.View 
-              key={renderedFilter}
-              entering={FadeIn.duration(200)}
-              exiting={FadeOut.duration(100)}
-              className="min-h-[220px]"
-            >
-              {cursorPage.items.length > 0 ? (
-                <>
-                  {cursorPage.items.map((booking) => (
-                    <BookingCard 
-                      key={booking.id} 
-                      booking={booking} 
-                      onOpenSupport={handleOpenSupport}
-                    />
-                  ))}
-                  {(renderedFilter === "completed" || renderedFilter === "cancelled") &&
-                    (cursorPage.hasPrevPage || cursorPage.hasNextPage) && (
-                      <View className="flex-row items-center justify-between mt-4 mb-2 pt-3 border-t border-zinc-200/80">
-                        <Pressable
-                          disabled={!cursorPage.hasPrevPage}
-                          onPress={() => {
-                            if (!cursorPage.hasPrevPage) return;
-                            const prevCursor = cursorHistory[cursorHistory.length - 1] ?? null;
-                            setCursorHistory((prev) => prev.slice(0, -1));
-                            setCurrentCursor(prevCursor);
-                          }}
-                          className={`px-4 py-2.5 rounded-full flex-row items-center gap-1.5 border ${
-                            cursorPage.hasPrevPage
-                              ? "bg-white border-zinc-300"
-                              : "bg-zinc-100 border-zinc-200 opacity-40"
-                          }`}
-                        >
-                          <Feather name="chevron-left" size={14} color="#101828" />
-                          <Text className="text-[#101828] text-xs font-bold">Prev</Text>
-                        </Pressable>
-
-                        <Pressable
-                          disabled={!cursorPage.hasNextPage || !cursorPage.nextCursor}
-                          onPress={() => {
-                            if (!cursorPage.hasNextPage || !cursorPage.nextCursor) return;
-                            setCursorHistory((prev) => [...prev, currentCursor]);
-                            setCurrentCursor(cursorPage.nextCursor);
-                          }}
-                          className={`px-4 py-2.5 rounded-full flex-row items-center gap-1.5 ${
-                            cursorPage.hasNextPage
-                              ? "bg-[#101828]"
-                              : "bg-zinc-200 opacity-40"
-                          }`}
-                        >
-                          <Text
-                            className={`text-xs font-bold ${
-                              cursorPage.hasNextPage ? "text-white" : "text-zinc-500"
-                            }`}
-                          >
-                            Next
-                          </Text>
-                          <Feather
-                            name="chevron-right"
-                            size={14}
-                            color={cursorPage.hasNextPage ? "#FFFFFF" : "#6B7280"}
-                          />
-                        </Pressable>
-                      </View>
-                    )}
-                </>
-              ) : (
-                <EmptyState 
-                  type={renderedFilter === "completed" || renderedFilter === "past" ? "no-sessions" : "no-bookings"} 
-                  title={
-                    renderedFilter === "cancelled" 
-                      ? "No Cancelled Sessions" 
-                      : renderedFilter === "completed" 
-                        ? "No Completed Sessions" 
-                        : "No Upcoming Sessions"
-                  }
-                  showCard={false}
-                  message={
-                    renderedFilter === "cancelled" && clientDateFilter !== "all"
-                      ? "No cancelled or missed visits found for this period."
-                      : renderedFilter === "upcoming" 
-                        ? "Schedule your next premium at-home training session from the home dashboard."
-                        : renderedFilter === "cancelled"
-                          ? "You do not have any cancelled sessions logged in your profile."
-                          : `You do not have any ${renderedFilter} visits logged in your profile.`
-                  }
-                  actionText={clientDateFilter !== "all" ? "Show All" : undefined}
-                  onAction={clientDateFilter !== "all" ? () => setClientDateFilter("all") : undefined}
-                />
-              )}
-            </AnimatedReanimated.View>
-          </AnimatedReanimated.ScrollView>
-          </View>
-        </View>
-      )}
+      <ClientSessionsView
+        loading={loading}
+        insetsTop={insets.top}
+        insetsBottom={insets.bottom}
+        activeFilter={activeFilter}
+        filterOptions={filterOptions}
+        getFilterLabel={getFilterLabel}
+        onFilterChange={(opt) => {
+          if (activeFilter === opt) return;
+          setActiveFilter(opt);
+          setClientDateFilter("all");
+          setCurrentCursor(null);
+          setCursorHistory([]);
+          setRenderedFilter(opt);
+        }}
+        clientDateFilter={clientDateFilter}
+        onDateFilterChange={(filterKey) => {
+          setClientDateFilter(filterKey);
+          setCurrentCursor(null);
+          setCursorHistory([]);
+        }}
+        activeTabCount={activeTabCount}
+        onOpenTickets={() => setShowUserTicketsModal(true)}
+        renderedFilter={renderedFilter}
+        cursorPage={cursorPage}
+        cursorHistory={cursorHistory}
+        currentCursor={currentCursor}
+        onPrevPage={() => {
+          if (!cursorPage.hasPrevPage) return;
+          const prevCursor = cursorHistory[cursorHistory.length - 1] ?? null;
+          setCursorHistory((prev) => prev.slice(0, -1));
+          setCurrentCursor(prevCursor);
+        }}
+        onNextPage={() => {
+          if (!cursorPage.hasNextPage || !cursorPage.nextCursor) return;
+          setCursorHistory((prev) => [...prev, currentCursor]);
+          setCurrentCursor(cursorPage.nextCursor);
+        }}
+        onOpenSupport={handleOpenSupport}
+        onResetDateFilter={() => setClientDateFilter("all")}
+      />
 
       {/* 1. Raise Support Ticket Question Flow Modal */}
       <RaiseSupportTicketModal
