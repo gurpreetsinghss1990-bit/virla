@@ -31,6 +31,7 @@ export const ClientHeroSection = React.memo(function ClientHeroSection({
             width: 84,
             height: 84,
             borderRadius: 42,
+            backgroundColor: '#FFFFFF',
             alignItems: 'center',
             justifyContent: 'center',
             ...softShadow({ color: '#F59E0B', opacity: 0.25, radius: 8, offsetY: 3 }),

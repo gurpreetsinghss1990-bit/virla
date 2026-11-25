@@ -513,7 +513,6 @@ export default function GetStartedScreen() {
     Database.setCurrentUserId(userObj.id);
     await setLoggedIn(true);
     setCompletedOnboarding(true);
-    updateProfile(userObj);
 
     console.log('[DEBUG] Session established. Syncing database caches...');
     await useUserProfileStore.getState().syncFromDB();

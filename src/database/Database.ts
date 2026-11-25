@@ -2005,7 +2005,16 @@ class DatabaseClient {
   }
 
   async updateUser(userId: string, fields: Partial<DBUser>): Promise<void> {
-    const user = this.schema.users.find(u => u.id === userId);
+    let user = this.schema.users.find(u => u.id === userId);
+    if (!user) {
+      // If user is not yet in local schema cache (e.g. freshly authenticated), fetch from Supabase
+      const { data: fetchedUser } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+      if (fetchedUser) {
+        user = mapDBUser(fetchedUser);
+        this.schema.users.push(user);
+      }
+    }
+
     if (user) {
       Object.assign(user, fields);
 
@@ -2039,7 +2048,7 @@ class DatabaseClient {
       this.save();
       this.log('UpdateUser', `Updated user fields for ID ${userId}`);
     } else {
-      throw new Error(`User with ID ${userId} not found in database cache.`);
+      console.warn(`[Database] User with ID ${userId} not found in database cache or remote table.`);
     }
   }
 

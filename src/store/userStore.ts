@@ -105,11 +105,15 @@ export const useUserStore = create<UserState>()(
       updateProfile: (profile) =>
         set((state) => {
           const updatedUser = { ...state.user, ...profile };
+          if (updatedUser.id) {
             Database.updateUser(updatedUser.id, {
               name: updatedUser.name,
               email: updatedUser.email,
               avatar: updatedUser.avatar,
+            }).catch((err) => {
+              console.warn('[UserStore] updateUser background sync caught:', err);
             });
+          }
           return { user: updatedUser };
         }),
       isLoggedIn: false,

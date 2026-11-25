@@ -117,6 +117,7 @@ export const ClientVirlaPassCard = React.memo(function ClientVirlaPassCard({
       style={{
         borderRadius: 24,
         padding: 20,
+        backgroundColor: '#FFFFFF',
         borderWidth: 2,
         borderColor: 'rgba(15, 23, 42, 0.7)',
         position: 'relative',
