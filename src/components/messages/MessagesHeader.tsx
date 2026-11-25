@@ -26,3 +26,4 @@ export const MessagesHeader: React.FC<MessagesHeaderProps> = React.memo(
     );
   }
 );
+

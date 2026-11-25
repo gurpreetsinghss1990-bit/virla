@@ -10,3 +10,4 @@ export interface ChatItem {
   isOnline?: boolean;
   type: 'coach' | 'concierge';
 }
+

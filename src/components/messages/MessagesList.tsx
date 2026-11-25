@@ -41,3 +41,4 @@ export const MessagesList: React.FC<MessagesListProps> = React.memo(
     );
   }
 );
+

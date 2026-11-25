@@ -35,3 +35,4 @@ export const MessagesSearchBar: React.FC<MessagesSearchBarProps> = React.memo(
     );
   }
 );
+
