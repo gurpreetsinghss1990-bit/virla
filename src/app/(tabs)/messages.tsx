@@ -1,17 +1,14 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, Platform } from 'react-native';
+import React, { useState, useMemo, useCallback } from 'react';
+import { Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBookingStore } from '../../store/bookingStore';
-import { AvatarImage } from '../../components/AvatarImage';
 import { useUserStore } from '../../store/userStore';
 import { useChatStore } from '../../store/chatStore';
 import { Database } from '../../database/Database';
-import { EmptyState } from '../../components/EmptyState';
 import { getBookingISTDateRange } from '../../utils/date';
-import { NativePressable } from '../../components/NativePressable';
-import { NativeDivider } from '../../components/NativeDivider';
+import { ClientMessagesView } from '../../components/ClientMessagesView';
+import { ChatItem } from '../../components/messages';
 
 let useMaterialColorsSafe: any = null;
 if (Platform.OS === 'android') {
@@ -19,19 +16,6 @@ if (Platform.OS === 'android') {
     const compose = require('@expo/ui/jetpack-compose');
     useMaterialColorsSafe = compose.useMaterialColors;
   } catch {}
-}
-
-interface ChatItem {
-  id: string;
-  bookingId?: string;
-  name: string;
-  subtitle?: string;
-  avatar: string;
-  lastMessage: string;
-  time: string;
-  unread: boolean;
-  isOnline?: boolean;
-  type: 'coach' | 'concierge';
 }
 
 export default function MessagesScreen() {
@@ -274,161 +258,36 @@ export default function MessagesScreen() {
     });
   }, [chatsList, searchQuery]);
 
+  const handleChatPress = useCallback((chat: ChatItem) => {
+    if (chat.type === 'concierge') {
+      router.push({
+        pathname: '/(tabs)/bookings' as any,
+        params: { filter: 'completed' }
+      });
+      return;
+    }
+    const targetId = chat.bookingId || chat.id;
+    useChatStore.getState().markAsRead([targetId, chat.id]);
+    router.push({
+      pathname: '/communication' as any,
+      params: { id: targetId, name: chat.name }
+    });
+  }, [router]);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery('');
+  }, []);
+
   return (
-    <View style={{ flex: 1, backgroundColor, paddingTop: insets.top }}>
-      {/* Top Header */}
-      <View style={{ backgroundColor }} className="px-5 pt-3 pb-2 flex-row items-center justify-between">
-        <View>
-          <Text className="text-zinc-950 text-2xl font-black tracking-tight">
-            Chats
-          </Text>
-        </View>
-
-        {chatsList.some((c) => c.isOnline) && (
-          <View className="flex-row items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200">
-            <View className="w-2 h-2 rounded-full bg-emerald-500" />
-            <Text className="text-emerald-700 text-xs font-bold">Online</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Lively Search Input Bar */}
-      <View className="px-5 pt-1 pb-2.5">
-        <View className="flex-row items-center bg-white px-3.5 py-2.5 rounded-full shadow-sm">
-          <Feather name="search" size={17} color="#71717A" />
-          <TextInput
-            maxLength={250}
-            placeholder="Search chats or messages..."
-            placeholderTextColor="#9CA3AF"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            className="flex-1 text-[15px] font-medium text-zinc-900 ml-2.5 py-0"
-            clearButtonMode="while-editing"
-          />
-          {searchQuery.length > 0 && (
-            <Pressable onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <View className="w-4 h-4 rounded-full bg-zinc-300 items-center justify-center">
-                <Feather name="x" size={10} color="white" />
-              </View>
-            </Pressable>
-          )}
-        </View>
-      </View>
-
-      {/* Chats List - WhatsApp-style clean listing */}
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: 110, flexGrow: 1 }}
-      >
-        {filteredChats.length > 0 ? (
-          <View className="bg-white">
-            {filteredChats.map((chat, idx) => {
-              const isConcierge = chat.type === 'concierge';
-              const isLast = idx === filteredChats.length - 1;
-
-              return (
-                <React.Fragment key={chat.id}>
-                  <NativePressable
-                    rippleColor="rgba(0, 0, 0, 0.08)"
-                    onPress={() => {
-                      if (isConcierge) {
-                        router.push({
-                          pathname: '/(tabs)/bookings' as any,
-                          params: { filter: 'completed' }
-                        });
-                        return;
-                      }
-                      const targetId = chat.bookingId || chat.id;
-                      useChatStore.getState().markAsRead([targetId, chat.id]);
-                      router.push({
-                        pathname: '/communication' as any,
-                        params: { id: targetId, name: chat.name }
-                      });
-                    }}
-                    className={`flex-row items-center px-4 py-3 ${
-                      isConcierge ? 'bg-rose-50/40' : 'bg-white'
-                    }`}
-                  >
-                    {/* Avatar */}
-                    <View className="relative mr-3.5">
-                      {isConcierge ? (
-                        <View className="rounded-full bg-rose-100 border border-rose-200 items-center justify-center overflow-hidden" style={{ width: 50, height: 50, borderRadius: 25 }}>
-                          <Ionicons name="sparkles" size={22} color="#E11D48" />
-                        </View>
-                      ) : (
-                        <View className="rounded-full overflow-hidden bg-zinc-100" style={{ width: 50, height: 50, borderRadius: 25 }}>
-                          <AvatarImage
-                            uri={chat.avatar}
-                            style={{ width: 50, height: 50, borderRadius: 25 }}
-                          />
-                          {chat.isOnline && (
-                            <View className="absolute right-0 bottom-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white" />
-                          )}
-                        </View>
-                      )}
-                    </View>
-
-                    {/* Chat Content */}
-                    <View className="flex-1 flex-row items-center justify-between py-0.5">
-                      <View className="flex-1 pr-2">
-                        <View className="flex-row items-center justify-between mb-1">
-                          <Text 
-                            numberOfLines={1} 
-                            className={`text-[16px] flex-1 pr-2 ${
-                              chat.unread ? 'font-bold text-zinc-950' : 'font-semibold text-zinc-900'
-                            }`}
-                          >
-                            {chat.name}
-                          </Text>
-                          {chat.time ? (
-                            <Text className={`text-xs ${chat.unread ? 'font-bold text-[#E11D48]' : 'text-zinc-400'}`}>
-                              {chat.time}
-                            </Text>
-                          ) : null}
-                        </View>
-
-                        <View className="flex-row items-center justify-between">
-                          <Text
-                            numberOfLines={1}
-                            className={`text-[14px] flex-1 pr-2 ${
-                              chat.unread ? 'font-semibold text-zinc-800' : 'text-zinc-500'
-                            }`}
-                          >
-                            {chat.lastMessage}
-                          </Text>
-                          {chat.unread && (
-                            <View className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#E11D48] items-center justify-center ml-2">
-                              <Text className="text-[10px] font-bold text-white">1</Text>
-                            </View>
-                          )}
-                        </View>
-                      </View>
-
-                      {/* Right end subtle chevron icon */}
-                      <Feather name="chevron-right" size={17} color="#D1D5DB" />
-                    </View>
-                  </NativePressable>
-
-                  {!isLast && (
-                    <View className="pl-[76px] bg-white">
-                      <NativeDivider color="#F4F4F5" />
-                    </View>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </View>
-        ) : (
-          <View className="flex-1 justify-center items-center py-16">
-            <EmptyState
-              type="no-messages"
-              showCard={false}
-              message="No conversations found matching your search. Your chats with assigned coaches and concierge will appear here."
-            />
-          </View>
-        )}
-      </ScrollView>
-    </View>
+    <ClientMessagesView
+      backgroundColor={backgroundColor}
+      insetsTop={insets.top}
+      hasOnlineChats={chatsList.some((c) => c.isOnline)}
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+      onClearSearch={handleClearSearch}
+      filteredChats={filteredChats}
+      onChatPress={handleChatPress}
+    />
   );
 }
