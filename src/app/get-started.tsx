@@ -1,24 +1,27 @@
-import { Loading } from '../components/Loading';
 import { AppLogo, Heading, PrimaryButton, Subtitle } from '@/presentation/components';
+import { Feather } from '@expo/vector-icons';
+import { useFonts } from 'expo-font';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, AppState, Dimensions, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, Pressable, TouchableWithoutFeedback, View } from 'react-native';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withSpring, 
-  withTiming, 
-  Easing, 
+import { Alert, AppState, Dimensions, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, TouchableWithoutFeedback, View } from 'react-native';
+import Animated, {
+  Easing,
   interpolate,
-  runOnJS
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
-import { Feather } from '@expo/vector-icons';
-import { useFonts } from 'expo-font';
+import { LegalWebViewModal } from '../components/LegalWebViewModal';
+import { Loading } from '../components/Loading';
+import { NativeAlertDialog } from '../components/NativeAlertDialog';
 import { Database } from '../database/Database';
 import { supabase } from '../database/supabaseClient';
+import { claimDeviceSession, type ClaimResult } from '../services/DeviceSession';
 import { OTPService } from '../services/OTPService';
 import { useAddressStore } from '../store/addressStore';
 import { useBookingStore } from '../store/bookingStore';
@@ -26,12 +29,7 @@ import { useMembershipStore } from '../store/membershipStore';
 import { useUserProfileStore } from '../store/userProfileStore';
 import { useUserStore } from '../store/userStore';
 import { useWalletStore } from '../store/walletStore';
-import Constants from 'expo-constants';
-import { LegalWebViewModal } from '../components/LegalWebViewModal';
-import { NativePrimaryButton } from '../components/NativePrimaryButton';
-import { NativeAlertDialog } from '../components/NativeAlertDialog';
-import { cleanOtp, clampInt } from '../utils/inputSafety';
-import { claimDeviceSession, type ClaimResult } from '../services/DeviceSession';
+import { clampInt, cleanOtp } from '../utils/inputSafety';
 
 import { softShadow } from '../utils/shadows';
 export default function GetStartedScreen() {
@@ -52,6 +50,7 @@ export default function GetStartedScreen() {
   const [legalModalVisible, setLegalModalVisible] = useState(false);
   const [authErrorMessage, setAuthErrorMessage] = useState<string | null>(null);
   const [legalModalTab, setLegalModalTab] = useState<'terms' | 'privacy'>('terms');
+  const [claimAlert, setClaimAlert] = useState<{ title: string; message: string } | null>(null);
 
   const handleOpenTerms = () => {
     setLegalModalTab('terms');
@@ -101,6 +100,8 @@ export default function GetStartedScreen() {
   const [isAppActive, setIsAppActive] = useState(AppState.currentState === 'active');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const otpInputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const otpBoxRefs = useRef<(React.ComponentRef<typeof TextInput> | null)[]>([]);
+  const [focusedOtpIndex, setFocusedOtpIndex] = useState(0);
 
   // 🚀 Native Reanimated UI-thread SharedValues
   const otpShiftAnim = useSharedValue(0);
@@ -203,7 +204,7 @@ export default function GetStartedScreen() {
       if (Platform.OS === 'android') {
         const browserInfo = await WebBrowser.getCustomTabsSupportingBrowsersAsync();
         console.log('[WebBrowser] Android Custom Tabs browsers found:', JSON.stringify(browserInfo));
-        
+
         const preferredPackage = browserInfo.preferredBrowserPackage || browserInfo.defaultBrowserPackage || browserInfo.browserPackages?.[0];
         console.log('[WebBrowser] Selected browser package for Custom Tabs:', preferredPackage);
 
@@ -498,22 +499,30 @@ export default function GetStartedScreen() {
 
   const showClaimFailure = (claim: ClaimResult): void => {
     if (claim.reason === 'active_elsewhere') {
-      Alert.alert(
-        'Already logged in',
-        `This account is currently logged in on ${claim.deviceName || 'another device'}. Please log out from that device first, then try again.`,
-        [{ text: 'OK' }]
-      );
+      setClaimAlert({
+        title: 'Already Logged In',
+        message: `This account is currently logged in on ${claim.deviceName || 'another device'}. Please log out from that device first, then try again.`,
+      });
       return;
     }
     if (claim.reason === 'network') {
-      Alert.alert('Connection problem', 'Could not verify this device. Check your internet connection and try again.', [{ text: 'OK' }]);
+      setClaimAlert({
+        title: 'Connection Problem',
+        message: 'Could not verify this device. Check your internet connection and try again.',
+      });
       return;
     }
     if (claim.reason === 'unknown_user') {
-      Alert.alert('Account not found', 'This account could not be found. Please sign up again.', [{ text: 'OK' }]);
+      setClaimAlert({
+        title: 'Account Not Found',
+        message: 'This account could not be found. Please sign up again.',
+      });
       return;
     }
-    Alert.alert('Could not start session', 'This device could not be verified. Please try again.', [{ text: 'OK' }]);
+    setClaimAlert({
+      title: 'Could Not Start Session',
+      message: 'This device could not be verified. Please try again.',
+    });
   };
 
   const finalizeUserSession = async (userObj: any): Promise<boolean> => {
@@ -755,7 +764,7 @@ export default function GetStartedScreen() {
           className="flex-1"
         >
           {/* Balanced Rose-Silk Concierge Canvas with visible gentle warmth */}
-          <View 
+          <View
             style={{
               position: 'absolute',
               top: 0,
@@ -763,7 +772,7 @@ export default function GetStartedScreen() {
               right: 0,
               bottom: 0,
               overflow: 'hidden',
-            }} 
+            }}
             pointerEvents="none"
           >
             <Svg width="100%" height="100%" viewBox={`0 0 ${screenWidth} ${screenHeight}`} fill="none">
@@ -1224,7 +1233,7 @@ export default function GetStartedScreen() {
                         marginTop: 2,
                         color:
                           otpStatusMessage.toLowerCase().includes('otp sent') ||
-                          otpStatusMessage.toLowerCase().includes('otp resent')
+                            otpStatusMessage.toLowerCase().includes('otp resent')
                             ? '#059669'
                             : '#E11D48',
                       }}
@@ -1260,34 +1269,22 @@ export default function GetStartedScreen() {
                     {/* Container for 6 Animated Rotated Digit Cards */}
                     <TouchableWithoutFeedback onPress={() => otpInputRef.current?.focus()}>
                       <View className="relative w-full max-w-[340px] py-1 items-center justify-center min-h-[76px]">
-                        {/* Hidden Native TextInput for 6-digit Keyboard Entry & Autofill */}
-                        <TextInput
-                          ref={otpInputRef}
-                          placeholder=""
-                          placeholderTextColor="transparent"
-                          keyboardType="number-pad"
-                          textContentType="oneTimeCode"
-                          autoComplete="one-time-code"
-                          maxLength={6}
-                          value={otpCode}
-                          onChangeText={(v) => setOtpCode(cleanOtp(v))}
-                          editable={!isLoading && !isOtpSuccessAnimating}
-                          className="absolute w-full h-full opacity-0 z-50"
-                          autoFocus
-                        />
-
                         {!isOtpSuccessAnimating ? (
-                          /* Visual State 1: 6 Individual Rotated Digit Boxes */
-                          <View className="flex-row justify-between w-full px-1 z-10 pointer-events-none">
+                          /* Visual State 1: 6 Individual Tappable Rotated Digit Boxes */
+                          <View className="flex-row justify-between w-full px-1 z-10">
                             {Array.from({ length: 6 }).map((_, idx) => {
                               const digit = otpCode[idx] || '';
-                              const isFocusedIndex = otpCode.length === idx || (idx === 5 && otpCode.length === 6);
+                              const isFocusedIndex = focusedOtpIndex === idx;
                               const rotations = ['-6deg', '8deg', '-4deg', '6deg', '-8deg', '5deg'];
                               const rot = rotations[idx % rotations.length];
 
                               return (
-                                <View
+                                <Pressable
                                   key={idx}
+                                  onPress={() => {
+                                    setFocusedOtpIndex(idx);
+                                    otpBoxRefs.current[idx]?.focus();
+                                  }}
                                   className={`w-11 h-14 rounded-2xl items-center justify-center border ${digit
                                     ? 'bg-[#1F1F24] border-[#E11D48]'
                                     : isFocusedIndex
@@ -1299,10 +1296,57 @@ export default function GetStartedScreen() {
                                     ...softShadow({ color: (digit || isFocusedIndex) ? '#E11D48' : '#000', opacity: (digit || isFocusedIndex) ? 0.5 : 0.2, radius: (digit || isFocusedIndex) ? 8 : 4, offsetY: (digit || isFocusedIndex) ? 4 : 2 }),
                                   }}
                                 >
-                                  <Text className="text-white text-xl font-black">
-                                    {digit}
-                                  </Text>
-                                </View>
+                                  <TextInput
+                                    ref={(el) => {
+                                      otpBoxRefs.current[idx] = el;
+                                      if (idx === 0) {
+                                        (otpInputRef as any).current = el;
+                                      }
+                                    }}
+                                    value={digit}
+                                    onFocus={() => setFocusedOtpIndex(idx)}
+                                    onChangeText={(text) => {
+                                      const cleaned = cleanOtp(text);
+                                      if (cleaned.length > 1) {
+                                        const pasted = cleaned.slice(0, 6);
+                                        setOtpCode(pasted);
+                                        const nextIdx = Math.min(pasted.length, 5);
+                                        setFocusedOtpIndex(nextIdx);
+                                        otpBoxRefs.current[nextIdx]?.focus();
+                                        return;
+                                      }
+                                      const chars = Array.from({ length: 6 }, (_, i) => otpCode[i] || '');
+                                      if (cleaned.length === 1) {
+                                        chars[idx] = cleaned;
+                                        setOtpCode(chars.join(''));
+                                        if (idx < 5) {
+                                          setFocusedOtpIndex(idx + 1);
+                                          otpBoxRefs.current[idx + 1]?.focus();
+                                        }
+                                      } else {
+                                        chars[idx] = '';
+                                        setOtpCode(chars.join(''));
+                                      }
+                                    }}
+                                    onKeyPress={({ nativeEvent }) => {
+                                      if (nativeEvent.key === 'Backspace' && !digit && idx > 0) {
+                                        const chars = Array.from({ length: 6 }, (_, i) => otpCode[i] || '');
+                                        chars[idx - 1] = '';
+                                        setOtpCode(chars.join(''));
+                                        setFocusedOtpIndex(idx - 1);
+                                        otpBoxRefs.current[idx - 1]?.focus();
+                                      }
+                                    }}
+                                    keyboardType="number-pad"
+                                    textContentType="oneTimeCode"
+                                    autoComplete="one-time-code"
+                                    maxLength={6}
+                                    editable={!isLoading && !isOtpSuccessAnimating}
+                                    autoFocus={idx === 0}
+                                    selectionColor="#E11D48"
+                                    className="w-full h-full text-center text-white text-xl font-black p-0"
+                                  />
+                                </Pressable>
                               );
                             })}
                           </View>
@@ -1497,6 +1541,13 @@ export default function GetStartedScreen() {
           message={authErrorMessage || ''}
           confirmText="OK"
           onClose={() => setAuthErrorMessage(null)}
+        />
+        <NativeAlertDialog
+          visible={!!claimAlert}
+          title={claimAlert?.title ?? ''}
+          message={claimAlert?.message ?? ''}
+          confirmText="OK"
+          onClose={() => setClaimAlert(null)}
         />
       </View>
     </TouchableWithoutFeedback>
