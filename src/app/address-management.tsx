@@ -234,7 +234,7 @@ export default function AddressManagementScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FCF5F5' }}>
+    <View style={{ flex: 1, backgroundColor: '#FFF8F8' }}>
       <ScreenHeader 
         title="Saved Addresses" 
         category="VIRLA PLACES"
@@ -243,7 +243,7 @@ export default function AddressManagementScreen() {
             onPress={() => { if (showForm) { resetForm(); } else { setShowForm(true); } }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text className="text-indigo-600 text-xs font-black uppercase tracking-wider">
+            <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 12, color: '#B80035', letterSpacing: 0.6, textTransform: 'uppercase' }}>
               {showForm ? 'Cancel' : 'Add New'}
             </Text>
           </Pressable>
@@ -255,22 +255,22 @@ export default function AddressManagementScreen() {
           <View className="gap-6">
             
             <View>
-              <Text className="text-zinc-900 text-2xl font-black tracking-tight leading-tight">Addresses</Text>
-              <Text className="text-zinc-500 text-xs font-semibold mt-1 leading-relaxed">
+              <Text style={{ fontFamily: 'Outfit_800Bold', fontSize: 26, lineHeight: 32, color: '#1D1B1B' }}>Addresses</Text>
+              <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 12, lineHeight: 18, color: '#5C3F40', marginTop: 4 }}>
                 Add, edit, or set default delivery addresses for fitness sessions at home or work.
               </Text>
             </View>
 
             {showForm ? (
               /* Add/Edit Form Panel */
-              <View className="bg-white p-5 rounded-[28px] shadow-sm gap-4">
-                <Text className="text-zinc-950 text-xs font-black uppercase tracking-wider border-b border-zinc-50 pb-2">
+              <View className="bg-white p-5 rounded-[24px] border border-[#E5E7EB] gap-4">
+                <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 14, color: '#1D1B1B', letterSpacing: 0.4, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#F3ECEC' }}>
                   {editingId ? 'Modify Address Details' : 'New Address Details'}
                 </Text>
 
                 {/* Label Category Selection */}
                 <View className="gap-2">
-                  <Text className="text-zinc-500 text-[8px] font-black uppercase">Address Label</Text>
+                  <Text className="text-zinc-500 text-[10px] font-bold uppercase">Address Label</Text>
                   <View className="flex-row gap-2">
                     {(['Home', 'Office', 'Gym', 'Custom'] as const).map((l) => (
                       <Pressable
@@ -280,7 +280,7 @@ export default function AddressManagementScreen() {
                           label === l ? 'bg-zinc-950 border-zinc-950' : 'bg-[#F7F8FC] border-zinc-200'
                         }`}
                       >
-                        <Text className={`text-[8px] font-black uppercase ${
+                        <Text className={`text-[10px] font-bold uppercase ${
                           label === l ? 'text-white' : 'text-zinc-650'
                         }`}>{l}</Text>
                       </Pressable>
@@ -289,38 +289,38 @@ export default function AddressManagementScreen() {
                 </View>
 
                 <View className="gap-1">
-                  <Text className="text-zinc-500 text-[8px] font-black uppercase">Location Nickname</Text>
+                  <Text className="text-zinc-500 text-[10px] font-bold uppercase">Location Nickname</Text>
                   <TextInput
                     maxLength={250}
                     value={name}
                     onChangeText={setName}
                     placeholder="e.g. My Residence, Worli HQ"
-                    className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
+                    className="border border-[#E5E7EB] bg-white p-3.5 rounded-[16px] text-sm" style={{ fontFamily: 'Inter_500Medium', fontSize: 13, color: '#1D1B1B' }}
                   />
                 </View>
 
                 <View className="gap-1">
-                  <Text className="text-zinc-500 text-[8px] font-black uppercase">Flat / Building name</Text>
+                  <Text className="text-zinc-500 text-[10px] font-bold uppercase">Flat / Building name</Text>
                   <TextInput
                     maxLength={250}
                     value={building}
                     onChangeText={setBuilding}
                     placeholder="Flat 12A, Sea Tower"
-                    className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
+                    className="border border-[#E5E7EB] bg-white p-3.5 rounded-[16px] text-sm" style={{ fontFamily: 'Inter_500Medium', fontSize: 13, color: '#1D1B1B' }}
                   />
                 </View>
 
                 {/* Search Address / Autocomplete */}
-                <View className="gap-1.5 bg-indigo-50/30 border border-indigo-150/40 p-3 rounded-2xl">
-                  <Text className="text-zinc-500 text-[8px] font-black uppercase">Resolve Workout Address</Text>
+                <View className="gap-1.5 bg-[#FFF1F2] border border-[#F3D3D7] p-3 rounded-2xl">
+                  <Text className="text-zinc-500 text-[10px] font-bold uppercase">Resolve Workout Address</Text>
                   
                   <Pressable
                     onPress={handleUseCurrentLocation}
                     disabled={isSearching}
-                    className="bg-indigo-50 border border-indigo-200/50 py-2.5 rounded-xl flex-row justify-center items-center gap-2"
+                    className="bg-white border border-[#E5BDBE] py-2.5 rounded-xl flex-row justify-center items-center gap-2"
                   >
-                    <Feather name="navigation" size={12} color="#4F46E5" />
-                    <Text className="text-indigo-600 text-[9px] font-black uppercase tracking-wider">Use Current Location</Text>
+                    <Feather name="navigation" size={12} color="#B80035" />
+                    <Text className="text-[#B80035] text-[10px] font-bold uppercase tracking-wider">Use Current Location</Text>
                   </Pressable>
 
                   <TextInput
@@ -328,7 +328,7 @@ export default function AddressManagementScreen() {
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                     placeholder="Search address..."
-                    className="border border-[#E5E7EB] bg-white p-3 rounded-xl text-xs font-semibold text-zinc-900"
+                    className="border border-[#E5E7EB] bg-white p-3 rounded-[16px] text-xs font-semibold text-zinc-900"
                   />
 
                   {suggestions.length > 0 && (
@@ -351,7 +351,7 @@ export default function AddressManagementScreen() {
                   {lat !== undefined && lng !== undefined && (
                     <View className="flex-row items-center gap-1.5 mt-1">
                       <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-                      <Text className="text-[#10B981] text-[9px] font-black uppercase">Location selected</Text>
+                      <Text className="text-[#10B981] text-[10px] font-bold uppercase">Location selected</Text>
                     </View>
                   )}
 
@@ -364,7 +364,7 @@ export default function AddressManagementScreen() {
                         size={13}
                         color={isOutsideCoverage ? '#E11D48' : '#059669'}
                       />
-                      <Text className={`text-[9px] font-black uppercase tracking-wider ${
+                      <Text className={`text-[10px] font-bold uppercase tracking-wider ${
                         isOutsideCoverage ? 'text-rose-600' : 'text-emerald-700'
                       }`}>
                         {isOutsideCoverage ? 'Outside Virla Service Area' : 'Virla Service Area Active'}
@@ -374,47 +374,47 @@ export default function AddressManagementScreen() {
                 </View>
 
                 <View className="gap-1">
-                  <Text className="text-zinc-500 text-[8px] font-black uppercase">Street / Locality</Text>
+                  <Text className="text-zinc-500 text-[10px] font-bold uppercase">Street / Locality</Text>
                   <TextInput
                     maxLength={250}
                     value={street}
                     onChangeText={setStreet}
                     placeholder="e.g. Worli Sea Face road"
-                    className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
+                    className="border border-[#E5E7EB] bg-white p-3.5 rounded-[16px] text-sm" style={{ fontFamily: 'Inter_500Medium', fontSize: 13, color: '#1D1B1B' }}
                   />
                 </View>
 
                 <View className="gap-1">
-                  <Text className="text-zinc-500 text-[8px] font-black uppercase">Landmark (Optional)</Text>
+                  <Text className="text-zinc-500 text-[10px] font-bold uppercase">Landmark (Optional)</Text>
                   <TextInput
                     maxLength={250}
                     value={landmark}
                     onChangeText={setLandmark}
                     placeholder="e.g. Opposite Trident Hotel"
-                    className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
+                    className="border border-[#E5E7EB] bg-white p-3.5 rounded-[16px] text-sm" style={{ fontFamily: 'Inter_500Medium', fontSize: 13, color: '#1D1B1B' }}
                   />
                 </View>
 
                 <View className="flex-row gap-3">
                   <View className="flex-1 gap-1">
-                    <Text className="text-zinc-500 text-[8px] font-black uppercase">City</Text>
+                    <Text className="text-zinc-500 text-[10px] font-bold uppercase">City</Text>
                     <TextInput
                       maxLength={250}
                       value={city}
                       onChangeText={setCity}
                       placeholder="Mumbai"
-                      className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
+                      className="border border-[#E5E7EB] bg-white p-3.5 rounded-[16px] text-sm" style={{ fontFamily: 'Inter_500Medium', fontSize: 13, color: '#1D1B1B' }}
                     />
                   </View>
                   <View className="flex-1 gap-1">
-                    <Text className="text-zinc-500 text-[8px] font-black uppercase">PIN Code</Text>
+                    <Text className="text-zinc-500 text-[10px] font-bold uppercase">PIN Code</Text>
                     <TextInput
                       value={pinCode}
                       onChangeText={(v) => setPinCode(digitsOnly(v, 6))}
                       placeholder="400030"
                       keyboardType="numeric"
                       maxLength={6}
-                      className="border border-[#E5E7EB] bg-[#F7F8FC] p-3.5 rounded-xl text-xs font-semibold"
+                      className="border border-[#E5E7EB] bg-white p-3.5 rounded-[16px] text-sm" style={{ fontFamily: 'Inter_500Medium', fontSize: 13, color: '#1D1B1B' }}
                     />
                   </View>
                 </View>
@@ -428,7 +428,7 @@ export default function AddressManagementScreen() {
                   onPress={handleSave}
                   disabled={coaches.length > 0 && isOutsideCoverage}
                   className={`w-full py-4 rounded-2xl items-center justify-center mt-2 shadow-xs ${
-                    coaches.length > 0 && isOutsideCoverage ? 'bg-zinc-300' : 'bg-[#101828]'
+                    coaches.length > 0 && isOutsideCoverage ? 'bg-zinc-300' : 'bg-[#E11D48]'
                   }`}
                 >
                   <Text className={`text-xs font-black uppercase ${
@@ -446,22 +446,22 @@ export default function AddressManagementScreen() {
                 {addresses.map((addr) => (
                   <View
                     key={addr.id}
-                    className="bg-white p-5 rounded-[28px] shadow-sm gap-3.5"
+                    className="bg-white p-5 rounded-[24px] border border-[#E5E7EB] gap-3.5 shadow-sm"
                   >
                     <View className="flex-row justify-between items-start">
                       <View className="gap-0.5 flex-1 pr-3">
-                        <Text className="text-zinc-950 text-sm font-black">{addr.name}</Text>
+                        <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 15, color: '#1D1B1B' }}>{addr.name}</Text>
                         <Text className="text-zinc-400 text-[8px] font-bold uppercase mt-0.5">{addr.label}</Text>
                       </View>
                       {addr.isDefault && (
                         <View className="bg-emerald-50 border border-emerald-150 px-2 py-0.5 rounded-full">
-                          <Text className="text-emerald-600 text-[7px] font-black uppercase">Default</Text>
+                          <Text className="text-emerald-600 text-[9px] font-bold uppercase">Default</Text>
                         </View>
                       )}
                     </View>
 
                     <View className="gap-1 pl-1">
-                      <Text className="text-zinc-650 text-xs font-semibold leading-relaxed">
+                      <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 13, lineHeight: 19, color: '#475569' }}>
                         {addr.building}, {addr.street}
                       </Text>
                       {addr.landmark ? <Text className="text-zinc-450 text-[10px] font-medium italic">Landmark: {addr.landmark}</Text> : null}
@@ -478,7 +478,7 @@ export default function AddressManagementScreen() {
                         className="flex-1 bg-zinc-50 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
                       >
                         <Feather name="edit" size={11} color="#101828" />
-                        <Text className="text-zinc-950 text-[8px] font-black uppercase">Edit</Text>
+                        <Text className="text-zinc-950 text-[10px] font-bold uppercase">Edit</Text>
                       </Pressable>
 
                       {!addr.isDefault && (
@@ -486,8 +486,8 @@ export default function AddressManagementScreen() {
                           onPress={() => setDefaultAddress(addr.id)}
                           className="flex-1 bg-zinc-50 py-2.5 rounded-xl items-center flex-row justify-center gap-1.5"
                         >
-                          <Feather name="check" size={11} color="#4F46E5" />
-                          <Text className="text-[#4F46E5] text-[8px] font-black uppercase">Make Default</Text>
+                          <Feather name="check" size={11} color="#B80035" />
+                          <Text className="text-[#B80035] text-[10px] font-bold uppercase">Make Default</Text>
                         </Pressable>
                       )}
 
