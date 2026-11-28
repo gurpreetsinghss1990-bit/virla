@@ -36,15 +36,21 @@ export const ClientTopTrainersSection: React.FC<ClientTopTrainersSectionProps> =
   getWorkoutEmoji,
   getDisplayWorkoutTitle,
 }) => {
+  const isAcceptedAssignment =
+    !!activeBooking &&
+    activeBooking.timelineStatus !== 'booked' &&
+    activeBooking.timelineStatus !== 'trainer_assigned';
+
   return (
     <View className="gap-3">
       <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 16, color: '#0F172A', letterSpacing: -0.3 }}>
-        Our Top Performing Trainers of the month
+        {isAcceptedAssignment
+          ? 'Well Done! You have been assigned our Top Performing Trainer.'
+          : 'Our Top Performing Trainers of the month'}
       </Text>
       
       {activeBooking ? (() => {
-        const isActiveAccepted = activeBooking.timelineStatus !== 'booked' && activeBooking.timelineStatus !== 'trainer_assigned';
-        if (!isActiveAccepted) {
+        if (!isAcceptedAssignment) {
           return (
             <View 
               className="p-5 rounded-[22px] gap-4"
