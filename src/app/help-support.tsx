@@ -10,6 +10,10 @@ import { Database } from '../database/Database';
 import { useUserStore } from '../store/userStore';
 
 import { softShadow } from '../utils/shadows';
+
+const SUPPORT_EMAIL = 'hello@virla.in';
+const SUPPORT_PHONE = '';
+
 export default function HelpSupportScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -78,7 +82,11 @@ export default function HelpSupportScreen() {
   };
 
   const handleCallSupport = async () => {
-    const phoneNumber = '+919999988888';
+    if (!SUPPORT_PHONE) {
+      Alert.alert('Direct Call', 'Phone support is not available right now. Please email us at ' + SUPPORT_EMAIL);
+      return;
+    }
+    const phoneNumber = SUPPORT_PHONE;
     try {
       const url = `tel:${phoneNumber}`;
       const supported = await Linking.canOpenURL(url);
@@ -93,7 +101,7 @@ export default function HelpSupportScreen() {
   };
 
   const handleEmailSupport = async () => {
-    const email = 'support@virla.fit';
+    const email = SUPPORT_EMAIL;
     try {
       const url = `mailto:${email}?subject=${encodeURIComponent('VIRLA Support Request')}`;
       const supported = await Linking.canOpenURL(url);
@@ -171,7 +179,7 @@ export default function HelpSupportScreen() {
                 Direct Call
               </Text>
               <Text style={{ fontSize: 11, fontWeight: '500', color: '#71717A', marginTop: 2 }}>
-                +91 99999 88888
+                {SUPPORT_PHONE}
               </Text>
               <View style={{ marginTop: 8, alignSelf: 'flex-start', backgroundColor: '#EEF2FF', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 }}>
                 <Text style={{ fontSize: 10, fontWeight: '700', color: '#4F46E5' }}>Instant</Text>
@@ -198,7 +206,7 @@ export default function HelpSupportScreen() {
                 Email Desk
               </Text>
               <Text style={{ fontSize: 11, fontWeight: '500', color: '#71717A', marginTop: 2 }}>
-                support@virla.fit
+                {SUPPORT_EMAIL}
               </Text>
               <View style={{ marginTop: 8, alignSelf: 'flex-start', backgroundColor: '#ECFDF5', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 }}>
                 <Text style={{ fontSize: 10, fontWeight: '700', color: '#059669' }}>&lt; 15 mins</Text>
