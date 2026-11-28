@@ -4,6 +4,7 @@ import ReanimatedAnimated from 'react-native-reanimated';
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { CoachVideoAvatar } from '../CoachVideoAvatar';
+import { getTrainerMedia } from '../../services/bunnyCdnService';
 import { NativeDivider } from '../NativeDivider';
 import { softShadow } from '../../utils/shadows';
 
@@ -91,6 +92,8 @@ export const ClientTopTrainersSection: React.FC<ClientTopTrainersSectionProps> =
             <View className="flex-row gap-4 items-center">
               <View className="relative">
                 <CoachVideoAvatar
+                  id={activeBooking.trainerId || activeBooking.coachId || activeBooking.trainerName || undefined}
+                  videoUri={getTrainerMedia(activeBooking.trainerId, activeBooking.trainerName)?.video}
                   posterUri={trainerPhotoSource(activeBooking.trainerId || activeBooking.coachId, activeBooking.trainerPhoto)}
                   width={90}
                   height={90}

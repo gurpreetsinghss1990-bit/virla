@@ -8,7 +8,6 @@ import Svg, { Defs, RadialGradient, Stop, Rect, Line } from 'react-native-svg';
 import { CachedVideo } from './CachedVideo';
 import { useIsAppActive } from '../hooks/useIsAppActive';
 import { getCachedMediaUri } from '../services/mediaCache';
-import { BUNNY_CDN_ASSETS } from '../services/bunnyCdnService';
 
 import { softShadow } from '../utils/shadows';
 // Module-level manager for Single Active Playback across all CoachVideoAvatar instances
@@ -21,9 +20,6 @@ function setGlobalActivePlayer(id: string | null) {
   playbackListeners.forEach((listener) => listener(id));
 }
 
-// Default CDN URLs with ultra-fast edge delivery
-const DEFAULT_VIDEO_URL = BUNNY_CDN_ASSETS.TRAINER_VIDEO_KALPESH;
-const DEFAULT_POSTER_URL = BUNNY_CDN_ASSETS.TRAINER_IMAGE_KALPESH;
 
 interface CoachVideoAvatarProps {
   /** Unique ID for the trainer/player to ensure only one video plays at a time */
@@ -119,7 +115,8 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
 
     let cancelled = false;
     (async () => {
-      const target = videoUri || DEFAULT_VIDEO_URL;
+      if (!videoUri) return; // no clip for this trainer: never play someone else's video
+      const target = videoUri;
       let remote: string | null = null;
       try {
         if (typeof target === 'string') {
@@ -132,7 +129,7 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
           remote = asset.localUri || asset.uri || null;
         }
       } catch {
-        remote = DEFAULT_VIDEO_URL;
+        remote = null;
       }
       if (!remote) return;
       const cached = await getCachedMediaUri(remote);
@@ -154,7 +151,7 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
     ? typeof posterUri === 'string'
       ? { uri: posterUri }
       : posterUri
-    : { uri: DEFAULT_POSTER_URL };
+    : null;
 
   return (
     <Pressable
@@ -245,19 +242,34 @@ export const CoachVideoAvatar: React.FC<CoachVideoAvatarProps> = ({
 
         {/* Initial Transparent WebP Cutout in the exact same frame (visible when video is not playing) */}
         {!shouldPlay && (
-          <Image
-            source={posterSource}
-            style={{
-              position: 'absolute',
-              width: frameWidth,
-              height: frameHeight,
-              backgroundColor: '#FFFFFF',
-              transform: [{ translateY: 6 }],
-            }}
-            contentFit="contain"
-            cachePolicy="memory-disk"
-            transition={120}
-          />
+          posterSource ? (
+            <Image
+              source={posterSource}
+              style={{
+                position: 'absolute',
+                width: frameWidth,
+                height: frameHeight,
+                backgroundColor: '#FFFFFF',
+                transform: [{ translateY: 6 }],
+              }}
+              contentFit="contain"
+              cachePolicy="memory-disk"
+              transition={120}
+            />
+          ) : (
+            <View
+              style={{
+                position: 'absolute',
+                width: frameWidth,
+                height: frameHeight,
+                backgroundColor: '#F1F5F9',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Feather name="user" size={Math.max(14, Math.round(frameWidth * 0.4))} color="#94A3B8" />
+            </View>
+          )
         )}
 
         {/* Soft Radial Edge Vignette to seamlessly blend the edges into the pure #FFFFFF card */}

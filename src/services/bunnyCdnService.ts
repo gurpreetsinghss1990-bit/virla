@@ -36,6 +36,30 @@ export const BUNNY_CDN_ASSETS = {
 };
 
 /**
+ * Trainer identity -> media. Keyed by a normalized token found in the trainer's
+ * name or id so a card can never play another trainer's clip.
+ */
+const TRAINER_MEDIA_MAP: Record<string, { video: string; thumb: string }> = {
+  kalpesh: { video: BUNNY_CDN_ASSETS.TRAINER_VIDEO_KALPESH, thumb: BUNNY_CDN_ASSETS.TRAINER_IMAGE_KALPESH },
+  pranay: { video: BUNNY_CDN_ASSETS.TRAINER_VIDEO_PRANAY, thumb: BUNNY_CDN_ASSETS.TRAINER_IMAGE_PRANAY },
+  shivani: { video: BUNNY_CDN_ASSETS.TRAINER_VIDEO_SHIVANI, thumb: BUNNY_CDN_ASSETS.TRAINER_IMAGE_SHIVANI },
+  mayur: { video: BUNNY_CDN_ASSETS.TRAINER_VIDEO_MAYUR, thumb: BUNNY_CDN_ASSETS.TRAINER_IMAGE_MAYUR },
+  pankaj: { video: BUNNY_CDN_ASSETS.TRAINER_VIDEO_PANKAJ, thumb: BUNNY_CDN_ASSETS.TRAINER_IMAGE_PANKAJ },
+  atharva: { video: BUNNY_CDN_ASSETS.TRAINER_VIDEO_ATHARVA, thumb: BUNNY_CDN_ASSETS.TRAINER_IMAGE_ATHARVA },
+  aatharva: { video: BUNNY_CDN_ASSETS.TRAINER_VIDEO_ATHARVA, thumb: BUNNY_CDN_ASSETS.TRAINER_IMAGE_ATHARVA },
+  parth: { video: BUNNY_CDN_ASSETS.TRAINER_VIDEO_PARTH, thumb: BUNNY_CDN_ASSETS.TRAINER_IMAGE_PARTH },
+};
+
+export function getTrainerMedia(...keys: (string | null | undefined)[]) {
+  const haystack = keys.filter(Boolean).join(' ').toLowerCase();
+  if (!haystack) return null;
+  for (const token of Object.keys(TRAINER_MEDIA_MAP)) {
+    if (haystack.includes(token)) return TRAINER_MEDIA_MAP[token];
+  }
+  return null;
+}
+
+/**
  * Resolves video URI: Returns direct BunnyCDN URL immediately for instant playback
  * without waiting for disk caching or download failures.
  */
